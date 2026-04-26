@@ -12,7 +12,7 @@
     --border: rgba(0,0,0,0.1); --text: #1a1a18; --muted: #6b6b67; --hint: #9e9e9a;
     --green: #1d9e75; --green-bg: #e1f5ee; --red: #d85a30; --red-bg: #faece7;
     --amber: #ba7517; --amber-bg: #faeeda; --blue: #185fa5; --blue-bg: #e6f1fb;
-    --radius: 12px; --radius-sm: 8px;
+    --purple: #534ab7; --radius: 12px; --radius-sm: 8px;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -30,6 +30,15 @@
   .env-badge { font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 500; }
   .env-sandbox { background: var(--amber-bg); color: var(--amber); }
   .env-production { background: var(--green-bg); color: var(--green); }
+
+  /* Nav */
+  .main-nav { background: var(--surface); border-bottom: 0.5px solid var(--border); padding: 0 2rem; display: flex; gap: 4px; overflow-x: auto; }
+  .nav-tab { padding: 0 16px; height: 44px; display: flex; align-items: center; font-size: 13px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; background: none; border-left: none; border-right: none; border-top: none; }
+  .nav-tab.active { color: var(--text); border-bottom-color: var(--green); font-weight: 500; }
+  .nav-tab:hover { color: var(--text); }
+  .page { display: none; }
+  .page.active { display: block; }
+
   main { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
   #connectScreen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; text-align: center; gap: 1.5rem; }
   .connect-icon { width: 64px; height: 64px; background: var(--green-bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
@@ -38,6 +47,8 @@
   #connectScreen p { color: var(--muted); max-width: 400px; line-height: 1.6; }
   #dashboard { display: none; }
   .section-label { font-size: 11px; font-weight: 500; color: var(--hint); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+
+  /* Export */
   .export-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px; }
   .export-bar-left { font-size: 13px; color: var(--muted); }
   .export-bar-right { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -46,6 +57,8 @@
   .export-btn.green { background: var(--green); color: #fff; border-color: transparent; }
   .export-btn.green:hover { background: #1a8a65; }
   .export-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+  /* Modal */
   .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 1rem; }
   .modal { background: var(--surface); border-radius: var(--radius); padding: 1.5rem; width: 100%; max-width: 460px; border: 0.5px solid var(--border); }
   .modal-title { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
@@ -60,23 +73,31 @@
   .date-field { flex: 1; }
   .date-field label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; }
   .date-field input { width: 100%; height: 34px; border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 0 10px; background: var(--surface2); color: var(--text); font-size: 13px; outline: none; }
-  .date-field input:focus { border-color: var(--blue); }
   .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.25rem; padding-top: 1rem; border-top: 0.5px solid var(--border); }
+
+  /* Metrics */
   .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 1.75rem; }
   .metric { background: var(--surface2); border-radius: var(--radius-sm); padding: 1rem; }
   .metric-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
   .metric-value { font-size: 22px; font-weight: 500; }
   .metric-sub { font-size: 11px; color: var(--hint); margin-top: 4px; }
   .green { color: var(--green); } .red { color: var(--red); } .amber { color: var(--amber); } .blue { color: var(--blue); }
+
+  /* Cards */
   .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1.25rem; }
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 1.5rem; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 1rem; }
   .chart-wrap { position: relative; height: 220px; width: 100%; }
+
+  /* Accounts */
   .account-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 0.5px solid var(--border); }
   .account-item:last-child { border-bottom: none; }
   .account-name { font-size: 13px; font-weight: 500; }
   .account-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
   .account-balance { font-size: 15px; font-weight: 500; text-align: right; }
   .account-type { font-size: 10px; color: var(--hint); margin-top: 2px; }
+
+  /* Transactions */
   .txn-controls { display: flex; gap: 8px; margin-bottom: 14px; align-items: center; flex-wrap: wrap; }
   .txn-search { flex: 1; min-width: 160px; height: 34px; border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 0 12px; background: var(--surface2); color: var(--text); font-size: 13px; outline: none; }
   .txn-search:focus { border-color: var(--blue); }
@@ -90,10 +111,14 @@
   .txn-amt-neg { color: var(--green); font-weight: 500; }
   .txn-merchant { font-weight: 500; }
   .txn-date { color: var(--muted); font-size: 12px; }
+
+  /* Banks */
   .bank-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 0.5px solid var(--border); }
   .bank-item:last-child { border-bottom: none; }
   .bank-name { font-size: 13px; font-weight: 500; }
   .bank-id { font-size: 11px; color: var(--hint); margin-top: 2px; font-family: monospace; }
+
+  /* Buttons */
   .btn { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 16px; border-radius: var(--radius-sm); border: 0.5px solid var(--border); background: transparent; color: var(--text); font-size: 13px; cursor: pointer; transition: background 0.15s; }
   .btn:hover { background: var(--surface2); }
   .btn-primary { background: var(--green); color: #fff; border-color: transparent; font-size: 14px; height: 44px; padding: 0 24px; }
@@ -101,6 +126,7 @@
   .btn-sm { height: 28px; padding: 0 10px; font-size: 11px; }
   .btn-danger { color: var(--red); }
   .btn-danger:hover { background: var(--red-bg); }
+
   .status { text-align: center; padding: 2rem; color: var(--muted); font-size: 14px; }
   .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -109,7 +135,36 @@
   #toast.success { border-left: 3px solid var(--green); }
   #toast.error { border-left: 3px solid var(--red); }
   .error-banner { background: var(--red-bg); color: var(--red); border-radius: var(--radius-sm); padding: 12px 16px; font-size: 13px; margin-bottom: 1rem; display: none; }
-  @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } main { padding: 1rem; } header { padding: 0 1rem; } }
+
+  /* Retirement */
+  .ret-tabs { display: flex; gap: 6px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .ret-tab { padding: 7px 16px; border-radius: var(--radius-sm); border: 0.5px solid var(--border); background: transparent; color: var(--muted); font-size: 13px; cursor: pointer; transition: all 0.15s; }
+  .ret-tab.active { background: var(--surface2); color: var(--text); font-weight: 500; border-color: var(--border); }
+  .ret-panel { display: none; }
+  .ret-panel.active { display: block; }
+  .slider-row { margin-bottom: 1rem; }
+  .slider-label { display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 6px; }
+  .slider-label span:first-child { color: var(--muted); }
+  .slider-val { font-weight: 500; font-size: 13px; }
+  input[type=range] { width: 100%; accent-color: var(--green); }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1rem; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 12px; color: var(--muted); }
+  .field input, .field select { height: 34px; border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 0 10px; background: var(--surface2); color: var(--text); font-size: 13px; outline: none; width: 100%; }
+  .field input:focus, .field select:focus { border-color: var(--blue); }
+  .result-box { background: var(--surface2); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 1rem; }
+  .result-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 0.5px solid var(--border); font-size: 13px; }
+  .result-row:last-child { border-bottom: none; font-weight: 500; font-size: 14px; padding-top: 10px; }
+  .insight { background: var(--blue-bg); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 13px; color: var(--blue); margin-bottom: 1rem; line-height: 1.5; }
+  .alloc-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+  .alloc-bar-bg { flex: 1; height: 8px; border-radius: 4px; background: var(--surface2); overflow: hidden; }
+  .alloc-bar { height: 100%; border-radius: 4px; transition: width 0.3s; }
+  .alloc-name { min-width: 130px; color: var(--muted); }
+  .alloc-pct { min-width: 36px; text-align: right; font-weight: 500; }
+  .legend-row { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 10px; font-size: 12px; color: var(--muted); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 4px; vertical-align: middle; }
+
+  @media (max-width: 640px) { .two-col, .three-col, .field-row { grid-template-columns: 1fr; } main { padding: 1rem; } header { padding: 0 1rem; } .main-nav { padding: 0 1rem; } }
 </style>
 </head>
 <body>
@@ -122,7 +177,13 @@
   </div>
 </header>
 
+<nav class="main-nav" id="mainNav" style="display:none;">
+  <button class="nav-tab active" onclick="showPage('dashboard')">Dashboard</button>
+  <button class="nav-tab" onclick="showPage('retirement')">Retirement</button>
+</nav>
+
 <main>
+<!-- Connect screen -->
 <div id="connectScreen">
   <div class="connect-icon">
     <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
@@ -133,7 +194,8 @@
   <p style="font-size:12px;color:var(--hint);">Bank-level 256-bit encryption · Read-only access · Plaid never shares your credentials</p>
 </div>
 
-<div id="dashboard">
+<!-- Dashboard page -->
+<div id="dashboard" class="page active">
   <div class="error-banner" id="errorBanner"></div>
   <div class="export-bar">
     <div class="export-bar-left" id="exportSummaryText"></div>
@@ -157,24 +219,12 @@
     <div class="metric"><div class="metric-label">Accounts linked</div><div class="metric-value" id="mAcctCount">—</div><div class="metric-sub">across all banks</div></div>
   </div>
   <div class="two-col">
-    <div class="card">
-      <div class="section-label">spending by category (30d)</div>
-      <div class="chart-wrap"><canvas id="catChart" role="img" aria-label="Donut chart of spending by category">Category spending</canvas></div>
-    </div>
-    <div class="card">
-      <div class="section-label">daily spending (30d)</div>
-      <div class="chart-wrap"><canvas id="dailyChart" role="img" aria-label="Bar chart of daily spending">Daily spending</canvas></div>
-    </div>
+    <div class="card"><div class="section-label">spending by category (30d)</div><div class="chart-wrap"><canvas id="catChart" role="img" aria-label="Donut chart of spending by category">Category spending</canvas></div></div>
+    <div class="card"><div class="section-label">daily spending (30d)</div><div class="chart-wrap"><canvas id="dailyChart" role="img" aria-label="Bar chart of daily spending">Daily spending</canvas></div></div>
   </div>
   <div class="two-col">
-    <div class="card">
-      <div class="section-label">accounts &amp; balances</div>
-      <div id="accountsList"><div class="status"><span class="spinner"></span></div></div>
-    </div>
-    <div class="card">
-      <div class="section-label">linked institutions</div>
-      <div id="banksList"><div class="status">No banks linked</div></div>
-    </div>
+    <div class="card"><div class="section-label">accounts &amp; balances</div><div id="accountsList"><div class="status"><span class="spinner"></span></div></div></div>
+    <div class="card"><div class="section-label">linked institutions</div><div id="banksList"><div class="status">No banks linked</div></div></div>
   </div>
   <div class="card" style="margin-bottom:2rem;">
     <div class="section-label">recent transactions</div>
@@ -192,8 +242,160 @@
     </div>
   </div>
 </div>
+
+<!-- Retirement page -->
+<div id="retirement" class="page">
+  <div class="section-label" style="margin-bottom:1rem;">retirement planning</div>
+  <div class="ret-tabs">
+    <button class="ret-tab active" onclick="switchRetTab('growth')">Retirement growth</button>
+    <button class="ret-tab" onclick="switchRetTab('roth')">Roth vs traditional</button>
+    <button class="ret-tab" onclick="switchRetTab('ss')">Social Security</button>
+    <button class="ret-tab" onclick="switchRetTab('alloc')">Investment mix</button>
+    <button class="ret-tab" onclick="switchRetTab('fire')">FIRE calculator</button>
+  </div>
+
+  <!-- Growth -->
+  <div class="ret-panel active" id="rpanel-growth">
+    <div class="two-col">
+      <div class="card">
+        <div class="section-label">your details</div>
+        <div class="slider-row"><div class="slider-label"><span>Current age</span><span class="slider-val" id="g-age-val">42</span></div><input type="range" min="20" max="70" value="42" step="1" oninput="gSync('age',this.value);calcGrowth()"></div>
+        <div class="slider-row"><div class="slider-label"><span>Retirement age</span><span class="slider-val" id="g-ret-val">65</span></div><input type="range" min="50" max="80" value="65" step="1" oninput="gSync('ret',this.value);calcGrowth()"></div>
+        <div class="slider-row"><div class="slider-label"><span>Current savings</span><span class="slider-val" id="g-saved-val">$45,000</span></div><input type="range" min="0" max="500000" value="45000" step="1000" oninput="gSync('saved',this.value);calcGrowth()"></div>
+        <div class="slider-row"><div class="slider-label"><span>Monthly contribution</span><span class="slider-val" id="g-contrib-val">$1,200</span></div><input type="range" min="0" max="5000" value="1200" step="50" oninput="gSync('contrib',this.value);calcGrowth()"></div>
+        <div class="slider-row"><div class="slider-label"><span>Expected return</span><span class="slider-val" id="g-rate-val">7.0%</span></div><input type="range" min="1" max="15" value="7" step="0.5" oninput="gSync('rate',this.value);calcGrowth()"></div>
+        <div class="slider-row"><div class="slider-label"><span>Inflation rate</span><span class="slider-val" id="g-inf-val">3.0%</span></div><input type="range" min="0" max="8" value="3" step="0.5" oninput="gSync('inf',this.value);calcGrowth()"></div>
+      </div>
+      <div>
+        <div class="three-col">
+          <div class="metric"><div class="metric-label">At retirement</div><div class="metric-value green" id="g-total">—</div><div class="metric-sub">nominal</div></div>
+          <div class="metric"><div class="metric-label">In today's $</div><div class="metric-value blue" id="g-real">—</div><div class="metric-sub">inflation-adj.</div></div>
+          <div class="metric"><div class="metric-label">Monthly income</div><div class="metric-value" id="g-monthly">—</div><div class="metric-sub">4% rule</div></div>
+        </div>
+        <div class="card" style="padding:1rem">
+          <div class="legend-row"><span><span class="legend-dot" style="background:#1d9e75"></span>Balance</span><span><span class="legend-dot" style="background:#185fa5"></span>Contributions</span></div>
+          <div class="chart-wrap" style="height:200px"><canvas id="growthChart" role="img" aria-label="Line chart showing retirement savings growth">Retirement growth</canvas></div>
+        </div>
+        <div class="insight" id="g-insight"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Roth -->
+  <div class="ret-panel" id="rpanel-roth">
+    <div class="two-col">
+      <div class="card">
+        <div class="section-label">inputs</div>
+        <div class="field-row">
+          <div class="field"><label>Current age</label><input type="number" id="r-age" value="42" min="18" max="70" oninput="calcRoth()"></div>
+          <div class="field"><label>Retirement age</label><input type="number" id="r-ret" value="65" min="50" max="80" oninput="calcRoth()"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Annual contribution</label><input type="number" id="r-contrib" value="7000" oninput="calcRoth()"></div>
+          <div class="field"><label>Current tax rate %</label><input type="number" id="r-taxnow" value="22" min="10" max="50" oninput="calcRoth()"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Retirement tax rate %</label><input type="number" id="r-taxret" value="18" min="0" max="50" oninput="calcRoth()"></div>
+          <div class="field"><label>Expected return %</label><input type="number" id="r-rate" value="7" step="0.5" oninput="calcRoth()"></div>
+        </div>
+      </div>
+      <div>
+        <div class="two-col">
+          <div class="metric"><div class="metric-label">Roth (after-tax)</div><div class="metric-value green" id="r-roth-val">—</div><div class="metric-sub">tax-free withdrawals</div></div>
+          <div class="metric"><div class="metric-label">Traditional (after-tax)</div><div class="metric-value blue" id="r-trad-val">—</div><div class="metric-sub">taxed at withdrawal</div></div>
+        </div>
+        <div class="insight" id="r-insight"></div>
+        <div class="card" style="padding:1rem">
+          <div class="legend-row"><span><span class="legend-dot" style="background:#1d9e75"></span>Roth IRA</span><span><span class="legend-dot" style="background:#185fa5"></span>Traditional IRA</span></div>
+          <div class="chart-wrap" style="height:190px"><canvas id="rothChart" role="img" aria-label="Bar chart comparing Roth vs Traditional IRA">Roth vs Traditional</canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Social Security -->
+  <div class="ret-panel" id="rpanel-ss">
+    <div class="two-col">
+      <div class="card">
+        <div class="section-label">your details</div>
+        <div class="slider-row"><div class="slider-label"><span>Current age</span><span class="slider-val" id="ss-age-val">42</span></div><input type="range" min="30" max="61" value="42" step="1" oninput="ssSync('age',this.value);calcSS()"></div>
+        <div class="slider-row"><div class="slider-label"><span>Monthly benefit at 67</span><span class="slider-val" id="ss-benefit-val">$2,400</span></div><input type="range" min="500" max="4000" value="2400" step="50" oninput="ssSync('benefit',this.value);calcSS()"></div>
+        <div class="slider-row"><div class="slider-label"><span>Life expectancy</span><span class="slider-val" id="ss-life-val">85</span></div><input type="range" min="70" max="100" value="85" step="1" oninput="ssSync('life',this.value);calcSS()"></div>
+        <div class="section-label" style="margin-top:1rem">claim age comparison</div>
+        <div class="result-box">
+          <div class="result-row"><span>Claim at 62 (early)</span><span class="red" id="ss-62">—</span></div>
+          <div class="result-row"><span>Claim at 67 (full)</span><span class="blue" id="ss-67">—</span></div>
+          <div class="result-row"><span>Claim at 70 (delayed)</span><span class="green" id="ss-70">—</span></div>
+          <div class="result-row"><span>Best strategy</span><span id="ss-best" style="font-weight:500">—</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="three-col">
+          <div class="metric"><div class="metric-label">Lifetime at 62</div><div class="metric-value red" id="ss-t62">—</div></div>
+          <div class="metric"><div class="metric-label">Lifetime at 67</div><div class="metric-value blue" id="ss-t67">—</div></div>
+          <div class="metric"><div class="metric-label">Lifetime at 70</div><div class="metric-value green" id="ss-t70">—</div></div>
+        </div>
+        <div class="card" style="padding:1rem">
+          <div class="legend-row"><span><span class="legend-dot" style="background:#d85a30"></span>Age 62</span><span><span class="legend-dot" style="background:#185fa5"></span>Age 67</span><span><span class="legend-dot" style="background:#1d9e75"></span>Age 70</span></div>
+          <div class="chart-wrap" style="height:200px"><canvas id="ssChart" role="img" aria-label="Line chart comparing cumulative Social Security benefits">Social Security comparison</canvas></div>
+        </div>
+        <div class="insight" id="ss-insight"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Allocation -->
+  <div class="ret-panel" id="rpanel-alloc">
+    <div class="two-col">
+      <div class="card">
+        <div class="section-label">your profile</div>
+        <div class="slider-row"><div class="slider-label"><span>Your age</span><span class="slider-val" id="a-age-val">42</span></div><input type="range" min="20" max="70" value="42" step="1" oninput="aSync('age',this.value);calcAlloc()"></div>
+        <div class="field-row" style="margin-top:4px">
+          <div class="field"><label>Risk tolerance</label><select id="a-risk" onchange="calcAlloc()"><option value="conservative">Conservative</option><option value="moderate" selected>Moderate</option><option value="aggressive">Aggressive</option></select></div>
+          <div class="field"><label>Time horizon</label><select id="a-horizon" onchange="calcAlloc()"><option value="short">Under 10 years</option><option value="medium" selected>10–20 years</option><option value="long">20+ years</option></select></div>
+        </div>
+        <div class="section-label" style="margin-top:1rem">recommended allocation</div>
+        <div id="allocBars"></div>
+        <div class="insight" id="a-insight"></div>
+      </div>
+      <div class="card" style="padding:1rem">
+        <div class="section-label" style="margin-bottom:10px">portfolio mix</div>
+        <div class="chart-wrap" style="height:220px"><canvas id="allocChart" role="img" aria-label="Donut chart of recommended investment allocation">Allocation mix</canvas></div>
+        <div class="legend-row" id="allocLegend" style="margin-top:12px;justify-content:center"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIRE -->
+  <div class="ret-panel" id="rpanel-fire">
+    <div class="two-col">
+      <div class="card">
+        <div class="section-label">FIRE inputs</div>
+        <div class="slider-row"><div class="slider-label"><span>Current age</span><span class="slider-val" id="f-age-val">42</span></div><input type="range" min="20" max="60" value="42" step="1" oninput="fSync('age',this.value);calcFire()"></div>
+        <div class="slider-row"><div class="slider-label"><span>Current savings</span><span class="slider-val" id="f-saved-val">$45,000</span></div><input type="range" min="0" max="2000000" value="45000" step="5000" oninput="fSync('saved',this.value);calcFire()"></div>
+        <div class="slider-row"><div class="slider-label"><span>Annual savings</span><span class="slider-val" id="f-annual-val">$24,000</span></div><input type="range" min="0" max="150000" value="24000" step="1000" oninput="fSync('annual',this.value);calcFire()"></div>
+        <div class="slider-row"><div class="slider-label"><span>Annual expenses in retirement</span><span class="slider-val" id="f-exp-val">$60,000</span></div><input type="range" min="10000" max="300000" value="60000" step="1000" oninput="fSync('exp',this.value);calcFire()"></div>
+        <div class="slider-row"><div class="slider-label"><span>Expected return</span><span class="slider-val" id="f-rate-val">7.0%</span></div><input type="range" min="1" max="15" value="7" step="0.5" oninput="fSync('rate',this.value);calcFire()"></div>
+        <div class="slider-row"><div class="slider-label"><span>Safe withdrawal rate</span><span class="slider-val" id="f-swr-val">4.0%</span></div><input type="range" min="2" max="6" value="4" step="0.25" oninput="fSync('swr',this.value);calcFire()"></div>
+      </div>
+      <div>
+        <div class="three-col">
+          <div class="metric"><div class="metric-label">FIRE number</div><div class="metric-value green" id="f-target">—</div><div class="metric-sub">savings needed</div></div>
+          <div class="metric"><div class="metric-label">Years to FIRE</div><div class="metric-value blue" id="f-years">—</div><div class="metric-sub">at current pace</div></div>
+          <div class="metric"><div class="metric-label">FIRE age</div><div class="metric-value amber" id="f-fireage">—</div><div class="metric-sub">projected</div></div>
+        </div>
+        <div class="card" style="padding:1rem">
+          <div class="legend-row"><span><span class="legend-dot" style="background:#1d9e75"></span>Savings</span><span><span class="legend-dot" style="background:#d85a30"></span>FIRE target</span></div>
+          <div class="chart-wrap" style="height:200px"><canvas id="fireChart" role="img" aria-label="Line chart showing path to financial independence">FIRE path</canvas></div>
+        </div>
+        <div class="insight" id="f-insight"></div>
+      </div>
+    </div>
+  </div>
+</div>
 </main>
 
+<!-- Export Modal -->
 <div class="modal-backdrop" id="exportModal" style="display:none;" onclick="if(event.target===this)closeExportModal()">
   <div class="modal">
     <div class="modal-title">Export to Excel</div>
@@ -223,280 +425,330 @@
 <div id="toast"></div>
 
 <script>
-let allTransactions = [], allAccounts = [], catChartInst = null, dailyChartInst = null;
+let allTransactions=[], allAccounts=[], catChartInst=null, dailyChartInst=null;
+const retCharts={};
+const gg=id=>document.getElementById(id);
+const fmtM=n=>'$'+(Math.abs(n)>=1e6?(Math.abs(n)/1e6).toFixed(2)+'M':Math.abs(n)>=1000?Math.round(Math.abs(n)/1000)+'K':Math.round(Math.abs(n)).toLocaleString());
+const fmtK=n=>'$'+Math.round(Math.abs(n)).toLocaleString();
 
+// ── Page nav ──────────────────────────────────────────────────────────────────
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',['dashboard','retirement'][i]===page));
+  gg(page).classList.add('active');
+  if(page==='retirement') { calcGrowth(); }
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
 async function init() {
   try {
-    const h = await fetch('/api/health').then(r => r.json());
-    const badge = document.getElementById('envBadge');
-    badge.textContent = h.env;
-    badge.className = 'env-badge ' + (h.env === 'production' ? 'env-production' : 'env-sandbox');
-    const accts = await fetch('/api/accounts').then(r => r.json());
-    if (accts.accounts && accts.accounts.length > 0) { showDashboard(); await refreshAll(); }
-  } catch(e) { showError('Cannot reach server.'); }
-  const today = new Date().toISOString().slice(0,10);
-  const ago90 = new Date(Date.now() - 90*86400000).toISOString().slice(0,10);
-  document.getElementById('exportTo').value = today;
-  document.getElementById('exportFrom').value = ago90;
+    const h=await fetch('/api/health').then(r=>r.json());
+    const badge=gg('envBadge');
+    badge.textContent=h.env;
+    badge.className='env-badge '+(h.env==='production'?'env-production':'env-sandbox');
+    const accts=await fetch('/api/accounts').then(r=>r.json());
+    if(accts.accounts&&accts.accounts.length>0){showDashboard();await refreshAll();}
+  } catch(e){showError('Cannot reach server.');}
+  const today=new Date().toISOString().slice(0,10);
+  const ago90=new Date(Date.now()-90*86400000).toISOString().slice(0,10);
+  gg('exportTo').value=today; gg('exportFrom').value=ago90;
 }
 
 async function openLinkHandler() {
   try {
-    const { link_token } = await fetch('/api/create_link_token', { method: 'POST' }).then(r => r.json());
-    const handler = Plaid.create({
-      token: link_token,
-      onSuccess: async (public_token, metadata) => {
-        const institution = metadata.institution?.name || 'Bank';
-        const res = await fetch('/api/exchange_token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ public_token, institution_name: institution })
-        }).then(r => r.json());
-        if (res.error) { showToast('Connection failed: ' + res.error, 'error'); return; }
-        showToast(institution + ' connected!', 'success');
-        showDashboard();
-        await refreshAll();
+    const {link_token}=await fetch('/api/create_link_token',{method:'POST'}).then(r=>r.json());
+    const handler=Plaid.create({
+      token:link_token,
+      onSuccess:async(public_token,metadata)=>{
+        const institution=metadata.institution?.name||'Bank';
+        const res=await fetch('/api/exchange_token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({public_token,institution_name:institution})}).then(r=>r.json());
+        if(res.error){showToast('Connection failed: '+res.error,'error');return;}
+        showToast(institution+' connected!','success');
+        showDashboard(); await refreshAll();
       },
-      onExit: (err) => { if (err) showToast('Link exited: ' + err.error_message, 'error'); }
+      onExit:(err)=>{if(err)showToast('Link exited: '+err.error_message,'error');}
     });
     handler.open();
-  } catch(e) { showToast('Failed to open Plaid Link. Check your API keys.', 'error'); }
+  } catch(e){showToast('Failed to open Plaid Link. Check your API keys.','error');}
 }
 
 function showDashboard() {
-  document.getElementById('connectScreen').style.display = 'none';
-  document.getElementById('dashboard').style.display = 'block';
+  gg('connectScreen').style.display='none';
+  gg('mainNav').style.display='flex';
+  gg('dashboard').style.display='block';
 }
 
-async function refreshAll() { await Promise.all([loadAccounts(), loadTransactions()]); }
+async function refreshAll(){await Promise.all([loadAccounts(),loadTransactions()]);}
 
-async function loadAccounts() {
-  const data = await fetch('/api/accounts').then(r => r.json());
-  allAccounts = data.accounts || [];
-  renderAccounts(); renderBanks(); updateMetricAccounts();
+async function loadAccounts(){
+  const data=await fetch('/api/accounts').then(r=>r.json());
+  allAccounts=data.accounts||[];
+  renderAccounts();renderBanks();updateMetricAccounts();
 }
 
-async function loadTransactions() {
-  const data = await fetch('/api/transactions').then(r => r.json());
-  allTransactions = data.transactions || [];
-  renderTransactions(allTransactions); renderCharts(); updateMetricSpend(); populateFilters(); updateExportSummary();
+async function loadTransactions(){
+  const data=await fetch('/api/transactions').then(r=>r.json());
+  allTransactions=data.transactions||[];
+  renderTransactions(allTransactions);renderCharts();updateMetricSpend();populateFilters();updateExportSummary();
 }
 
-function renderAccounts() {
-  const el = document.getElementById('accountsList');
-  if (!allAccounts.length) { el.innerHTML = '<div class="status">No accounts found</div>'; return; }
-  el.innerHTML = allAccounts.map(a => {
-    const bal = a.balances.current ?? a.balances.available ?? 0;
-    const isCredit = a.type === 'credit';
-    return `<div class="account-item">
-      <div><div class="account-name">${esc(a.name)}</div><div class="account-sub">${esc(a.institution)} · ****${esc(a.mask||'????')}</div></div>
-      <div><div class="account-balance ${isCredit?'red':'green'}">${isCredit?'-':''}${fmt(bal)}</div><div class="account-type">${a.subtype||a.type}</div></div>
-    </div>`;
+function renderAccounts(){
+  const el=gg('accountsList');
+  if(!allAccounts.length){el.innerHTML='<div class="status">No accounts found</div>';return;}
+  el.innerHTML=allAccounts.map(a=>{
+    const bal=a.balances.current??a.balances.available??0;
+    const isCredit=a.type==='credit';
+    return `<div class="account-item"><div><div class="account-name">${esc(a.name)}</div><div class="account-sub">${esc(a.institution)} · ****${esc(a.mask||'????')}</div></div><div><div class="account-balance ${isCredit?'red':'green'}">${isCredit?'-':''}${fmtK(bal)}</div><div class="account-type">${a.subtype||a.type}</div></div></div>`;
   }).join('');
 }
 
-function renderBanks() {
-  const el = document.getElementById('banksList');
-  const items = [...new Map(allAccounts.map(a => [a.itemId, a])).values()];
-  if (!items.length) { el.innerHTML = '<div class="status">No banks linked</div>'; return; }
-  el.innerHTML = items.map(a => `<div class="bank-item">
-    <div><div class="bank-name">${esc(a.institution)}</div><div class="bank-id">${esc(a.itemId?.slice(0,24))}...</div></div>
-    <button class="btn btn-sm btn-danger" onclick="removeBank('${esc(a.itemId)}')">Remove</button>
-  </div>`).join('');
+function renderBanks(){
+  const el=gg('banksList');
+  const items=[...new Map(allAccounts.map(a=>[a.itemId,a])).values()];
+  if(!items.length){el.innerHTML='<div class="status">No banks linked</div>';return;}
+  el.innerHTML=items.map(a=>`<div class="bank-item"><div><div class="bank-name">${esc(a.institution)}</div><div class="bank-id">${esc(a.itemId?.slice(0,24))}...</div></div><button class="btn btn-sm btn-danger" onclick="removeBank('${esc(a.itemId)}')">Remove</button></div>`).join('');
 }
 
-async function removeBank(itemId) {
-  if (!confirm('Remove this bank?')) return;
-  const res = await fetch('/api/item/' + itemId, { method: 'DELETE' }).then(r => r.json());
-  if (res.success) { showToast('Bank removed', 'success'); await refreshAll(); }
-  else showToast('Error: ' + res.error, 'error');
+async function removeBank(itemId){
+  if(!confirm('Remove this bank?'))return;
+  const res=await fetch('/api/item/'+itemId,{method:'DELETE'}).then(r=>r.json());
+  if(res.success){showToast('Bank removed','success');await refreshAll();}
+  else showToast('Error: '+res.error,'error');
 }
 
-function renderTransactions(txns) {
-  const tbody = document.getElementById('txnBody');
-  if (!txns.length) { tbody.innerHTML = '<tr><td colspan="5" class="status">No transactions found</td></tr>'; return; }
-  tbody.innerHTML = txns.slice(0,200).map(t => {
-    const cat = formatCat(t.personal_finance_category?.primary || t.category?.[0] || 'Other');
-    const pos = t.amount > 0;
-    return `<tr>
-      <td><div class="txn-merchant">${esc(t.merchant_name||t.name)}</div></td>
-      <td><span class="cat-badge">${esc(cat)}</span></td>
-      <td style="color:var(--muted);font-size:12px;">${esc(t.institution||'')}</td>
-      <td class="txn-date">${t.date}</td>
-      <td style="text-align:right;" class="${pos?'txn-amt-pos':'txn-amt-neg'}">${pos?'':'+'}${fmt(Math.abs(t.amount))}</td>
-    </tr>`;
+function renderTransactions(txns){
+  const tbody=gg('txnBody');
+  if(!txns.length){tbody.innerHTML='<tr><td colspan="5" class="status">No transactions found</td></tr>';return;}
+  tbody.innerHTML=txns.slice(0,200).map(t=>{
+    const cat=formatCat(t.personal_finance_category?.primary||t.category?.[0]||'Other');
+    const pos=t.amount>0;
+    return `<tr><td><div class="txn-merchant">${esc(t.merchant_name||t.name)}</div></td><td><span class="cat-badge">${esc(cat)}</span></td><td style="color:var(--muted);font-size:12px;">${esc(t.institution||'')}</td><td class="txn-date">${t.date}</td><td style="text-align:right;" class="${pos?'txn-amt-pos':'txn-amt-neg'}">${pos?'':'+'}${fmtK(Math.abs(t.amount))}</td></tr>`;
   }).join('');
 }
 
-function filterTransactions() {
-  const q = document.getElementById('txnSearch').value.toLowerCase();
-  const cat = document.getElementById('catFilter').value;
-  const bank = document.getElementById('bankFilter').value;
-  renderTransactions(allTransactions.filter(t => {
-    const name = (t.merchant_name||t.name||'').toLowerCase();
-    const tCat = t.personal_finance_category?.primary || t.category?.[0] || '';
-    return (!q||name.includes(q)) && (!cat||tCat===cat) && (!bank||t.institution===bank);
+function filterTransactions(){
+  const q=gg('txnSearch').value.toLowerCase(),cat=gg('catFilter').value,bank=gg('bankFilter').value;
+  renderTransactions(allTransactions.filter(t=>{
+    const name=(t.merchant_name||t.name||'').toLowerCase();
+    const tCat=t.personal_finance_category?.primary||t.category?.[0]||'';
+    return(!q||name.includes(q))&&(!cat||tCat===cat)&&(!bank||t.institution===bank);
   }));
 }
 
-function populateFilters() {
-  const cats = [...new Set(allTransactions.map(t => t.personal_finance_category?.primary || t.category?.[0] || 'Other'))].sort();
-  const banks = [...new Set(allTransactions.map(t => t.institution||''))].filter(Boolean).sort();
-  document.getElementById('catFilter').innerHTML = '<option value="">All categories</option>' + cats.map(c => `<option value="${esc(c)}">${esc(formatCat(c))}</option>`).join('');
-  document.getElementById('bankFilter').innerHTML = '<option value="">All banks</option>' + banks.map(b => `<option value="${esc(b)}">${esc(b)}</option>`).join('');
+function populateFilters(){
+  const cats=[...new Set(allTransactions.map(t=>t.personal_finance_category?.primary||t.category?.[0]||'Other'))].sort();
+  const banks=[...new Set(allTransactions.map(t=>t.institution||''))].filter(Boolean).sort();
+  gg('catFilter').innerHTML='<option value="">All categories</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(formatCat(c))}</option>`).join('');
+  gg('bankFilter').innerHTML='<option value="">All banks</option>'+banks.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join('');
 }
 
-function updateMetricAccounts() {
-  const total = allAccounts.reduce((s,a) => a.type==='credit' ? s-(a.balances.current??0) : s+(a.balances.current??0), 0);
-  document.getElementById('mNetBal').textContent = fmt(total);
-  document.getElementById('mNetBal').className = 'metric-value ' + (total>=0?'green':'red');
-  document.getElementById('mAcctCount').textContent = allAccounts.length;
+function updateMetricAccounts(){
+  const total=allAccounts.reduce((s,a)=>a.type==='credit'?s-(a.balances.current??0):s+(a.balances.current??0),0);
+  gg('mNetBal').textContent=fmtK(total);
+  gg('mNetBal').className='metric-value '+(total>=0?'green':'red');
+  gg('mAcctCount').textContent=allAccounts.length;
 }
 
-function updateMetricSpend() {
-  const cutoff = new Date(Date.now() - 30*86400000);
-  const recent = allTransactions.filter(t => new Date(t.date) >= cutoff);
-  document.getElementById('mSpent').textContent = fmt(recent.filter(t=>t.amount>0).reduce((s,t)=>s+t.amount,0));
-  document.getElementById('mIncome').textContent = fmt(recent.filter(t=>t.amount<0).reduce((s,t)=>s+Math.abs(t.amount),0));
-  document.getElementById('mTxnCount').textContent = recent.length;
+function updateMetricSpend(){
+  const cutoff=new Date(Date.now()-30*86400000);
+  const recent=allTransactions.filter(t=>new Date(t.date)>=cutoff);
+  gg('mSpent').textContent=fmtK(recent.filter(t=>t.amount>0).reduce((s,t)=>s+t.amount,0));
+  gg('mIncome').textContent=fmtK(recent.filter(t=>t.amount<0).reduce((s,t)=>s+Math.abs(t.amount),0));
+  gg('mTxnCount').textContent=recent.length;
 }
 
-function updateExportSummary() {
-  const el = document.getElementById('exportSummaryText');
-  if (el) el.textContent = allTransactions.length + ' transactions · ' + allAccounts.length + ' accounts ready to export';
+function updateExportSummary(){
+  const el=gg('exportSummaryText');
+  if(el) el.textContent=allTransactions.length+' transactions · '+allAccounts.length+' accounts ready to export';
 }
 
-const COLORS = ['#378ADD','#1D9E75','#D85A30','#534AB7','#BA7517','#D4537E','#0F6E56','#E24B4A','#639922','#5DCAA5'];
+const COLORS=['#378ADD','#1D9E75','#D85A30','#534AB7','#BA7517','#D4537E','#0F6E56','#E24B4A','#639922','#5DCAA5'];
 
-function renderCharts() {
-  const cutoff = new Date(Date.now() - 30*86400000);
-  const recent = allTransactions.filter(t => new Date(t.date)>=cutoff && t.amount>0);
-  const byCat = {};
-  recent.forEach(t => { const c = formatCat(t.personal_finance_category?.primary||t.category?.[0]||'Other'); byCat[c]=(byCat[c]||0)+t.amount; });
-  const sorted = Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  if (catChartInst) catChartInst.destroy();
-  catChartInst = new Chart(document.getElementById('catChart'), {
-    type: 'doughnut',
-    data: { labels: sorted.map(([k])=>k), datasets: [{ data: sorted.map(([,v])=>Math.round(v)), backgroundColor: COLORS, borderWidth: 2, borderColor: '#fff' }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font:{size:11}, boxWidth:12, padding:8 } }, tooltip: { callbacks: { label: ctx=>` $${ctx.parsed.toLocaleString()}` } } } }
-  });
-  const byDay = {};
-  recent.forEach(t => { byDay[t.date]=(byDay[t.date]||0)+t.amount; });
-  const days = Object.keys(byDay).sort().slice(-30);
-  if (dailyChartInst) dailyChartInst.destroy();
-  dailyChartInst = new Chart(document.getElementById('dailyChart'), {
-    type: 'bar',
-    data: { labels: days.map(d=>d.slice(5)), datasets: [{ label:'Spent', data: days.map(d=>Math.round(byDay[d])), backgroundColor:'#378ADD', borderRadius:3 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}}, scales: { x:{ticks:{font:{size:9},maxRotation:45,autoSkip:true,maxTicksLimit:10},grid:{display:false}}, y:{ticks:{font:{size:10},callback:v=>'$'+v},grid:{color:'rgba(128,128,128,0.08)'}} } }
-  });
+function renderCharts(){
+  const cutoff=new Date(Date.now()-30*86400000);
+  const recent=allTransactions.filter(t=>new Date(t.date)>=cutoff&&t.amount>0);
+  const byCat={};
+  recent.forEach(t=>{const c=formatCat(t.personal_finance_category?.primary||t.category?.[0]||'Other');byCat[c]=(byCat[c]||0)+t.amount;});
+  const sorted=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  if(catChartInst)catChartInst.destroy();
+  catChartInst=new Chart(gg('catChart'),{type:'doughnut',data:{labels:sorted.map(([k])=>k),datasets:[{data:sorted.map(([,v])=>Math.round(v)),backgroundColor:COLORS,borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:12,padding:8}},tooltip:{callbacks:{label:ctx=>` $${ctx.parsed.toLocaleString()}`}}}}});
+  const byDay={};
+  recent.forEach(t=>{byDay[t.date]=(byDay[t.date]||0)+t.amount;});
+  const days=Object.keys(byDay).sort().slice(-30);
+  if(dailyChartInst)dailyChartInst.destroy();
+  dailyChartInst=new Chart(gg('dailyChart'),{type:'bar',data:{labels:days.map(d=>d.slice(5)),datasets:[{label:'Spent',data:days.map(d=>Math.round(byDay[d])),backgroundColor:'#378ADD',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9},maxRotation:45,autoSkip:true,maxTicksLimit:10},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>'$'+v},grid:{color:'rgba(128,128,128,0.08)'}}}}});
 }
 
-function openExportModal() { document.getElementById('exportModal').style.display = 'flex'; }
-function closeExportModal() { document.getElementById('exportModal').style.display = 'none'; }
+// ── Export ────────────────────────────────────────────────────────────────────
+function openExportModal(){gg('exportModal').style.display='flex';}
+function closeExportModal(){gg('exportModal').style.display='none';}
 
-function exportCSV() {
-  if (!allTransactions.length) { showToast('No transactions to export', 'error'); return; }
-  const headers = ['Date','Merchant','Category','Amount','Type','Bank'];
-  const rows = allTransactions.map(t => [
-    t.date, t.merchant_name||t.name||'',
-    formatCat(t.personal_finance_category?.primary||t.category?.[0]||'Other'),
-    t.amount.toFixed(2), t.amount>0?'Debit':'Credit', t.institution||''
-  ]);
-  const csv = [headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-  a.download = 'Matt_Dana_Transactions_' + todayStr() + '.csv';
-  a.click();
-  showToast('CSV downloaded!', 'success');
+function exportCSV(){
+  if(!allTransactions.length){showToast('No transactions to export','error');return;}
+  const headers=['Date','Merchant','Category','Amount','Type','Bank'];
+  const rows=allTransactions.map(t=>[t.date,t.merchant_name||t.name||'',formatCat(t.personal_finance_category?.primary||t.category?.[0]||'Other'),t.amount.toFixed(2),t.amount>0?'Debit':'Credit',t.institution||'']);
+  const csv=[headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='Matt_Dana_Transactions_'+todayStr()+'.csv';a.click();
+  showToast('CSV downloaded!','success');
 }
 
-function exportExcel() {
-  if (!allTransactions.length && !allAccounts.length) { showToast('No data to export','error'); return; }
-  const fromDate = document.getElementById('exportFrom').value;
-  const toDate = document.getElementById('exportTo').value;
-  const filtered = allTransactions.filter(t => (!fromDate||t.date>=fromDate) && (!toDate||t.date<=toDate));
-  const wb = XLSX.utils.book_new();
-
-  if (document.getElementById('chkTransactions').checked) {
-    const data = [['Date','Merchant','Category','Subcategory','Amount','Type','Bank']];
-    filtered.forEach(t => data.push([
-      t.date, t.merchant_name||t.name||'',
-      formatCat(t.personal_finance_category?.primary||t.category?.[0]||'Other'),
-      formatCat(t.personal_finance_category?.detailed||t.category?.[1]||''),
-      parseFloat(t.amount.toFixed(2)), t.amount>0?'Debit':'Credit', t.institution||''
-    ]));
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    ws['!cols'] = [{wch:12},{wch:28},{wch:22},{wch:26},{wch:12},{wch:8},{wch:18}];
-    XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
+function exportExcel(){
+  if(!allTransactions.length&&!allAccounts.length){showToast('No data to export','error');return;}
+  const fromDate=gg('exportFrom').value,toDate=gg('exportTo').value;
+  const filtered=allTransactions.filter(t=>(!fromDate||t.date>=fromDate)&&(!toDate||t.date<=toDate));
+  const wb=XLSX.utils.book_new();
+  if(gg('chkTransactions').checked){
+    const data=[['Date','Merchant','Category','Subcategory','Amount','Type','Bank']];
+    filtered.forEach(t=>data.push([t.date,t.merchant_name||t.name||'',formatCat(t.personal_finance_category?.primary||t.category?.[0]||'Other'),formatCat(t.personal_finance_category?.detailed||t.category?.[1]||''),parseFloat(t.amount.toFixed(2)),t.amount>0?'Debit':'Credit',t.institution||'']));
+    const ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[{wch:12},{wch:28},{wch:22},{wch:26},{wch:12},{wch:8},{wch:18}];
+    XLSX.utils.book_append_sheet(wb,ws,'Transactions');
   }
-
-  if (document.getElementById('chkAccounts').checked) {
-    const data = [['Institution','Account Name','Type','Subtype','Mask','Current Balance','Available Balance']];
-    allAccounts.forEach(a => data.push([
-      a.institution||'', a.name||'', a.type||'', a.subtype||'',
-      a.mask?'****'+a.mask:'',
-      parseFloat((a.balances.current??0).toFixed(2)),
-      parseFloat((a.balances.available??0).toFixed(2))
-    ]));
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    ws['!cols'] = [{wch:18},{wch:24},{wch:12},{wch:14},{wch:10},{wch:16},{wch:16}];
-    XLSX.utils.book_append_sheet(wb, ws, 'Accounts & Balances');
+  if(gg('chkAccounts').checked){
+    const data=[['Institution','Account Name','Type','Subtype','Mask','Current Balance','Available Balance']];
+    allAccounts.forEach(a=>data.push([a.institution||'',a.name||'',a.type||'',a.subtype||'',a.mask?'****'+a.mask:'',parseFloat((a.balances.current??0).toFixed(2)),parseFloat((a.balances.available??0).toFixed(2))]));
+    const ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[{wch:18},{wch:24},{wch:12},{wch:14},{wch:10},{wch:16},{wch:16}];
+    XLSX.utils.book_append_sheet(wb,ws,'Accounts & Balances');
   }
-
-  if (document.getElementById('chkSummary').checked) {
-    const byCat = {};
-    filtered.filter(t=>t.amount>0).forEach(t => {
-      const c = formatCat(t.personal_finance_category?.primary||t.category?.[0]||'Other');
-      byCat[c] = (byCat[c]||0) + t.amount;
-    });
-    const total = Object.values(byCat).reduce((s,v)=>s+v,0);
-    const data = [['Category','Total Spent','% of Total','Transaction Count']];
-    Object.entries(byCat).sort((a,b)=>b[1]-a[1]).forEach(([cat,amt]) => {
-      const count = filtered.filter(t=>t.amount>0 && formatCat(t.personal_finance_category?.primary||t.category?.[0]||'Other')===cat).length;
-      data.push([cat, parseFloat(amt.toFixed(2)), parseFloat(((amt/total)*100).toFixed(1)), count]);
-    });
-    data.push(['','','','']);
-    data.push(['TOTAL', parseFloat(total.toFixed(2)), 100, filtered.filter(t=>t.amount>0).length]);
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    ws['!cols'] = [{wch:24},{wch:14},{wch:12},{wch:18}];
-    XLSX.utils.book_append_sheet(wb, ws, 'Spending Summary');
+  if(gg('chkSummary').checked){
+    const byCat={};
+    filtered.filter(t=>t.amount>0).forEach(t=>{const c=formatCat(t.personal_finance_category?.primary||t.category?.[0]||'Other');byCat[c]=(byCat[c]||0)+t.amount;});
+    const total=Object.values(byCat).reduce((s,v)=>s+v,0);
+    const data=[['Category','Total Spent','% of Total','Transaction Count']];
+    Object.entries(byCat).sort((a,b)=>b[1]-a[1]).forEach(([cat,amt])=>{const count=filtered.filter(t=>t.amount>0&&formatCat(t.personal_finance_category?.primary||t.category?.[0]||'Other')===cat).length;data.push([cat,parseFloat(amt.toFixed(2)),parseFloat(((amt/total)*100).toFixed(1)),count]);});
+    data.push(['','','','']);data.push(['TOTAL',parseFloat(total.toFixed(2)),100,filtered.filter(t=>t.amount>0).length]);
+    const ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[{wch:24},{wch:14},{wch:12},{wch:18}];
+    XLSX.utils.book_append_sheet(wb,ws,'Spending Summary');
   }
-
-  if (document.getElementById('chkMonthly').checked) {
-    const byMonth = {};
-    filtered.forEach(t => {
-      const m = t.date.slice(0,7);
-      if (!byMonth[m]) byMonth[m] = {income:0,expenses:0,count:0};
-      if (t.amount<0) byMonth[m].income += Math.abs(t.amount);
-      else byMonth[m].expenses += t.amount;
-      byMonth[m].count++;
-    });
-    const data = [['Month','Income','Expenses','Net Cash Flow','Transactions']];
-    Object.keys(byMonth).sort().forEach(m => {
-      const d = byMonth[m];
-      data.push([m, parseFloat(d.income.toFixed(2)), parseFloat(d.expenses.toFixed(2)), parseFloat((d.income-d.expenses).toFixed(2)), d.count]);
-    });
-    const ws = XLSX.utils.aoa_to_sheet(data);
-    ws['!cols'] = [{wch:12},{wch:14},{wch:14},{wch:16},{wch:14}];
-    XLSX.utils.book_append_sheet(wb, ws, 'Monthly Breakdown');
+  if(gg('chkMonthly').checked){
+    const byMonth={};
+    filtered.forEach(t=>{const m=t.date.slice(0,7);if(!byMonth[m])byMonth[m]={income:0,expenses:0,count:0};if(t.amount<0)byMonth[m].income+=Math.abs(t.amount);else byMonth[m].expenses+=t.amount;byMonth[m].count++;});
+    const data=[['Month','Income','Expenses','Net Cash Flow','Transactions']];
+    Object.keys(byMonth).sort().forEach(m=>{const d=byMonth[m];data.push([m,parseFloat(d.income.toFixed(2)),parseFloat(d.expenses.toFixed(2)),parseFloat((d.income-d.expenses).toFixed(2)),d.count]);});
+    const ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[{wch:12},{wch:14},{wch:14},{wch:16},{wch:14}];
+    XLSX.utils.book_append_sheet(wb,ws,'Monthly Breakdown');
   }
-
-  XLSX.writeFile(wb, 'Matt_Dana_Finance_' + todayStr() + '.xlsx');
-  showToast('Excel file downloaded!', 'success');
-  closeExportModal();
+  XLSX.writeFile(wb,'Matt_Dana_Finance_'+todayStr()+'.xlsx');
+  showToast('Excel file downloaded!','success');closeExportModal();
 }
 
-function todayStr() { return new Date().toISOString().slice(0,10).replace(/-/g,''); }
-function fmt(n) { return '$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function formatCat(s) { return String(s).replace(/_/g,' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()); }
-function showError(msg) { const el=document.getElementById('errorBanner'); if(el){el.textContent=msg;el.style.display='block';} }
-function showToast(msg,type='success') { const t=document.getElementById('toast'); t.textContent=msg; t.className='show '+type; setTimeout(()=>{t.className='';},3500); }
+// ── Retirement calculators ────────────────────────────────────────────────────
+function switchRetTab(tab){
+  document.querySelectorAll('.ret-tab').forEach((t,i)=>t.classList.toggle('active',['growth','roth','ss','alloc','fire'][i]===tab));
+  document.querySelectorAll('.ret-panel').forEach(p=>p.classList.remove('active'));
+  gg('rpanel-'+tab).classList.add('active');
+  const fns={growth:calcGrowth,roth:calcRoth,ss:calcSS,alloc:calcAlloc,fire:calcFire};
+  fns[tab]&&fns[tab]();
+}
 
-const plaidScript = document.createElement('script');
-plaidScript.src = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js';
+function destroyRetChart(id){if(retCharts[id]){retCharts[id].destroy();delete retCharts[id];}}
+
+function gSync(k,v){
+  const m={age:'g-age-val',ret:'g-ret-val',saved:'g-saved-val',contrib:'g-contrib-val',rate:'g-rate-val',inf:'g-inf-val'};
+  const f={age:v=>v,ret:v=>v,saved:v=>'$'+Number(v).toLocaleString(),contrib:v=>'$'+Number(v).toLocaleString(),rate:v=>parseFloat(v).toFixed(1)+'%',inf:v=>parseFloat(v).toFixed(1)+'%'};
+  gg(m[k]).textContent=f[k](v);
+}
+function calcGrowth(){
+  const s=document.querySelectorAll('#rpanel-growth input[type=range]');
+  const age=+s[0].value,ret=+s[1].value,saved=+s[2].value,contrib=+s[3].value*12,rate=+s[4].value/100,inf=+s[5].value/100;
+  const yrs=Math.max(ret-age,1);
+  const labels=[],balData=[],contribData=[];
+  let bal=saved,totalContrib=saved;
+  for(let y=0;y<=yrs;y++){labels.push(age+y);balData.push(Math.round(bal));contribData.push(Math.round(totalContrib));bal=bal*(1+rate)+contrib;if(y<yrs)totalContrib+=contrib;}
+  const finalBal=balData[balData.length-1],realBal=finalBal/Math.pow(1+inf,yrs),monthly=finalBal*0.04/12;
+  gg('g-total').textContent=fmtM(finalBal);gg('g-real').textContent=fmtM(realBal);gg('g-monthly').textContent=fmtK(monthly);
+  gg('g-insight').textContent=`Of your projected ${fmtM(finalBal)}, you'll contribute ${fmtM(totalContrib)} and earn ${fmtM(finalBal-totalContrib)} in returns. In today's dollars that's ${fmtM(realBal)}, generating ${fmtK(monthly)}/mo using the 4% rule.`;
+  destroyRetChart('growth');
+  retCharts.growth=new Chart(gg('growthChart'),{type:'line',data:{labels,datasets:[{label:'Balance',data:balData,borderColor:'#1d9e75',backgroundColor:'rgba(29,158,117,0.08)',borderWidth:2,fill:true,tension:0.3,pointRadius:0},{label:'Contributions',data:contribData,borderColor:'#185fa5',borderDash:[5,5],borderWidth:1.5,fill:false,tension:0.3,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}},scales:{x:{ticks:{font:{size:10},maxTicksLimit:8},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}});
+}
+
+function calcRoth(){
+  const age=+gg('r-age').value,ret=+gg('r-ret').value,contrib=+gg('r-contrib').value;
+  const taxNow=+gg('r-taxnow').value/100,taxRet=+gg('r-taxret').value/100,rate=+gg('r-rate').value/100;
+  const yrs=Math.max(ret-age,1);
+  const fv=(pmt,r,n)=>pmt*((Math.pow(1+r,n)-1)/r)*(1+r);
+  const rothFV=fv(contrib*(1-taxNow),rate,yrs),tradFV=fv(contrib,rate,yrs)*(1-taxRet);
+  gg('r-roth-val').textContent=fmtM(rothFV);gg('r-trad-val').textContent=fmtM(tradFV);
+  const winner=rothFV>tradFV?'Roth':'Traditional',diff=Math.abs(rothFV-tradFV);
+  gg('r-insight').textContent=`${winner} IRA wins by ${fmtM(diff)} after taxes over ${yrs} years. ${taxNow>taxRet?'Your tax rate is higher now, so Traditional defers taxes to a lower bracket. But Roth offers tax-free growth and no required minimum distributions.':'Your retirement tax rate may be higher — Roth locks in today\'s lower rate and withdrawals are tax-free.'}`;
+  destroyRetChart('roth');
+  retCharts.roth=new Chart(gg('rothChart'),{type:'bar',data:{labels:['After-tax value at retirement'],datasets:[{label:'Roth IRA',data:[Math.round(rothFV)],backgroundColor:'#1d9e75',borderRadius:4},{label:'Traditional IRA',data:[Math.round(tradFV)],backgroundColor:'#185fa5',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{ticks:{font:{size:10},callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}});
+}
+
+function ssSync(k,v){
+  const m={age:'ss-age-val',benefit:'ss-benefit-val',life:'ss-life-val'};
+  const f={age:v=>v,benefit:v=>'$'+Number(v).toLocaleString(),life:v=>v};
+  gg(m[k]).textContent=f[k](v);
+}
+function calcSS(){
+  const s=document.querySelectorAll('#rpanel-ss input[type=range]');
+  const age=+s[0].value,base=+s[1].value,life=+s[2].value;
+  const b62=Math.round(base*0.70),b67=base,b70=Math.round(base*1.24);
+  gg('ss-62').textContent='$'+b62.toLocaleString()+'/mo';gg('ss-67').textContent='$'+b67.toLocaleString()+'/mo';gg('ss-70').textContent='$'+b70.toLocaleString()+'/mo';
+  const tot62=b62*12*(life-62),tot67=b67*12*(life-67),tot70=b70*12*(Math.max(life-70,0));
+  gg('ss-t62').textContent=fmtM(tot62);gg('ss-t67').textContent=fmtM(tot67);gg('ss-t70').textContent=fmtM(tot70);
+  const best=tot70>tot67&&tot70>tot62?'Delay to 70':tot67>tot62?'Claim at 67':'Claim at 62';
+  gg('ss-best').textContent=best;
+  const be=Math.round((b70*70-b67*67)/(b67-b70)*(-1));
+  gg('ss-insight').textContent=`Based on living to ${life}, ${best} maximizes lifetime benefits at ${fmtM(Math.max(tot62,tot67,tot70))}. The breakeven between claiming at 67 vs 70 is around age ${Math.min(be,90)}.`;
+  const labels=[];for(let a=62;a<=life;a++)labels.push(a);
+  const c62=[],c67=[],c70=[];
+  for(let a=62;a<=life;a++){c62.push(Math.round(b62*12*Math.max(a-62,0)));c67.push(a>=67?Math.round(b67*12*(a-67)):0);c70.push(a>=70?Math.round(b70*12*(a-70)):0);}
+  destroyRetChart('ss');
+  retCharts.ss=new Chart(gg('ssChart'),{type:'line',data:{labels,datasets:[{label:'Age 62',data:c62,borderColor:'#d85a30',borderWidth:2,fill:false,tension:0.2,pointRadius:0},{label:'Age 67',data:c67,borderColor:'#185fa5',borderWidth:2,fill:false,tension:0.2,pointRadius:0},{label:'Age 70',data:c70,borderColor:'#1d9e75',borderWidth:2,fill:false,tension:0.2,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}},scales:{x:{ticks:{font:{size:10},maxTicksLimit:8},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}});
+}
+
+function aSync(k,v){gg('a-age-val').textContent=v;}
+function calcAlloc(){
+  const age=+document.querySelectorAll('#rpanel-alloc input[type=range]')[0].value;
+  const risk=gg('a-risk').value,horizon=gg('a-horizon').value;
+  let stocks=110-age,bonds=Math.max(0,age-20),intl=15,cash=5,reits=5;
+  if(risk==='aggressive'){stocks+=15;bonds-=15;}if(risk==='conservative'){stocks-=15;bonds+=15;}
+  if(horizon==='long'){stocks+=5;bonds-=5;}if(horizon==='short'){stocks-=10;bonds+=10;}
+  stocks=Math.max(10,Math.min(90,stocks));bonds=Math.max(5,Math.min(70,bonds));
+  const total=stocks+bonds+intl+cash+reits;
+  const norm=v=>Math.round(v/total*100);
+  const allocs=[{name:'US Stocks',pct:norm(stocks),color:'#1d9e75'},{name:'Bonds',pct:norm(bonds),color:'#185fa5'},{name:'Intl Stocks',pct:norm(intl),color:'#534ab7'},{name:'REITs',pct:norm(reits),color:'#ba7517'},{name:'Cash/MM',pct:norm(cash),color:'#888780'}];
+  gg('allocBars').innerHTML=allocs.map(a=>`<div class="alloc-row"><span class="alloc-name">${a.name}</span><div class="alloc-bar-bg"><div class="alloc-bar" style="width:${a.pct}%;background:${a.color}"></div></div><span class="alloc-pct">${a.pct}%</span></div>`).join('');
+  gg('a-insight').textContent=`At age ${age} with ${risk} risk tolerance, a ${allocs[0].pct}% stock / ${allocs[1].pct}% bond mix balances growth with stability. ${risk==='aggressive'?'Higher stocks mean more volatility but greater long-term growth.':risk==='conservative'?'More bonds reduce volatility — ideal if you\'re closer to retirement.':'A balanced approach for steady long-term growth.'}`;
+  gg('allocLegend').innerHTML=allocs.map(a=>`<span style="display:flex;align-items:center;gap:4px"><span class="legend-dot" style="background:${a.color}"></span>${a.name} ${a.pct}%</span>`).join('');
+  destroyRetChart('alloc');
+  retCharts.alloc=new Chart(gg('allocChart'),{type:'doughnut',data:{labels:allocs.map(a=>a.name),datasets:[{data:allocs.map(a=>a.pct),backgroundColor:allocs.map(a=>a.color),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.parsed}%`}}}}});
+}
+
+function fSync(k,v){
+  const m={age:'f-age-val',saved:'f-saved-val',annual:'f-annual-val',exp:'f-exp-val',rate:'f-rate-val',swr:'f-swr-val'};
+  const f={age:v=>v,saved:v=>'$'+Number(v).toLocaleString(),annual:v=>'$'+Number(v).toLocaleString(),exp:v=>'$'+Number(v).toLocaleString(),rate:v=>parseFloat(v).toFixed(1)+'%',swr:v=>parseFloat(v).toFixed(2)+'%'};
+  gg(m[k]).textContent=f[k](v);
+}
+function calcFire(){
+  const s=document.querySelectorAll('#rpanel-fire input[type=range]');
+  const age=+s[0].value,saved=+s[1].value,annual=+s[2].value,exp=+s[3].value,rate=+s[4].value/100,swr=+s[5].value/100;
+  const target=exp/swr;
+  gg('f-target').textContent=fmtM(target);
+  const labels=[],savData=[],targetData=[];
+  let bal=saved,yr=0,fireYr=null;
+  while(bal<target&&yr<60){labels.push(age+yr);savData.push(Math.round(bal));targetData.push(Math.round(target));if(bal>=target&&!fireYr)fireYr=yr;bal=bal*(1+rate)+annual;yr++;}
+  labels.push(age+yr);savData.push(Math.round(bal));targetData.push(Math.round(target));
+  if(!fireYr&&bal>=target)fireYr=yr;
+  gg('f-years').textContent=fireYr!=null?fireYr+'y':'50y+';
+  gg('f-fireage').textContent=fireYr!=null?age+fireYr:'70+';
+  const pct=Math.min(100,Math.round(saved/target*100));
+  gg('f-insight').textContent=`Your FIRE number is ${fmtM(target)} (${exp.toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0})} ÷ ${(swr*100).toFixed(2)}% SWR). You're ${pct}% of the way there.${fireYr!=null?' At your current pace, you reach FIRE at age '+(age+fireYr)+'.':' Boost savings or reduce target expenses to reach FIRE sooner.'}`;
+  destroyRetChart('fire');
+  retCharts.fire=new Chart(gg('fireChart'),{type:'line',data:{labels,datasets:[{label:'Savings',data:savData,borderColor:'#1d9e75',backgroundColor:'rgba(29,158,117,0.1)',borderWidth:2,fill:true,tension:0.3,pointRadius:0},{label:'FIRE target',data:targetData,borderColor:'#d85a30',borderDash:[6,4],borderWidth:1.5,fill:false,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}},scales:{x:{ticks:{font:{size:10},maxTicksLimit:8},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}});
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function todayStr(){return new Date().toISOString().slice(0,10).replace(/-/g,'');}
+function fmt(n){return '$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function formatCat(s){return String(s).replace(/_/g,' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());}
+function showError(msg){const el=gg('errorBanner');if(el){el.textContent=msg;el.style.display='block';}}
+function showToast(msg,type='success'){const t=gg('toast');t.textContent=msg;t.className='show '+type;setTimeout(()=>{t.className='';},3500);}
+
+const plaidScript=document.createElement('script');
+plaidScript.src='https://cdn.plaid.com/link/v2/stable/link-initialize.js';
 document.head.appendChild(plaidScript);
-
 init();
 </script>
 </body>
