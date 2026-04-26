@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Matt & Dana Finance</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root {
     --bg: #f7f6f3; --surface: #ffffff; --surface2: #f1efe8;
@@ -25,7 +26,7 @@
   header { background: var(--surface); border-bottom: 0.5px solid var(--border); padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 60px; position: sticky; top: 0; z-index: 100; }
   .logo { font-size: 16px; font-weight: 500; }
   .logo span { color: var(--green); }
-  .header-right { display: flex; align-items: center; gap: 12px; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
   .env-badge { font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 500; }
   .env-sandbox { background: var(--amber-bg); color: var(--amber); }
   .env-production { background: var(--green-bg); color: var(--green); }
@@ -37,6 +38,30 @@
   #connectScreen p { color: var(--muted); max-width: 400px; line-height: 1.6; }
   #dashboard { display: none; }
   .section-label { font-size: 11px; font-weight: 500; color: var(--hint); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+  .export-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px; }
+  .export-bar-left { font-size: 13px; color: var(--muted); }
+  .export-bar-right { display: flex; gap: 8px; flex-wrap: wrap; }
+  .export-btn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border-radius: var(--radius-sm); border: 0.5px solid var(--border); background: var(--surface); color: var(--text); font-size: 12px; font-weight: 500; cursor: pointer; transition: background 0.15s; white-space: nowrap; }
+  .export-btn:hover { background: var(--surface2); }
+  .export-btn.green { background: var(--green); color: #fff; border-color: transparent; }
+  .export-btn.green:hover { background: #1a8a65; }
+  .export-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+  .modal { background: var(--surface); border-radius: var(--radius); padding: 1.5rem; width: 100%; max-width: 460px; border: 0.5px solid var(--border); }
+  .modal-title { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
+  .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 1.25rem; }
+  .modal-section { font-size: 11px; font-weight: 500; color: var(--hint); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; margin-top: 1rem; }
+  .checkbox-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 1rem; }
+  .checkbox-item { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; cursor: pointer; }
+  .checkbox-item input { width: 15px; height: 15px; margin-top: 2px; accent-color: var(--green); cursor: pointer; flex-shrink: 0; }
+  .chk-label { font-weight: 500; }
+  .chk-sub { font-size: 11px; color: var(--hint); margin-top: 2px; }
+  .date-row { display: flex; gap: 10px; margin-bottom: 1rem; }
+  .date-field { flex: 1; }
+  .date-field label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; }
+  .date-field input { width: 100%; height: 34px; border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 0 10px; background: var(--surface2); color: var(--text); font-size: 13px; outline: none; }
+  .date-field input:focus { border-color: var(--blue); }
+  .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.25rem; padding-top: 1rem; border-top: 0.5px solid var(--border); }
   .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 1.75rem; }
   .metric { background: var(--surface2); border-radius: var(--radius-sm); padding: 1rem; }
   .metric-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
@@ -88,6 +113,7 @@
 </style>
 </head>
 <body>
+
 <header>
   <div class="logo">Matt &amp; <span>Dana</span> Finance</div>
   <div class="header-right">
@@ -95,6 +121,7 @@
     <button class="btn" onclick="openLinkHandler()">+ Connect bank</button>
   </div>
 </header>
+
 <main>
 <div id="connectScreen">
   <div class="connect-icon">
@@ -105,8 +132,22 @@
   <button class="btn btn-primary" onclick="openLinkHandler()">Connect with Plaid</button>
   <p style="font-size:12px;color:var(--hint);">Bank-level 256-bit encryption · Read-only access · Plaid never shares your credentials</p>
 </div>
+
 <div id="dashboard">
   <div class="error-banner" id="errorBanner"></div>
+  <div class="export-bar">
+    <div class="export-bar-left" id="exportSummaryText"></div>
+    <div class="export-bar-right">
+      <button class="export-btn" onclick="exportCSV()">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export CSV
+      </button>
+      <button class="export-btn green" onclick="openExportModal()">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export to Excel
+      </button>
+    </div>
+  </div>
   <div class="section-label">overview</div>
   <div class="metric-grid">
     <div class="metric"><div class="metric-label">Net balance</div><div class="metric-value" id="mNetBal">—</div><div class="metric-sub">all accounts</div></div>
@@ -152,7 +193,35 @@
   </div>
 </div>
 </main>
+
+<div class="modal-backdrop" id="exportModal" style="display:none;" onclick="if(event.target===this)closeExportModal()">
+  <div class="modal">
+    <div class="modal-title">Export to Excel</div>
+    <div class="modal-sub">Choose what to include in your workbook</div>
+    <div class="modal-section">Sheets to include</div>
+    <div class="checkbox-group">
+      <label class="checkbox-item"><input type="checkbox" id="chkTransactions" checked><div><div class="chk-label">Transactions</div><div class="chk-sub">All transactions with date, merchant, category, amount</div></div></label>
+      <label class="checkbox-item"><input type="checkbox" id="chkAccounts" checked><div><div class="chk-label">Accounts &amp; Balances</div><div class="chk-sub">Current balance for every linked account</div></div></label>
+      <label class="checkbox-item"><input type="checkbox" id="chkSummary" checked><div><div class="chk-label">Spending Summary</div><div class="chk-sub">Totals by category with percentage breakdown</div></div></label>
+      <label class="checkbox-item"><input type="checkbox" id="chkMonthly"><div><div class="chk-label">Monthly Breakdown</div><div class="chk-sub">Income vs expenses by month with net cash flow</div></div></label>
+    </div>
+    <div class="modal-section">Date range</div>
+    <div class="date-row">
+      <div class="date-field"><label>From</label><input type="date" id="exportFrom"></div>
+      <div class="date-field"><label>To</label><input type="date" id="exportTo"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-sm" onclick="closeExportModal()">Cancel</button>
+      <button class="export-btn green" onclick="exportExcel()">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download Excel
+      </button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
+
 <script>
 let allTransactions = [], allAccounts = [], catChartInst = null, dailyChartInst = null;
 
@@ -165,6 +234,10 @@ async function init() {
     const accts = await fetch('/api/accounts').then(r => r.json());
     if (accts.accounts && accts.accounts.length > 0) { showDashboard(); await refreshAll(); }
   } catch(e) { showError('Cannot reach server.'); }
+  const today = new Date().toISOString().slice(0,10);
+  const ago90 = new Date(Date.now() - 90*86400000).toISOString().slice(0,10);
+  document.getElementById('exportTo').value = today;
+  document.getElementById('exportFrom').value = ago90;
 }
 
 async function openLinkHandler() {
@@ -206,7 +279,7 @@ async function loadAccounts() {
 async function loadTransactions() {
   const data = await fetch('/api/transactions').then(r => r.json());
   allTransactions = data.transactions || [];
-  renderTransactions(allTransactions); renderCharts(); updateMetricSpend(); populateFilters();
+  renderTransactions(allTransactions); renderCharts(); updateMetricSpend(); populateFilters(); updateExportSummary();
 }
 
 function renderAccounts() {
@@ -288,6 +361,11 @@ function updateMetricSpend() {
   document.getElementById('mTxnCount').textContent = recent.length;
 }
 
+function updateExportSummary() {
+  const el = document.getElementById('exportSummaryText');
+  if (el) el.textContent = allTransactions.length + ' transactions · ' + allAccounts.length + ' accounts ready to export';
+}
+
 const COLORS = ['#378ADD','#1D9E75','#D85A30','#534AB7','#BA7517','#D4537E','#0F6E56','#E24B4A','#639922','#5DCAA5'];
 
 function renderCharts() {
@@ -309,10 +387,106 @@ function renderCharts() {
   dailyChartInst = new Chart(document.getElementById('dailyChart'), {
     type: 'bar',
     data: { labels: days.map(d=>d.slice(5)), datasets: [{ label:'Spent', data: days.map(d=>Math.round(byDay[d])), backgroundColor:'#378ADD', borderRadius:3 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend:{display:false} }, scales: { x:{ticks:{font:{size:9},maxRotation:45,autoSkip:true,maxTicksLimit:10},grid:{display:false}}, y:{ticks:{font:{size:10},callback:v=>'$'+v},grid:{color:'rgba(128,128,128,0.08)'}} } }
+    options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}}, scales: { x:{ticks:{font:{size:9},maxRotation:45,autoSkip:true,maxTicksLimit:10},grid:{display:false}}, y:{ticks:{font:{size:10},callback:v=>'$'+v},grid:{color:'rgba(128,128,128,0.08)'}} } }
   });
 }
 
+function openExportModal() { document.getElementById('exportModal').style.display = 'flex'; }
+function closeExportModal() { document.getElementById('exportModal').style.display = 'none'; }
+
+function exportCSV() {
+  if (!allTransactions.length) { showToast('No transactions to export', 'error'); return; }
+  const headers = ['Date','Merchant','Category','Amount','Type','Bank'];
+  const rows = allTransactions.map(t => [
+    t.date, t.merchant_name||t.name||'',
+    formatCat(t.personal_finance_category?.primary||t.category?.[0]||'Other'),
+    t.amount.toFixed(2), t.amount>0?'Debit':'Credit', t.institution||''
+  ]);
+  const csv = [headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download = 'Matt_Dana_Transactions_' + todayStr() + '.csv';
+  a.click();
+  showToast('CSV downloaded!', 'success');
+}
+
+function exportExcel() {
+  if (!allTransactions.length && !allAccounts.length) { showToast('No data to export','error'); return; }
+  const fromDate = document.getElementById('exportFrom').value;
+  const toDate = document.getElementById('exportTo').value;
+  const filtered = allTransactions.filter(t => (!fromDate||t.date>=fromDate) && (!toDate||t.date<=toDate));
+  const wb = XLSX.utils.book_new();
+
+  if (document.getElementById('chkTransactions').checked) {
+    const data = [['Date','Merchant','Category','Subcategory','Amount','Type','Bank']];
+    filtered.forEach(t => data.push([
+      t.date, t.merchant_name||t.name||'',
+      formatCat(t.personal_finance_category?.primary||t.category?.[0]||'Other'),
+      formatCat(t.personal_finance_category?.detailed||t.category?.[1]||''),
+      parseFloat(t.amount.toFixed(2)), t.amount>0?'Debit':'Credit', t.institution||''
+    ]));
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [{wch:12},{wch:28},{wch:22},{wch:26},{wch:12},{wch:8},{wch:18}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
+  }
+
+  if (document.getElementById('chkAccounts').checked) {
+    const data = [['Institution','Account Name','Type','Subtype','Mask','Current Balance','Available Balance']];
+    allAccounts.forEach(a => data.push([
+      a.institution||'', a.name||'', a.type||'', a.subtype||'',
+      a.mask?'****'+a.mask:'',
+      parseFloat((a.balances.current??0).toFixed(2)),
+      parseFloat((a.balances.available??0).toFixed(2))
+    ]));
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [{wch:18},{wch:24},{wch:12},{wch:14},{wch:10},{wch:16},{wch:16}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Accounts & Balances');
+  }
+
+  if (document.getElementById('chkSummary').checked) {
+    const byCat = {};
+    filtered.filter(t=>t.amount>0).forEach(t => {
+      const c = formatCat(t.personal_finance_category?.primary||t.category?.[0]||'Other');
+      byCat[c] = (byCat[c]||0) + t.amount;
+    });
+    const total = Object.values(byCat).reduce((s,v)=>s+v,0);
+    const data = [['Category','Total Spent','% of Total','Transaction Count']];
+    Object.entries(byCat).sort((a,b)=>b[1]-a[1]).forEach(([cat,amt]) => {
+      const count = filtered.filter(t=>t.amount>0 && formatCat(t.personal_finance_category?.primary||t.category?.[0]||'Other')===cat).length;
+      data.push([cat, parseFloat(amt.toFixed(2)), parseFloat(((amt/total)*100).toFixed(1)), count]);
+    });
+    data.push(['','','','']);
+    data.push(['TOTAL', parseFloat(total.toFixed(2)), 100, filtered.filter(t=>t.amount>0).length]);
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [{wch:24},{wch:14},{wch:12},{wch:18}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Spending Summary');
+  }
+
+  if (document.getElementById('chkMonthly').checked) {
+    const byMonth = {};
+    filtered.forEach(t => {
+      const m = t.date.slice(0,7);
+      if (!byMonth[m]) byMonth[m] = {income:0,expenses:0,count:0};
+      if (t.amount<0) byMonth[m].income += Math.abs(t.amount);
+      else byMonth[m].expenses += t.amount;
+      byMonth[m].count++;
+    });
+    const data = [['Month','Income','Expenses','Net Cash Flow','Transactions']];
+    Object.keys(byMonth).sort().forEach(m => {
+      const d = byMonth[m];
+      data.push([m, parseFloat(d.income.toFixed(2)), parseFloat(d.expenses.toFixed(2)), parseFloat((d.income-d.expenses).toFixed(2)), d.count]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [{wch:12},{wch:14},{wch:14},{wch:16},{wch:14}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Monthly Breakdown');
+  }
+
+  XLSX.writeFile(wb, 'Matt_Dana_Finance_' + todayStr() + '.xlsx');
+  showToast('Excel file downloaded!', 'success');
+  closeExportModal();
+}
+
+function todayStr() { return new Date().toISOString().slice(0,10).replace(/-/g,''); }
 function fmt(n) { return '$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function formatCat(s) { return String(s).replace(/_/g,' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()); }
@@ -322,6 +496,7 @@ function showToast(msg,type='success') { const t=document.getElementById('toast'
 const plaidScript = document.createElement('script');
 plaidScript.src = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js';
 document.head.appendChild(plaidScript);
+
 init();
 </script>
 </body>
