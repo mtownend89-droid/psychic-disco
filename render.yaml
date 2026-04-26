@@ -1,0 +1,155 @@
+# Matt & Dana Finance App
+> Live personal finance dashboard powered by Plaid · Deploy to Render for free
+
+---
+
+## What this app does
+
+- Connects to your real bank accounts and credit cards via Plaid
+- Shows live balances across all accounts
+- Syncs transactions automatically (incremental, only fetches new ones)
+- Spending breakdown by category with charts
+- Search and filter transactions
+- Works in Sandbox (fake data) and Production (real accounts)
+
+---
+
+## Quick Start (5 minutes)
+
+### Step 1 — Get your Plaid API keys
+
+1. Go to [https://dashboard.plaid.com/signup](https://dashboard.plaid.com/signup) — sign up for free
+2. Once logged in, go to **Team Settings → Keys**
+3. Copy your:
+   - `client_id` (same for sandbox and production)
+   - `Sandbox secret` (starts with sandbox)
+   - `Production secret` (only needed when going live)
+
+### Step 2 — Deploy to Render (free)
+
+**Option A: One-click via GitHub**
+
+1. Push this folder to a GitHub repo:
+   ```bash
+   git init
+   git add .
+   git commit -m "Initial commit"
+   git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
+   git push -u origin main
+   ```
+2. Go to [https://render.com](https://render.com) and sign up (free)
+3. Click **New → Web Service → Connect GitHub repo**
+4. Select your repo — Render will auto-detect `render.yaml`
+5. Add environment variables in the Render dashboard:
+   - `PLAID_CLIENT_ID` → your client ID
+   - `PLAID_SECRET` → your sandbox secret
+   - `PLAID_ENV` → `sandbox`
+6. Click **Deploy** — your app will be live in ~2 minutes
+
+**Option B: Run locally first**
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Set up environment
+cp .env.example .env
+# Edit .env and fill in your Plaid keys
+
+# 3. Start the server
+npm start
+# or for live reload:
+npm run dev
+
+# 4. Open in browser
+open http://localhost:3000
+```
+
+---
+
+## Switching to Production (real banks)
+
+1. In Plaid dashboard, apply for Production access (usually approved same day for personal use)
+2. In Render (or your `.env`):
+   - Set `PLAID_SECRET` to your **Production** secret
+   - Set `PLAID_ENV` to `production`
+3. Redeploy
+
+> ⚠️ In production, Plaid requires your app to have a privacy policy URL.
+> Add one to `server/index.js` in the `linkTokenCreate` call:
+> ```js
+> link_customization_name: 'default',
+> ```
+
+---
+
+## Adding a database (recommended for production)
+
+Right now, linked accounts are stored in memory — they reset when the server restarts.
+For persistent storage, add a database:
+
+**SQLite (easiest — stays on the same server):**
+```bash
+npm install better-sqlite3
+```
+
+**Postgres on Render (free tier):**
+1. In Render dashboard → New → PostgreSQL
+2. Copy the connection string to your env as `DATABASE_URL`
+3. Replace the in-memory `store` in `server/index.js` with DB queries
+
+---
+
+## Project structure
+
+```
+plaid-finance-app/
+├── server/
+│   └── index.js          ← Express backend + all Plaid API routes
+├── public/
+│   └── index.html        ← Full frontend dashboard (single file)
+├── .env.example          ← Copy to .env and fill in your keys
+├── render.yaml           ← One-click Render deployment config
+├── package.json
+└── README.md
+```
+
+## API endpoints
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | `/api/health` | Server status + current Plaid env |
+| POST | `/api/create_link_token` | Creates Plaid Link session |
+| POST | `/api/exchange_token` | Exchanges public token for access token |
+| GET | `/api/accounts` | All linked accounts + live balances |
+| GET | `/api/transactions` | Incremental transaction sync |
+| GET | `/api/summary` | 30-day spending summary by category |
+| DELETE | `/api/item/:itemId` | Remove a linked bank |
+
+---
+
+## Sandbox test credentials
+
+When using sandbox, Plaid gives you fake banks to test with:
+- Username: `user_good`
+- Password: `pass_good`
+- MFA code (if asked): `1234`
+
+These return realistic fake transaction data immediately.
+
+---
+
+## Security notes
+
+- Your Plaid credentials never touch the frontend — all API calls go through your backend
+- Access tokens are stored server-side only
+- The frontend uses read-only Plaid Link — it cannot move money
+- For production: add authentication (e.g. Passport.js) so only you can access the dashboard
+
+---
+
+## Support
+
+- Plaid docs: [https://plaid.com/docs](https://plaid.com/docs)
+- Plaid community: [https://plaid.com/community](https://plaid.com/community)
+- Render docs: [https://render.com/docs](https://render.com/docs)

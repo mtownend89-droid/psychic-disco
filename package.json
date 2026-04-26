@@ -1,0 +1,14 @@
+# ─── Plaid Credentials ───────────────────────────────────────────────
+# Get these from https://dashboard.plaid.com/developers/keys
+PLAID_CLIENT_ID=your_client_id_here
+PLAID_SECRET=your_sandbox_secret_here
+
+# ─── Environment ─────────────────────────────────────────────────────
+# Options: sandbox | development | production
+PLAID_ENV=sandbox
+
+# ─── App Config ──────────────────────────────────────────────────────
+PORT=3000
+
+# For production: set a long random string (openssl rand -hex 32)
+SESSION_SECRET=change_this_to_a_long_random_string
