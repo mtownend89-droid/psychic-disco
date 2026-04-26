@@ -195,7 +195,7 @@
 </div>
 
 <!-- Dashboard page -->
-<div id="dashboard" class="page active">
+<div id="dashboard" class="page">
   <div class="error-banner" id="errorBanner"></div>
   <div class="export-bar">
     <div class="export-bar-left" id="exportSummaryText"></div>
@@ -475,7 +475,8 @@ async function openLinkHandler() {
 function showDashboard() {
   gg('connectScreen').style.display='none';
   gg('mainNav').style.display='flex';
-  gg('dashboard').style.display='block';
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  gg('dashboard').classList.add('active');
 }
 
 async function refreshAll(){await Promise.all([loadAccounts(),loadTransactions()]);}
