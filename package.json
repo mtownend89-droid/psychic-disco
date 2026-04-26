@@ -1,14 +1,23 @@
-# ─── Plaid Credentials ───────────────────────────────────────────────
-# Get these from https://dashboard.plaid.com/developers/keys
-PLAID_CLIENT_ID=your_client_id_here
-PLAID_SECRET=your_sandbox_secret_here
-
-# ─── Environment ─────────────────────────────────────────────────────
-# Options: sandbox | development | production
-PLAID_ENV=sandbox
-
-# ─── App Config ──────────────────────────────────────────────────────
-PORT=3000
-
-# For production: set a long random string (openssl rand -hex 32)
-SESSION_SECRET=change_this_to_a_long_random_string
+{
+  "name": "plaid-finance-app",
+  "version": "1.0.0",
+  "description": "Personal finance dashboard with Plaid integration",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "nodemon server/index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "plaid": "^25.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
