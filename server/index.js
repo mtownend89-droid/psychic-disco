@@ -7,6 +7,29 @@ const { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } = re
 const app = express();
 app.use(cors());
 app.use(express.json());
+// ─── Basic auth middleware ────────────────────────────────────────────────────
+app.use((req, res, next) => {
+  // Skip auth for health check
+  if (req.path === '/api/health') return next();
+
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith('Basic ')) {
+    res.set('WWW-Authenticate', 'Basic realm="Matt & Dana Finance"');
+    return res.status(401).send('Authentication required');
+  }
+
+  const credentials = Buffer.from(auth.slice(6), 'base64').toString();
+  const [user, pass] = credentials.split(':');
+
+  const validUser = process.env.APP_USERNAME || 'matt';
+  const validPass = process.env.APP_PASSWORD || 'changeme';
+
+  if (user !== validUser || pass !== validPass) {
+    res.set('WWW-Authenticate', 'Basic realm="Matt & Dana Finance"');
+    return res.status(401).send('Invalid credentials');
+  }
+  next();
+});
 app.use(express.static(path.join(__dirname, '../public')));
 
 // ─── Plaid client ─────────────────────────────────────────────────────────────
