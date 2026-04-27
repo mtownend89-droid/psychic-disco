@@ -30,25 +30,19 @@
   .env-badge { font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 500; }
   .env-sandbox { background: var(--amber-bg); color: var(--amber); }
   .env-production { background: var(--green-bg); color: var(--green); }
-
-  /* Nav */
   .main-nav { background: var(--surface); border-bottom: 0.5px solid var(--border); padding: 0 2rem; display: flex; gap: 4px; overflow-x: auto; }
   .nav-tab { padding: 0 16px; height: 44px; display: flex; align-items: center; font-size: 13px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; background: none; border-left: none; border-right: none; border-top: none; }
   .nav-tab.active { color: var(--text); border-bottom-color: var(--green); font-weight: 500; }
   .nav-tab:hover { color: var(--text); }
   .page { display: none; }
   .page.active { display: block; }
-
   main { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
   #connectScreen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; text-align: center; gap: 1.5rem; }
   .connect-icon { width: 64px; height: 64px; background: var(--green-bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
   .connect-icon svg { width: 28px; height: 28px; stroke: var(--green); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   #connectScreen h1 { font-size: 26px; font-weight: 500; }
   #connectScreen p { color: var(--muted); max-width: 400px; line-height: 1.6; }
-  #dashboard { display: none; }
   .section-label { font-size: 11px; font-weight: 500; color: var(--hint); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
-
-  /* Export */
   .export-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px; }
   .export-bar-left { font-size: 13px; color: var(--muted); }
   .export-bar-right { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -57,8 +51,6 @@
   .export-btn.green { background: var(--green); color: #fff; border-color: transparent; }
   .export-btn.green:hover { background: #1a8a65; }
   .export-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
-
-  /* Modal */
   .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 1rem; }
   .modal { background: var(--surface); border-radius: var(--radius); padding: 1.5rem; width: 100%; max-width: 460px; border: 0.5px solid var(--border); }
   .modal-title { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
@@ -74,30 +66,22 @@
   .date-field label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; }
   .date-field input { width: 100%; height: 34px; border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 0 10px; background: var(--surface2); color: var(--text); font-size: 13px; outline: none; }
   .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.25rem; padding-top: 1rem; border-top: 0.5px solid var(--border); }
-
-  /* Metrics */
   .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 1.75rem; }
   .metric { background: var(--surface2); border-radius: var(--radius-sm); padding: 1rem; }
   .metric-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
   .metric-value { font-size: 22px; font-weight: 500; }
   .metric-sub { font-size: 11px; color: var(--hint); margin-top: 4px; }
   .green { color: var(--green); } .red { color: var(--red); } .amber { color: var(--amber); } .blue { color: var(--blue); }
-
-  /* Cards */
   .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1.25rem; }
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 1.5rem; }
   .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 1rem; }
   .chart-wrap { position: relative; height: 220px; width: 100%; }
-
-  /* Accounts */
   .account-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 0.5px solid var(--border); }
   .account-item:last-child { border-bottom: none; }
   .account-name { font-size: 13px; font-weight: 500; }
   .account-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
   .account-balance { font-size: 15px; font-weight: 500; text-align: right; }
   .account-type { font-size: 10px; color: var(--hint); margin-top: 2px; }
-
-  /* Transactions */
   .txn-controls { display: flex; gap: 8px; margin-bottom: 14px; align-items: center; flex-wrap: wrap; }
   .txn-search { flex: 1; min-width: 160px; height: 34px; border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 0 12px; background: var(--surface2); color: var(--text); font-size: 13px; outline: none; }
   .txn-search:focus { border-color: var(--blue); }
@@ -111,14 +95,10 @@
   .txn-amt-neg { color: var(--green); font-weight: 500; }
   .txn-merchant { font-weight: 500; }
   .txn-date { color: var(--muted); font-size: 12px; }
-
-  /* Banks */
   .bank-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 0.5px solid var(--border); }
   .bank-item:last-child { border-bottom: none; }
   .bank-name { font-size: 13px; font-weight: 500; }
   .bank-id { font-size: 11px; color: var(--hint); margin-top: 2px; font-family: monospace; }
-
-  /* Buttons */
   .btn { display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 16px; border-radius: var(--radius-sm); border: 0.5px solid var(--border); background: transparent; color: var(--text); font-size: 13px; cursor: pointer; transition: background 0.15s; }
   .btn:hover { background: var(--surface2); }
   .btn-primary { background: var(--green); color: #fff; border-color: transparent; font-size: 14px; height: 44px; padding: 0 24px; }
@@ -126,7 +106,6 @@
   .btn-sm { height: 28px; padding: 0 10px; font-size: 11px; }
   .btn-danger { color: var(--red); }
   .btn-danger:hover { background: var(--red-bg); }
-
   .status { text-align: center; padding: 2rem; color: var(--muted); font-size: 14px; }
   .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -135,11 +114,9 @@
   #toast.success { border-left: 3px solid var(--green); }
   #toast.error { border-left: 3px solid var(--red); }
   .error-banner { background: var(--red-bg); color: var(--red); border-radius: var(--radius-sm); padding: 12px 16px; font-size: 13px; margin-bottom: 1rem; display: none; }
-
-  /* Retirement */
   .ret-tabs { display: flex; gap: 6px; margin-bottom: 1.5rem; flex-wrap: wrap; }
   .ret-tab { padding: 7px 16px; border-radius: var(--radius-sm); border: 0.5px solid var(--border); background: transparent; color: var(--muted); font-size: 13px; cursor: pointer; transition: all 0.15s; }
-  .ret-tab.active { background: var(--surface2); color: var(--text); font-weight: 500; border-color: var(--border); }
+  .ret-tab.active { background: var(--surface2); color: var(--text); font-weight: 500; }
   .ret-panel { display: none; }
   .ret-panel.active { display: block; }
   .slider-row { margin-bottom: 1rem; }
@@ -156,6 +133,8 @@
   .result-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 0.5px solid var(--border); font-size: 13px; }
   .result-row:last-child { border-bottom: none; font-weight: 500; font-size: 14px; padding-top: 10px; }
   .insight { background: var(--blue-bg); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 13px; color: var(--blue); margin-bottom: 1rem; line-height: 1.5; }
+  .insight.warn { background: var(--amber-bg); color: var(--amber); }
+  .insight.good { background: var(--green-bg); color: var(--green); }
   .alloc-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
   .alloc-bar-bg { flex: 1; height: 8px; border-radius: 4px; background: var(--surface2); overflow: hidden; }
   .alloc-bar { height: 100%; border-radius: 4px; transition: width 0.3s; }
@@ -163,7 +142,10 @@
   .alloc-pct { min-width: 36px; text-align: right; font-weight: 500; }
   .legend-row { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 10px; font-size: 12px; color: var(--muted); }
   .legend-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 4px; vertical-align: middle; }
-
+  .ret-acct-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 0.5px solid var(--border); font-size: 13px; }
+  .ret-acct-item:last-child { border-bottom: none; }
+  .progress-bar-bg { height: 6px; border-radius: 3px; background: var(--surface2); overflow: hidden; margin-top: 4px; }
+  .progress-bar { height: 100%; border-radius: 3px; background: var(--green); transition: width 0.4s; }
   @media (max-width: 640px) { .two-col, .three-col, .field-row { grid-template-columns: 1fr; } main { padding: 1rem; } header { padding: 0 1rem; } .main-nav { padding: 0 1rem; } }
 </style>
 </head>
@@ -183,7 +165,6 @@
 </nav>
 
 <main>
-<!-- Connect screen -->
 <div id="connectScreen">
   <div class="connect-icon">
     <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
@@ -194,7 +175,7 @@
   <p style="font-size:12px;color:var(--hint);">Bank-level 256-bit encryption · Read-only access · Plaid never shares your credentials</p>
 </div>
 
-<!-- Dashboard page -->
+<!-- ── DASHBOARD ── -->
 <div id="dashboard" class="page">
   <div class="error-banner" id="errorBanner"></div>
   <div class="export-bar">
@@ -243,11 +224,33 @@
   </div>
 </div>
 
-<!-- Retirement page -->
+<!-- ── RETIREMENT ── -->
 <div id="retirement" class="page">
   <div class="section-label" style="margin-bottom:1rem;">retirement planning</div>
+
+  <!-- Live retirement accounts from Plaid -->
+  <div class="card" style="margin-bottom:1.5rem;" id="retAccountsCard">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div class="section-label" style="margin-bottom:0;">linked retirement accounts</div>
+      <button class="btn btn-sm" onclick="refreshRetAccounts()">↻ Refresh</button>
+    </div>
+    <div id="retAccountsList"><div class="status" style="padding:1rem;">Connect your 401k, IRA, or brokerage accounts via Plaid to see live balances here.</div></div>
+    <div id="retProgressWrap" style="display:none;margin-top:1rem;">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px;">
+        <span>Progress toward retirement goal</span>
+        <span id="retProgressPct">—</span>
+      </div>
+      <div class="progress-bar-bg"><div class="progress-bar" id="retProgressBar" style="width:0%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--hint);margin-top:4px;">
+        <span id="retProgressCurrent">—</span>
+        <span id="retProgressGoal">Goal: set in growth calculator</span>
+      </div>
+    </div>
+  </div>
+
   <div class="ret-tabs">
     <button class="ret-tab active" onclick="switchRetTab('growth')">Retirement growth</button>
+    <button class="ret-tab" onclick="switchRetTab('longevity')">Longevity</button>
     <button class="ret-tab" onclick="switchRetTab('roth')">Roth vs traditional</button>
     <button class="ret-tab" onclick="switchRetTab('ss')">Social Security</button>
     <button class="ret-tab" onclick="switchRetTab('alloc')">Investment mix</button>
@@ -277,6 +280,38 @@
           <div class="chart-wrap" style="height:200px"><canvas id="growthChart" role="img" aria-label="Line chart showing retirement savings growth">Retirement growth</canvas></div>
         </div>
         <div class="insight" id="g-insight"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Longevity -->
+  <div class="ret-panel" id="rpanel-longevity">
+    <div class="two-col">
+      <div class="card">
+        <div class="section-label">retirement fund inputs</div>
+        <div class="slider-row"><div class="slider-label"><span>Nest egg at retirement</span><span class="slider-val" id="l-nest-val">$800,000</span></div><input type="range" min="100000" max="5000000" value="800000" step="10000" oninput="lSync('nest',this.value);calcLongevity()"></div>
+        <div class="slider-row"><div class="slider-label"><span>Monthly expenses</span><span class="slider-val" id="l-exp-val">$4,500</span></div><input type="range" min="1000" max="20000" value="4500" step="100" oninput="lSync('exp',this.value);calcLongevity()"></div>
+        <div class="slider-row"><div class="slider-label"><span>Monthly Social Security</span><span class="slider-val" id="l-ss-val">$2,400</span></div><input type="range" min="0" max="5000" value="2400" step="50" oninput="lSync('ss',this.value);calcLongevity()"></div>
+        <div class="slider-row"><div class="slider-label"><span>Monthly pension / other</span><span class="slider-val" id="l-pen-val">$0</span></div><input type="range" min="0" max="5000" value="0" step="50" oninput="lSync('pen',this.value);calcLongevity()"></div>
+        <div class="slider-row"><div class="slider-label"><span>Investment return in retirement</span><span class="slider-val" id="l-rate-val">5.0%</span></div><input type="range" min="0" max="12" value="5" step="0.5" oninput="lSync('rate',this.value);calcLongevity()"></div>
+        <div class="slider-row"><div class="slider-label"><span>Inflation rate</span><span class="slider-val" id="l-inf-val">3.0%</span></div><input type="range" min="0" max="8" value="3" step="0.5" oninput="lSync('inf',this.value);calcLongevity()"></div>
+        <div class="slider-row"><div class="slider-label"><span>Retirement age</span><span class="slider-val" id="l-age-val">65</span></div><input type="range" min="50" max="80" value="65" step="1" oninput="lSync('age',this.value);calcLongevity()"></div>
+      </div>
+      <div>
+        <div class="three-col">
+          <div class="metric"><div class="metric-label">Funds last until</div><div class="metric-value green" id="l-until">—</div><div class="metric-sub">projected age</div></div>
+          <div class="metric"><div class="metric-label">Years in retirement</div><div class="metric-value blue" id="l-years">—</div><div class="metric-sub">before depletion</div></div>
+          <div class="metric"><div class="metric-label">Monthly shortfall</div><div class="metric-value" id="l-shortfall">—</div><div class="metric-sub">from savings only</div></div>
+        </div>
+        <div class="card" style="padding:1rem;">
+          <div class="legend-row">
+            <span><span class="legend-dot" style="background:#1d9e75"></span>Portfolio balance</span>
+            <span><span class="legend-dot" style="background:#185fa5"></span>Income (SS + pension)</span>
+            <span><span class="legend-dot" style="background:#d85a30"></span>Expenses</span>
+          </div>
+          <div class="chart-wrap" style="height:210px"><canvas id="longevityChart" role="img" aria-label="Line chart showing retirement fund longevity">Retirement longevity</canvas></div>
+        </div>
+        <div class="insight" id="l-insight"></div>
       </div>
     </div>
   </div>
@@ -436,7 +471,7 @@ function showPage(page) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',['dashboard','retirement'][i]===page));
   gg(page).classList.add('active');
-  if(page==='retirement') { calcGrowth(); }
+  if(page==='retirement'){calcGrowth();refreshRetAccounts();}
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
@@ -464,7 +499,7 @@ async function openLinkHandler() {
         const res=await fetch('/api/exchange_token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({public_token,institution_name:institution})}).then(r=>r.json());
         if(res.error){showToast('Connection failed: '+res.error,'error');return;}
         showToast(institution+' connected!','success');
-        showDashboard(); await refreshAll();
+        showDashboard();await refreshAll();
       },
       onExit:(err)=>{if(err)showToast('Link exited: '+err.error_message,'error');}
     });
@@ -493,6 +528,48 @@ async function loadTransactions(){
   renderTransactions(allTransactions);renderCharts();updateMetricSpend();populateFilters();updateExportSummary();
 }
 
+// ── Retirement accounts (live from Plaid) ─────────────────────────────────────
+function refreshRetAccounts(){
+  const retTypes=['investment','brokerage','401k','ira','roth','retirement','hsa'];
+  const retAccounts=allAccounts.filter(a=>
+    retTypes.some(t=>(a.type||'').toLowerCase().includes(t)||(a.subtype||'').toLowerCase().includes(t))
+  );
+  const el=gg('retAccountsList');
+  if(!retAccounts.length){
+    el.innerHTML='<div class="status" style="padding:1rem;font-size:13px;">No retirement accounts detected. Connect your 401k, IRA, or brokerage via "+ Connect bank" above.</div>';
+    gg('retProgressWrap').style.display='none';
+    return;
+  }
+  const totalRetBal=retAccounts.reduce((s,a)=>s+(a.balances.current??0),0);
+  el.innerHTML=retAccounts.map(a=>{
+    const bal=a.balances.current??0;
+    return `<div class="ret-acct-item">
+      <div><div class="account-name">${esc(a.name)}</div><div class="account-sub">${esc(a.institution)} · ${esc(a.subtype||a.type)}</div></div>
+      <div class="account-balance green">${fmtK(bal)}</div>
+    </div>`;
+  }).join('')+`<div class="ret-acct-item" style="border-top:0.5px solid var(--border);margin-top:4px;padding-top:12px;">
+    <div style="font-weight:500;font-size:13px;">Total retirement assets</div>
+    <div class="account-balance green" style="font-size:18px;">${fmtK(totalRetBal)}</div>
+  </div>`;
+
+  // Progress bar toward growth calculator goal
+  const goalSliders=document.querySelectorAll('#rpanel-growth input[type=range]');
+  if(goalSliders.length>=5){
+    const age=+goalSliders[0].value,ret=+goalSliders[1].value,saved=+goalSliders[2].value;
+    const contrib=+goalSliders[3].value*12,rate=+goalSliders[4].value/100;
+    const yrs=Math.max(ret-age,1);
+    let bal=saved;
+    for(let y=0;y<yrs;y++) bal=bal*(1+rate)+contrib;
+    const pct=Math.min(100,Math.round(totalRetBal/bal*100));
+    gg('retProgressWrap').style.display='block';
+    gg('retProgressBar').style.width=pct+'%';
+    gg('retProgressPct').textContent=pct+'% of goal';
+    gg('retProgressCurrent').textContent='Current: '+fmtK(totalRetBal);
+    gg('retProgressGoal').textContent='Goal: '+fmtM(bal)+' at age '+ret;
+  }
+}
+
+// ── Dashboard renders ─────────────────────────────────────────────────────────
 function renderAccounts(){
   const el=gg('accountsList');
   if(!allAccounts.length){el.innerHTML='<div class="status">No accounts found</div>';return;}
@@ -632,17 +709,18 @@ function exportExcel(){
   showToast('Excel file downloaded!','success');closeExportModal();
 }
 
-// ── Retirement calculators ────────────────────────────────────────────────────
+// ── Retirement tab switching ───────────────────────────────────────────────────
 function switchRetTab(tab){
-  document.querySelectorAll('.ret-tab').forEach((t,i)=>t.classList.toggle('active',['growth','roth','ss','alloc','fire'][i]===tab));
+  document.querySelectorAll('.ret-tab').forEach((t,i)=>t.classList.toggle('active',['growth','longevity','roth','ss','alloc','fire'][i]===tab));
   document.querySelectorAll('.ret-panel').forEach(p=>p.classList.remove('active'));
   gg('rpanel-'+tab).classList.add('active');
-  const fns={growth:calcGrowth,roth:calcRoth,ss:calcSS,alloc:calcAlloc,fire:calcFire};
+  const fns={growth:calcGrowth,longevity:calcLongevity,roth:calcRoth,ss:calcSS,alloc:calcAlloc,fire:calcFire};
   fns[tab]&&fns[tab]();
 }
 
 function destroyRetChart(id){if(retCharts[id]){retCharts[id].destroy();delete retCharts[id];}}
 
+// ── Growth calculator ─────────────────────────────────────────────────────────
 function gSync(k,v){
   const m={age:'g-age-val',ret:'g-ret-val',saved:'g-saved-val',contrib:'g-contrib-val',rate:'g-rate-val',inf:'g-inf-val'};
   const f={age:v=>v,ret:v=>v,saved:v=>'$'+Number(v).toLocaleString(),contrib:v=>'$'+Number(v).toLocaleString(),rate:v=>parseFloat(v).toFixed(1)+'%',inf:v=>parseFloat(v).toFixed(1)+'%'};
@@ -660,8 +738,71 @@ function calcGrowth(){
   gg('g-insight').textContent=`Of your projected ${fmtM(finalBal)}, you'll contribute ${fmtM(totalContrib)} and earn ${fmtM(finalBal-totalContrib)} in returns. In today's dollars that's ${fmtM(realBal)}, generating ${fmtK(monthly)}/mo using the 4% rule.`;
   destroyRetChart('growth');
   retCharts.growth=new Chart(gg('growthChart'),{type:'line',data:{labels,datasets:[{label:'Balance',data:balData,borderColor:'#1d9e75',backgroundColor:'rgba(29,158,117,0.08)',borderWidth:2,fill:true,tension:0.3,pointRadius:0},{label:'Contributions',data:contribData,borderColor:'#185fa5',borderDash:[5,5],borderWidth:1.5,fill:false,tension:0.3,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}},scales:{x:{ticks:{font:{size:10},maxTicksLimit:8},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}});
+  refreshRetAccounts();
 }
 
+// ── Longevity calculator ──────────────────────────────────────────────────────
+function lSync(k,v){
+  const m={nest:'l-nest-val',exp:'l-exp-val',ss:'l-ss-val',pen:'l-pen-val',rate:'l-rate-val',inf:'l-inf-val',age:'l-age-val'};
+  const f={nest:v=>'$'+Number(v).toLocaleString(),exp:v=>'$'+Number(v).toLocaleString(),ss:v=>'$'+Number(v).toLocaleString(),pen:v=>'$'+Number(v).toLocaleString(),rate:v=>parseFloat(v).toFixed(1)+'%',inf:v=>parseFloat(v).toFixed(1)+'%',age:v=>v};
+  gg(m[k]).textContent=f[k](v);
+}
+function calcLongevity(){
+  const s=document.querySelectorAll('#rpanel-longevity input[type=range]');
+  const nest=+s[0].value,monthlyExp=+s[1].value,monthlySS=+s[2].value,monthlyPen=+s[3].value,rate=+s[4].value/100,inf=+s[5].value/100,retAge=+s[6].value;
+  const monthlyIncome=monthlySS+monthlyPen;
+  const monthlyShortfall=Math.max(0,monthlyExp-monthlyIncome);
+  gg('l-shortfall').textContent=monthlyShortfall>0?fmtK(monthlyShortfall)+'/mo':'Covered!';
+  gg('l-shortfall').className='metric-value '+(monthlyShortfall===0?'green':'red');
+
+  const labels=[],balData=[],expData=[],incData=[];
+  let bal=nest,age=retAge,depletionAge=null;
+  const monthlyRate=rate/12,monthlyInf=inf/12;
+  let curExp=monthlyExp,curInc=monthlyIncome;
+
+  for(let yr=0;yr<=50;yr++){
+    labels.push(retAge+yr);
+    balData.push(Math.round(Math.max(bal,0)));
+    expData.push(Math.round(curExp*12));
+    incData.push(Math.round(curInc*12));
+    if(bal<=0&&!depletionAge) depletionAge=retAge+yr;
+    for(let m=0;m<12;m++){
+      bal=bal*(1+monthlyRate)-(curExp-curInc);
+      curExp*=(1+monthlyInf);
+      curInc*=(1+monthlyInf*0.5);
+    }
+  }
+
+  const survivesAge=depletionAge||retAge+50;
+  gg('l-until').textContent=depletionAge?depletionAge+'':retAge+50+'+';
+  gg('l-until').className='metric-value '+(depletionAge&&depletionAge<85?'red':depletionAge&&depletionAge<95?'amber':'green');
+  gg('l-years').textContent=depletionAge?(depletionAge-retAge)+'y':`50y+`;
+
+  const insightEl=gg('l-insight');
+  if(!depletionAge){
+    insightEl.className='insight good';
+    insightEl.textContent=`Your funds outlast a 50-year retirement. With ${fmtK(monthlyIncome)}/mo in guaranteed income covering ${Math.round(monthlyIncome/monthlyExp*100)}% of expenses, your portfolio stays healthy throughout retirement.`;
+  } else if(depletionAge>=90){
+    insightEl.className='insight';
+    insightEl.textContent=`Your funds last until age ${depletionAge} — ${depletionAge-retAge} years into retirement. Consider a small annuity or slightly reducing expenses to extend coverage further.`;
+  } else {
+    insightEl.className='insight warn';
+    insightEl.textContent=`Your funds deplete at age ${depletionAge}, only ${depletionAge-retAge} years into retirement. Options: increase savings now, reduce retirement expenses by ${fmtK(monthlyShortfall)}/mo, delay retirement, or add guaranteed income sources.`;
+  }
+
+  destroyRetChart('longevity');
+  retCharts.longevity=new Chart(gg('longevityChart'),{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'Portfolio balance',data:balData,borderColor:'#1d9e75',backgroundColor:'rgba(29,158,117,0.08)',borderWidth:2,fill:true,tension:0.3,pointRadius:0},
+      {label:'Annual income',data:incData,borderColor:'#185fa5',borderWidth:1.5,borderDash:[4,4],fill:false,tension:0.2,pointRadius:0},
+      {label:'Annual expenses',data:expData,borderColor:'#d85a30',borderWidth:1.5,fill:false,tension:0.2,pointRadius:0}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}},scales:{x:{ticks:{font:{size:10},maxTicksLimit:10},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}
+  });
+}
+
+// ── Roth calculator ───────────────────────────────────────────────────────────
 function calcRoth(){
   const age=+gg('r-age').value,ret=+gg('r-ret').value,contrib=+gg('r-contrib').value;
   const taxNow=+gg('r-taxnow').value/100,taxRet=+gg('r-taxret').value/100,rate=+gg('r-rate').value/100;
@@ -675,6 +816,7 @@ function calcRoth(){
   retCharts.roth=new Chart(gg('rothChart'),{type:'bar',data:{labels:['After-tax value at retirement'],datasets:[{label:'Roth IRA',data:[Math.round(rothFV)],backgroundColor:'#1d9e75',borderRadius:4},{label:'Traditional IRA',data:[Math.round(tradFV)],backgroundColor:'#185fa5',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{ticks:{font:{size:10},callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}});
 }
 
+// ── Social Security ───────────────────────────────────────────────────────────
 function ssSync(k,v){
   const m={age:'ss-age-val',benefit:'ss-benefit-val',life:'ss-life-val'};
   const f={age:v=>v,benefit:v=>'$'+Number(v).toLocaleString(),life:v=>v};
@@ -698,6 +840,7 @@ function calcSS(){
   retCharts.ss=new Chart(gg('ssChart'),{type:'line',data:{labels,datasets:[{label:'Age 62',data:c62,borderColor:'#d85a30',borderWidth:2,fill:false,tension:0.2,pointRadius:0},{label:'Age 67',data:c67,borderColor:'#185fa5',borderWidth:2,fill:false,tension:0.2,pointRadius:0},{label:'Age 70',data:c70,borderColor:'#1d9e75',borderWidth:2,fill:false,tension:0.2,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}},scales:{x:{ticks:{font:{size:10},maxTicksLimit:8},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}});
 }
 
+// ── Investment mix ────────────────────────────────────────────────────────────
 function aSync(k,v){gg('a-age-val').textContent=v;}
 function calcAlloc(){
   const age=+document.querySelectorAll('#rpanel-alloc input[type=range]')[0].value;
@@ -716,6 +859,7 @@ function calcAlloc(){
   retCharts.alloc=new Chart(gg('allocChart'),{type:'doughnut',data:{labels:allocs.map(a=>a.name),datasets:[{data:allocs.map(a=>a.pct),backgroundColor:allocs.map(a=>a.color),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.parsed}%`}}}}});
 }
 
+// ── FIRE calculator ───────────────────────────────────────────────────────────
 function fSync(k,v){
   const m={age:'f-age-val',saved:'f-saved-val',annual:'f-annual-val',exp:'f-exp-val',rate:'f-rate-val',swr:'f-swr-val'};
   const f={age:v=>v,saved:v=>'$'+Number(v).toLocaleString(),annual:v=>'$'+Number(v).toLocaleString(),exp:v=>'$'+Number(v).toLocaleString(),rate:v=>parseFloat(v).toFixed(1)+'%',swr:v=>parseFloat(v).toFixed(2)+'%'};
@@ -741,7 +885,6 @@ function calcFire(){
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function todayStr(){return new Date().toISOString().slice(0,10).replace(/-/g,'');}
-function fmt(n){return '$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function formatCat(s){return String(s).replace(/_/g,' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());}
 function showError(msg){const el=gg('errorBanner');if(el){el.textContent=msg;el.style.display='block';}}
