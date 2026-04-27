@@ -36,7 +36,7 @@
   .nav-tab:hover { color: var(--text); }
   .page { display: none; }
   .page.active { display: block; }
-  main { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+  main { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
   #connectScreen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; text-align: center; gap: 1.5rem; }
   .connect-icon { width: 64px; height: 64px; background: var(--green-bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
   .connect-icon svg { width: 28px; height: 28px; stroke: var(--green); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -52,7 +52,7 @@
   .export-btn.green:hover { background: #1a8a65; }
   .export-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
   .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 1rem; }
-  .modal { background: var(--surface); border-radius: var(--radius); padding: 1.5rem; width: 100%; max-width: 460px; border: 0.5px solid var(--border); }
+  .modal { background: var(--surface); border-radius: var(--radius); padding: 1.5rem; width: 100%; max-width: 520px; border: 0.5px solid var(--border); max-height: 90vh; overflow-y: auto; }
   .modal-title { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
   .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 1.25rem; }
   .modal-section { font-size: 11px; font-weight: 500; color: var(--hint); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; margin-top: 1rem; }
@@ -91,7 +91,6 @@
   .custom-date-row { display: none; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
   .custom-date-row.visible { display: flex; }
   .custom-date-row input[type=date] { height: 34px; border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 0 10px; background: var(--surface2); color: var(--text); font-size: 13px; outline: none; }
-  .custom-date-row input[type=date]:focus { border-color: var(--blue); }
   .custom-date-row label { font-size: 12px; color: var(--muted); }
   .txn-count-badge { font-size: 12px; color: var(--muted); padding: 3px 8px; background: var(--surface2); border-radius: 20px; white-space: nowrap; }
   .txn-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -170,7 +169,57 @@
   .drag-handle:active { cursor: grabbing; }
   .drag-handle svg { width: 14px; height: 14px; fill: currentColor; flex-shrink: 0; }
   .edit-mode-bar { display: none; align-items: center; justify-content: space-between; background: var(--green-bg); border-radius: var(--radius-sm); padding: 8px 14px; margin-bottom: 1.25rem; font-size: 13px; color: var(--green); border: 0.5px solid var(--green); }
-  @media (max-width: 640px) { .two-col,.three-col,.four-col,.five-col { grid-template-columns: 1fr; } main { padding: 1rem; } header { padding: 0 1rem; } .main-nav { padding: 0 1rem; } .inputs-grid { grid-template-columns: 1fr; } }
+
+  /* ── Expenses & Budget tab ── */
+  .budget-tabs { display: flex; gap: 6px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .budget-tab { padding: 7px 16px; border-radius: var(--radius-sm); border: 0.5px solid var(--border); background: transparent; color: var(--muted); font-size: 13px; cursor: pointer; transition: all 0.15s; }
+  .budget-tab.active { background: var(--surface2); color: var(--text); font-weight: 500; }
+  .budget-panel { display: none; }
+  .budget-panel.active { display: block; }
+
+  /* Bill table */
+  .bill-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .bill-table th { text-align: left; font-size: 11px; font-weight: 500; color: var(--hint); text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 6px; border-bottom: 0.5px solid var(--border); white-space: nowrap; }
+  .bill-table td { padding: 9px 6px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
+  .bill-table tr:last-child td { border-bottom: none; }
+  .bill-table tr:hover td { background: var(--surface2); }
+  .bill-table tr.total-row td { font-weight: 500; background: var(--surface2); border-top: 0.5px solid var(--border); }
+  .cat-pill { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+  .cat-CC { background: var(--blue-bg); color: var(--blue); }
+  .cat-LOAN { background: var(--amber-bg); color: var(--amber); }
+  .cat-HM { background: var(--green-bg); color: var(--green); }
+  .cat-CAR { background: #f0e8fb; color: var(--purple); }
+  .cat-PH { background: var(--surface2); color: var(--muted); }
+  .cat-TV { background: var(--surface2); color: var(--muted); }
+  .cat-FAM { background: var(--red-bg); color: var(--red); }
+  .cat-SAVE { background: var(--green-bg); color: var(--green); }
+  .status-paid { color: var(--green); font-weight: 500; font-size: 12px; }
+  .status-due { color: var(--amber); font-weight: 500; font-size: 12px; }
+  .status-overdue { color: var(--red); font-weight: 500; font-size: 12px; }
+  .editable-cell { outline: none; border-radius: 4px; padding: 2px 4px; min-width: 60px; display: inline-block; }
+  .editable-cell:focus { background: var(--blue-bg); }
+
+  /* Zero-balance budget / P&L calendar */
+  .pl-week { display: grid; grid-template-columns: 120px 1fr 1fr 1fr 1fr; gap: 0; border-bottom: 0.5px solid var(--border); }
+  .pl-week:first-child { font-size: 11px; font-weight: 500; color: var(--hint); text-transform: uppercase; letter-spacing: 0.06em; }
+  .pl-cell { padding: 10px 12px; font-size: 13px; border-right: 0.5px solid var(--border); }
+  .pl-cell:last-child { border-right: none; }
+  .pl-date { font-size: 12px; font-weight: 500; }
+  .pl-sub { font-size: 11px; color: var(--hint); margin-top: 2px; }
+  .pl-income { color: var(--green); font-weight: 500; }
+  .pl-expense { color: var(--red); }
+  .pl-balance-pos { color: var(--green); font-weight: 500; }
+  .pl-balance-neg { color: var(--red); font-weight: 500; }
+  .pl-balance-low { color: var(--amber); font-weight: 500; }
+
+  /* Add bill form */
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 1rem; }
+  .form-field { display: flex; flex-direction: column; gap: 4px; }
+  .form-field label { font-size: 12px; color: var(--muted); }
+  .form-field input, .form-field select { height: 34px; border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 0 10px; background: var(--surface2); color: var(--text); font-size: 13px; outline: none; width: 100%; }
+  .form-field input:focus, .form-field select:focus { border-color: var(--blue); }
+
+  @media (max-width: 640px) { .two-col,.three-col,.four-col,.five-col { grid-template-columns: 1fr; } main { padding: 1rem; } header { padding: 0 1rem; } .main-nav { padding: 0 1rem; } .inputs-grid { grid-template-columns: 1fr; } .pl-week { grid-template-columns: 80px 1fr 1fr; } }
 </style>
 </head>
 <body>
@@ -185,6 +234,7 @@
 
 <nav class="main-nav" id="mainNav" style="display:none;">
   <button class="nav-tab active" onclick="showPage('dashboard')">Dashboard</button>
+  <button class="nav-tab" onclick="showPage('expenses')">Expenses &amp; Budget</button>
   <button class="nav-tab" onclick="showPage('retirement')">Retirement</button>
 </nav>
 
@@ -207,12 +257,10 @@
     <div class="export-bar-right">
       <button class="btn btn-sm" onclick="toggleEditMode('dashboard')" id="dashEditBtn">⠿ Arrange sections</button>
       <button class="export-btn" onclick="exportCSV()">
-        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Export CSV
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV
       </button>
       <button class="export-btn green" onclick="openExportModal()">
-        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Export to Excel
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export to Excel
       </button>
     </div>
   </div>
@@ -220,9 +268,7 @@
     <span>Drag the handles on each section to reorder</span>
     <button class="btn btn-sm" onclick="toggleEditMode('dashboard')">Done</button>
   </div>
-
   <div class="drag-container" id="dashContainer">
-
     <div class="drag-section" data-id="overview">
       <div class="drag-handle-bar"><div class="drag-handle" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Overview</div></div>
       <div class="metric-grid">
@@ -233,7 +279,6 @@
         <div class="metric"><div class="metric-label">Accounts linked</div><div class="metric-value" id="mAcctCount">—</div><div class="metric-sub">across all banks</div></div>
       </div>
     </div>
-
     <div class="drag-section" data-id="charts">
       <div class="drag-handle-bar"><div class="drag-handle" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Spending charts</div></div>
       <div class="two-col">
@@ -241,7 +286,6 @@
         <div class="card"><div class="section-label">daily spending (30d)</div><div class="chart-wrap"><canvas id="dailyChart" role="img" aria-label="Bar chart of daily spending">Daily spending</canvas></div></div>
       </div>
     </div>
-
     <div class="drag-section" data-id="accounts">
       <div class="drag-handle-bar"><div class="drag-handle" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Accounts &amp; banks</div></div>
       <div class="two-col">
@@ -249,7 +293,6 @@
         <div class="card"><div class="section-label">linked institutions</div><div id="banksList"><div class="status">No banks linked</div></div></div>
       </div>
     </div>
-
     <div class="drag-section" data-id="transactions">
       <div class="drag-handle-bar"><div class="drag-handle" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Transactions</div></div>
       <div class="card" style="margin-bottom:0;">
@@ -275,10 +318,8 @@
           <button class="btn btn-sm" onclick="refreshAll()">↻ Refresh</button>
         </div>
         <div class="custom-date-row" id="customDateRow">
-          <label>From</label>
-          <input type="date" id="txnDateFrom" onchange="filterTransactions()">
-          <label>To</label>
-          <input type="date" id="txnDateTo" onchange="filterTransactions()">
+          <label>From</label><input type="date" id="txnDateFrom" onchange="filterTransactions()">
+          <label>To</label><input type="date" id="txnDateTo" onchange="filterTransactions()">
         </div>
         <div style="overflow-x:auto;">
           <table class="txn-table">
@@ -288,8 +329,157 @@
         </div>
       </div>
     </div>
-
   </div>
+</div>
+
+<!-- ── EXPENSES & BUDGET ── -->
+<div id="expenses" class="page">
+
+  <!-- Summary metrics -->
+  <div class="metric-grid" style="margin-bottom:1.5rem;" id="budgetMetrics">
+    <div class="metric"><div class="metric-label">Monthly income</div><div class="metric-value green" id="bIncome">$8,979</div><div class="metric-sub">est. avg per month</div></div>
+    <div class="metric"><div class="metric-label">Monthly bills</div><div class="metric-value red" id="bBills">—</div><div class="metric-sub">fixed obligations</div></div>
+    <div class="metric"><div class="metric-label">Remaining budget</div><div class="metric-value" id="bRemaining">—</div><div class="metric-sub">after all bills</div></div>
+    <div class="metric"><div class="metric-label">Zero-balance target</div><div class="metric-value blue" id="bZero">$0</div><div class="metric-sub">allocate everything</div></div>
+    <div class="metric"><div class="metric-label">Unallocated</div><div class="metric-value amber" id="bUnalloc">—</div><div class="metric-sub">needs a budget bucket</div></div>
+  </div>
+
+  <div class="budget-tabs">
+    <button class="budget-tab active" onclick="switchBudgetTab('bills')">Bills &amp; expenses</button>
+    <button class="budget-tab" onclick="switchBudgetTab('calendar')">P&amp;L calendar</button>
+    <button class="budget-tab" onclick="switchBudgetTab('zero')">Zero-balance budget</button>
+    <button class="budget-tab" onclick="switchBudgetTab('income')">Income sources</button>
+  </div>
+
+  <!-- BILLS TABLE -->
+  <div class="budget-panel active" id="bpanel-bills">
+    <div class="card" style="margin-bottom:1rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px;">
+        <div class="section-label" style="margin-bottom:0;">monthly bills &amp; fixed expenses</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm" onclick="openAddBillModal()">+ Add bill</button>
+          <button class="export-btn green" onclick="exportBillsExcel()">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export
+          </button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="bill-table" id="billTable">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Name</th>
+              <th>Lender / Note</th>
+              <th>APR</th>
+              <th>Due day</th>
+              <th>Balance</th>
+              <th>Min payment</th>
+              <th>Your payment</th>
+              <th>Promo / Notes</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="billBody"></tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td colspan="6" style="font-weight:500;">Monthly totals</td>
+              <td id="totalMinPay" style="color:var(--red);font-weight:500;"></td>
+              <td id="totalYourPay" style="color:var(--red);font-weight:500;"></td>
+              <td colspan="3"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Category breakdown chart -->
+    <div class="two-col">
+      <div class="card">
+        <div class="section-label">spending by category</div>
+        <div class="chart-wrap" style="height:240px;"><canvas id="billCatChart" role="img" aria-label="Donut chart of bills by category">Bills by category</canvas></div>
+      </div>
+      <div class="card">
+        <div class="section-label">bill breakdown</div>
+        <div id="billBreakdown"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- P&L CALENDAR -->
+  <div class="budget-panel" id="bpanel-calendar">
+    <div class="card" style="margin-bottom:1rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px;">
+        <div class="section-label" style="margin-bottom:0;">weekly cash flow calendar</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select class="filter" id="calMonthSel" onchange="renderCalendar()"></select>
+          <button class="btn btn-sm" onclick="renderCalendar()">↻ Refresh</button>
+        </div>
+      </div>
+      <!-- Header row -->
+      <div class="pl-week" style="padding-bottom:6px;margin-bottom:4px;">
+        <div class="pl-cell" style="font-size:11px;font-weight:500;color:var(--hint);text-transform:uppercase;letter-spacing:0.06em;">Week of</div>
+        <div class="pl-cell" style="font-size:11px;font-weight:500;color:var(--hint);text-transform:uppercase;letter-spacing:0.06em;">Income</div>
+        <div class="pl-cell" style="font-size:11px;font-weight:500;color:var(--hint);text-transform:uppercase;letter-spacing:0.06em;">Bills due</div>
+        <div class="pl-cell" style="font-size:11px;font-weight:500;color:var(--hint);text-transform:uppercase;letter-spacing:0.06em;">Net</div>
+        <div class="pl-cell" style="font-size:11px;font-weight:500;color:var(--hint);text-transform:uppercase;letter-spacing:0.06em;">Running balance</div>
+      </div>
+      <div id="calendarBody"></div>
+    </div>
+    <div class="two-col">
+      <div class="card" style="padding:1rem;">
+        <div class="section-label">monthly cash flow</div>
+        <div class="chart-wrap" style="height:220px;"><canvas id="plChart" role="img" aria-label="Bar chart showing monthly income vs expenses">Monthly P&L</canvas></div>
+      </div>
+      <div class="card">
+        <div class="section-label">bills due this month</div>
+        <div id="upcomingBills"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ZERO-BALANCE BUDGET -->
+  <div class="budget-panel" id="bpanel-zero">
+    <div class="insight" style="margin-bottom:1rem;">
+      A zero-balance budget means every dollar of income is assigned a job. Income − all allocations = $0. Adjust the sliders below to allocate your remaining income after bills.
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="section-label">allocate remaining income</div>
+        <div id="zeroBudgetSliders"></div>
+        <div style="border-top:0.5px solid var(--border);padding-top:12px;margin-top:4px;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;"><span style="color:var(--muted);">Monthly income</span><span class="green" id="zIncome">—</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;"><span style="color:var(--muted);">Fixed bills</span><span class="red" id="zBills">—</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;"><span style="color:var(--muted);">Discretionary allocated</span><span class="amber" id="zAllocated">—</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:500;padding-top:8px;border-top:0.5px solid var(--border);"><span>Remaining (target: $0)</span><span id="zRemaining">—</span></div>
+        </div>
+      </div>
+      <div class="card" style="padding:1rem;">
+        <div class="section-label">budget allocation</div>
+        <div class="chart-wrap" style="height:260px;"><canvas id="zeroChart" role="img" aria-label="Donut chart showing zero-balance budget allocation">Budget allocation</canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INCOME SOURCES -->
+  <div class="budget-panel" id="bpanel-income">
+    <div class="two-col">
+      <div class="card">
+        <div class="section-label">income sources</div>
+        <table class="bill-table" id="incomeTable">
+          <thead><tr><th>Source</th><th>Frequency</th><th>Amount</th><th>Annual</th><th></th></tr></thead>
+          <tbody id="incomeBody"></tbody>
+          <tfoot><tr class="total-row"><td colspan="2" style="font-weight:500;">Total annual income</td><td id="incTotalMonthly"></td><td id="incTotalAnnual"></td><td></td></tr></tfoot>
+        </table>
+        <button class="btn btn-sm" style="margin-top:1rem;" onclick="openAddIncomeModal()">+ Add income source</button>
+      </div>
+      <div class="card" style="padding:1rem;">
+        <div class="section-label">income breakdown</div>
+        <div class="chart-wrap" style="height:240px;"><canvas id="incomeChart" role="img" aria-label="Donut chart of income sources">Income sources</canvas></div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- ── RETIREMENT ── -->
@@ -302,9 +492,7 @@
     <span>Drag the handles on each section to reorder</span>
     <button class="btn btn-sm" onclick="toggleEditMode('retirement')">Done</button>
   </div>
-
   <div class="drag-container" id="retContainer">
-
     <div class="drag-section" data-id="ret-accounts">
       <div class="drag-handle-bar"><div class="drag-handle" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Live retirement accounts</div></div>
       <div class="card">
@@ -320,7 +508,6 @@
         </div>
       </div>
     </div>
-
     <div class="drag-section" data-id="ret-inputs">
       <div class="drag-handle-bar"><div class="drag-handle" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Your details</div></div>
       <div class="inputs-panel">
@@ -337,18 +524,11 @@
             <div class="input-group-label">Tax &amp; risk</div>
             <div class="slider-row"><div class="slider-label"><span>Current tax rate</span><span class="slider-val" id="u-taxnow-val">22%</span></div><input type="range" id="u-taxnow" min="10" max="50" value="22" step="1" oninput="uSync()"></div>
             <div class="slider-row"><div class="slider-label"><span>Retirement tax rate</span><span class="slider-val" id="u-taxret-val">18%</span></div><input type="range" id="u-taxret" min="0" max="50" value="18" step="1" oninput="uSync()"></div>
-            <div class="select-row" style="flex-direction:column;gap:4px;">
-              <label>Risk tolerance</label>
-              <select id="u-risk" onchange="uSync()"><option value="conservative">Conservative</option><option value="moderate" selected>Moderate</option><option value="aggressive">Aggressive</option></select>
-            </div>
+            <div class="select-row" style="flex-direction:column;gap:4px;"><label>Risk tolerance</label><select id="u-risk" onchange="uSync()"><option value="conservative">Conservative</option><option value="moderate" selected>Moderate</option><option value="aggressive">Aggressive</option></select></div>
           </div>
           <div>
             <div class="input-group-label">Savings &amp; contributions</div>
-            <div class="slider-row">
-              <div class="slider-label"><span>Current retirement savings</span><span class="slider-val" id="u-saved-val">$45,000</span></div>
-              <div class="plaid-note" id="u-saved-note" style="display:none;">↑ pulled from linked accounts</div>
-              <input type="range" id="u-saved" min="0" max="2000000" value="45000" step="1000" oninput="uSync()">
-            </div>
+            <div class="slider-row"><div class="slider-label"><span>Current retirement savings</span><span class="slider-val" id="u-saved-val">$45,000</span></div><div class="plaid-note" id="u-saved-note" style="display:none;">↑ pulled from linked accounts</div><input type="range" id="u-saved" min="0" max="2000000" value="45000" step="1000" oninput="uSync()"></div>
             <div class="slider-row"><div class="slider-label"><span>Monthly contribution</span><span class="slider-val" id="u-contrib-val">$1,200</span></div><input type="range" id="u-contrib" min="0" max="5000" value="1200" step="50" oninput="uSync()"></div>
             <div class="slider-row"><div class="slider-label"><span>Annual IRA contribution</span><span class="slider-val" id="u-ira-val">$7,000</span></div><input type="range" id="u-ira" min="0" max="15000" value="7000" step="500" oninput="uSync()"></div>
             <div class="slider-row"><div class="slider-label"><span>Safe withdrawal rate</span><span class="slider-val" id="u-swr-val">4.0%</span></div><input type="range" id="u-swr" min="2" max="6" value="4" step="0.25" oninput="uSync()"></div>
@@ -364,18 +544,13 @@
             <div class="slider-row"><div class="slider-label"><span>Monthly retirement expenses</span><span class="slider-val" id="u-exp-val">$4,500</span></div><input type="range" id="u-exp" min="1000" max="20000" value="4500" step="100" oninput="uSync()"></div>
             <div class="input-group-label">Social Security</div>
             <div class="slider-row"><div class="slider-label"><span>Claim SS at age</span><span class="slider-val" id="u-ssclaim-val">67</span></div><input type="range" id="u-ssclaim" min="62" max="70" value="67" step="1" oninput="uSync()"></div>
-            <div class="select-row" style="flex-direction:column;gap:4px;">
-              <label>Time horizon</label>
-              <select id="u-horizon" onchange="uSync()"><option value="short">Under 10 years</option><option value="medium" selected>10–20 years</option><option value="long">20+ years</option></select>
-            </div>
+            <div class="select-row" style="flex-direction:column;gap:4px;"><label>Time horizon</label><select id="u-horizon" onchange="uSync()"><option value="short">Under 10 years</option><option value="medium" selected>10–20 years</option><option value="long">20+ years</option></select></div>
           </div>
         </div>
       </div>
     </div>
-
     <div class="drag-section" data-id="ret-results">
       <div class="drag-handle-bar"><div class="drag-handle" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Results</div></div>
-
       <div class="five-col">
         <div class="metric"><div class="metric-label">Nest egg at retirement</div><div class="metric-value green" id="sum-nest">—</div><div class="metric-sub">nominal</div></div>
         <div class="metric"><div class="metric-label">Monthly income</div><div class="metric-value blue" id="sum-income">—</div><div class="metric-sub">4% rule + SS</div></div>
@@ -383,7 +558,6 @@
         <div class="metric"><div class="metric-label">Roth advantage</div><div class="metric-value" id="sum-roth">—</div><div class="metric-sub">vs traditional</div></div>
         <div class="metric"><div class="metric-label">FIRE age</div><div class="metric-value amber" id="sum-fire">—</div><div class="metric-sub">at current pace</div></div>
       </div>
-
       <div class="ret-tabs">
         <button class="ret-tab active" onclick="switchRetTab('growth')">Growth</button>
         <button class="ret-tab" onclick="switchRetTab('longevity')">Longevity</button>
@@ -392,116 +566,106 @@
         <button class="ret-tab" onclick="switchRetTab('alloc')">Investment mix</button>
         <button class="ret-tab" onclick="switchRetTab('fire')">FIRE</button>
       </div>
-
       <div class="ret-panel active" id="rpanel-growth">
         <div class="two-col">
-          <div>
-            <div class="three-col">
-              <div class="metric"><div class="metric-label">At retirement</div><div class="metric-value green" id="g-total">—</div><div class="metric-sub">nominal</div></div>
-              <div class="metric"><div class="metric-label">In today's $</div><div class="metric-value blue" id="g-real">—</div><div class="metric-sub">inflation-adj.</div></div>
-              <div class="metric"><div class="metric-label">Monthly (4% rule)</div><div class="metric-value" id="g-monthly">—</div><div class="metric-sub">from portfolio</div></div>
-            </div>
-            <div class="insight" id="g-insight"></div>
-          </div>
-          <div class="card" style="padding:1rem">
-            <div class="legend-row"><span><span class="legend-dot" style="background:#1d9e75"></span>Balance</span><span><span class="legend-dot" style="background:#185fa5"></span>Contributions</span></div>
-            <div class="chart-wrap" style="height:220px"><canvas id="growthChart" role="img" aria-label="Line chart showing retirement savings growth">Retirement growth</canvas></div>
-          </div>
+          <div><div class="three-col"><div class="metric"><div class="metric-label">At retirement</div><div class="metric-value green" id="g-total">—</div><div class="metric-sub">nominal</div></div><div class="metric"><div class="metric-label">In today's $</div><div class="metric-value blue" id="g-real">—</div><div class="metric-sub">inflation-adj.</div></div><div class="metric"><div class="metric-label">Monthly (4% rule)</div><div class="metric-value" id="g-monthly">—</div><div class="metric-sub">from portfolio</div></div></div><div class="insight" id="g-insight"></div></div>
+          <div class="card" style="padding:1rem"><div class="legend-row"><span><span class="legend-dot" style="background:#1d9e75"></span>Balance</span><span><span class="legend-dot" style="background:#185fa5"></span>Contributions</span></div><div class="chart-wrap" style="height:220px"><canvas id="growthChart" role="img" aria-label="Line chart showing retirement savings growth">Retirement growth</canvas></div></div>
         </div>
       </div>
-
       <div class="ret-panel" id="rpanel-longevity">
         <div class="two-col">
-          <div>
-            <div class="three-col">
-              <div class="metric"><div class="metric-label">Funds last until</div><div class="metric-value green" id="l-until">—</div><div class="metric-sub">projected age</div></div>
-              <div class="metric"><div class="metric-label">Years in retirement</div><div class="metric-value blue" id="l-years">—</div><div class="metric-sub">before depletion</div></div>
-              <div class="metric"><div class="metric-label">Monthly shortfall</div><div class="metric-value" id="l-shortfall">—</div><div class="metric-sub">from savings only</div></div>
-            </div>
-            <div class="insight" id="l-insight"></div>
-          </div>
-          <div class="card" style="padding:1rem">
-            <div class="legend-row"><span><span class="legend-dot" style="background:#1d9e75"></span>Portfolio</span><span><span class="legend-dot" style="background:#185fa5"></span>Income</span><span><span class="legend-dot" style="background:#d85a30"></span>Expenses</span></div>
-            <div class="chart-wrap" style="height:220px"><canvas id="longevityChart" role="img" aria-label="Line chart showing retirement fund longevity">Longevity</canvas></div>
-          </div>
+          <div><div class="three-col"><div class="metric"><div class="metric-label">Funds last until</div><div class="metric-value green" id="l-until">—</div><div class="metric-sub">projected age</div></div><div class="metric"><div class="metric-label">Years in retirement</div><div class="metric-value blue" id="l-years">—</div><div class="metric-sub">before depletion</div></div><div class="metric"><div class="metric-label">Monthly shortfall</div><div class="metric-value" id="l-shortfall">—</div><div class="metric-sub">from savings only</div></div></div><div class="insight" id="l-insight"></div></div>
+          <div class="card" style="padding:1rem"><div class="legend-row"><span><span class="legend-dot" style="background:#1d9e75"></span>Portfolio</span><span><span class="legend-dot" style="background:#185fa5"></span>Income</span><span><span class="legend-dot" style="background:#d85a30"></span>Expenses</span></div><div class="chart-wrap" style="height:220px"><canvas id="longevityChart" role="img" aria-label="Line chart showing retirement fund longevity">Longevity</canvas></div></div>
         </div>
       </div>
-
       <div class="ret-panel" id="rpanel-roth">
         <div class="two-col">
-          <div>
-            <div class="two-col">
-              <div class="metric"><div class="metric-label">Roth (after-tax)</div><div class="metric-value green" id="r-roth-val">—</div><div class="metric-sub">tax-free withdrawals</div></div>
-              <div class="metric"><div class="metric-label">Traditional (after-tax)</div><div class="metric-value blue" id="r-trad-val">—</div><div class="metric-sub">taxed at withdrawal</div></div>
-            </div>
-            <div class="insight" id="r-insight"></div>
-          </div>
-          <div class="card" style="padding:1rem">
-            <div class="legend-row"><span><span class="legend-dot" style="background:#1d9e75"></span>Roth IRA</span><span><span class="legend-dot" style="background:#185fa5"></span>Traditional IRA</span></div>
-            <div class="chart-wrap" style="height:220px"><canvas id="rothChart" role="img" aria-label="Bar chart comparing Roth vs Traditional IRA">Roth vs Traditional</canvas></div>
-          </div>
+          <div><div class="two-col"><div class="metric"><div class="metric-label">Roth (after-tax)</div><div class="metric-value green" id="r-roth-val">—</div><div class="metric-sub">tax-free withdrawals</div></div><div class="metric"><div class="metric-label">Traditional (after-tax)</div><div class="metric-value blue" id="r-trad-val">—</div><div class="metric-sub">taxed at withdrawal</div></div></div><div class="insight" id="r-insight"></div></div>
+          <div class="card" style="padding:1rem"><div class="legend-row"><span><span class="legend-dot" style="background:#1d9e75"></span>Roth IRA</span><span><span class="legend-dot" style="background:#185fa5"></span>Traditional IRA</span></div><div class="chart-wrap" style="height:220px"><canvas id="rothChart" role="img" aria-label="Bar chart comparing Roth vs Traditional IRA">Roth vs Traditional</canvas></div></div>
         </div>
       </div>
-
       <div class="ret-panel" id="rpanel-ss">
         <div class="two-col">
-          <div>
-            <div class="three-col">
-              <div class="metric"><div class="metric-label">Lifetime at 62</div><div class="metric-value red" id="ss-t62">—</div></div>
-              <div class="metric"><div class="metric-label">Lifetime at 67</div><div class="metric-value blue" id="ss-t67">—</div></div>
-              <div class="metric"><div class="metric-label">Lifetime at 70</div><div class="metric-value green" id="ss-t70">—</div></div>
-            </div>
-            <div class="result-box">
-              <div class="result-row"><span>Monthly at 62 (−30%)</span><span class="red" id="ss-62">—</span></div>
-              <div class="result-row"><span>Monthly at 67 (full)</span><span class="blue" id="ss-67">—</span></div>
-              <div class="result-row"><span>Monthly at 70 (+24%)</span><span class="green" id="ss-70">—</span></div>
-              <div class="result-row"><span>Best strategy</span><span id="ss-best" style="font-weight:500">—</span></div>
-            </div>
-            <div class="insight" id="ss-insight"></div>
-          </div>
-          <div class="card" style="padding:1rem">
-            <div class="legend-row"><span><span class="legend-dot" style="background:#d85a30"></span>Age 62</span><span><span class="legend-dot" style="background:#185fa5"></span>Age 67</span><span><span class="legend-dot" style="background:#1d9e75"></span>Age 70</span></div>
-            <div class="chart-wrap" style="height:220px"><canvas id="ssChart" role="img" aria-label="Line chart comparing cumulative Social Security benefits">Social Security</canvas></div>
-          </div>
+          <div><div class="three-col"><div class="metric"><div class="metric-label">Lifetime at 62</div><div class="metric-value red" id="ss-t62">—</div></div><div class="metric"><div class="metric-label">Lifetime at 67</div><div class="metric-value blue" id="ss-t67">—</div></div><div class="metric"><div class="metric-label">Lifetime at 70</div><div class="metric-value green" id="ss-t70">—</div></div></div><div class="result-box"><div class="result-row"><span>Monthly at 62 (−30%)</span><span class="red" id="ss-62">—</span></div><div class="result-row"><span>Monthly at 67 (full)</span><span class="blue" id="ss-67">—</span></div><div class="result-row"><span>Monthly at 70 (+24%)</span><span class="green" id="ss-70">—</span></div><div class="result-row"><span>Best strategy</span><span id="ss-best" style="font-weight:500">—</span></div></div><div class="insight" id="ss-insight"></div></div>
+          <div class="card" style="padding:1rem"><div class="legend-row"><span><span class="legend-dot" style="background:#d85a30"></span>Age 62</span><span><span class="legend-dot" style="background:#185fa5"></span>Age 67</span><span><span class="legend-dot" style="background:#1d9e75"></span>Age 70</span></div><div class="chart-wrap" style="height:220px"><canvas id="ssChart" role="img" aria-label="Line chart comparing cumulative Social Security benefits">Social Security</canvas></div></div>
         </div>
       </div>
-
       <div class="ret-panel" id="rpanel-alloc">
         <div class="two-col">
-          <div>
-            <div id="allocBars"></div>
-            <div class="insight" id="a-insight"></div>
-          </div>
-          <div class="card" style="padding:1rem">
-            <div class="section-label" style="margin-bottom:10px">portfolio mix</div>
-            <div class="chart-wrap" style="height:220px"><canvas id="allocChart" role="img" aria-label="Donut chart of recommended investment allocation">Allocation mix</canvas></div>
-            <div class="legend-row" id="allocLegend" style="margin-top:12px;justify-content:center"></div>
-          </div>
+          <div><div id="allocBars"></div><div class="insight" id="a-insight"></div></div>
+          <div class="card" style="padding:1rem"><div class="section-label" style="margin-bottom:10px">portfolio mix</div><div class="chart-wrap" style="height:220px"><canvas id="allocChart" role="img" aria-label="Donut chart of recommended investment allocation">Allocation mix</canvas></div><div class="legend-row" id="allocLegend" style="margin-top:12px;justify-content:center"></div></div>
         </div>
       </div>
-
       <div class="ret-panel" id="rpanel-fire">
         <div class="two-col">
-          <div>
-            <div class="three-col">
-              <div class="metric"><div class="metric-label">FIRE number</div><div class="metric-value green" id="f-target">—</div><div class="metric-sub">savings needed</div></div>
-              <div class="metric"><div class="metric-label">Years to FIRE</div><div class="metric-value blue" id="f-years">—</div><div class="metric-sub">at current pace</div></div>
-              <div class="metric"><div class="metric-label">FIRE age</div><div class="metric-value amber" id="f-fireage">—</div><div class="metric-sub">projected</div></div>
-            </div>
-            <div class="insight" id="f-insight"></div>
-          </div>
-          <div class="card" style="padding:1rem">
-            <div class="legend-row"><span><span class="legend-dot" style="background:#1d9e75"></span>Savings</span><span><span class="legend-dot" style="background:#d85a30"></span>FIRE target</span></div>
-            <div class="chart-wrap" style="height:220px"><canvas id="fireChart" role="img" aria-label="Line chart showing path to financial independence">FIRE path</canvas></div>
-          </div>
+          <div><div class="three-col"><div class="metric"><div class="metric-label">FIRE number</div><div class="metric-value green" id="f-target">—</div><div class="metric-sub">savings needed</div></div><div class="metric"><div class="metric-label">Years to FIRE</div><div class="metric-value blue" id="f-years">—</div><div class="metric-sub">at current pace</div></div><div class="metric"><div class="metric-label">FIRE age</div><div class="metric-value amber" id="f-fireage">—</div><div class="metric-sub">projected</div></div></div><div class="insight" id="f-insight"></div></div>
+          <div class="card" style="padding:1rem"><div class="legend-row"><span><span class="legend-dot" style="background:#1d9e75"></span>Savings</span><span><span class="legend-dot" style="background:#d85a30"></span>FIRE target</span></div><div class="chart-wrap" style="height:220px"><canvas id="fireChart" role="img" aria-label="Line chart showing path to financial independence">FIRE path</canvas></div></div>
         </div>
       </div>
-
     </div>
   </div>
 </div>
 
 </main>
+
+<!-- Add Bill Modal -->
+<div class="modal-backdrop" id="addBillModal" style="display:none;" onclick="if(event.target===this)closeAddBillModal()">
+  <div class="modal">
+    <div class="modal-title">Add bill or expense</div>
+    <div class="modal-sub">Add a fixed monthly bill to your budget</div>
+    <div class="form-grid">
+      <div class="form-field"><label>Category</label>
+        <select id="newBillCat">
+          <option value="HM">🏠 Housing (HM)</option>
+          <option value="LOAN">🏦 Loan</option>
+          <option value="CC" selected>💳 Credit card (CC)</option>
+          <option value="CAR">🚗 Auto (CAR)</option>
+          <option value="PH">📱 Phone (PH)</option>
+          <option value="TV">📺 Cable/Streaming (TV)</option>
+          <option value="FAM">👨‍👩‍👧 Family (FAM)</option>
+          <option value="SAVE">💰 Savings (SAVE)</option>
+          <option value="OTHER">Other</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Name</label><input type="text" id="newBillName" placeholder="e.g. Chase Sapphire"></div>
+      <div class="form-field"><label>Lender / Note</label><input type="text" id="newBillNote" placeholder="e.g. Chase Bank"></div>
+      <div class="form-field"><label>APR %</label><input type="number" id="newBillAPR" placeholder="0" step="0.01" min="0" max="100"></div>
+      <div class="form-field"><label>Due day of month</label><input type="number" id="newBillDue" placeholder="1–31" min="1" max="31"></div>
+      <div class="form-field"><label>Balance (negative)</label><input type="number" id="newBillBal" placeholder="e.g. -1500"></div>
+      <div class="form-field"><label>Minimum payment</label><input type="number" id="newBillMin" placeholder="e.g. 29" min="0"></div>
+      <div class="form-field"><label>Your payment</label><input type="number" id="newBillPay" placeholder="e.g. 100" min="0"></div>
+      <div class="form-field" style="grid-column:1/-1;"><label>Promo / Notes</label><input type="text" id="newBillPromo" placeholder="e.g. 0% interest until 2026-09-01"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-sm" onclick="closeAddBillModal()">Cancel</button>
+      <button class="export-btn green" onclick="saveNewBill()">Add bill</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Income Modal -->
+<div class="modal-backdrop" id="addIncomeModal" style="display:none;" onclick="if(event.target===this)closeAddIncomeModal()">
+  <div class="modal">
+    <div class="modal-title">Add income source</div>
+    <div class="form-grid">
+      <div class="form-field"><label>Source name</label><input type="text" id="newIncName" placeholder="e.g. Matt Paycheck"></div>
+      <div class="form-field"><label>Frequency</label>
+        <select id="newIncFreq">
+          <option value="biweekly">Bi-weekly</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly" selected>Monthly</option>
+          <option value="quarterly">Quarterly</option>
+          <option value="annual">Annual</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Amount per payment</label><input type="number" id="newIncAmt" placeholder="e.g. 2088.50" min="0"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-sm" onclick="closeAddIncomeModal()">Cancel</button>
+      <button class="export-btn green" onclick="saveNewIncome()">Add income</button>
+    </div>
+  </div>
+</div>
 
 <!-- Export Modal -->
 <div class="modal-backdrop" id="exportModal" style="display:none;" onclick="if(event.target===this)closeExportModal()">
@@ -523,8 +687,7 @@
     <div class="modal-footer">
       <button class="btn btn-sm" onclick="closeExportModal()">Cancel</button>
       <button class="export-btn green" onclick="exportExcel()">
-        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Download Excel
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download Excel
       </button>
     </div>
   </div>
@@ -534,28 +697,76 @@
 
 <script>
 let allTransactions=[], allAccounts=[], catChartInst=null, dailyChartInst=null;
-const retCharts={};
+const retCharts={}, budgetCharts={};
 const gg=id=>document.getElementById(id);
 const fmtM=n=>'$'+(Math.abs(n)>=1e6?(Math.abs(n)/1e6).toFixed(2)+'M':Math.abs(n)>=1000?Math.round(Math.abs(n)/1000)+'K':Math.round(Math.abs(n)).toLocaleString());
 const fmtK=n=>'$'+Math.round(Math.abs(n)).toLocaleString();
+const fmt2=n=>'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+// ── Bills data (pre-loaded from Matt & Dana workbook) ─────────────────────────
+let bills = [
+  {cat:'HM', name:"M&T Mortgage",      note:'Mortgage',        apr:2.625, due:5,  bal:-292452.38, min:2638.46, pay:2638.46, promo:''},
+  {cat:'LOAN',name:'Navy HELOC',        note:'Navy Federal',    apr:7.75,  due:1,  bal:-45427.90,  min:454.28,  pay:461.64,  promo:''},
+  {cat:'LOAN',name:'Windows Loan',      note:'0% Promo',        apr:0,     due:12, bal:-11339.55,  min:315.00,  pay:315.00,  promo:'0% Interest 3yr'},
+  {cat:'CAR', name:"Dana Auto",         note:'Capitol 1',       apr:7.86,  due:15, bal:-6430.19,   min:300.61,  pay:300.61,  promo:''},
+  {cat:'CAR', name:"Matt Auto",         note:'Wells Fargo',     apr:5.14,  due:28, bal:-11865.37,  min:451.50,  pay:451.50,  promo:''},
+  {cat:'CAR', name:'State Farm Ins',    note:'Insurance',       apr:0,     due:15, bal:0,          min:265.93,  pay:265.93,  promo:''},
+  {cat:'PH',  name:'T-Mobile',          note:'Phone',           apr:0,     due:1,  bal:0,          min:274.94,  pay:274.94,  promo:''},
+  {cat:'HM',  name:'Lake Worth Utilities',note:'Utilities',     apr:0,     due:10, bal:0,          min:321.00,  pay:321.00,  promo:''},
+  {cat:'TV',  name:'Xfinity',           note:'Cable',           apr:0,     due:29, bal:0,          min:319.66,  pay:319.66,  promo:''},
+  {cat:'CC',  name:'Amex Blue Cash',    note:'AMEX',            apr:24.49, due:3,  bal:-1134.61,   min:53.41,   pay:256.00,  promo:'0% Interest 15mo'},
+  {cat:'CC',  name:'Savor',             note:'Capitol 1',       apr:29.49, due:3,  bal:-678.59,    min:29.00,   pay:100.00,  promo:'3% Food/Grocery'},
+  {cat:'CC',  name:'Chase Freedom',     note:'Chase',           apr:0,     due:3,  bal:-803.71,    min:40.00,   pay:100.00,  promo:'3% Food/Drugstore'},
+  {cat:'CC',  name:'Wells Fargo Reflect',note:'Wells Fargo',    apr:0,     due:12, bal:-2908.35,   min:73.00,   pay:287.93,  promo:'0% Interest 21mo thru 5/27'},
+  {cat:'CC',  name:'Best Buy CC',       note:'CITI Bank',       apr:28.74, due:12, bal:-434.10,    min:29.00,   pay:92.61,   promo:'0% thru 9/26'},
+  {cat:'CC',  name:'Home Depot',        note:'CITI Bank',       apr:29.99, due:6,  bal:-903.68,    min:29.00,   pay:82.15,   promo:'0% thru 4/27'},
+  {cat:'CC',  name:'Harbor Freight',    note:'Synchrony',       apr:0,     due:20, bal:-238.15,    min:44.00,   pay:44.00,   promo:'0% Interest 24mo thru 10/26'},
+  {cat:'CC',  name:'Amazon CC',         note:'Synchrony',       apr:29.74, due:8,  bal:-585.57,    min:81.00,   pay:100.00,  promo:''},
+  {cat:'CC',  name:'Costco CC',         note:'CITI Bank',       apr:18.74, due:28, bal:-152.70,    min:29.00,   pay:152.70,  promo:''},
+  {cat:'CC',  name:'Double Cash Back',  note:'CITI Bank',       apr:26.49, due:16, bal:-21.69,     min:29.00,   pay:21.69,   promo:''},
+  {cat:'CC',  name:'Hilton Honors',     note:'AMEX',            apr:28.49, due:2,  bal:-1268.93,   min:29.00,   pay:29.00,   promo:'HH Points'},
+  {cat:'CC',  name:'Platinum',          note:'Capitol 1',       apr:28.74, due:14, bal:-118.14,    min:29.00,   pay:150.00,  promo:''},
+  {cat:'FAM', name:'Ana Mom',           note:'Family',          apr:0,     due:30, bal:-2500,      min:204.99,  pay:204.99,  promo:''},
+];
+
+// Income sources
+let incomeSources = [
+  {name:'Matt Paycheck',   freq:'biweekly', amt:2088.50},
+  {name:'Dana Paycheck',   freq:'weekly',   amt:788.01},
+  {name:'Auto Allowance',  freq:'monthly',  amt:1650.00},
+  {name:'Quarterly Bonus', freq:'quarterly',amt:3594.23},
+];
+
+// Zero budget buckets
+let zeroBuckets = [
+  {name:'Groceries',    amt:350},
+  {name:'Dining out',   amt:200},
+  {name:'Gas',          amt:300},
+  {name:'Medical',      amt:150},
+  {name:'Clothing',     amt:100},
+  {name:'Entertainment',amt:100},
+  {name:'Savings',      amt:500},
+  {name:'Emergency fund',amt:200},
+  {name:'Misc',         amt:100},
+];
 
 // ── Unified retirement input state ────────────────────────────────────────────
 const U={age:42,ret:65,life:85,taxNow:22,taxRet:18,risk:'moderate',saved:45000,contrib:1200,ira:7000,swr:4,ss:2400,pen:0,rate:7,retRate:5,inf:3,exp:4500,ssClaim:67,horizon:'medium'};
 
 function uSync(){
-  U.age=+gg('u-age').value; U.ret=+gg('u-ret').value; U.life=+gg('u-life').value;
-  U.taxNow=+gg('u-taxnow').value; U.taxRet=+gg('u-taxret').value; U.risk=gg('u-risk').value;
-  U.saved=+gg('u-saved').value; U.contrib=+gg('u-contrib').value; U.ira=+gg('u-ira').value;
-  U.swr=+gg('u-swr').value; U.ss=+gg('u-ss').value; U.pen=+gg('u-pen').value;
-  U.rate=+gg('u-rate').value; U.retRate=+gg('u-retrate').value; U.inf=+gg('u-inf').value;
-  U.exp=+gg('u-exp').value; U.ssClaim=+gg('u-ssclaim').value; U.horizon=gg('u-horizon').value;
-  gg('u-age-val').textContent=U.age; gg('u-ret-val').textContent=U.ret; gg('u-life-val').textContent=U.life;
-  gg('u-taxnow-val').textContent=U.taxNow+'%'; gg('u-taxret-val').textContent=U.taxRet+'%';
-  gg('u-saved-val').textContent='$'+U.saved.toLocaleString(); gg('u-contrib-val').textContent='$'+U.contrib.toLocaleString();
-  gg('u-ira-val').textContent='$'+U.ira.toLocaleString(); gg('u-swr-val').textContent=U.swr.toFixed(2)+'%';
-  gg('u-ss-val').textContent='$'+U.ss.toLocaleString(); gg('u-pen-val').textContent='$'+U.pen.toLocaleString();
-  gg('u-rate-val').textContent=parseFloat(U.rate).toFixed(1)+'%'; gg('u-retrate-val').textContent=parseFloat(U.retRate).toFixed(1)+'%';
-  gg('u-inf-val').textContent=parseFloat(U.inf).toFixed(1)+'%'; gg('u-exp-val').textContent='$'+U.exp.toLocaleString();
+  U.age=+gg('u-age').value;U.ret=+gg('u-ret').value;U.life=+gg('u-life').value;
+  U.taxNow=+gg('u-taxnow').value;U.taxRet=+gg('u-taxret').value;U.risk=gg('u-risk').value;
+  U.saved=+gg('u-saved').value;U.contrib=+gg('u-contrib').value;U.ira=+gg('u-ira').value;
+  U.swr=+gg('u-swr').value;U.ss=+gg('u-ss').value;U.pen=+gg('u-pen').value;
+  U.rate=+gg('u-rate').value;U.retRate=+gg('u-retrate').value;U.inf=+gg('u-inf').value;
+  U.exp=+gg('u-exp').value;U.ssClaim=+gg('u-ssclaim').value;U.horizon=gg('u-horizon').value;
+  gg('u-age-val').textContent=U.age;gg('u-ret-val').textContent=U.ret;gg('u-life-val').textContent=U.life;
+  gg('u-taxnow-val').textContent=U.taxNow+'%';gg('u-taxret-val').textContent=U.taxRet+'%';
+  gg('u-saved-val').textContent='$'+U.saved.toLocaleString();gg('u-contrib-val').textContent='$'+U.contrib.toLocaleString();
+  gg('u-ira-val').textContent='$'+U.ira.toLocaleString();gg('u-swr-val').textContent=U.swr.toFixed(2)+'%';
+  gg('u-ss-val').textContent='$'+U.ss.toLocaleString();gg('u-pen-val').textContent='$'+U.pen.toLocaleString();
+  gg('u-rate-val').textContent=parseFloat(U.rate).toFixed(1)+'%';gg('u-retrate-val').textContent=parseFloat(U.retRate).toFixed(1)+'%';
+  gg('u-inf-val').textContent=parseFloat(U.inf).toFixed(1)+'%';gg('u-exp-val').textContent='$'+U.exp.toLocaleString();
   gg('u-ssclaim-val').textContent=U.ssClaim;
   calcAll();
 }
@@ -584,33 +795,22 @@ function initDrag(container){
     handle.addEventListener('dragend',()=>{dragSrc&&dragSrc.classList.remove('dragging');container.querySelectorAll('.drag-section').forEach(s=>s.classList.remove('drag-over'));dragSrc=null;});
   });
   container.querySelectorAll('.drag-section').forEach(section=>{
-    section.addEventListener('dragover',e=>{e.preventDefault();e.dataTransfer.dropEffect='move';if(dragSrc&&section!==dragSrc){container.querySelectorAll('.drag-section').forEach(s=>s.classList.remove('drag-over'));section.classList.add('drag-over');}});
+    section.addEventListener('dragover',e=>{e.preventDefault();if(dragSrc&&section!==dragSrc){container.querySelectorAll('.drag-section').forEach(s=>s.classList.remove('drag-over'));section.classList.add('drag-over');}});
     section.addEventListener('dragleave',()=>section.classList.remove('drag-over'));
     section.addEventListener('drop',e=>{e.preventDefault();section.classList.remove('drag-over');if(dragSrc&&section!==dragSrc){const kids=[...container.children];const si=kids.indexOf(dragSrc),ti=kids.indexOf(section);si<ti?container.insertBefore(dragSrc,section.nextSibling):container.insertBefore(dragSrc,section);}});
   });
 }
 
-function saveSectionOrder(page){
-  const c=gg(page==='dashboard'?'dashContainer':'retContainer');
-  const order=[...c.querySelectorAll('.drag-section')].map(s=>s.dataset.id);
-  try{localStorage.setItem('section-order-'+page,JSON.stringify(order));}catch(e){}
-}
-
-function loadSectionOrder(page){
-  try{
-    const saved=JSON.parse(localStorage.getItem('section-order-'+page));
-    if(!saved)return;
-    const c=gg(page==='dashboard'?'dashContainer':'retContainer');
-    saved.forEach(id=>{const el=c.querySelector(`[data-id="${id}"]`);if(el)c.appendChild(el);});
-  }catch(e){}
-}
+function saveSectionOrder(page){try{const c=gg(page==='dashboard'?'dashContainer':'retContainer');localStorage.setItem('section-order-'+page,JSON.stringify([...c.querySelectorAll('.drag-section')].map(s=>s.dataset.id)));}catch(e){}}
+function loadSectionOrder(page){try{const saved=JSON.parse(localStorage.getItem('section-order-'+page));if(!saved)return;const c=gg(page==='dashboard'?'dashContainer':'retContainer');saved.forEach(id=>{const el=c.querySelector(`[data-id="${id}"]`);if(el)c.appendChild(el);});}catch(e){}}
 
 // ── Page nav ──────────────────────────────────────────────────────────────────
 function showPage(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',['dashboard','retirement'][i]===page));
+  document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',['dashboard','expenses','retirement'][i]===page));
   gg(page).classList.add('active');
   if(page==='retirement')calcAll();
+  if(page==='expenses')renderExpensesPage();
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
@@ -622,16 +822,25 @@ async function init(){
   loadSectionOrder('dashboard');
   loadSectionOrder('retirement');
 
-  // Set default custom date range
+  // Populate calendar month selector
+  const sel=gg('calMonthSel');
+  const now=new Date();
+  for(let i=0;i<12;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()+i,1);
+    const opt=document.createElement('option');
+    opt.value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    opt.textContent=d.toLocaleString('default',{month:'long',year:'numeric'});
+    if(i===0)opt.selected=true;
+    sel.appendChild(opt);
+  }
+
   const today=new Date().toISOString().slice(0,10);
   const ago30=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
-  gg('txnDateFrom').value=ago30;
-  gg('txnDateTo').value=today;
+  gg('txnDateFrom').value=ago30;gg('txnDateTo').value=today;
 
   try{
     const h=await fetch('/api/health').then(r=>r.json());
-    const badge=gg('envBadge');
-    badge.textContent=h.env;
+    const badge=gg('envBadge');badge.textContent=h.env;
     badge.className='env-badge '+(h.env==='production'?'env-production':'env-sandbox');
     const accts=await fetch('/api/accounts').then(r=>r.json());
     if(accts.accounts&&accts.accounts.length>0){showDashboard();await refreshAll();}
@@ -640,7 +849,16 @@ async function init(){
   const exportToday=new Date().toISOString().slice(0,10);
   const ago90=new Date(Date.now()-90*86400000).toISOString().slice(0,10);
   gg('exportTo').value=exportToday;gg('exportFrom').value=ago90;
+
+  // Load saved bills from localStorage
+  try{const saved=JSON.parse(localStorage.getItem('bills'));if(saved&&saved.length)bills=saved;}catch(e){}
+  try{const saved=JSON.parse(localStorage.getItem('incomeSources'));if(saved&&saved.length)incomeSources=saved;}catch(e){}
+  try{const saved=JSON.parse(localStorage.getItem('zeroBuckets'));if(saved&&saved.length)zeroBuckets=saved;}catch(e){}
 }
+
+function saveBills(){try{localStorage.setItem('bills',JSON.stringify(bills));}catch(e){}}
+function saveIncomeSources(){try{localStorage.setItem('incomeSources',JSON.stringify(incomeSources));}catch(e){}}
+function saveZeroBuckets(){try{localStorage.setItem('zeroBuckets',JSON.stringify(zeroBuckets));}catch(e){}}
 
 async function openLinkHandler(){
   try{
@@ -651,8 +869,7 @@ async function openLinkHandler(){
         const institution=metadata.institution?.name||'Bank';
         const res=await fetch('/api/exchange_token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({public_token,institution_name:institution})}).then(r=>r.json());
         if(res.error){showToast('Connection failed: '+res.error,'error');return;}
-        showToast(institution+' connected!','success');
-        showDashboard();await refreshAll();
+        showToast(institution+' connected!','success');showDashboard();await refreshAll();
       },
       onExit:(err)=>{if(err)showToast('Link exited: '+err.error_message,'error');}
     });
@@ -661,8 +878,7 @@ async function openLinkHandler(){
 }
 
 function showDashboard(){
-  gg('connectScreen').style.display='none';
-  gg('mainNav').style.display='flex';
+  gg('connectScreen').style.display='none';gg('mainNav').style.display='flex';
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   gg('dashboard').classList.add('active');
 }
@@ -672,49 +888,33 @@ async function refreshAll(){await Promise.all([loadAccounts(),loadTransactions()
 async function loadAccounts(){
   const data=await fetch('/api/accounts').then(r=>r.json());
   allAccounts=data.accounts||[];
-  renderAccounts();renderBanks();updateMetricAccounts();
-  injectPlaidRetirementData();
+  renderAccounts();renderBanks();updateMetricAccounts();injectPlaidRetirementData();
 }
 
 async function loadTransactions(){
   const data=await fetch('/api/transactions').then(r=>r.json());
   allTransactions=data.transactions||[];
-  filterTransactions();
-  renderCharts();updateMetricSpend();populateFilters();updateExportSummary();
+  filterTransactions();renderCharts();updateMetricSpend();populateFilters();updateExportSummary();
 }
 
-// ── Plaid retirement data injection ───────────────────────────────────────────
+// ── Plaid retirement injection ─────────────────────────────────────────────────
 function injectPlaidRetirementData(){
   const retTypes=['investment','brokerage','401k','ira','roth','retirement','hsa'];
   const retAccounts=allAccounts.filter(a=>retTypes.some(t=>(a.type||'').toLowerCase().includes(t)||(a.subtype||'').toLowerCase().includes(t)));
   if(!retAccounts.length)return;
   const totalRetBal=Math.round(retAccounts.reduce((s,a)=>s+(a.balances.current??0),0));
-  const slider=gg('u-saved');
-  slider.max=Math.max(+slider.max,totalRetBal*2);
-  slider.value=totalRetBal;
-  U.saved=totalRetBal;
-  gg('u-saved-val').textContent='$'+totalRetBal.toLocaleString();
-  gg('u-saved-val').classList.add('from-plaid');
-  gg('u-saved-note').style.display='block';
+  const slider=gg('u-saved');slider.max=Math.max(+slider.max,totalRetBal*2);slider.value=totalRetBal;
+  U.saved=totalRetBal;gg('u-saved-val').textContent='$'+totalRetBal.toLocaleString();
+  gg('u-saved-val').classList.add('from-plaid');gg('u-saved-note').style.display='block';
   gg('plaidBadge').textContent='Savings pulled from Plaid ✓';
-  const cutoff=new Date(Date.now()-90*86400000);
-  const investTxns=allTransactions.filter(t=>{
-    const acct=allAccounts.find(a=>a.account_id===t.account_id);
-    return acct&&retTypes.some(tp=>(acct.type||'').toLowerCase().includes(tp)||(acct.subtype||'').toLowerCase().includes(tp))&&new Date(t.date)>=cutoff&&t.amount<0;
-  });
-  if(investTxns.length>0){
-    const monthlyEst=Math.round(Math.abs(investTxns.reduce((s,t)=>s+t.amount,0))/3);
-    if(monthlyEst>0){gg('u-contrib').value=Math.min(monthlyEst,5000);U.contrib=Math.min(monthlyEst,5000);gg('u-contrib-val').textContent='$'+U.contrib.toLocaleString();}
-  }
   calcAll();
 }
 
-// ── Retirement accounts panel ─────────────────────────────────────────────────
 function refreshRetAccounts(){
   const retTypes=['investment','brokerage','401k','ira','roth','retirement','hsa'];
   const retAccounts=allAccounts.filter(a=>retTypes.some(t=>(a.type||'').toLowerCase().includes(t)||(a.subtype||'').toLowerCase().includes(t)));
   const el=gg('retAccountsList');
-  if(!retAccounts.length){el.innerHTML='<div class="status" style="padding:1rem;font-size:13px;">No retirement accounts detected. Connect your 401k, IRA, or brokerage via "+ Connect bank".</div>';gg('retProgressWrap').style.display='none';return;}
+  if(!retAccounts.length){el.innerHTML='<div class="status" style="padding:1rem;font-size:13px;">No retirement accounts detected. Connect via "+ Connect bank".</div>';gg('retProgressWrap').style.display='none';return;}
   const totalRetBal=retAccounts.reduce((s,a)=>s+(a.balances.current??0),0);
   el.innerHTML=retAccounts.map(a=>{const bal=a.balances.current??0;return `<div class="ret-acct-item"><div><div class="account-name">${esc(a.name)}</div><div class="account-sub">${esc(a.institution)} · ${esc(a.subtype||a.type)}</div></div><div class="account-balance green">${fmtK(bal)}</div></div>`;}).join('')+`<div class="ret-acct-item" style="border-top:0.5px solid var(--border);margin-top:4px;padding-top:12px;"><div style="font-weight:500;font-size:13px;">Total retirement assets</div><div class="account-balance green" style="font-size:18px;">${fmtK(totalRetBal)}</div></div>`;
   const yrs=Math.max(U.ret-U.age,1);let goalBal=U.saved;for(let y=0;y<yrs;y++)goalBal=goalBal*(1+U.rate/100)+U.contrib*12;
@@ -726,14 +926,12 @@ function refreshRetAccounts(){
 
 // ── Dashboard renders ─────────────────────────────────────────────────────────
 function renderAccounts(){
-  const el=gg('accountsList');
-  if(!allAccounts.length){el.innerHTML='<div class="status">No accounts found</div>';return;}
+  const el=gg('accountsList');if(!allAccounts.length){el.innerHTML='<div class="status">No accounts found</div>';return;}
   el.innerHTML=allAccounts.map(a=>{const bal=a.balances.current??a.balances.available??0;const isCredit=a.type==='credit';return `<div class="account-item"><div><div class="account-name">${esc(a.name)}</div><div class="account-sub">${esc(a.institution)} · ****${esc(a.mask||'????')}</div></div><div><div class="account-balance ${isCredit?'red':'green'}">${isCredit?'-':''}${fmtK(bal)}</div><div class="account-type">${a.subtype||a.type}</div></div></div>`;}).join('');
 }
 
 function renderBanks(){
-  const el=gg('banksList');
-  const items=[...new Map(allAccounts.map(a=>[a.itemId,a])).values()];
+  const el=gg('banksList');const items=[...new Map(allAccounts.map(a=>[a.itemId,a])).values()];
   if(!items.length){el.innerHTML='<div class="status">No banks linked</div>';return;}
   el.innerHTML=items.map(a=>`<div class="bank-item"><div><div class="bank-name">${esc(a.institution)}</div><div class="bank-id">${esc(a.itemId?.slice(0,24))}...</div></div><button class="btn btn-sm btn-danger" onclick="removeBank('${esc(a.itemId)}')">Remove</button></div>`).join('');
 }
@@ -741,64 +939,26 @@ function renderBanks(){
 async function removeBank(itemId){
   if(!confirm('Remove this bank?'))return;
   const res=await fetch('/api/item/'+itemId,{method:'DELETE'}).then(r=>r.json());
-  if(res.success){showToast('Bank removed','success');await refreshAll();}
-  else showToast('Error: '+res.error,'error');
+  if(res.success){showToast('Bank removed','success');await refreshAll();}else showToast('Error: '+res.error,'error');
 }
 
 function renderTransactions(txns){
-  const tbody=gg('txnBody');
-  if(!txns.length){tbody.innerHTML='<tr><td colspan="5" class="status">No transactions found</td></tr>';return;}
-  tbody.innerHTML=txns.slice(0,500).map(t=>{
-    const cat=formatCat(t.personal_finance_category?.primary||t.category?.[0]||'Other');
-    const pos=t.amount>0;
-    return `<tr><td><div class="txn-merchant">${esc(t.merchant_name||t.name)}</div></td><td><span class="cat-badge">${esc(cat)}</span></td><td style="color:var(--muted);font-size:12px;">${esc(t.institution||'')}</td><td class="txn-date">${t.date}</td><td style="text-align:right;" class="${pos?'txn-amt-pos':'txn-amt-neg'}">${pos?'':'+'}${fmtK(Math.abs(t.amount))}</td></tr>`;
-  }).join('');
+  const tbody=gg('txnBody');if(!txns.length){tbody.innerHTML='<tr><td colspan="5" class="status">No transactions found</td></tr>';return;}
+  tbody.innerHTML=txns.slice(0,500).map(t=>{const cat=formatCat(t.personal_finance_category?.primary||t.category?.[0]||'Other');const pos=t.amount>0;return `<tr><td><div class="txn-merchant">${esc(t.merchant_name||t.name)}</div></td><td><span class="cat-badge">${esc(cat)}</span></td><td style="color:var(--muted);font-size:12px;">${esc(t.institution||'')}</td><td class="txn-date">${t.date}</td><td style="text-align:right;" class="${pos?'txn-amt-pos':'txn-amt-neg'}">${pos?'':'+'}${fmtK(Math.abs(t.amount))}</td></tr>`;}).join('');
 }
 
-// ── Transaction filtering with time range ─────────────────────────────────────
 function filterTransactions(){
-  const q=gg('txnSearch').value.toLowerCase();
-  const cat=gg('catFilter').value;
-  const bank=gg('bankFilter').value;
-  const time=gg('timeFilter').value;
-  const customRow=gg('customDateRow');
-
-  // Show/hide custom date picker
-  customRow.classList.toggle('visible', time==='custom');
-
-  // Determine date bounds
-  let fromDate=null, toDate=null;
-  const now=new Date();
-  if(time==='custom'){
-    fromDate=gg('txnDateFrom').value||null;
-    toDate=gg('txnDateTo').value||null;
-  } else if(time==='ytd'){
-    fromDate=new Date(now.getFullYear(),0,1).toISOString().slice(0,10);
-  } else if(time!=='all'){
-    fromDate=new Date(now-parseInt(time)*86400000).toISOString().slice(0,10);
-  }
-
-  const filtered=allTransactions.filter(t=>{
-    const name=(t.merchant_name||t.name||'').toLowerCase();
-    const tCat=t.personal_finance_category?.primary||t.category?.[0]||'';
-    const inDate=(!fromDate||t.date>=fromDate)&&(!toDate||t.date<=toDate);
-    return inDate&&(!q||name.includes(q))&&(!cat||tCat===cat)&&(!bank||t.institution===bank);
-  });
-
+  const q=gg('txnSearch').value.toLowerCase(),cat=gg('catFilter').value,bank=gg('bankFilter').value,time=gg('timeFilter').value;
+  const customRow=gg('customDateRow');customRow.classList.toggle('visible',time==='custom');
+  let fromDate=null,toDate=null;const now=new Date();
+  if(time==='custom'){fromDate=gg('txnDateFrom').value||null;toDate=gg('txnDateTo').value||null;}
+  else if(time==='ytd'){fromDate=new Date(now.getFullYear(),0,1).toISOString().slice(0,10);}
+  else if(time!=='all'){fromDate=new Date(now-parseInt(time)*86400000).toISOString().slice(0,10);}
+  const filtered=allTransactions.filter(t=>{const name=(t.merchant_name||t.name||'').toLowerCase();const tCat=t.personal_finance_category?.primary||t.category?.[0]||'';const inDate=(!fromDate||t.date>=fromDate)&&(!toDate||t.date<=toDate);return inDate&&(!q||name.includes(q))&&(!cat||tCat===cat)&&(!bank||t.institution===bank);});
   renderTransactions(filtered);
-
-  // Update section label
-  const rangeLabels={
-    '7':'last 7 days','30':'last 30 days','60':'last 60 days','90':'last 90 days',
-    '180':'last 6 months','365':'last 12 months','ytd':'year to date',
-    'all':'all time','custom':'custom range'
-  };
-  const label=gg('txnSectionLabel');
-  if(label) label.textContent='recent transactions — '+(rangeLabels[time]||'last 30 days');
-
-  // Update count badge
-  const badge=gg('txnCountBadge');
-  if(badge) badge.textContent=filtered.length+' transaction'+(filtered.length===1?'':'s');
+  const rangeLabels={'7':'last 7 days','30':'last 30 days','60':'last 60 days','90':'last 90 days','180':'last 6 months','365':'last 12 months','ytd':'year to date','all':'all time','custom':'custom range'};
+  const label=gg('txnSectionLabel');if(label)label.textContent='recent transactions — '+(rangeLabels[time]||'last 30 days');
+  const badge=gg('txnCountBadge');if(badge)badge.textContent=filtered.length+' transaction'+(filtered.length===1?'':'s');
 }
 
 function populateFilters(){
@@ -808,34 +968,333 @@ function populateFilters(){
   gg('bankFilter').innerHTML='<option value="">All banks</option>'+banks.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join('');
 }
 
-function updateMetricAccounts(){
-  const total=allAccounts.reduce((s,a)=>a.type==='credit'?s-(a.balances.current??0):s+(a.balances.current??0),0);
-  gg('mNetBal').textContent=fmtK(total);gg('mNetBal').className='metric-value '+(total>=0?'green':'red');gg('mAcctCount').textContent=allAccounts.length;
-}
-
-function updateMetricSpend(){
-  const cutoff=new Date(Date.now()-30*86400000);
-  const recent=allTransactions.filter(t=>new Date(t.date)>=cutoff);
-  gg('mSpent').textContent=fmtK(recent.filter(t=>t.amount>0).reduce((s,t)=>s+t.amount,0));
-  gg('mIncome').textContent=fmtK(recent.filter(t=>t.amount<0).reduce((s,t)=>s+Math.abs(t.amount),0));
-  gg('mTxnCount').textContent=recent.length;
-}
-
+function updateMetricAccounts(){const total=allAccounts.reduce((s,a)=>a.type==='credit'?s-(a.balances.current??0):s+(a.balances.current??0),0);gg('mNetBal').textContent=fmtK(total);gg('mNetBal').className='metric-value '+(total>=0?'green':'red');gg('mAcctCount').textContent=allAccounts.length;}
+function updateMetricSpend(){const cutoff=new Date(Date.now()-30*86400000);const recent=allTransactions.filter(t=>new Date(t.date)>=cutoff);gg('mSpent').textContent=fmtK(recent.filter(t=>t.amount>0).reduce((s,t)=>s+t.amount,0));gg('mIncome').textContent=fmtK(recent.filter(t=>t.amount<0).reduce((s,t)=>s+Math.abs(t.amount),0));gg('mTxnCount').textContent=recent.length;}
 function updateExportSummary(){const el=gg('exportSummaryText');if(el)el.textContent=allTransactions.length+' transactions · '+allAccounts.length+' accounts ready to export';}
 
 const COLORS=['#378ADD','#1D9E75','#D85A30','#534AB7','#BA7517','#D4537E','#0F6E56','#E24B4A','#639922','#5DCAA5'];
 
 function renderCharts(){
-  const cutoff=new Date(Date.now()-30*86400000);
-  const recent=allTransactions.filter(t=>new Date(t.date)>=cutoff&&t.amount>0);
+  const cutoff=new Date(Date.now()-30*86400000);const recent=allTransactions.filter(t=>new Date(t.date)>=cutoff&&t.amount>0);
   const byCat={};recent.forEach(t=>{const c=formatCat(t.personal_finance_category?.primary||t.category?.[0]||'Other');byCat[c]=(byCat[c]||0)+t.amount;});
   const sorted=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,10);
   if(catChartInst)catChartInst.destroy();
   catChartInst=new Chart(gg('catChart'),{type:'doughnut',data:{labels:sorted.map(([k])=>k),datasets:[{data:sorted.map(([,v])=>Math.round(v)),backgroundColor:COLORS,borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:12,padding:8}},tooltip:{callbacks:{label:ctx=>` $${ctx.parsed.toLocaleString()}`}}}}});
-  const byDay={};recent.forEach(t=>{byDay[t.date]=(byDay[t.date]||0)+t.amount;});
-  const days=Object.keys(byDay).sort().slice(-30);
+  const byDay={};recent.forEach(t=>{byDay[t.date]=(byDay[t.date]||0)+t.amount;});const days=Object.keys(byDay).sort().slice(-30);
   if(dailyChartInst)dailyChartInst.destroy();
   dailyChartInst=new Chart(gg('dailyChart'),{type:'bar',data:{labels:days.map(d=>d.slice(5)),datasets:[{label:'Spent',data:days.map(d=>Math.round(byDay[d])),backgroundColor:'#378ADD',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9},maxRotation:45,autoSkip:true,maxTicksLimit:10},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>'$'+v},grid:{color:'rgba(128,128,128,0.08)'}}}}});
+}
+
+// ── EXPENSES PAGE ─────────────────────────────────────────────────────────────
+function switchBudgetTab(tab){
+  document.querySelectorAll('.budget-tab').forEach((t,i)=>t.classList.toggle('active',['bills','calendar','zero','income'][i]===tab));
+  document.querySelectorAll('.budget-panel').forEach(p=>p.classList.remove('active'));
+  gg('bpanel-'+tab).classList.add('active');
+  if(tab==='bills')renderBillsTab();
+  if(tab==='calendar')renderCalendar();
+  if(tab==='zero')renderZeroBudget();
+  if(tab==='income')renderIncomeTab();
+}
+
+function renderExpensesPage(){
+  renderBillsTab();
+  updateBudgetMetrics();
+}
+
+function monthlyIncome(){
+  return incomeSources.reduce((s,src)=>{
+    const mult={weekly:52/12,biweekly:26/12,monthly:1,quarterly:1/3,annual:1/12};
+    return s+(src.amt*(mult[src.freq]||1));
+  },0);
+}
+
+function monthlyBills(){return bills.reduce((s,b)=>s+b.pay,0);}
+
+function updateBudgetMetrics(){
+  const income=monthlyIncome(),billsTotal=monthlyBills();
+  const remaining=income-billsTotal;
+  const discretionaryAllocated=zeroBuckets.reduce((s,b)=>s+b.amt,0);
+  const unalloc=remaining-discretionaryAllocated;
+  gg('bIncome').textContent=fmt2(income);
+  gg('bBills').textContent=fmt2(billsTotal);
+  gg('bRemaining').textContent=fmt2(remaining);
+  gg('bRemaining').className='metric-value '+(remaining>=0?'green':'red');
+  gg('bUnalloc').textContent=fmt2(Math.abs(unalloc));
+  gg('bUnalloc').className='metric-value '+(Math.abs(unalloc)<50?'green':'amber');
+}
+
+// ── BILLS TAB ─────────────────────────────────────────────────────────────────
+function renderBillsTab(){
+  const tbody=gg('billBody');
+  const today=new Date();
+  tbody.innerHTML=bills.map((b,i)=>{
+    const dueDate=b.due?new Date(today.getFullYear(),today.getMonth(),b.due):null;
+    const daysUntil=dueDate?Math.ceil((dueDate-today)/(86400000)):null;
+    let statusHtml='';
+    if(daysUntil!==null){
+      if(daysUntil<0)statusHtml=`<span class="status-overdue">Overdue</span>`;
+      else if(daysUntil<=5)statusHtml=`<span class="status-due">Due in ${daysUntil}d</span>`;
+      else statusHtml=`<span class="status-paid">Day ${b.due}</span>`;
+    }
+    const aprDisplay=b.apr>0?b.apr.toFixed(2)+'%':'—';
+    const balDisplay=b.bal<0?`<span class="red">${fmt2(Math.abs(b.bal))}</span>`:'—';
+    return `<tr>
+      <td><span class="cat-pill cat-${b.cat}">${b.cat}</span></td>
+      <td style="font-weight:500;">${esc(b.name)}</td>
+      <td style="color:var(--muted);font-size:12px;">${esc(b.note||'')}</td>
+      <td style="font-size:12px;color:var(--muted);">${aprDisplay}</td>
+      <td style="font-size:12px;">${b.due||'—'}</td>
+      <td style="font-size:12px;">${balDisplay}</td>
+      <td style="color:var(--red);font-size:13px;">${fmt2(b.min)}</td>
+      <td><span class="editable-cell" contenteditable="true" onblur="updateBillPay(${i},this.textContent)" style="font-weight:500;color:var(--blue);">${fmt2(b.pay)}</span></td>
+      <td style="font-size:11px;color:var(--muted);">${esc(b.promo||'')}</td>
+      <td>${statusHtml}</td>
+      <td><button class="btn btn-sm btn-danger" onclick="deleteBill(${i})">✕</button></td>
+    </tr>`;
+  }).join('');
+
+  const totalMin=bills.reduce((s,b)=>s+b.min,0);
+  const totalPay=bills.reduce((s,b)=>s+b.pay,0);
+  gg('totalMinPay').textContent=fmt2(totalMin);
+  gg('totalYourPay').textContent=fmt2(totalPay);
+
+  renderBillCategoryChart();
+  renderBillBreakdown();
+  updateBudgetMetrics();
+}
+
+function updateBillPay(i,val){
+  const num=parseFloat(val.replace(/[^0-9.]/g,''));
+  if(!isNaN(num)){bills[i].pay=num;saveBills();updateBudgetMetrics();renderBillCategoryChart();}
+}
+
+function deleteBill(i){
+  if(!confirm('Remove this bill?'))return;
+  bills.splice(i,1);saveBills();renderBillsTab();
+}
+
+function renderBillCategoryChart(){
+  const byCat={};
+  bills.forEach(b=>{byCat[b.cat]=(byCat[b.cat]||0)+b.pay;});
+  const catLabels={HM:'Housing',LOAN:'Loans',CC:'Credit Cards',CAR:'Auto',PH:'Phone',TV:'Cable/Streaming',FAM:'Family',SAVE:'Savings',OTHER:'Other'};
+  const entries=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  const catColors={HM:'#1d9e75',LOAN:'#ba7517',CC:'#185fa5',CAR:'#534ab7',PH:'#888780',TV:'#888780',FAM:'#d85a30',SAVE:'#1d9e75',OTHER:'#9e9e9a'};
+  if(budgetCharts.billCat)budgetCharts.billCat.destroy();
+  budgetCharts.billCat=new Chart(gg('billCatChart'),{type:'doughnut',data:{labels:entries.map(([k])=>catLabels[k]||k),datasets:[{data:entries.map(([,v])=>Math.round(v)),backgroundColor:entries.map(([k])=>catColors[k]||'#888780'),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:12,padding:8}},tooltip:{callbacks:{label:ctx=>` $${ctx.parsed.toLocaleString()}`}}}}});
+}
+
+function renderBillBreakdown(){
+  const byCat={};bills.forEach(b=>{byCat[b.cat]=(byCat[b.cat]||0)+b.pay;});
+  const catLabels={HM:'🏠 Housing',LOAN:'🏦 Loans',CC:'💳 Credit Cards',CAR:'🚗 Auto',PH:'📱 Phone',TV:'📺 Cable/Streaming',FAM:'👨‍👩‍👧 Family',SAVE:'💰 Savings',OTHER:'Other'};
+  const total=Object.values(byCat).reduce((s,v)=>s+v,0);
+  gg('billBreakdown').innerHTML=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--border);font-size:13px;">
+      <span style="color:var(--muted);">${catLabels[cat]||cat}</span>
+      <div style="text-align:right;">
+        <div style="font-weight:500;">${fmt2(amt)}</div>
+        <div style="font-size:11px;color:var(--hint);">${Math.round(amt/total*100)}% of bills</div>
+      </div>
+    </div>`).join('')+`<div style="display:flex;justify-content:space-between;padding:10px 0;font-weight:500;font-size:14px;"><span>Total</span><span class="red">${fmt2(total)}</span></div>`;
+}
+
+// Bill modals
+function openAddBillModal(){gg('addBillModal').style.display='flex';}
+function closeAddBillModal(){gg('addBillModal').style.display='none';}
+function saveNewBill(){
+  const b={
+    cat:gg('newBillCat').value,name:gg('newBillName').value,note:gg('newBillNote').value,
+    apr:parseFloat(gg('newBillAPR').value)||0,due:parseInt(gg('newBillDue').value)||0,
+    bal:parseFloat(gg('newBillBal').value)||0,min:parseFloat(gg('newBillMin').value)||0,
+    pay:parseFloat(gg('newBillPay').value)||0,promo:gg('newBillPromo').value
+  };
+  if(!b.name){showToast('Please enter a bill name','error');return;}
+  bills.push(b);saveBills();closeAddBillModal();renderBillsTab();
+  showToast(b.name+' added!','success');
+}
+
+// ── CALENDAR / P&L TAB ────────────────────────────────────────────────────────
+function renderCalendar(){
+  const [yr,mo]=gg('calMonthSel').value.split('-').map(Number);
+  const daysInMonth=new Date(yr,mo,0).getDate();
+  let runningBal=443; // Starting cash from workbook
+
+  // Build weekly buckets
+  const weeks=[];
+  let weekStart=1;
+  while(weekStart<=daysInMonth){
+    const weekEnd=Math.min(weekStart+6,daysInMonth);
+    weeks.push({start:weekStart,end:weekEnd,income:[],bills:[],net:0});
+    weekStart+=7;
+  }
+
+  // Assign income to weeks based on paycheck schedule
+  incomeSources.forEach(src=>{
+    if(src.freq==='biweekly'||src.freq==='weekly'){
+      // Distribute across bi-weekly/weekly paychecks
+      const daysPerPaycheck=src.freq==='weekly'?7:14;
+      for(let d=1;d<=daysInMonth;d+=daysPerPaycheck){
+        const week=weeks.find(w=>d>=w.start&&d<=w.end);
+        if(week)week.income.push({name:src.name,amt:src.amt,day:d});
+      }
+    } else if(src.freq==='monthly'){
+      // Mid-month
+      const week=weeks.find(w=>15>=w.start&&15<=w.end)||weeks[0];
+      week.income.push({name:src.name,amt:src.amt,day:15});
+    } else if(src.freq==='quarterly'){
+      // First week only if it's a quarter month (Jan, Apr, Jul, Oct)
+      if([1,4,7,10].includes(mo)){
+        weeks[0].income.push({name:src.name,amt:src.amt,day:1});
+      }
+    }
+  });
+
+  // Assign bills to weeks by due date
+  bills.forEach(b=>{
+    if(b.due&&b.due<=daysInMonth&&b.pay>0){
+      const week=weeks.find(w=>b.due>=w.start&&b.due<=w.end);
+      if(week)week.bills.push({name:b.name,amt:b.pay,day:b.due});
+    }
+  });
+
+  // Calculate net and running balance
+  const calRows=weeks.map(w=>{
+    const incomeTotal=w.income.reduce((s,i)=>s+i.amt,0);
+    const billsTotal=w.bills.reduce((s,b)=>s+b.amt,0);
+    const net=incomeTotal-billsTotal;
+    runningBal+=net;
+    return {...w,incomeTotal,billsTotal,net,runningBal:runningBal-net+net};
+  });
+
+  // Render rows
+  gg('calendarBody').innerHTML=calRows.map((w,idx)=>{
+    const dateStr=`${mo}/${w.start}–${w.end}`;
+    const incItems=w.income.map(i=>`<div style="font-size:11px;color:var(--green);">+${fmt2(i.amt)} ${i.name.split(' ')[0]}</div>`).join('');
+    const billItems=w.bills.map(b=>`<div style="font-size:11px;color:var(--red);">-${fmt2(b.amt)} ${b.name.split(' ')[0]}</div>`).join('');
+    const balClass=w.runningBal<0?'pl-balance-neg':w.runningBal<500?'pl-balance-low':'pl-balance-pos';
+    return `<div class="pl-week" style="${idx%2===0?'background:var(--surface2);':''};border-radius:4px;">
+      <div class="pl-cell"><div class="pl-date">${dateStr}</div></div>
+      <div class="pl-cell">${incItems||'<span style="color:var(--hint);font-size:12px;">—</span>'}</div>
+      <div class="pl-cell">${billItems||'<span style="color:var(--hint);font-size:12px;">—</span>'}</div>
+      <div class="pl-cell"><span class="${w.net>=0?'pl-income':'pl-expense'}">${w.net>=0?'+':''}${fmt2(w.net)}</span></div>
+      <div class="pl-cell"><span class="${balClass}">${fmt2(Math.abs(w.runningBal))}${w.runningBal<0?' (deficit)':''}</span></div>
+    </div>`;
+  }).join('');
+
+  // P&L chart
+  const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const months=Array.from({length:6},(_,i)=>{const d=new Date(yr,mo-1+i,1);return {label:monthNames[d.getMonth()],income:monthlyIncome(),bills:monthlyBills()};});
+  if(budgetCharts.pl)budgetCharts.pl.destroy();
+  budgetCharts.pl=new Chart(gg('plChart'),{type:'bar',data:{labels:months.map(m=>m.label),datasets:[{label:'Income',data:months.map(m=>Math.round(m.income)),backgroundColor:'#1d9e75',borderRadius:3},{label:'Bills',data:months.map(m=>Math.round(m.bills)),backgroundColor:'#d85a30',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11},boxWidth:10}}},scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}});
+
+  // Upcoming bills this month
+  const today=new Date();
+  const upcoming=bills.filter(b=>b.due&&b.pay>0).sort((a,b)=>a.due-b.due);
+  gg('upcomingBills').innerHTML=upcoming.map(b=>{
+    const dueDate=new Date(today.getFullYear(),today.getMonth(),b.due);
+    const daysUntil=Math.ceil((dueDate-today)/86400000);
+    const statusCls=daysUntil<0?'status-overdue':daysUntil<=5?'status-due':'status-paid';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:0.5px solid var(--border);font-size:13px;">
+      <div><div style="font-weight:500;">${esc(b.name)}</div><div style="font-size:11px;color:var(--muted);">Due day ${b.due}</div></div>
+      <div style="text-align:right;"><div style="font-weight:500;color:var(--red);">${fmt2(b.pay)}</div><div class="${statusCls}">${daysUntil<0?'Overdue':daysUntil===0?'Today':daysUntil===1?'Tomorrow':'In '+daysUntil+'d'}</div></div>
+    </div>`;
+  }).join('');
+}
+
+// ── ZERO-BALANCE BUDGET ────────────────────────────────────────────────────────
+function renderZeroBudget(){
+  const income=monthlyIncome(),billsTotal=monthlyBills(),remaining=income-billsTotal;
+  const discretionaryAllocated=zeroBuckets.reduce((s,b)=>s+b.amt,0);
+  const unalloc=remaining-discretionaryAllocated;
+
+  gg('zIncome').textContent=fmt2(income);
+  gg('zBills').textContent=fmt2(billsTotal);
+  gg('zAllocated').textContent=fmt2(discretionaryAllocated);
+  gg('zRemaining').textContent=fmt2(Math.abs(unalloc));
+  gg('zRemaining').className=Math.abs(unalloc)<1?'green':unalloc>0?'amber':'red';
+
+  const slidersEl=gg('zeroBudgetSliders');
+  slidersEl.innerHTML=zeroBuckets.map((b,i)=>`
+    <div class="slider-row">
+      <div class="slider-label">
+        <span style="color:var(--muted);">${esc(b.name)}</span>
+        <span style="font-weight:500;">$${b.amt}</span>
+      </div>
+      <input type="range" min="0" max="${Math.round(remaining)}" value="${b.amt}" step="10"
+        oninput="zeroBuckets[${i}].amt=+this.value;this.previousElementSibling.querySelector('span:last-child').textContent='$'+this.value;saveZeroBuckets();renderZeroBudgetChart();">
+    </div>`).join('')+`
+    <button class="btn btn-sm" style="margin-top:8px;" onclick="addZeroBucket()">+ Add category</button>`;
+
+  renderZeroBudgetChart();
+}
+
+function renderZeroBudgetChart(){
+  const income=monthlyIncome(),billsTotal=monthlyBills(),remaining=income-billsTotal;
+  const allocated=zeroBuckets.reduce((s,b)=>s+b.amt,0);
+  const unalloc=Math.max(0,remaining-allocated);
+  const labels=[...zeroBuckets.map(b=>b.name),'Bills','Unallocated'];
+  const data=[...zeroBuckets.map(b=>b.amt),billsTotal,unalloc];
+  const colors=[...COLORS.slice(0,zeroBuckets.length),'#d85a30','#d3d1c7'];
+  if(budgetCharts.zero)budgetCharts.zero.destroy();
+  budgetCharts.zero=new Chart(gg('zeroChart'),{type:'doughnut',data:{labels,datasets:[{data:data.map(v=>Math.round(v)),backgroundColor:colors,borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:12,padding:6}},tooltip:{callbacks:{label:ctx=>` $${ctx.parsed.toLocaleString()}`}}}}});
+}
+
+function addZeroBucket(){
+  const name=prompt('Category name (e.g. Vacation):');
+  if(!name)return;
+  zeroBuckets.push({name,amt:0});saveZeroBuckets();renderZeroBudget();
+}
+
+// ── INCOME TAB ────────────────────────────────────────────────────────────────
+function renderIncomeTab(){
+  const freqMult={weekly:52/12,biweekly:26/12,monthly:1,quarterly:1/3,annual:1/12};
+  const freqLabel={weekly:'Weekly',biweekly:'Bi-weekly',monthly:'Monthly',quarterly:'Quarterly',annual:'Annual'};
+  let totalMonthly=0,totalAnnual=0;
+  gg('incomeBody').innerHTML=incomeSources.map((src,i)=>{
+    const monthly=src.amt*(freqMult[src.freq]||1);
+    const annual=monthly*12;
+    totalMonthly+=monthly;totalAnnual+=annual;
+    return `<tr>
+      <td style="font-weight:500;">${esc(src.name)}</td>
+      <td style="color:var(--muted);font-size:12px;">${freqLabel[src.freq]||src.freq}</td>
+      <td class="green" style="font-weight:500;">${fmt2(src.amt)}</td>
+      <td class="green">${fmt2(annual)}</td>
+      <td><button class="btn btn-sm btn-danger" onclick="deleteIncome(${i})">✕</button></td>
+    </tr>`;
+  }).join('');
+  gg('incTotalMonthly').textContent=fmt2(totalMonthly);gg('incTotalAnnual').textContent=fmt2(totalAnnual);
+  gg('incTotalMonthly').className='green';gg('incTotalAnnual').className='green';
+
+  // Income chart
+  const data=incomeSources.map(s=>Math.round(s.amt*(freqMult[s.freq]||1)));
+  if(budgetCharts.income)budgetCharts.income.destroy();
+  budgetCharts.income=new Chart(gg('incomeChart'),{type:'doughnut',data:{labels:incomeSources.map(s=>s.name),datasets:[{data,backgroundColor:COLORS.slice(0,incomeSources.length),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:12,padding:8}},tooltip:{callbacks:{label:ctx=>` $${ctx.parsed.toLocaleString()}/mo`}}}}});
+}
+
+function deleteIncome(i){if(!confirm('Remove this income source?'))return;incomeSources.splice(i,1);saveIncomeSources();renderIncomeTab();updateBudgetMetrics();}
+function openAddIncomeModal(){gg('addIncomeModal').style.display='flex';}
+function closeAddIncomeModal(){gg('addIncomeModal').style.display='none';}
+function saveNewIncome(){
+  const src={name:gg('newIncName').value,freq:gg('newIncFreq').value,amt:parseFloat(gg('newIncAmt').value)||0};
+  if(!src.name){showToast('Please enter a name','error');return;}
+  incomeSources.push(src);saveIncomeSources();closeAddIncomeModal();renderIncomeTab();
+  showToast(src.name+' added!','success');updateBudgetMetrics();
+}
+
+// Bills Excel export
+function exportBillsExcel(){
+  const wb=XLSX.utils.book_new();
+  const data=[['Category','Name','Lender','APR %','Due Day','Balance','Min Payment','Your Payment','Promo/Notes']];
+  bills.forEach(b=>data.push([b.cat,b.name,b.note||'',b.apr,b.due,b.bal,b.min,b.pay,b.promo||'']));
+  data.push([]);data.push(['','','','','','Total Min',bills.reduce((s,b)=>s+b.min,0).toFixed(2),'Total Payment',bills.reduce((s,b)=>s+b.pay,0).toFixed(2)]);
+  const ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[{wch:8},{wch:24},{wch:18},{wch:8},{wch:8},{wch:14},{wch:14},{wch:14},{wch:30}];
+  XLSX.utils.book_append_sheet(wb,ws,'Bills & Expenses');
+  // Income sheet
+  const incData=[['Source','Frequency','Per Payment','Monthly Est','Annual Est']];
+  const freqMult={weekly:52/12,biweekly:26/12,monthly:1,quarterly:1/3,annual:1/12};
+  incomeSources.forEach(s=>incData.push([s.name,s.freq,s.amt.toFixed(2),(s.amt*(freqMult[s.freq]||1)).toFixed(2),(s.amt*(freqMult[s.freq]||1)*12).toFixed(2)]));
+  const ws2=XLSX.utils.aoa_to_sheet(incData);XLSX.utils.book_append_sheet(wb,ws2,'Income Sources');
+  XLSX.writeFile(wb,'Matt_Dana_Budget_'+todayStr()+'.xlsx');
+  showToast('Budget exported!','success');
 }
 
 // ── Export ────────────────────────────────────────────────────────────────────
@@ -860,95 +1319,65 @@ function exportExcel(){
   if(gg('chkAccounts').checked){const data=[['Institution','Account Name','Type','Subtype','Mask','Current Balance','Available Balance']];allAccounts.forEach(a=>data.push([a.institution||'',a.name||'',a.type||'',a.subtype||'',a.mask?'****'+a.mask:'',parseFloat((a.balances.current??0).toFixed(2)),parseFloat((a.balances.available??0).toFixed(2))]));const ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[{wch:18},{wch:24},{wch:12},{wch:14},{wch:10},{wch:16},{wch:16}];XLSX.utils.book_append_sheet(wb,ws,'Accounts & Balances');}
   if(gg('chkSummary').checked){const byCat={};filtered.filter(t=>t.amount>0).forEach(t=>{const c=formatCat(t.personal_finance_category?.primary||t.category?.[0]||'Other');byCat[c]=(byCat[c]||0)+t.amount;});const total=Object.values(byCat).reduce((s,v)=>s+v,0);const data=[['Category','Total Spent','% of Total','Transaction Count']];Object.entries(byCat).sort((a,b)=>b[1]-a[1]).forEach(([cat,amt])=>{const count=filtered.filter(t=>t.amount>0&&formatCat(t.personal_finance_category?.primary||t.category?.[0]||'Other')===cat).length;data.push([cat,parseFloat(amt.toFixed(2)),parseFloat(((amt/total)*100).toFixed(1)),count]);});data.push(['','','','']);data.push(['TOTAL',parseFloat(total.toFixed(2)),100,filtered.filter(t=>t.amount>0).length]);const ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[{wch:24},{wch:14},{wch:12},{wch:18}];XLSX.utils.book_append_sheet(wb,ws,'Spending Summary');}
   if(gg('chkMonthly').checked){const byMonth={};filtered.forEach(t=>{const m=t.date.slice(0,7);if(!byMonth[m])byMonth[m]={income:0,expenses:0,count:0};if(t.amount<0)byMonth[m].income+=Math.abs(t.amount);else byMonth[m].expenses+=t.amount;byMonth[m].count++;});const data=[['Month','Income','Expenses','Net Cash Flow','Transactions']];Object.keys(byMonth).sort().forEach(m=>{const d=byMonth[m];data.push([m,parseFloat(d.income.toFixed(2)),parseFloat(d.expenses.toFixed(2)),parseFloat((d.income-d.expenses).toFixed(2)),d.count]);});const ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[{wch:12},{wch:14},{wch:14},{wch:16},{wch:14}];XLSX.utils.book_append_sheet(wb,ws,'Monthly Breakdown');}
-  XLSX.writeFile(wb,'Matt_Dana_Finance_'+todayStr()+'.xlsx');
-  showToast('Excel file downloaded!','success');closeExportModal();
+  XLSX.writeFile(wb,'Matt_Dana_Finance_'+todayStr()+'.xlsx');showToast('Excel downloaded!','success');closeExportModal();
 }
 
-// ── Retirement tab switching ───────────────────────────────────────────────────
-function switchRetTab(tab){
-  document.querySelectorAll('.ret-tab').forEach((t,i)=>t.classList.toggle('active',['growth','longevity','roth','ss','alloc','fire'][i]===tab));
-  document.querySelectorAll('.ret-panel').forEach(p=>p.classList.remove('active'));
-  gg('rpanel-'+tab).classList.add('active');
-}
-
+// ── Retirement ────────────────────────────────────────────────────────────────
+function switchRetTab(tab){document.querySelectorAll('.ret-tab').forEach((t,i)=>t.classList.toggle('active',['growth','longevity','roth','ss','alloc','fire'][i]===tab));document.querySelectorAll('.ret-panel').forEach(p=>p.classList.remove('active'));gg('rpanel-'+tab).classList.add('active');}
 function destroyRetChart(id){if(retCharts[id]){retCharts[id].destroy();delete retCharts[id];}}
 
-// ── Growth ────────────────────────────────────────────────────────────────────
 function calcGrowth(){
   const yrs=Math.max(U.ret-U.age,1),rate=U.rate/100,inf=U.inf/100,contrib=U.contrib*12;
-  const labels=[],balData=[],contribData=[];
-  let bal=U.saved,totalContrib=U.saved;
+  const labels=[],balData=[],contribData=[];let bal=U.saved,totalContrib=U.saved;
   for(let y=0;y<=yrs;y++){labels.push(U.age+y);balData.push(Math.round(bal));contribData.push(Math.round(totalContrib));bal=bal*(1+rate)+contrib;if(y<yrs)totalContrib+=contrib;}
   const finalBal=balData[balData.length-1],realBal=finalBal/Math.pow(1+inf,yrs),monthly=finalBal*0.04/12;
   gg('g-total').textContent=fmtM(finalBal);gg('g-real').textContent=fmtM(realBal);gg('g-monthly').textContent=fmtK(monthly);
-  gg('g-insight').textContent=`You'll accumulate ${fmtM(finalBal)} by age ${U.ret} (${fmtM(realBal)} in today's dollars). Using the 4% rule that's ${fmtK(monthly)}/mo from your portfolio, plus ${fmtK(U.ss+U.pen)}/mo from Social Security and pension — a total of ${fmtK(monthly+U.ss+U.pen)}/mo.`;
-  gg('sum-nest').textContent=fmtM(finalBal);gg('sum-nest').className='metric-value green';
-  gg('sum-income').textContent=fmtK(monthly+U.ss+U.pen);
+  gg('g-insight').textContent=`You'll accumulate ${fmtM(finalBal)} by age ${U.ret} (${fmtM(realBal)} in today's dollars). Using the 4% rule: ${fmtK(monthly)}/mo from portfolio + ${fmtK(U.ss+U.pen)}/mo SS/pension = ${fmtK(monthly+U.ss+U.pen)}/mo total.`;
+  gg('sum-nest').textContent=fmtM(finalBal);gg('sum-nest').className='metric-value green';gg('sum-income').textContent=fmtK(monthly+U.ss+U.pen);
   destroyRetChart('growth');
   retCharts.growth=new Chart(gg('growthChart'),{type:'line',data:{labels,datasets:[{label:'Balance',data:balData,borderColor:'#1d9e75',backgroundColor:'rgba(29,158,117,0.08)',borderWidth:2,fill:true,tension:0.3,pointRadius:0},{label:'Contributions',data:contribData,borderColor:'#185fa5',borderDash:[5,5],borderWidth:1.5,fill:false,tension:0.3,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}},scales:{x:{ticks:{font:{size:10},maxTicksLimit:8},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}});
 }
 
-// ── Longevity ─────────────────────────────────────────────────────────────────
 function calcLongevity(){
-  const yrs=Math.max(U.ret-U.age,1),rate=U.rate/100,contrib=U.contrib*12;
-  let nest=U.saved;for(let y=0;y<yrs;y++)nest=nest*(1+rate)+contrib;
+  const yrs=Math.max(U.ret-U.age,1),rate=U.rate/100,contrib=U.contrib*12;let nest=U.saved;for(let y=0;y<yrs;y++)nest=nest*(1+rate)+contrib;
   const monthlyIncome=U.ss+U.pen,monthlyShortfall=Math.max(0,U.exp-monthlyIncome);
-  gg('l-shortfall').textContent=monthlyShortfall>0?fmtK(monthlyShortfall)+'/mo':'Covered!';
-  gg('l-shortfall').className='metric-value '+(monthlyShortfall===0?'green':'red');
-  const labels=[],balData=[],expData=[],incData=[];
-  let bal=nest,depletionAge=null,curExp=U.exp,curInc=monthlyIncome;
+  gg('l-shortfall').textContent=monthlyShortfall>0?fmtK(monthlyShortfall)+'/mo':'Covered!';gg('l-shortfall').className='metric-value '+(monthlyShortfall===0?'green':'red');
+  const labels=[],balData=[],expData=[],incData=[];let bal=nest,depletionAge=null,curExp=U.exp,curInc=monthlyIncome;
   const monthlyRate=U.retRate/12/100,monthlyInf=U.inf/12/100;
-  for(let yr=0;yr<=50;yr++){
-    labels.push(U.ret+yr);balData.push(Math.round(Math.max(bal,0)));expData.push(Math.round(curExp*12));incData.push(Math.round(curInc*12));
-    if(bal<=0&&!depletionAge)depletionAge=U.ret+yr;
-    for(let m=0;m<12;m++){bal=bal*(1+monthlyRate)-(curExp-curInc);curExp*=(1+monthlyInf);curInc*=(1+monthlyInf*0.5);}
-  }
-  gg('l-until').textContent=depletionAge?depletionAge+'':U.ret+50+'+';
-  gg('l-until').className='metric-value '+(depletionAge&&depletionAge<85?'red':depletionAge&&depletionAge<95?'amber':'green');
-  gg('l-years').textContent=depletionAge?(depletionAge-U.ret)+'y':'50y+';
-  gg('sum-last').textContent=depletionAge?'Age '+depletionAge:'Age '+(U.ret+50)+'+';
-  gg('sum-last').className='metric-value '+(depletionAge&&depletionAge<85?'red':depletionAge&&depletionAge<95?'amber':'green');
+  for(let yr=0;yr<=50;yr++){labels.push(U.ret+yr);balData.push(Math.round(Math.max(bal,0)));expData.push(Math.round(curExp*12));incData.push(Math.round(curInc*12));if(bal<=0&&!depletionAge)depletionAge=U.ret+yr;for(let m=0;m<12;m++){bal=bal*(1+monthlyRate)-(curExp-curInc);curExp*=(1+monthlyInf);curInc*=(1+monthlyInf*0.5);}}
+  gg('l-until').textContent=depletionAge?depletionAge+'':U.ret+50+'+';gg('l-until').className='metric-value '+(depletionAge&&depletionAge<85?'red':depletionAge&&depletionAge<95?'amber':'green');gg('l-years').textContent=depletionAge?(depletionAge-U.ret)+'y':'50y+';
+  gg('sum-last').textContent=depletionAge?'Age '+depletionAge:'Age '+(U.ret+50)+'+';gg('sum-last').className='metric-value '+(depletionAge&&depletionAge<85?'red':depletionAge&&depletionAge<95?'amber':'green');
   const insightEl=gg('l-insight');
-  if(!depletionAge){insightEl.className='insight good';insightEl.textContent=`Your funds outlast a 50-year retirement. With ${fmtK(monthlyIncome)}/mo in guaranteed income and a ${fmtM(Math.round(nest))} nest egg, you're in excellent shape.`;}
-  else if(depletionAge>=90){insightEl.className='insight';insightEl.textContent=`Your funds last until age ${depletionAge} — ${depletionAge-U.ret} years into retirement. Consider a small annuity to extend coverage.`;}
-  else{insightEl.className='insight warn';insightEl.textContent=`Funds deplete at age ${depletionAge}, only ${depletionAge-U.ret} years in. Increase savings, reduce retirement expenses by ${fmtK(monthlyShortfall)}/mo, or delay retirement.`;}
-  destroyRetChart('longevity');
-  retCharts.longevity=new Chart(gg('longevityChart'),{type:'line',data:{labels,datasets:[{label:'Portfolio',data:balData,borderColor:'#1d9e75',backgroundColor:'rgba(29,158,117,0.08)',borderWidth:2,fill:true,tension:0.3,pointRadius:0},{label:'Income',data:incData,borderColor:'#185fa5',borderWidth:1.5,borderDash:[4,4],fill:false,tension:0.2,pointRadius:0},{label:'Expenses',data:expData,borderColor:'#d85a30',borderWidth:1.5,fill:false,tension:0.2,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}},scales:{x:{ticks:{font:{size:10},maxTicksLimit:10},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}});
+  if(!depletionAge){insightEl.className='insight good';insightEl.textContent=`Your funds outlast a 50-year retirement. With ${fmtK(monthlyIncome)}/mo guaranteed income and ${fmtM(Math.round(nest))} nest egg, excellent shape.`;}
+  else if(depletionAge>=90){insightEl.className='insight';insightEl.textContent=`Funds last until age ${depletionAge} — ${depletionAge-U.ret} years in. Consider a small annuity to extend coverage.`;}
+  else{insightEl.className='insight warn';insightEl.textContent=`Funds deplete at age ${depletionAge}, only ${depletionAge-U.ret} years in. Increase savings, reduce expenses by ${fmtK(monthlyShortfall)}/mo, or delay retirement.`;}
+  destroyRetChart('longevity');retCharts.longevity=new Chart(gg('longevityChart'),{type:'line',data:{labels,datasets:[{label:'Portfolio',data:balData,borderColor:'#1d9e75',backgroundColor:'rgba(29,158,117,0.08)',borderWidth:2,fill:true,tension:0.3,pointRadius:0},{label:'Income',data:incData,borderColor:'#185fa5',borderWidth:1.5,borderDash:[4,4],fill:false,tension:0.2,pointRadius:0},{label:'Expenses',data:expData,borderColor:'#d85a30',borderWidth:1.5,fill:false,tension:0.2,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}},scales:{x:{ticks:{font:{size:10},maxTicksLimit:10},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}});
 }
 
-// ── Roth ──────────────────────────────────────────────────────────────────────
 function calcRoth(){
   const yrs=Math.max(U.ret-U.age,1),rate=U.rate/100,taxNow=U.taxNow/100,taxRet=U.taxRet/100;
   const fv=(pmt,r,n)=>pmt*((Math.pow(1+r,n)-1)/r)*(1+r);
   const rothFV=fv(U.ira*(1-taxNow),rate,yrs),tradFV=fv(U.ira,rate,yrs)*(1-taxRet);
   gg('r-roth-val').textContent=fmtM(rothFV);gg('r-trad-val').textContent=fmtM(tradFV);
   const winner=rothFV>tradFV?'Roth':'Traditional',diff=Math.abs(rothFV-tradFV);
-  gg('r-insight').textContent=`${winner} IRA wins by ${fmtM(diff)} after taxes over ${yrs} years. ${U.taxNow>U.taxRet?'Traditional defers taxes to a lower retirement bracket — but Roth offers tax-free growth and no RMDs.':'Roth locks in your current lower tax rate — withdrawals will be tax-free.'}`;
-  gg('sum-roth').textContent=rothFV>tradFV?'+'+fmtM(diff):'-'+fmtM(diff);
-  gg('sum-roth').className='metric-value '+(rothFV>tradFV?'green':'red');
-  destroyRetChart('roth');
-  retCharts.roth=new Chart(gg('rothChart'),{type:'bar',data:{labels:['After-tax value at retirement'],datasets:[{label:'Roth IRA',data:[Math.round(rothFV)],backgroundColor:'#1d9e75',borderRadius:4},{label:'Traditional IRA',data:[Math.round(tradFV)],backgroundColor:'#185fa5',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{ticks:{font:{size:10},callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}});
+  gg('r-insight').textContent=`${winner} IRA wins by ${fmtM(diff)} after taxes over ${yrs} years. ${U.taxNow>U.taxRet?'Traditional defers taxes to a lower bracket — but Roth has no RMDs.':'Roth locks in your current lower tax rate — withdrawals tax-free.'}`;
+  gg('sum-roth').textContent=rothFV>tradFV?'+'+fmtM(diff):'-'+fmtM(diff);gg('sum-roth').className='metric-value '+(rothFV>tradFV?'green':'red');
+  destroyRetChart('roth');retCharts.roth=new Chart(gg('rothChart'),{type:'bar',data:{labels:['After-tax value at retirement'],datasets:[{label:'Roth IRA',data:[Math.round(rothFV)],backgroundColor:'#1d9e75',borderRadius:4},{label:'Traditional IRA',data:[Math.round(tradFV)],backgroundColor:'#185fa5',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}},scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}});
 }
 
-// ── Social Security ───────────────────────────────────────────────────────────
 function calcSS(){
-  const base=U.ss,life=U.life;
-  const b62=Math.round(base*0.70),b67=base,b70=Math.round(base*1.24);
+  const base=U.ss,life=U.life,b62=Math.round(base*0.70),b67=base,b70=Math.round(base*1.24);
   gg('ss-62').textContent='$'+b62.toLocaleString()+'/mo';gg('ss-67').textContent='$'+b67.toLocaleString()+'/mo';gg('ss-70').textContent='$'+b70.toLocaleString()+'/mo';
   const tot62=b62*12*(life-62),tot67=b67*12*(life-67),tot70=b70*12*(Math.max(life-70,0));
   gg('ss-t62').textContent=fmtM(tot62);gg('ss-t67').textContent=fmtM(tot67);gg('ss-t70').textContent=fmtM(tot70);
   const best=tot70>tot67&&tot70>tot62?'Delay to 70':tot67>tot62?'Claim at 67':'Claim at 62';
-  gg('ss-best').textContent=best;
-  const be=Math.round((b70*70-b67*67)/(b67-b70)*(-1));
-  gg('ss-insight').textContent=`Based on living to ${life}, ${best} maximizes lifetime benefits at ${fmtM(Math.max(tot62,tot67,tot70))}. Breakeven between 67 and 70 is around age ${Math.min(be,90)}. Your claim age is set to ${U.ssClaim}.`;
-  const labels=[];for(let a=62;a<=life;a++)labels.push(a);
-  const c62=[],c67=[],c70=[];
+  gg('ss-best').textContent=best;const be=Math.round((b70*70-b67*67)/(b67-b70)*(-1));
+  gg('ss-insight').textContent=`Based on living to ${life}, ${best} maximizes lifetime benefits at ${fmtM(Math.max(tot62,tot67,tot70))}. Breakeven at age ${Math.min(be,90)}.`;
+  const labels=[];for(let a=62;a<=life;a++)labels.push(a);const c62=[],c67=[],c70=[];
   for(let a=62;a<=life;a++){c62.push(Math.round(b62*12*Math.max(a-62,0)));c67.push(a>=67?Math.round(b67*12*(a-67)):0);c70.push(a>=70?Math.round(b70*12*(a-70)):0);}
-  destroyRetChart('ss');
-  retCharts.ss=new Chart(gg('ssChart'),{type:'line',data:{labels,datasets:[{label:'Age 62',data:c62,borderColor:'#d85a30',borderWidth:2,fill:false,tension:0.2,pointRadius:0},{label:'Age 67',data:c67,borderColor:'#185fa5',borderWidth:2,fill:false,tension:0.2,pointRadius:0},{label:'Age 70',data:c70,borderColor:'#1d9e75',borderWidth:2,fill:false,tension:0.2,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}},scales:{x:{ticks:{font:{size:10},maxTicksLimit:8},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}});
+  destroyRetChart('ss');retCharts.ss=new Chart(gg('ssChart'),{type:'line',data:{labels,datasets:[{label:'Age 62',data:c62,borderColor:'#d85a30',borderWidth:2,fill:false,tension:0.2,pointRadius:0},{label:'Age 67',data:c67,borderColor:'#185fa5',borderWidth:2,fill:false,tension:0.2,pointRadius:0},{label:'Age 70',data:c70,borderColor:'#1d9e75',borderWidth:2,fill:false,tension:0.2,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}},scales:{x:{ticks:{font:{size:10},maxTicksLimit:8},grid:{display:false}},y:{ticks:{callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}});
 }
 
-// ── Allocation ────────────────────────────────────────────────────────────────
 function calcAlloc(){
   let stocks=110-U.age,bonds=Math.max(0,U.age-20),intl=15,cash=5,reits=5;
   if(U.risk==='aggressive'){stocks+=15;bonds-=15;}if(U.risk==='conservative'){stocks-=15;bonds+=15;}
@@ -957,28 +1386,20 @@ function calcAlloc(){
   const total=stocks+bonds+intl+cash+reits,norm=v=>Math.round(v/total*100);
   const allocs=[{name:'US Stocks',pct:norm(stocks),color:'#1d9e75'},{name:'Bonds',pct:norm(bonds),color:'#185fa5'},{name:'Intl Stocks',pct:norm(intl),color:'#534ab7'},{name:'REITs',pct:norm(reits),color:'#ba7517'},{name:'Cash/MM',pct:norm(cash),color:'#888780'}];
   gg('allocBars').innerHTML=allocs.map(a=>`<div class="alloc-row"><span class="alloc-name">${a.name}</span><div class="alloc-bar-bg"><div class="alloc-bar" style="width:${a.pct}%;background:${a.color}"></div></div><span class="alloc-pct">${a.pct}%</span></div>`).join('');
-  gg('a-insight').textContent=`At age ${U.age} with ${U.risk} risk and a ${U.horizon.replace('medium','10–20yr').replace('long','20yr+').replace('short','<10yr')} horizon: ${allocs[0].pct}% stocks / ${allocs[1].pct}% bonds. ${U.risk==='aggressive'?'Higher stocks = more volatility but greater long-term growth.':U.risk==='conservative'?'More bonds reduce volatility — ideal closer to retirement.':'A balanced approach for steady long-term growth.'}`;
+  gg('a-insight').textContent=`Age ${U.age}, ${U.risk} risk, ${U.horizon.replace('medium','10–20yr').replace('long','20yr+').replace('short','<10yr')} horizon: ${allocs[0].pct}% stocks / ${allocs[1].pct}% bonds.`;
   gg('allocLegend').innerHTML=allocs.map(a=>`<span style="display:flex;align-items:center;gap:4px"><span class="legend-dot" style="background:${a.color}"></span>${a.name} ${a.pct}%</span>`).join('');
-  destroyRetChart('alloc');
-  retCharts.alloc=new Chart(gg('allocChart'),{type:'doughnut',data:{labels:allocs.map(a=>a.name),datasets:[{data:allocs.map(a=>a.pct),backgroundColor:allocs.map(a=>a.color),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.parsed}%`}}}}});
+  destroyRetChart('alloc');retCharts.alloc=new Chart(gg('allocChart'),{type:'doughnut',data:{labels:allocs.map(a=>a.name),datasets:[{data:allocs.map(a=>a.pct),backgroundColor:allocs.map(a=>a.color),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.parsed}%`}}}}});
 }
 
-// ── FIRE ──────────────────────────────────────────────────────────────────────
 function calcFire(){
-  const annualExp=U.exp*12,target=annualExp/(U.swr/100),rate=U.rate/100,annual=U.contrib*12;
-  gg('f-target').textContent=fmtM(target);
-  const labels=[],savData=[],targetData=[];
-  let bal=U.saved,yr=0,fireYr=null;
+  const annualExp=U.exp*12,target=annualExp/(U.swr/100),rate=U.rate/100,annual=U.contrib*12;gg('f-target').textContent=fmtM(target);
+  const labels=[],savData=[],targetData=[];let bal=U.saved,yr=0,fireYr=null;
   while(bal<target&&yr<60){labels.push(U.age+yr);savData.push(Math.round(bal));targetData.push(Math.round(target));if(bal>=target&&!fireYr)fireYr=yr;bal=bal*(1+rate)+annual;yr++;}
-  labels.push(U.age+yr);savData.push(Math.round(bal));targetData.push(Math.round(target));
-  if(!fireYr&&bal>=target)fireYr=yr;
-  gg('f-years').textContent=fireYr!=null?fireYr+'y':'50y+';
-  gg('f-fireage').textContent=fireYr!=null?U.age+fireYr:'70+';
-  gg('sum-fire').textContent=fireYr!=null?U.age+fireYr:'70+';
+  labels.push(U.age+yr);savData.push(Math.round(bal));targetData.push(Math.round(target));if(!fireYr&&bal>=target)fireYr=yr;
+  gg('f-years').textContent=fireYr!=null?fireYr+'y':'50y+';gg('f-fireage').textContent=fireYr!=null?U.age+fireYr:'70+';gg('sum-fire').textContent=fireYr!=null?U.age+fireYr:'70+';
   const pct=Math.min(100,Math.round(U.saved/target*100));
-  gg('f-insight').textContent=`FIRE number: ${fmtM(target)} (${(U.exp*12).toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0})}/yr ÷ ${U.swr.toFixed(2)}% SWR). You're ${pct}% of the way there.${fireYr!=null?' At your current savings pace, FIRE at age '+(U.age+fireYr)+'.':' Boost monthly savings or reduce target expenses to reach FIRE sooner.'}`;
-  destroyRetChart('fire');
-  retCharts.fire=new Chart(gg('fireChart'),{type:'line',data:{labels,datasets:[{label:'Savings',data:savData,borderColor:'#1d9e75',backgroundColor:'rgba(29,158,117,0.1)',borderWidth:2,fill:true,tension:0.3,pointRadius:0},{label:'FIRE target',data:targetData,borderColor:'#d85a30',borderDash:[6,4],borderWidth:1.5,fill:false,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}},scales:{x:{ticks:{font:{size:10},maxTicksLimit:8},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}});
+  gg('f-insight').textContent=`FIRE number: ${fmtM(target)}. You're ${pct}% there.${fireYr!=null?' FIRE at age '+(U.age+fireYr)+'.':' Boost savings or reduce expenses.'}`;
+  destroyRetChart('fire');retCharts.fire=new Chart(gg('fireChart'),{type:'line',data:{labels,datasets:[{label:'Savings',data:savData,borderColor:'#1d9e75',backgroundColor:'rgba(29,158,117,0.1)',borderWidth:2,fill:true,tension:0.3,pointRadius:0},{label:'FIRE target',data:targetData,borderColor:'#d85a30',borderDash:[6,4],borderWidth:1.5,fill:false,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}},scales:{x:{ticks:{font:{size:10},maxTicksLimit:8},grid:{display:false}},y:{ticks:{callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}});
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
