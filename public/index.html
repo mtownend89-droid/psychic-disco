@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -231,7 +231,7 @@
   <button class="btn btn-primary" onclick="openLinkHandler()">Connect with Plaid</button>
   <p style="font-size:12px;color:var(--hint);">Bank-level 256-bit encryption · Read-only access · Plaid never shares your credentials</p>
 </div>
-
+ 
 <!-- DASHBOARD -->
 <div id="dashboard" class="page">
   <div class="error-banner" id="errorBanner"></div>
@@ -303,7 +303,7 @@
     </div>
   </div>
 </div>
-
+ 
 <!-- EXPENSES & BUDGET -->
 <div id="expenses" class="page">
   <div class="metric-grid" style="margin-bottom:1.5rem;">
@@ -319,7 +319,7 @@
     <button class="budget-tab" onclick="switchBudgetTab('zero')">Zero-balance budget</button>
     <button class="budget-tab" onclick="switchBudgetTab('income')">Income sources</button>
   </div>
-
+ 
   <!-- BILLS -->
   <div class="budget-panel active" id="bpanel-bills">
     <div class="card" style="margin-bottom:1rem;">
@@ -363,7 +363,7 @@
       <div class="card"><div class="section-label">bill breakdown</div><div id="billBreakdown"></div></div>
     </div>
   </div>
-
+ 
   <!-- P&L CALENDAR -->
   <div class="budget-panel" id="bpanel-calendar">
     <div class="card" style="margin-bottom:1rem;">
@@ -388,7 +388,7 @@
       <div class="card"><div class="section-label">bills due this month</div><div id="upcomingBills"></div></div>
     </div>
   </div>
-
+ 
   <!-- ZERO BUDGET -->
   <div class="budget-panel" id="bpanel-zero">
     <div class="insight" style="margin-bottom:1rem;">A zero-balance budget assigns every dollar a job. Income − bills − all discretionary allocations = $0. Adjust the sliders to allocate your remaining income.</div>
@@ -406,7 +406,7 @@
       <div class="card" style="padding:1rem;"><div class="section-label">budget allocation</div><div class="chart-wrap" style="height:260px;"><canvas id="zeroChart" role="img" aria-label="Donut chart showing zero-balance budget">Budget allocation</canvas></div></div>
     </div>
   </div>
-
+ 
   <!-- INCOME SOURCES -->
   <div class="budget-panel" id="bpanel-income">
     <div class="two-col">
@@ -423,7 +423,7 @@
     </div>
   </div>
 </div>
-
+ 
 <!-- RETIREMENT -->
 <div id="retirement" class="page">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
@@ -539,7 +539,7 @@
   </div>
 </div>
 </main>
-
+ 
 <!-- Add Bill Modal -->
 <div class="modal-backdrop" id="addBillModal" style="display:none;" onclick="if(event.target===this)closeAddBillModal()">
   <div class="modal">
@@ -559,7 +559,7 @@
     <div class="modal-footer"><button class="btn btn-sm" onclick="closeAddBillModal()">Cancel</button><button class="export-btn green" onclick="saveNewBill()">Add bill</button></div>
   </div>
 </div>
-
+ 
 <!-- Add Income Modal -->
 <div class="modal-backdrop" id="addIncomeModal" style="display:none;" onclick="if(event.target===this)closeAddIncomeModal()">
   <div class="modal">
@@ -572,7 +572,7 @@
     <div class="modal-footer"><button class="btn btn-sm" onclick="closeAddIncomeModal()">Cancel</button><button class="export-btn green" onclick="saveNewIncome()">Add income</button></div>
   </div>
 </div>
-
+ 
 <!-- Export Modal -->
 <div class="modal-backdrop" id="exportModal" style="display:none;" onclick="if(event.target===this)closeExportModal()">
   <div class="modal">
@@ -596,7 +596,7 @@
     </div>
   </div>
 </div>
-
+ 
 <div id="toast"></div>
 <script>
 let allTransactions=[],allAccounts=[],catChartInst=null,dailyChartInst=null;
@@ -605,7 +605,7 @@ const gg=id=>document.getElementById(id);
 const fmtM=n=>'$'+(Math.abs(n)>=1e6?(Math.abs(n)/1e6).toFixed(2)+'M':Math.abs(n)>=1000?Math.round(Math.abs(n)/1000)+'K':Math.round(Math.abs(n)).toLocaleString());
 const fmtK=n=>'$'+Math.round(Math.abs(n)).toLocaleString();
 const fmt2=n=>'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-
+ 
 // ── Bills data ────────────────────────────────────────────────────────────────
 let bills=[
   {cat:'HM',name:"M&T Mortgage",note:'Mortgage',apr:2.625,due:5,bal:-292452.38,min:2638.46,pay:2638.46,promo:'',paid:false},
@@ -631,15 +631,15 @@ let bills=[
   {cat:'CC',name:'Platinum',note:'Capitol 1',apr:28.74,due:14,bal:-118.14,min:29.00,pay:150.00,promo:'',paid:false},
   {cat:'FAM',name:'Ana Mom',note:'Family',apr:0,due:30,bal:-2500,min:204.99,pay:204.99,promo:'',paid:false},
 ];
-
+ 
 // Plaid liability cache
 let plaidLiabilities={credit_cards:[],student_loans:[],mortgages:[],loaded:false};
-
+ 
 // ── Plaid liability sync ──────────────────────────────────────────────────────
 function mergePlaidIntoBills(liabilities){
   plaidLiabilities={...liabilities,loaded:true};
   let synced=0;
-
+ 
   liabilities.credit_cards.forEach(cc=>{
     const nameKey=(cc.name||'').toLowerCase().split(' ')[0];
     const existing=bills.find(b=>
@@ -667,7 +667,7 @@ function mergePlaidIntoBills(liabilities){
       synced++;
     }
   });
-
+ 
   liabilities.mortgages.forEach(m=>{
     const existing=bills.find(b=>b.cat==='HM'&&b.name.toLowerCase().includes('mortgage'));
     if(existing){
@@ -680,7 +680,7 @@ function mergePlaidIntoBills(liabilities){
       existing.plaid_synced=true;synced++;
     }
   });
-
+ 
   liabilities.student_loans.forEach(loan=>{
     const existing=bills.find(b=>b.cat==='LOAN'&&b.name.toLowerCase().includes('student'));
     if(existing){
@@ -690,12 +690,12 @@ function mergePlaidIntoBills(liabilities){
       existing.plaid_synced=true;synced++;
     }
   });
-
+ 
   saveBills();renderBillsTab();
   const note=gg('plaidSyncNote');if(note)note.style.display='block';
   showToast(`${synced} bills synced from Plaid ✓`,'success');
 }
-
+ 
 async function syncBillsFromPlaid(){
   showToast('Syncing from Plaid...','success');
   try{
@@ -707,7 +707,7 @@ async function syncBillsFromPlaid(){
     showToast('Could not sync — check server logs','error');
   }
 }
-
+ 
 // Income sources
 let incomeSources=[
   {name:'Matt Paycheck',freq:'biweekly',amt:2088.50},
@@ -715,17 +715,17 @@ let incomeSources=[
   {name:'Auto Allowance',freq:'monthly',amt:1650.00},
   {name:'Quarterly Bonus',freq:'quarterly',amt:3594.23},
 ];
-
+ 
 // Zero budget buckets
 let zeroBuckets=[
   {name:'Groceries',amt:350},{name:'Dining out',amt:200},{name:'Gas',amt:300},
   {name:'Medical',amt:150},{name:'Clothing',amt:100},{name:'Entertainment',amt:100},
   {name:'Savings',amt:500},{name:'Emergency fund',amt:200},{name:'Misc',amt:100},
 ];
-
+ 
 // ── Unified retirement state ───────────────────────────────────────────────────
 const U={age:42,ret:65,life:85,taxNow:22,taxRet:18,risk:'moderate',saved:45000,contrib:1200,ira:7000,swr:4,ss:2400,pen:0,rate:7,retRate:5,inf:3,exp:4500,ssClaim:67,horizon:'medium'};
-
+ 
 function uSync(){
   U.age=+gg('u-age').value;U.ret=+gg('u-ret').value;U.life=+gg('u-life').value;
   U.taxNow=+gg('u-taxnow').value;U.taxRet=+gg('u-taxret').value;U.risk=gg('u-risk').value;
@@ -744,7 +744,7 @@ function uSync(){
   calcAll();
 }
 function calcAll(){calcGrowth();calcLongevity();calcRoth();calcSS();calcAlloc();calcFire();refreshRetAccounts();}
-
+ 
 // ── Drag & drop ───────────────────────────────────────────────────────────────
 let dragSrc=null,editModes={dashboard:false,retirement:false};
 function toggleEditMode(page){
@@ -771,7 +771,7 @@ function initDrag(container){
 }
 function saveSectionOrder(page){try{const c=gg(page==='dashboard'?'dashContainer':'retContainer');localStorage.setItem('so-'+page,JSON.stringify([...c.querySelectorAll('.drag-section')].map(s=>s.dataset.id)));}catch(e){}}
 function loadSectionOrder(page){try{const s=JSON.parse(localStorage.getItem('so-'+page));if(!s)return;const c=gg(page==='dashboard'?'dashContainer':'retContainer');s.forEach(id=>{const el=c.querySelector(`[data-id="${id}"]`);if(el)c.appendChild(el);});}catch(e){}}
-
+ 
 // ── Page nav ──────────────────────────────────────────────────────────────────
 function showPage(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -780,7 +780,7 @@ function showPage(page){
   if(page==='retirement')calcAll();
   if(page==='expenses')renderExpensesPage();
 }
-
+ 
 // ── Init ─────────────────────────────────────────────────────────────────────
 async function init(){
   gg('dashEditBar').style.display='none';gg('retEditBar').style.display='none';
@@ -803,11 +803,11 @@ async function init(){
     if(accts.accounts&&accts.accounts.length>0){showDashboard();await refreshAll();}
   }catch(e){showError('Cannot reach server.');}
 }
-
+ 
 function saveBills(){try{localStorage.setItem('bills',JSON.stringify(bills));}catch(e){}}
 function saveIncomeSources(){try{localStorage.setItem('incomeSources',JSON.stringify(incomeSources));}catch(e){}}
 function saveZeroBuckets(){try{localStorage.setItem('zeroBuckets',JSON.stringify(zeroBuckets));}catch(e){}}
-
+ 
 async function openLinkHandler(){
   try{
     const {link_token}=await fetch('/api/create_link_token',{method:'POST'}).then(r=>r.json());
@@ -823,28 +823,28 @@ async function openLinkHandler(){
     handler.open();
   }catch(e){showToast('Failed to open Plaid Link. Check your API keys.','error');}
 }
-
+ 
 function showDashboard(){
   gg('connectScreen').style.display='none';gg('mainNav').style.display='flex';
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   gg('dashboard').classList.add('active');
 }
-
+ 
 async function refreshAll(){await Promise.all([loadAccounts(),loadTransactions()]);}
-
+ 
 async function loadAccounts(){
   const data=await fetch('/api/accounts').then(r=>r.json());
   allAccounts=data.accounts||[];
   renderAccounts();renderBanks();updateMetricAccounts();injectPlaidRetirementData();
   syncBillsFromPlaid();
 }
-
+ 
 async function loadTransactions(){
   const data=await fetch('/api/transactions').then(r=>r.json());
   allTransactions=data.transactions||[];
   filterTransactions();renderCharts();updateMetricSpend();populateFilters();updateExportSummary();
 }
-
+ 
 function injectPlaidRetirementData(){
   const retTypes=['investment','brokerage','401k','ira','roth','retirement','hsa'];
   const retAccounts=allAccounts.filter(a=>retTypes.some(t=>(a.type||'').toLowerCase().includes(t)||(a.subtype||'').toLowerCase().includes(t)));
@@ -855,7 +855,7 @@ function injectPlaidRetirementData(){
   gg('u-saved-val').classList.add('from-plaid');gg('u-saved-note').style.display='block';
   gg('plaidBadge').textContent='Savings pulled from Plaid ✓';calcAll();
 }
-
+ 
 function refreshRetAccounts(){
   const retTypes=['investment','brokerage','401k','ira','roth','retirement','hsa'];
   const retAccounts=allAccounts.filter(a=>retTypes.some(t=>(a.type||'').toLowerCase().includes(t)||(a.subtype||'').toLowerCase().includes(t)));
@@ -869,29 +869,29 @@ function refreshRetAccounts(){
   gg('retProgressPct').textContent=pct+'% of goal';gg('retProgressCurrent').textContent='Current: '+fmtK(totalRetBal);
   gg('retProgressGoal').textContent='Goal: '+fmtM(goalBal)+' at age '+U.ret;
 }
-
+ 
 function renderAccounts(){
   const el=gg('accountsList');if(!allAccounts.length){el.innerHTML='<div class="status">No accounts found</div>';return;}
   el.innerHTML=allAccounts.map(a=>{const bal=a.balances.current??a.balances.available??0;const isCredit=a.type==='credit';return `<div class="account-item"><div><div class="account-name">${esc(a.name)}</div><div class="account-sub">${esc(a.institution)} · ****${esc(a.mask||'????')}</div></div><div><div class="account-balance ${isCredit?'red':'green'}">${isCredit?'-':''}${fmtK(bal)}</div><div class="account-type">${a.subtype||a.type}</div></div></div>`;}).join('');
 }
-
+ 
 function renderBanks(){
   const el=gg('banksList');const items=[...new Map(allAccounts.map(a=>[a.itemId,a])).values()];
   if(!items.length){el.innerHTML='<div class="status">No banks linked</div>';return;}
   el.innerHTML=items.map(a=>`<div class="bank-item"><div><div class="bank-name">${esc(a.institution)}</div><div class="bank-id">${esc(a.itemId?.slice(0,24))}...</div></div><button class="btn btn-sm btn-danger" onclick="removeBank('${esc(a.itemId)}')">Remove</button></div>`).join('');
 }
-
+ 
 async function removeBank(itemId){
   if(!confirm('Remove this bank?'))return;
   const res=await fetch('/api/item/'+itemId,{method:'DELETE'}).then(r=>r.json());
   if(res.success){showToast('Bank removed','success');await refreshAll();}else showToast('Error: '+res.error,'error');
 }
-
+ 
 function renderTransactions(txns){
   const tbody=gg('txnBody');if(!txns.length){tbody.innerHTML='<tr><td colspan="5" class="status">No transactions found</td></tr>';return;}
   tbody.innerHTML=txns.slice(0,500).map(t=>{const cat=formatCat(t.personal_finance_category?.primary||t.category?.[0]||'Other');const pos=t.amount>0;return `<tr><td><div class="txn-merchant">${esc(t.merchant_name||t.name)}</div></td><td><span class="cat-badge">${esc(cat)}</span></td><td style="color:var(--muted);font-size:12px;">${esc(t.institution||'')}</td><td class="txn-date">${t.date}</td><td style="text-align:right;" class="${pos?'txn-amt-pos':'txn-amt-neg'}">${pos?'':'+'}${fmtK(Math.abs(t.amount))}</td></tr>`;}).join('');
 }
-
+ 
 function filterTransactions(){
   const q=gg('txnSearch').value.toLowerCase(),cat=gg('catFilter').value,bank=gg('bankFilter').value,time=gg('timeFilter').value;
   gg('customDateRow').classList.toggle('visible',time==='custom');
@@ -905,18 +905,18 @@ function filterTransactions(){
   const lbl=gg('txnSectionLabel');if(lbl)lbl.textContent='recent transactions — '+(labels[time]||'last 30 days');
   const badge=gg('txnCountBadge');if(badge)badge.textContent=filtered.length+' transaction'+(filtered.length===1?'':'s');
 }
-
+ 
 function populateFilters(){
   const cats=[...new Set(allTransactions.map(t=>t.personal_finance_category?.primary||t.category?.[0]||'Other'))].sort();
   const banks=[...new Set(allTransactions.map(t=>t.institution||''))].filter(Boolean).sort();
   gg('catFilter').innerHTML='<option value="">All categories</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(formatCat(c))}</option>`).join('');
   gg('bankFilter').innerHTML='<option value="">All banks</option>'+banks.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join('');
 }
-
+ 
 function updateMetricAccounts(){const total=allAccounts.reduce((s,a)=>a.type==='credit'?s-(a.balances.current??0):s+(a.balances.current??0),0);gg('mNetBal').textContent=fmtK(total);gg('mNetBal').className='metric-value '+(total>=0?'green':'red');gg('mAcctCount').textContent=allAccounts.length;}
 function updateMetricSpend(){const cutoff=new Date(Date.now()-30*86400000);const recent=allTransactions.filter(t=>new Date(t.date)>=cutoff);gg('mSpent').textContent=fmtK(recent.filter(t=>t.amount>0).reduce((s,t)=>s+t.amount,0));gg('mIncome').textContent=fmtK(recent.filter(t=>t.amount<0).reduce((s,t)=>s+Math.abs(t.amount),0));gg('mTxnCount').textContent=recent.length;}
 function updateExportSummary(){const el=gg('exportSummaryText');if(el)el.textContent=allTransactions.length+' transactions · '+allAccounts.length+' accounts ready to export';}
-
+ 
 const COLORS=['#378ADD','#1D9E75','#D85A30','#534AB7','#BA7517','#D4537E','#0F6E56','#E24B4A','#639922','#5DCAA5'];
 function renderCharts(){
   const cutoff=new Date(Date.now()-30*86400000);const recent=allTransactions.filter(t=>new Date(t.date)>=cutoff&&t.amount>0);
@@ -928,7 +928,7 @@ function renderCharts(){
   if(dailyChartInst)dailyChartInst.destroy();
   dailyChartInst=new Chart(gg('dailyChart'),{type:'bar',data:{labels:days.map(d=>d.slice(5)),datasets:[{label:'Spent',data:days.map(d=>Math.round(byDay[d])),backgroundColor:'#378ADD',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9},maxRotation:45,autoSkip:true,maxTicksLimit:10},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>'$'+v},grid:{color:'rgba(128,128,128,0.08)'}}}}});
 }
-
+ 
 // ── EXPENSES PAGE ─────────────────────────────────────────────────────────────
 function switchBudgetTab(tab){
   document.querySelectorAll('.budget-tab').forEach((t,i)=>t.classList.toggle('active',['bills','calendar','zero','income'][i]===tab));
@@ -939,14 +939,14 @@ function switchBudgetTab(tab){
   if(tab==='zero')renderZeroBudget();
   if(tab==='income')renderIncomeTab();
 }
-
+ 
 function renderExpensesPage(){renderBillsTab();updateBudgetMetrics();}
-
+ 
 function monthlyIncome(){
   return incomeSources.reduce((s,src)=>{const mult={weekly:52/12,biweekly:26/12,monthly:1,quarterly:1/3,annual:1/12};return s+(src.amt*(mult[src.freq]||1));},0);
 }
 function monthlyBills(){return bills.reduce((s,b)=>s+(b.paid?0:b.pay),0);}
-
+ 
 function updateBudgetMetrics(){
   const income=monthlyIncome(),billsTotal=monthlyBills();
   const remaining=income-billsTotal;
@@ -959,7 +959,7 @@ function updateBudgetMetrics(){
   gg('bDebt').textContent=fmtM(totalDebt);
   gg('bUnalloc').textContent=fmt2(Math.abs(unalloc));gg('bUnalloc').className='metric-value '+(Math.abs(unalloc)<50?'green':'amber');
 }
-
+ 
 // ── BILLS TAB ─────────────────────────────────────────────────────────────────
 function renderBillsTab(){
   const tbody=gg('billBody');
@@ -1026,7 +1026,7 @@ function renderBillsTab(){
       <td><button class="btn btn-sm btn-danger" onclick="deleteBill(${i})">✕</button></td>
     </tr>`;
   }).join('');
-
+ 
   const totalBal=bills.reduce((s,b)=>s+Math.abs(b.bal||0),0);
   const totalMin=bills.reduce((s,b)=>s+b.min,0);
   const totalPay=bills.reduce((s,b)=>s+b.pay,0);
@@ -1035,21 +1035,21 @@ function renderBillsTab(){
   gg('totalYourPay').textContent=fmt2(totalPay);
   renderBillCategoryChart();renderBillBreakdown();updateBudgetMetrics();
 }
-
+ 
 function toggleBillPaid(i,checked){
   bills[i].paid=checked;saveBills();
   const row=gg('bill-row-'+i);
   if(row){row.className=checked?'bill-paid':'';}
   updateBudgetMetrics();
 }
-
+ 
 function updateBillPay(i,val){
   const num=parseFloat(val.replace(/[^0-9.]/g,''));
   if(!isNaN(num)){bills[i].pay=num;saveBills();updateBudgetMetrics();renderBillCategoryChart();}
 }
-
+ 
 function deleteBill(i){if(!confirm('Remove this bill?'))return;bills.splice(i,1);saveBills();renderBillsTab();}
-
+ 
 function renderBillCategoryChart(){
   const byCat={};bills.forEach(b=>{byCat[b.cat]=(byCat[b.cat]||0)+b.pay;});
   const catLabels={HM:'Housing',LOAN:'Loans',CC:'Credit Cards',CAR:'Auto',PH:'Phone',TV:'Cable/Stream',FAM:'Family',SAVE:'Savings',OTHER:'Other'};
@@ -1058,7 +1058,7 @@ function renderBillCategoryChart(){
   if(budgetCharts.billCat)budgetCharts.billCat.destroy();
   budgetCharts.billCat=new Chart(gg('billCatChart'),{type:'doughnut',data:{labels:entries.map(([k])=>catLabels[k]||k),datasets:[{data:entries.map(([,v])=>Math.round(v)),backgroundColor:entries.map(([k])=>catColors[k]||'#888780'),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:12,padding:8}},tooltip:{callbacks:{label:ctx=>` $${ctx.parsed.toLocaleString()}`}}}}});
 }
-
+ 
 function renderBillBreakdown(){
   const byCat={};bills.forEach(b=>{byCat[b.cat]=(byCat[b.cat]||0)+b.pay;});
   const catLabels={HM:'🏠 Housing',LOAN:'🏦 Loans',CC:'💳 Credit Cards',CAR:'🚗 Auto',PH:'📱 Phone',TV:'📺 Cable',FAM:'👨‍👩‍👧 Family',SAVE:'💰 Savings',OTHER:'Other'};
@@ -1069,7 +1069,7 @@ function renderBillBreakdown(){
       <div style="text-align:right;"><div style="font-weight:500;">${fmt2(amt)}</div><div style="font-size:11px;color:var(--hint);">${Math.round(amt/total*100)}% of bills</div></div>
     </div>`).join('')+`<div style="display:flex;justify-content:space-between;padding:10px 0;font-weight:500;font-size:14px;"><span>Total</span><span class="red">${fmt2(total)}</span></div>`;
 }
-
+ 
 function openAddBillModal(){gg('addBillModal').style.display='flex';}
 function closeAddBillModal(){gg('addBillModal').style.display='none';}
 function saveNewBill(){
@@ -1077,7 +1077,7 @@ function saveNewBill(){
   if(!b.name){showToast('Please enter a bill name','error');return;}
   bills.push(b);saveBills();closeAddBillModal();renderBillsTab();showToast(b.name+' added!','success');
 }
-
+ 
 // ── CALENDAR ──────────────────────────────────────────────────────────────────
 function renderCalendar(){
   const[yr,mo]=gg('calMonthSel').value.split('-').map(Number);
@@ -1120,7 +1120,7 @@ function renderCalendar(){
     </div>`;
   }).join('');
 }
-
+ 
 // ── ZERO BUDGET ───────────────────────────────────────────────────────────────
 function renderZeroBudget(){
   const income=monthlyIncome(),billsTotal=monthlyBills(),remaining=income-billsTotal;
@@ -1138,7 +1138,7 @@ function renderZeroBudget(){
     </div>`).join('')+`<button class="btn btn-sm" style="margin-top:8px;" onclick="addZeroBucket()">+ Add category</button>`;
   renderZeroBudgetChart();
 }
-
+ 
 function renderZeroBudgetChart(){
   const income=monthlyIncome(),billsTotal=monthlyBills(),remaining=income-billsTotal;
   const allocated=zeroBuckets.reduce((s,b)=>s+b.amt,0);
@@ -1149,9 +1149,9 @@ function renderZeroBudgetChart(){
   if(budgetCharts.zero)budgetCharts.zero.destroy();
   budgetCharts.zero=new Chart(gg('zeroChart'),{type:'doughnut',data:{labels,datasets:[{data:data.map(v=>Math.round(v)),backgroundColor:colors,borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:12,padding:6}},tooltip:{callbacks:{label:ctx=>` $${ctx.parsed.toLocaleString()}`}}}}});
 }
-
+ 
 function addZeroBucket(){const name=prompt('Category name:');if(!name)return;zeroBuckets.push({name,amt:0});saveZeroBuckets();renderZeroBudget();}
-
+ 
 // ── INCOME TAB ────────────────────────────────────────────────────────────────
 function renderIncomeTab(){
   const freqMult={weekly:52/12,biweekly:26/12,monthly:1,quarterly:1/3,annual:1/12};
@@ -1166,7 +1166,7 @@ function renderIncomeTab(){
   if(budgetCharts.income)budgetCharts.income.destroy();
   budgetCharts.income=new Chart(gg('incomeChart'),{type:'doughnut',data:{labels:incomeSources.map(s=>s.name),datasets:[{data:incomeSources.map(s=>Math.round(s.amt*(freqMult[s.freq]||1))),backgroundColor:COLORS.slice(0,incomeSources.length),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:12,padding:8}},tooltip:{callbacks:{label:ctx=>` $${ctx.parsed.toLocaleString()}/mo`}}}}});
 }
-
+ 
 function deleteIncome(i){if(!confirm('Remove this income source?'))return;incomeSources.splice(i,1);saveIncomeSources();renderIncomeTab();updateBudgetMetrics();}
 function openAddIncomeModal(){gg('addIncomeModal').style.display='flex';}
 function closeAddIncomeModal(){gg('addIncomeModal').style.display='none';}
@@ -1175,7 +1175,7 @@ function saveNewIncome(){
   if(!src.name){showToast('Please enter a name','error');return;}
   incomeSources.push(src);saveIncomeSources();closeAddIncomeModal();renderIncomeTab();showToast(src.name+' added!','success');updateBudgetMetrics();
 }
-
+ 
 // ── Bills Excel export ────────────────────────────────────────────────────────
 function exportBillsExcel(){
   const wb=XLSX.utils.book_new();
@@ -1198,7 +1198,7 @@ function exportBillsExcel(){
   const ws2=XLSX.utils.aoa_to_sheet(incData);XLSX.utils.book_append_sheet(wb,ws2,'Income Sources');
   XLSX.writeFile(wb,'Matt_Dana_Budget_'+todayStr()+'.xlsx');showToast('Budget exported!','success');
 }
-
+ 
 // ── Export ────────────────────────────────────────────────────────────────────
 function openExportModal(){gg('exportModal').style.display='flex';}
 function closeExportModal(){gg('exportModal').style.display='none';}
@@ -1220,11 +1220,11 @@ function exportExcel(){
   if(gg('chkMonthly').checked){const byMonth={};filtered.forEach(t=>{const m=t.date.slice(0,7);if(!byMonth[m])byMonth[m]={income:0,expenses:0,count:0};if(t.amount<0)byMonth[m].income+=Math.abs(t.amount);else byMonth[m].expenses+=t.amount;byMonth[m].count++;});const data=[['Month','Income','Expenses','Net Cash Flow','Transactions']];Object.keys(byMonth).sort().forEach(m=>{const d=byMonth[m];data.push([m,parseFloat(d.income.toFixed(2)),parseFloat(d.expenses.toFixed(2)),parseFloat((d.income-d.expenses).toFixed(2)),d.count]);});const ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[{wch:12},{wch:14},{wch:14},{wch:16},{wch:14}];XLSX.utils.book_append_sheet(wb,ws,'Monthly Breakdown');}
   XLSX.writeFile(wb,'Matt_Dana_Finance_'+todayStr()+'.xlsx');showToast('Excel downloaded!','success');closeExportModal();
 }
-
+ 
 // ── Retirement calculators ────────────────────────────────────────────────────
 function switchRetTab(tab){document.querySelectorAll('.ret-tab').forEach((t,i)=>t.classList.toggle('active',['growth','longevity','roth','ss','alloc','fire'][i]===tab));document.querySelectorAll('.ret-panel').forEach(p=>p.classList.remove('active'));gg('rpanel-'+tab).classList.add('active');}
 function destroyRetChart(id){if(retCharts[id]){retCharts[id].destroy();delete retCharts[id];}}
-
+ 
 function calcGrowth(){
   const yrs=Math.max(U.ret-U.age,1),rate=U.rate/100,inf=U.inf/100,contrib=U.contrib*12;
   const labels=[],balData=[],contribData=[];let bal=U.saved,totalContrib=U.saved;
@@ -1236,7 +1236,7 @@ function calcGrowth(){
   destroyRetChart('growth');
   retCharts.growth=new Chart(gg('growthChart'),{type:'line',data:{labels,datasets:[{label:'Balance',data:balData,borderColor:'#1d9e75',backgroundColor:'rgba(29,158,117,0.08)',borderWidth:2,fill:true,tension:0.3,pointRadius:0},{label:'Contributions',data:contribData,borderColor:'#185fa5',borderDash:[5,5],borderWidth:1.5,fill:false,tension:0.3,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}},scales:{x:{ticks:{font:{size:10},maxTicksLimit:8},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}});
 }
-
+ 
 function calcLongevity(){
   const yrs=Math.max(U.ret-U.age,1),rate=U.rate/100,contrib=U.contrib*12;let nest=U.saved;for(let y=0;y<yrs;y++)nest=nest*(1+rate)+contrib;
   const monthlyInc=U.ss+U.pen,shortfall=Math.max(0,U.exp-monthlyInc);
@@ -1252,7 +1252,7 @@ function calcLongevity(){
   else{ins.className='insight warn';ins.textContent=`Funds deplete at age ${depAge}, only ${depAge-U.ret} years in. Increase savings, reduce expenses by ${fmtK(shortfall)}/mo, or delay retirement.`;}
   destroyRetChart('longevity');retCharts.longevity=new Chart(gg('longevityChart'),{type:'line',data:{labels,datasets:[{label:'Portfolio',data:balData,borderColor:'#1d9e75',backgroundColor:'rgba(29,158,117,0.08)',borderWidth:2,fill:true,tension:0.3,pointRadius:0},{label:'Income',data:incData,borderColor:'#185fa5',borderWidth:1.5,borderDash:[4,4],fill:false,tension:0.2,pointRadius:0},{label:'Expenses',data:expData,borderColor:'#d85a30',borderWidth:1.5,fill:false,tension:0.2,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}},scales:{x:{ticks:{font:{size:10},maxTicksLimit:10},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}});
 }
-
+ 
 function calcRoth(){
   const yrs=Math.max(U.ret-U.age,1),rate=U.rate/100,taxNow=U.taxNow/100,taxRet=U.taxRet/100;
   const fv=(pmt,r,n)=>pmt*((Math.pow(1+r,n)-1)/r)*(1+r);
@@ -1263,7 +1263,7 @@ function calcRoth(){
   gg('sum-roth').textContent=rothFV>tradFV?'+'+fmtM(diff):'-'+fmtM(diff);gg('sum-roth').className='metric-value '+(rothFV>tradFV?'green':'red');
   destroyRetChart('roth');retCharts.roth=new Chart(gg('rothChart'),{type:'bar',data:{labels:['After-tax value at retirement'],datasets:[{label:'Roth IRA',data:[Math.round(rothFV)],backgroundColor:'#1d9e75',borderRadius:4},{label:'Traditional IRA',data:[Math.round(tradFV)],backgroundColor:'#185fa5',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}},scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}});
 }
-
+ 
 function calcSS(){
   const base=U.ss,life=U.life,b62=Math.round(base*0.70),b67=base,b70=Math.round(base*1.24);
   gg('ss-62').textContent='$'+b62.toLocaleString()+'/mo';gg('ss-67').textContent='$'+b67.toLocaleString()+'/mo';gg('ss-70').textContent='$'+b70.toLocaleString()+'/mo';
@@ -1276,7 +1276,7 @@ function calcSS(){
   for(let a=62;a<=life;a++){c62.push(Math.round(b62*12*Math.max(a-62,0)));c67.push(a>=67?Math.round(b67*12*(a-67)):0);c70.push(a>=70?Math.round(b70*12*(a-70)):0);}
   destroyRetChart('ss');retCharts.ss=new Chart(gg('ssChart'),{type:'line',data:{labels,datasets:[{label:'Age 62',data:c62,borderColor:'#d85a30',borderWidth:2,fill:false,tension:0.2,pointRadius:0},{label:'Age 67',data:c67,borderColor:'#185fa5',borderWidth:2,fill:false,tension:0.2,pointRadius:0},{label:'Age 70',data:c70,borderColor:'#1d9e75',borderWidth:2,fill:false,tension:0.2,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}},scales:{x:{ticks:{font:{size:10},maxTicksLimit:8},grid:{display:false}},y:{ticks:{callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}});
 }
-
+ 
 function calcAlloc(){
   let stocks=110-U.age,bonds=Math.max(0,U.age-20),intl=15,cash=5,reits=5;
   if(U.risk==='aggressive'){stocks+=15;bonds-=15;}if(U.risk==='conservative'){stocks-=15;bonds+=15;}
@@ -1289,7 +1289,7 @@ function calcAlloc(){
   gg('allocLegend').innerHTML=allocs.map(a=>`<span style="display:flex;align-items:center;gap:4px"><span class="legend-dot" style="background:${a.color}"></span>${a.name} ${a.pct}%</span>`).join('');
   destroyRetChart('alloc');retCharts.alloc=new Chart(gg('allocChart'),{type:'doughnut',data:{labels:allocs.map(a=>a.name),datasets:[{data:allocs.map(a=>a.pct),backgroundColor:allocs.map(a=>a.color),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.parsed}%`}}}}});
 }
-
+ 
 function calcFire(){
   const annualExp=U.exp*12,target=annualExp/(U.swr/100),rate=U.rate/100,annual=U.contrib*12;
   gg('f-target').textContent=fmtM(target);
@@ -1301,14 +1301,14 @@ function calcFire(){
   gg('f-insight').textContent=`FIRE number: ${fmtM(target)}. You're ${pct}% there.${fireYr!=null?' FIRE at age '+(U.age+fireYr)+'.':' Boost savings or reduce expenses.'}`;
   destroyRetChart('fire');retCharts.fire=new Chart(gg('fireChart'),{type:'line',data:{labels,datasets:[{label:'Savings',data:savData,borderColor:'#1d9e75',backgroundColor:'rgba(29,158,117,0.1)',borderWidth:2,fill:true,tension:0.3,pointRadius:0},{label:'FIRE target',data:targetData,borderColor:'#d85a30',borderDash:[6,4],borderWidth:1.5,fill:false,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}},scales:{x:{ticks:{font:{size:10},maxTicksLimit:8},grid:{display:false}},y:{ticks:{callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}});
 }
-
+ 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function todayStr(){return new Date().toISOString().slice(0,10).replace(/-/g,'');}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function formatCat(s){return String(s).replace(/_/g,' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());}
 function showError(msg){const el=gg('errorBanner');if(el){el.textContent=msg;el.style.display='block';}}
 function showToast(msg,type='success'){const t=gg('toast');t.textContent=msg;t.className='show '+type;setTimeout(()=>{t.className='';},3500);}
-
+ 
 const plaidScript=document.createElement('script');
 plaidScript.src='https://cdn.plaid.com/link/v2/stable/link-initialize.js';
 document.head.appendChild(plaidScript);
