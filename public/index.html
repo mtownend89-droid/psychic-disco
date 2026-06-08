@@ -654,6 +654,28 @@ input[type=range]{width:100%;accent-color:var(--green);}
 .fd-check-body strong{color:var(--text);font-weight:500;}
 @media(max-width:900px){#fdMainGrid{grid-template-columns:1fr !important;}}
 
+
+/* ── DEBT PAYOFF ── */
+#dpMainGrid{display:grid;grid-template-columns:1fr 320px;gap:14px;}
+@media(max-width:900px){#dpMainGrid{grid-template-columns:1fr !important;}}
+.dp-priority-num{
+  width:24px;height:24px;border-radius:50%;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;background:var(--surface3);color:var(--muted);
+  flex-shrink:0;
+}
+.dp-priority-num.active{background:var(--green-dim);color:var(--green);}
+.dp-payoff-bar-bg{height:5px;border-radius:3px;background:var(--surface3);overflow:hidden;margin-top:4px;width:100%;}
+.dp-payoff-bar{height:100%;border-radius:3px;transition:width 0.3s;}
+.dp-tactic{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12.5px;}
+.dp-tactic:last-child{border-bottom:none;}
+.dp-tactic-icon{font-size:16px;flex-shrink:0;margin-top:1px;}
+.dp-tactic-body{color:var(--muted);line-height:1.5;flex:1;}
+.dp-tactic-body strong{color:var(--text);font-weight:500;}
+.dp-compare-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12.5px;}
+.dp-compare-row:last-child{border-bottom:none;}
+.dp-compare-row.winner{color:var(--green);font-weight:500;}
+
 </style>
 </head><body>
 <!-- ── SIDEBAR ── -->
@@ -1118,15 +1140,19 @@ input[type=range]{width:100%;accent-color:var(--green);}
     <!-- ── FIRE DRILL ── -->
     <div id="firedrill" class="page">
       <div class="page-hdr">
-        <div>
-          <div class="page-title">🔥 Fire Drill Scenarios</div>
-          <div class="page-sub">Simulate financial emergencies — see your runway, adjust bills, and build a survival plan</div>
-        </div>
-        <div class="page-hdr-right">
-          <button class="btn" onclick="fdReset()">↺ Reset all</button>
+        <div><div class="page-title" id="fdPageTitle">🔥 Fire Drill Scenarios</div><div class="page-sub" id="fdPageSub">Simulate financial emergencies — adjust bills and build a survival plan</div></div>
+        <div class="page-hdr-right" id="fdPageActions">
+          <button class="btn" onclick="fdReset()">↺ Reset</button>
           <button class="btn primary" onclick="fdExport()">Export plan</button>
         </div>
       </div>
+      <!-- TOP TABS -->
+      <div class="tab-row" id="fdTopTabs" style="margin-bottom:20px">
+        <button class="tab-btn active" onclick="fdSwitchTab('drill')">🔥 Fire Drill</button>
+        <button class="tab-btn" onclick="fdSwitchTab('debt')">💳 Debt Payoff Planner</button>
+      </div>
+      <!-- FIRE DRILL PANEL -->
+      <div id="fdTab-drill">
 
       <!-- SCENARIO SELECTOR -->
       <div style="margin-bottom:20px">
@@ -1173,7 +1199,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
       </div>
 
       <!-- MAIN LAYOUT -->
-      <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;margin-bottom:20px" id="fdMainGrid">
+      <div style="display:grid;grid-template-columns:1fr 320px;gap:14px;margin-bottom:20px" id="fdMainGrid">
 
         <!-- LEFT COLUMN -->
         <div>
@@ -1386,8 +1412,159 @@ input[type=range]{width:100%;accent-color:var(--green);}
           style="width:100%;min-height:80px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;color:var(--text);font-family:var(--font);font-size:13px;resize:vertical;outline:none;line-height:1.6"
           oninput="localStorage.setItem('fdNotes',this.value)"></textarea>
       </div>
+      </div><!-- /fdTab-drill -->
 
-    </div>
+      <!-- DEBT PAYOFF PANEL -->
+      <div id="fdTab-debt" style="display:none">
+        <!-- WIDGETS ROW -->
+        <div class="wgrid" style="margin-bottom:18px">
+          <div class="widget w-red"><div class="wlabel">Total Debt</div><div class="wvalue red" id="dp-total-debt">—</div><div class="wsub">all balances</div></div>
+          <div class="widget w-amber"><div class="wlabel">Monthly Interest</div><div class="wvalue amber" id="dp-monthly-int">—</div><div class="wsub">being charged</div></div>
+          <div class="widget w-cyan"><div class="wlabel">Monthly Payment</div><div class="wvalue cyan" id="dp-monthly-pay">—</div><div class="wsub">current total</div></div>
+          <div class="widget w-green"><div class="wlabel">Payoff Date</div><div class="wvalue green" id="dp-payoff-date">—</div><div class="wsub">at current pace</div></div>
+          <div class="widget w-purple"><div class="wlabel">Total Interest</div><div class="wvalue purple" id="dp-total-int">—</div><div class="wsub">you'll pay</div></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 320px;gap:14px" id="dpMainGrid">
+
+          <!-- LEFT: STRATEGY + DEBT TABLE -->
+          <div>
+
+            <!-- STRATEGY SELECTOR -->
+            <div class="card" style="margin-bottom:14px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                <div class="card-title" style="margin-bottom:0">Payoff strategy</div>
+                <button class="btn green-outline" onclick="dpSyncPlaid()">⟳ Sync Plaid</button>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px" id="dpStrategyCards">
+                <div class="fd-scenario-card active" onclick="dpSetStrategy('snowball')" data-id="snowball">
+                  <div class="fd-sc-icon">⛄</div>
+                  <div class="fd-sc-name">Debt Snowball</div>
+                  <div class="fd-sc-sub">Smallest balance first — quick wins</div>
+                </div>
+                <div class="fd-scenario-card" onclick="dpSetStrategy('avalanche')" data-id="avalanche">
+                  <div class="fd-sc-icon">🏔️</div>
+                  <div class="fd-sc-name">Debt Avalanche</div>
+                  <div class="fd-sc-sub">Highest APR first — saves most money</div>
+                </div>
+                <div class="fd-scenario-card" onclick="dpSetStrategy('hybrid')" data-id="hybrid">
+                  <div class="fd-sc-icon">⚖️</div>
+                  <div class="fd-sc-name">Hybrid</div>
+                  <div class="fd-sc-sub">Balance wins + savings</div>
+                </div>
+                <div class="fd-scenario-card" onclick="dpSetStrategy('custom')" data-id="custom-dp">
+                  <div class="fd-sc-icon">✏️</div>
+                  <div class="fd-sc-name">Custom Order</div>
+                  <div class="fd-sc-sub">Drag to set your own priority</div>
+                </div>
+              </div>
+              <div class="insight info" id="dpStrategyInsight" style="margin-bottom:0"></div>
+            </div>
+
+            <!-- EXTRA PAYMENT SLIDER -->
+            <div class="card" style="margin-bottom:14px">
+              <div class="card-title" style="margin-bottom:12px">Extra monthly payment</div>
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+                <span style="font-size:13px;color:var(--muted);min-width:130px">Extra toward debt</span>
+                <input type="range" id="dp-extra" min="0" max="2000" value="0" step="50" style="flex:1" oninput="dpCalc()">
+                <span class="mono" style="font-weight:600;font-size:14px;color:var(--green);min-width:60px;text-align:right" id="dp-extra-val">$0/mo</span>
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap">
+                <button class="btn" onclick="gg('dp-extra').value=100;dpCalc()">+$100</button>
+                <button class="btn" onclick="gg('dp-extra').value=200;dpCalc()">+$200</button>
+                <button class="btn" onclick="gg('dp-extra').value=500;dpCalc()">+$500</button>
+                <button class="btn" onclick="gg('dp-extra').value=1000;dpCalc()">+$1,000</button>
+                <span style="font-size:12px;color:var(--hint);margin-left:auto;align-self:center">Months saved: <span id="dp-months-saved" style="color:var(--green);font-weight:600">—</span> · Interest saved: <span id="dp-int-saved" style="color:var(--green);font-weight:600">—</span></span>
+              </div>
+            </div>
+
+            <!-- DEBT TABLE -->
+            <div class="card">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                <div class="card-title" style="margin-bottom:0">Your debts — payoff order</div>
+                <span style="font-size:11px;color:var(--hint)" id="dpOrderHint">Sorted by strategy</span>
+              </div>
+              <div style="overflow-x:auto">
+                <table class="tbl" id="dpDebtTable">
+                  <thead><tr>
+                    <th style="width:28px">#</th>
+                    <th>Debt</th>
+                    <th>Balance</th>
+                    <th>APR</th>
+                    <th>Min pay</th>
+                    <th>Extra pay</th>
+                    <th>Payoff</th>
+                    <th>Interest cost</th>
+                    <th>Status</th>
+                  </tr></thead>
+                  <tbody id="dpDebtBody"></tbody>
+                  <tfoot><tr class="tbl-total">
+                    <td colspan="2">Totals</td>
+                    <td id="dp-foot-bal" class="mono" style="color:var(--red)"></td>
+                    <td></td>
+                    <td id="dp-foot-min" class="mono" style="color:var(--amber)"></td>
+                    <td id="dp-foot-extra" class="mono" style="color:var(--green)"></td>
+                    <td id="dp-foot-payoff"></td>
+                    <td id="dp-foot-int" class="mono" style="color:var(--red)"></td>
+                    <td></td>
+                  </tr></tfoot>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- RIGHT: CHARTS + SUMMARY + TACTICS -->
+          <div>
+
+            <!-- PAYOFF TIMELINE CHART -->
+            <div class="card" style="padding:16px;margin-bottom:12px">
+              <div class="card-title" style="margin-bottom:10px">Payoff timeline</div>
+              <div style="position:relative;height:180px">
+                <canvas id="dpTimelineChart" role="img" aria-label="Debt payoff timeline chart"></canvas>
+              </div>
+            </div>
+
+            <!-- INTEREST BREAKDOWN -->
+            <div class="card" style="padding:16px;margin-bottom:12px">
+              <div class="card-title" style="margin-bottom:10px">Interest by debt</div>
+              <div style="position:relative;height:160px">
+                <canvas id="dpIntChart" role="img" aria-label="Interest cost by debt"></canvas>
+              </div>
+            </div>
+
+            <!-- STRATEGY COMPARISON -->
+            <div class="card" style="padding:16px;margin-bottom:12px">
+              <div class="card-title" style="margin-bottom:12px">Strategy comparison</div>
+              <div id="dpCompare"></div>
+            </div>
+
+            <!-- QUICK TACTICS -->
+            <div class="card" style="padding:16px">
+              <div class="card-title" style="margin-bottom:12px">Quick win tactics</div>
+              <div id="dpTactics"></div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- PAYOFF SCHEDULE -->
+        <div class="card" style="margin-top:14px;padding:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <div class="card-title" style="margin-bottom:0">Month-by-month payoff schedule</div>
+            <button class="btn primary" onclick="dpExport()"><svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export plan</button>
+          </div>
+          <div style="overflow-x:auto;max-height:320px;overflow-y:auto">
+            <table class="tbl" id="dpScheduleTable">
+              <thead id="dpScheduleHead"></thead>
+              <tbody id="dpScheduleBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div><!-- /fdTab-debt -->
+
+    </div><!-- /firedrill page -->
 
 <!-- ── MODALS ── -->
 <div class="modal-bg" id="addBillModal" style="display:none" onclick="if(event.target===this)closeAddBillModal()">
@@ -1574,7 +1751,7 @@ function showPage(page){
   if(page==='expenses'){renderBillsTab();renderCalendar();renderZeroBudget();renderIncomeTab();updateBudgetMetrics();}
   if(page==='networth')renderNetWorth();
   if(page==='cashflow')renderCashFlow();
-  if(page==='firedrill'){initFireDrill();}
+  if(page==='firedrill'){initFireDrill();fdSwitchTab('drill');}
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
@@ -2783,6 +2960,501 @@ function initFireDrill() {
       fdCalcQuick();
     });
   });
+}
+
+
+// ── DEBT PAYOFF PLANNER ───────────────────────────────────────────────────────
+let dpStrategy = 'snowball';
+let dpDebtList = [];   // working copy, sorted by strategy
+let dpTimelineChartInst = null;
+let dpIntChartInst = null;
+
+function dpInit() {
+  dpBuildDebtList();
+  dpSetStrategy('snowball');
+  const notes = gg('fdNotes');
+  if (notes) notes.value = localStorage.getItem('fdNotes') || '';
+}
+
+function dpBuildDebtList() {
+  // Pull from bills — anything with a balance and APR or min payment
+  dpDebtList = bills
+    .filter(b => Math.abs(b.bal || 0) > 0 && b.pay > 0)
+    .map((b, origIdx) => ({
+      origIdx,
+      name: b.name,
+      cat: b.cat,
+      balance: Math.abs(b.bal || 0),
+      apr: b.apr || 0,
+      min: b.min || b.pay,
+      pay: b.pay,
+      promo: b.promo || '',
+      note: b.note || '',
+      plaid: b.plaid_synced || false,
+    }));
+}
+
+function dpSyncPlaid() {
+  dpBuildDebtList();
+  dpCalc();
+  showToast('Debt list refreshed from Plaid ✓', 'success');
+}
+
+function dpSetStrategy(id) {
+  dpStrategy = id;
+  document.querySelectorAll('#dpStrategyCards .fd-scenario-card').forEach(c => {
+    c.classList.toggle('active', c.dataset.id === id || (id === 'custom' && c.dataset.id === 'custom-dp'));
+  });
+  dpSortDebts();
+  dpUpdateStrategyInsight();
+  dpCalc();
+}
+
+function dpSortDebts() {
+  if (dpStrategy === 'snowball') {
+    dpDebtList.sort((a, b) => a.balance - b.balance);
+  } else if (dpStrategy === 'avalanche') {
+    dpDebtList.sort((a, b) => b.apr - a.apr);
+  } else if (dpStrategy === 'hybrid') {
+    // Score: 50% balance rank + 50% APR rank
+    const n = dpDebtList.length;
+    const byBal = [...dpDebtList].sort((a,b) => a.balance - b.balance);
+    const byApr = [...dpDebtList].sort((a,b) => b.apr - a.apr);
+    dpDebtList.forEach(d => {
+      d._score = (byBal.indexOf(d) / n) * 0.5 + (byApr.indexOf(d) / n) * 0.5;
+    });
+    dpDebtList.sort((a,b) => a._score - b._score);
+  }
+  // custom: user-defined order, don't re-sort
+  const hint = gg('dpOrderHint');
+  if (hint) {
+    const hints = {
+      snowball: 'Smallest balance → biggest',
+      avalanche: 'Highest APR → lowest',
+      hybrid: 'Best balance of speed & savings',
+      custom: 'Drag rows to reorder',
+    };
+    hint.textContent = hints[dpStrategy] || '';
+  }
+}
+
+function dpUpdateStrategyInsight() {
+  const el = gg('dpStrategyInsight'); if (!el) return;
+  const insights = {
+    snowball: 'Snowball: pay minimums on everything, throw all extra money at the smallest balance. When it\'s gone, roll that payment to the next. Builds momentum with quick wins — best for motivation.',
+    avalanche: 'Avalanche: pay minimums on everything, throw all extra money at the highest APR debt. Mathematically optimal — saves the most in total interest. Best if you can stay disciplined.',
+    hybrid: 'Hybrid: balances quick wins (snowball) with interest savings (avalanche). Scores each debt on both criteria. Good middle ground when you want both motivation and efficiency.',
+    custom: 'Custom: drag the rows in the table to set your own payoff priority. Useful when you have specific goals like freeing up a minimum payment or paying off a family loan first.',
+  };
+  el.className = 'insight info';
+  el.textContent = insights[dpStrategy] || '';
+}
+
+function dpCalcDebt(debt, extraForThis) {
+  // Returns months to payoff and total interest paid
+  const bal = debt.balance;
+  const apr = debt.apr;
+  const pay = debt.min + extraForThis;
+  if (bal <= 0) return { months: 0, interest: 0, totalPaid: 0 };
+  if (apr === 0) {
+    const months = Math.ceil(bal / pay);
+    return { months, interest: 0, totalPaid: bal };
+  }
+  const mr = apr / 100 / 12;
+  if (pay <= bal * mr) {
+    // Can't pay off — interest exceeds payment
+    return { months: 999, interest: 999999, totalPaid: 999999 };
+  }
+  const months = Math.ceil(-Math.log(1 - (bal * mr / pay)) / Math.log(1 + mr));
+  const totalPaid = pay * months;
+  const interest = totalPaid - bal;
+  return { months: Math.max(1, months), interest: Math.max(0, interest), totalPaid };
+}
+
+function dpCalc() {
+  const extra = +(gg('dp-extra')?.value || 0);
+  const ev = gg('dp-extra-val'); if (ev) ev.textContent = '$' + extra + '/mo';
+
+  // Build payoff schedule using strategy
+  // Available extra rolls over when a debt is paid off (snowball effect)
+  let schedule = dpDebtList.map(d => ({
+    ...d,
+    remaining: d.balance,
+    paid: false,
+    payoffMonth: 0,
+    totalInterest: 0,
+    extraThisRound: 0,
+  }));
+
+  // Assign initial extra to first unpaid debt
+  let month = 0;
+  const MAX_MONTHS = 360;
+  const monthlyData = []; // for chart: { month, total }
+  let totalInterestPaid = 0;
+  let freedPayments = 0; // snowball: freed minimums roll to next
+
+  // Pre-calculate without extra for comparison
+  const calcBaseline = () => {
+    let totalInt = 0, maxMonths = 0;
+    dpDebtList.forEach(d => {
+      const r = dpCalcDebt(d, 0);
+      totalInt += r.interest;
+      maxMonths = Math.max(maxMonths, r.months);
+    });
+    return { totalInt, maxMonths };
+  };
+
+  // Simulate month by month
+  let monthlySnapshot = [];
+  let remainings = dpDebtList.map(d => d.balance);
+  let paid = dpDebtList.map(() => false);
+  let payoffMonths = dpDebtList.map(() => 0);
+  let accInterest = dpDebtList.map(() => 0);
+  let rolledExtra = 0; // freed minimums from paid-off debts
+
+  for (let m = 1; m <= MAX_MONTHS; m++) {
+    if (paid.every(p => p)) break;
+    // Find first unpaid index
+    const firstUnpaid = paid.findIndex(p => !p);
+    // Distribute: mins to all + extra to first unpaid
+    let totalBal = 0;
+    dpDebtList.forEach((d, i) => {
+      if (paid[i]) return;
+      const mr = d.apr / 100 / 12;
+      const intCharge = remainings[i] * mr;
+      accInterest[i] += intCharge;
+      let payment = d.min;
+      if (i === firstUnpaid) payment += extra + rolledExtra;
+      payment = Math.min(payment, remainings[i] + intCharge);
+      remainings[i] = Math.max(0, remainings[i] + intCharge - payment);
+      if (remainings[i] < 0.01) {
+        remainings[i] = 0;
+        if (!paid[i]) {
+          paid[i] = true;
+          payoffMonths[i] = m;
+          rolledExtra += d.min; // snowball: roll freed minimum
+        }
+      }
+      totalBal += remainings[i];
+    });
+    monthlySnapshot.push({ m, total: Math.round(totalBal) });
+  }
+
+  // Build debt table results
+  const tbody = gg('dpDebtBody'); if (!tbody) return;
+  let totalBal = 0, totalMin = 0, totalExtra = 0, totalInt = 0, maxMonth = 0;
+
+  tbody.innerHTML = dpDebtList.map((d, i) => {
+    const months = payoffMonths[i] || 999;
+    const interest = Math.round(accInterest[i]);
+    totalBal += d.balance;
+    totalMin += d.min;
+    totalInt += interest;
+    if (months < 999) maxMonth = Math.max(maxMonth, months);
+
+    const payoffDate = months < 999
+      ? new Date(Date.now() + months * 30.4 * 86400000).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+      : 'Never ⚠️';
+
+    const extraForThis = i === dpDebtList.findIndex((_, ii) => !paid[ii]) ? extra : 0;
+    if (i === 0) totalExtra = extra;
+
+    // Progress bar
+    const origBal = d.balance;
+    const pctPaid = 0; // starting fresh
+    const barColor = d.apr > 20 ? 'var(--red)' : d.apr > 10 ? 'var(--amber)' : 'var(--green)';
+    const priorityNum = i + 1;
+    const isFirst = i === 0;
+
+    let statusHtml = months < 999
+      ? `<span style="font-size:11px;color:var(--green);font-weight:600">${months}mo</span>`
+      : `<span style="font-size:11px;color:var(--red);font-weight:600">↑ pay more</span>`;
+
+    return `<tr>
+      <td><span class="dp-priority-num ${isFirst ? 'active' : ''}">${priorityNum}</span></td>
+      <td>
+        <div style="font-weight:500;font-size:12.5px">${esc(d.name)}${d.plaid ? '<span class="badge-live">live</span>' : ''}</div>
+        <div style="font-size:10.5px;color:var(--hint)">${esc(d.note)}${d.promo ? ' · ' + esc(d.promo) : ''}</div>
+        <div class="dp-payoff-bar-bg"><div class="dp-payoff-bar" style="width:0%;background:${barColor}"></div></div>
+      </td>
+      <td class="mono" style="color:var(--red);font-size:12.5px">${fmt2(d.balance)}</td>
+      <td style="font-size:12px">${d.apr > 0 ? `<span class="mono">${d.apr.toFixed(2)}%</span>` : '<span style="color:var(--green);font-size:11px;font-weight:700">0%</span>'}</td>
+      <td class="mono" style="color:var(--amber);font-size:12px">${fmt2(d.min)}</td>
+      <td class="mono" style="color:var(--green);font-size:12px">${isFirst && extra > 0 ? '+' + fmt2(extra) : '—'}</td>
+      <td style="font-size:12px;white-space:nowrap">${payoffDate}</td>
+      <td class="mono" style="color:${interest > 500 ? 'var(--red)' : 'var(--muted)'};font-size:12px">${fmt2(interest)}</td>
+      <td>${statusHtml}</td>
+    </tr>`;
+  }).join('');
+
+  // Foot
+  const now = new Date(Date.now() + maxMonth * 30.4 * 86400000);
+  const fd = gg('dp-foot-bal'); if (fd) fd.textContent = fmt2(totalBal);
+  const fm = gg('dp-foot-min'); if (fm) fm.textContent = fmt2(totalMin);
+  const fe = gg('dp-foot-extra'); if (fe) fe.textContent = extra > 0 ? '+' + fmt2(extra) : '—';
+  const fp = gg('dp-foot-payoff'); if (fp) fp.textContent = maxMonth < 999 ? now.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—';
+  const fi = gg('dp-foot-int'); if (fi) fi.textContent = fmt2(totalInt);
+
+  // Top widgets
+  const monthlyInterest = dpDebtList.reduce((s, d) => s + d.balance * d.apr / 100 / 12, 0);
+  const setW = (id, v) => { const el = gg(id); if (el) el.textContent = v; };
+  setW('dp-total-debt', fmtM(totalBal));
+  setW('dp-monthly-int', fmt2(monthlyInterest));
+  setW('dp-monthly-pay', fmt2(totalMin + extra));
+  setW('dp-payoff-date', maxMonth < 999 ? now.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—');
+  setW('dp-total-int', fmtM(totalInt));
+
+  // Extra savings vs baseline
+  const baseline = calcBaseline();
+  const intSaved = Math.max(0, baseline.totalInt - totalInt);
+  const monthsSaved = Math.max(0, baseline.maxMonths - maxMonth);
+  const ms = gg('dp-months-saved'); if (ms) ms.textContent = monthsSaved > 0 ? monthsSaved + ' months' : '—';
+  const is = gg('dp-int-saved'); if (is) is.textContent = intSaved > 0 ? fmtM(intSaved) : '—';
+
+  // Charts
+  dpDrawTimelineChart(monthlySnapshot);
+  dpDrawIntChart();
+
+  // Strategy comparison
+  dpDrawComparison(totalBal, totalMin);
+
+  // Tactics
+  dpDrawTactics();
+
+  // Schedule
+  dpDrawSchedule(monthlySnapshot);
+}
+
+function dpDrawTimelineChart(snapshots) {
+  const el = gg('dpTimelineChart'); if (!el) return;
+  if (dpTimelineChartInst) dpTimelineChartInst.destroy();
+  const labels = snapshots.filter((_, i) => i % 3 === 0).map(s => 'Mo ' + s.m);
+  const data = snapshots.filter((_, i) => i % 3 === 0).map(s => s.total);
+  dpTimelineChartInst = new Chart(el, {
+    type: 'line',
+    data: { labels, datasets: [{ data, borderColor: '#2ecc8a', backgroundColor: 'rgba(46,204,138,0.08)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 0 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + fmt2(c.parsed.y) } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 9 }, maxTicksLimit: 8 } },
+        y: { ticks: { callback: v => fmtM(v), font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.03)' } }
+      }
+    }
+  });
+}
+
+function dpDrawIntChart() {
+  const el = gg('dpIntChart'); if (!el) return;
+  const debts = dpDebtList.filter(d => d.apr > 0).slice(0, 8);
+  const interests = debts.map(d => {
+    const r = dpCalcDebt(d, 0);
+    return Math.round(r.interest);
+  });
+  if (dpIntChartInst) dpIntChartInst.destroy();
+  dpIntChartInst = new Chart(el, {
+    type: 'bar', indexAxis: 'y',
+    data: {
+      labels: debts.map(d => d.name.length > 18 ? d.name.slice(0, 16) + '…' : d.name),
+      datasets: [{ data: interests, backgroundColor: debts.map(d => d.apr > 25 ? '#f05c5c' : d.apr > 15 ? '#f0a540' : '#5b8def'), borderRadius: 3 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + fmt2(c.parsed.x) + ' interest' } } },
+      scales: {
+        x: { ticks: { callback: v => fmtM(v), font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.03)' } },
+        y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+function dpDrawComparison(totalBal, totalMin) {
+  const el = gg('dpCompare'); if (!el) return;
+  const extra = +(gg('dp-extra')?.value || 0);
+  const strategies = ['snowball', 'avalanche', 'hybrid'];
+  const results = strategies.map(strat => {
+    // Quick simulation per strategy
+    let sorted = [...dpDebtList];
+    if (strat === 'snowball') sorted.sort((a, b) => a.balance - b.balance);
+    else if (strat === 'avalanche') sorted.sort((a, b) => b.apr - a.apr);
+    else {
+      const n = sorted.length;
+      const bb = [...sorted].sort((a, b) => a.balance - b.balance);
+      const ba = [...sorted].sort((a, b) => b.apr - a.apr);
+      sorted.forEach(d => { d._s = (bb.indexOf(d) / n) * 0.5 + (ba.indexOf(d) / n) * 0.5; });
+      sorted.sort((a, b) => a._s - b._s);
+    }
+    let rems = sorted.map(d => d.balance);
+    let paid = sorted.map(() => false);
+    let totalInt = 0, maxM = 0, rolled = 0;
+    for (let m = 1; m <= 360; m++) {
+      if (paid.every(p => p)) break;
+      const fi = paid.findIndex(p => !p);
+      sorted.forEach((d, i) => {
+        if (paid[i]) return;
+        const mr = d.apr / 100 / 12;
+        const ic = rems[i] * mr;
+        totalInt += ic;
+        let pay = d.min;
+        if (i === fi) pay += extra + rolled;
+        pay = Math.min(pay, rems[i] + ic);
+        rems[i] = Math.max(0, rems[i] + ic - pay);
+        if (rems[i] < 0.01) { rems[i] = 0; if (!paid[i]) { paid[i] = true; rolled += d.min; maxM = m; } }
+      });
+    }
+    return { strat, months: maxM, interest: Math.round(totalInt) };
+  });
+  const minInt = Math.min(...results.map(r => r.interest));
+  const minMo = Math.min(...results.map(r => r.months));
+  const names = { snowball: '⛄ Snowball', avalanche: '🏔️ Avalanche', hybrid: '⚖️ Hybrid' };
+  el.innerHTML = `
+    <div class="dp-compare-row" style="font-size:10.5px;color:var(--hint);font-weight:700;text-transform:uppercase;letter-spacing:0.08em">
+      <span>Strategy</span><span>Payoff</span><span>Total interest</span>
+    </div>` +
+    results.map(r => {
+      const isWinner = r.interest === minInt;
+      const isFastest = r.months === minMo;
+      const active = r.strat === dpStrategy;
+      return `<div class="dp-compare-row ${isWinner ? 'winner' : ''}" style="${active ? 'background:rgba(46,204,138,0.05);border-radius:6px;padding:7px 6px;margin:0 -6px;' : ''}">
+        <span>${names[r.strat]}${active ? ' ←' : ''}</span>
+        <span class="mono">${r.months}mo ${isFastest ? '🏆' : ''}</span>
+        <span class="mono" style="color:${isWinner ? 'var(--green)' : 'var(--red)'}">${fmtM(r.interest)} ${isWinner ? '✓' : ''}</span>
+      </div>`;
+    }).join('');
+}
+
+function dpDrawTactics() {
+  const el = gg('dpTactics'); if (!el) return;
+  const tactics = [];
+  const highApr = dpDebtList.filter(d => d.apr > 20).sort((a, b) => b.apr - a.apr);
+  const promoEnding = dpDebtList.filter(d => d.promo && d.promo.toLowerCase().includes('0%'));
+  const smallBal = dpDebtList.filter(d => d.balance < 500 && d.balance > 0);
+  const totalCC = dpDebtList.filter(d => d.cat === 'CC').reduce((s, d) => s + d.balance, 0);
+
+  if (highApr.length) {
+    tactics.push({ icon: '🔥', text: `<strong>Balance transfer</strong> — ${esc(highApr[0].name)} at ${highApr[0].apr}% APR is costing you ${fmt2(highApr[0].balance * highApr[0].apr / 100 / 12)}/mo in interest. A 0% BT card could save that immediately.` });
+  }
+  if (promoEnding.length) {
+    tactics.push({ icon: '⏰', text: `<strong>Watch promo expirations</strong> — ${esc(promoEnding[0].name)} has a 0% promo ending soon. Pay this off before it expires or the back-interest may hit.` });
+  }
+  if (smallBal.length) {
+    tactics.push({ icon: '✅', text: `<strong>Quick win available</strong> — ${esc(smallBal[0].name)} only has ${fmt2(smallBal[0].balance)} left. Paying it off frees ${fmt2(smallBal[0].min)}/mo and eliminates one payment.` });
+  }
+  if (totalCC > 10000) {
+    tactics.push({ icon: '🏠', text: `<strong>HELOC consolidation</strong> — you have ${fmt2(totalCC)} in CC debt at high APRs. Rolling into your HELOC (7.75%) could save significant interest — but only if you stop using the cards.` });
+  }
+  tactics.push({ icon: '📞', text: `<strong>Call for lower rates</strong> — call Capital One, AMEX, and CITI and ask for a hardship APR reduction. Longtime customers often get 5–10% knocked off.` });
+  tactics.push({ icon: '💰', text: `<strong>Round up payments</strong> — even rounding each payment to the nearest $50 can shave months off your payoff date and save hundreds in interest.` });
+  tactics.push({ icon: '🎯', text: `<strong>Apply windfalls</strong> — any tax refund, bonus, or extra income should go directly to your #1 priority debt before lifestyle inflation kicks in.` });
+
+  el.innerHTML = tactics.slice(0, 5).map(t => `
+    <div class="dp-tactic">
+      <span class="dp-tactic-icon">${t.icon}</span>
+      <span class="dp-tactic-body">${t.text}</span>
+    </div>`).join('');
+}
+
+function dpDrawSchedule(snapshots) {
+  const thead = gg('dpScheduleHead');
+  const tbody = gg('dpScheduleBody');
+  if (!thead || !tbody) return;
+
+  // Headers: Month | Total Balance | [each debt name]
+  const shortNames = dpDebtList.map(d => d.name.split(' ').slice(0, 2).join(' '));
+  thead.innerHTML = `<tr><th>Month</th><th>Total bal</th>${shortNames.map(n => `<th>${esc(n)}</th>`).join('')}</tr>`;
+
+  // Recalculate month by month with full per-debt tracking
+  let rems = dpDebtList.map(d => d.balance);
+  let paid = dpDebtList.map(() => false);
+  let rolled = 0;
+  const extra = +(gg('dp-extra')?.value || 0);
+  const rows = [];
+
+  for (let m = 1; m <= 360; m++) {
+    if (paid.every(p => p)) break;
+    const fi = paid.findIndex(p => !p);
+    dpDebtList.forEach((d, i) => {
+      if (paid[i]) return;
+      const mr = d.apr / 100 / 12;
+      const ic = rems[i] * mr;
+      let pay = d.min;
+      if (i === fi) pay += extra + rolled;
+      pay = Math.min(pay, rems[i] + ic);
+      rems[i] = Math.max(0, rems[i] + ic - pay);
+      if (rems[i] < 0.01) { rems[i] = 0; if (!paid[i]) { paid[i] = true; rolled += d.min; } }
+    });
+    const total = rems.reduce((s, v) => s + v, 0);
+    if (m <= 60 || m % 6 === 0) { // show monthly for first 5 years, then every 6mo
+      rows.push({ m, total: Math.round(total), rems: [...rems] });
+    }
+    if (total < 1) break;
+  }
+
+  tbody.innerHTML = rows.map((row, ri) => {
+    const date = new Date(Date.now() + row.m * 30.4 * 86400000);
+    const dateStr = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    const cells = dpDebtList.map((d, i) => {
+      const v = row.rems[i];
+      if (v < 1) return `<td style="color:var(--green);font-size:11px">✓ Paid</td>`;
+      return `<td class="mono" style="font-size:11.5px;color:var(--muted)">${fmt2(v)}</td>`;
+    }).join('');
+    const isEven = ri % 2 === 0;
+    return `<tr style="${isEven ? 'background:rgba(255,255,255,0.01)' : ''}">
+      <td style="white-space:nowrap;font-size:12px;color:var(--muted)">${dateStr}</td>
+      <td class="mono" style="font-weight:600;color:${row.total < 5000 ? 'var(--green)' : 'var(--text)'};font-size:12.5px">${fmt2(row.total)}</td>
+      ${cells}
+    </tr>`;
+  }).join('');
+}
+
+function dpExport() {
+  const wb = XLSX.utils.book_new();
+  const extra = +(gg('dp-extra')?.value || 0);
+  const d = [
+    ['Debt Payoff Plan', '', ''],
+    ['Strategy', dpStrategy.charAt(0).toUpperCase() + dpStrategy.slice(1), ''],
+    ['Extra monthly payment', fmt2(extra), ''],
+    ['Generated', new Date().toLocaleDateString(), ''],
+    ['', '', ''],
+    ['DEBT LIST', '', ''],
+    ['Priority', 'Debt', 'Balance', 'APR', 'Min Pay', 'Payoff Date', 'Interest Cost'],
+  ];
+  dpDebtList.forEach((debt, i) => {
+    const r = dpCalcDebt(debt, i === 0 ? extra : 0);
+    const pd = r.months < 999
+      ? new Date(Date.now() + r.months * 30.4 * 86400000).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+      : 'Cannot pay off';
+    d.push([i + 1, debt.name, debt.balance, debt.apr + '%', debt.min, pd, Math.round(r.interest)]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(d);
+  ws['!cols'] = [{ wch: 10 }, { wch: 24 }, { wch: 14 }, { wch: 8 }, { wch: 12 }, { wch: 16 }, { wch: 16 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'Debt Payoff Plan');
+  XLSX.writeFile(wb, 'Matt_Dana_DebtPayoff_' + todayStr() + '.xlsx');
+  showToast('Debt payoff plan exported!', 'success');
+}
+
+// ── TAB SWITCHER ──────────────────────────────────────────────────────────────
+function fdSwitchTab(tab) {
+  const drillEl = gg('fdTab-drill');
+  const debtEl = gg('fdTab-debt');
+  const tabs = document.querySelectorAll('#fdTopTabs .tab-btn');
+  tabs.forEach((b, i) => b.classList.toggle('active', (i === 0 && tab === 'drill') || (i === 1 && tab === 'debt')));
+  if (drillEl) drillEl.style.display = tab === 'drill' ? 'block' : 'none';
+  if (debtEl) debtEl.style.display = tab === 'debt' ? 'block' : 'none';
+  if (tab === 'debt') {
+    dpInit();
+    // Update header
+    const pt = gg('fdPageTitle'); if (pt) pt.textContent = '💳 Debt Payoff Planner';
+    const ps = gg('fdPageSub'); if (ps) ps.textContent = 'Choose a strategy, set an extra payment, and see your exact payoff date';
+    const pa = gg('fdPageActions');
+    if (pa) pa.innerHTML = '<button class="btn primary" onclick="dpExport()">Export plan</button>';
+  } else {
+    const pt = gg('fdPageTitle'); if (pt) pt.textContent = '🔥 Fire Drill Scenarios';
+    const ps = gg('fdPageSub'); if (ps) ps.textContent = 'Simulate financial emergencies — adjust bills and build a survival plan';
+    const pa = gg('fdPageActions');
+    if (pa) pa.innerHTML = '<button class="btn" onclick="fdReset()">↺ Reset</button><button class="btn primary" onclick="fdExport()">Export plan</button>';
+  }
 }
 
 const plaidS=document.createElement('script');
