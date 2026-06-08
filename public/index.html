@@ -75,19 +75,19 @@ p, td, .card, .widget, input, textarea {
   padding-bottom: calc(26px + var(--safe-bottom));
 }
 
-/* Fix main left offset on iPad when sidebar is shown */
-@media (min-width: 900px) {
+/* Sidebar always visible on iPad and above */
+@media (min-width: 768px) {
   #main {
     margin-left: var(--sidebar-w);
     padding-left: 0;
   }
+  #sidebar {
+    transform: none !important;
+  }
 }
 
 /* iPad-optimised layout: wider widgets */
-@media (min-width: 768px) and (max-width: 1024px) {
-  .wgrid { grid-template-columns: repeat(3, 1fr); }
-  .g-main-side { grid-template-columns: 1fr 280px; }
-}
+
 
 /* iPhone layout: sidebar becomes bottom sheet on small screens */
 @media (max-width: 767px) {
@@ -263,10 +263,19 @@ p, td, .card, .widget, input, textarea {
   .g5 { grid-template-columns: repeat(3, 1fr); }
 }
 
-/* iPad */
+/* iPad — sidebar always visible, adjust content grids */
 @media (min-width: 768px) and (max-width: 1024px) {
+  #sidebar {
+    transform: none !important;
+    width: var(--sidebar-w);
+  }
+  #main {
+    margin-left: var(--sidebar-w) !important;
+  }
   .wgrid { grid-template-columns: repeat(3, 1fr); }
-  .g-main-side { grid-template-columns: 1fr 280px; }
+  .g-main-side { grid-template-columns: 1fr 260px; }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .g5 { grid-template-columns: repeat(3, 1fr); }
 }
 
 /* Prevent iOS auto-zoom on focus (font-size must be >=16px) */
@@ -565,7 +574,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
 #toast.error{border-left:3px solid var(--red);}
 
 /* ── RESPONSIVE ── */
-@media(max-width:900px){
+@media(max-width:767px){
   #sidebar{transform:translateX(-100%);}
   #sidebar.open{transform:translateX(0);}
   #main{margin-left:0;}
@@ -576,6 +585,28 @@ input[type=range]{width:100%;accent-color:var(--green);}
   .wgrid{grid-template-columns:1fr 1fr;}
   .g5{grid-template-columns:1fr 1fr;}
 }
+
+/* Hamburger button — only shows on iPhone */
+.hamburger-btn {
+  display: none;
+  width: 36px; height: 36px; padding: 0;
+  background: none; border: none; color: var(--text);
+  cursor: pointer; align-items: center; justify-content: center;
+  border-radius: var(--radius-sm); flex-shrink: 0;
+}
+.hamburger-btn:hover { background: rgba(255,255,255,0.07); }
+@media (max-width: 767px) {
+  .hamburger-btn { display: flex; }
+}
+
+/* Sidebar overlay backdrop on iPhone */
+#sidebarOverlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55); z-index: 49;
+  backdrop-filter: blur(2px);
+}
+#sidebarOverlay.visible { display: block; }
+
 </style>
 </head><body>
 <!-- ── SIDEBAR ── -->
@@ -615,10 +646,14 @@ input[type=range]{width:100%;accent-color:var(--green);}
     </button>
   </div>
 </nav>
+<div id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
 <!-- ── MAIN ── -->
 <div id="main">
   <div id="topbar">
+    <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Open navigation">
+      <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
     <div class="topbar-title" id="topbarTitle">Dashboard</div>
     <div class="topbar-right">
       <span class="env-badge env-sandbox" id="envBadge">Sandbox</span>
@@ -1932,6 +1967,26 @@ function showToast(msg,type='success'){const t=gg('toast');t.textContent=msg;t.c
     }, 4000);
   }
 })();
+
+
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  const isOpen = sb.classList.contains('open');
+  sb.classList.toggle('open', !isOpen);
+  overlay.classList.toggle('visible', !isOpen);
+}
+// Close sidebar when a nav item is tapped on iPhone
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (window.innerWidth < 768) {
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('sidebarOverlay').classList.remove('visible');
+      }
+    });
+  });
+});
 
 const plaidS=document.createElement('script');
 plaidS.src='https://cdn.plaid.com/link/v2/stable/link-initialize.js';
