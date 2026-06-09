@@ -20,9 +20,9 @@ const app = express();
 const REQUIRED_ENV = ['PLAID_CLIENT_ID', 'PLAID_SECRET', 'SESSION_SECRET', 'APP_USERNAME', 'APP_PASSWORD'];
 const missing = REQUIRED_ENV.filter(k => !process.env[k]);
 if (missing.length) {
-  console.error('\n❌ Missing required environment variables:', missing.join(', '));
-  console.error('   Set these in Render → your service → Environment\n');
-  process.exit(1);
+  console.warn('\n⚠️  Missing environment variables:', missing.join(', '));
+  console.warn('   Set these in Render → your service → Environment');
+  console.warn('   App will start but auth and Plaid calls will not work until set.\n');
 }
 
 // ─── SECURITY HEADERS (Helmet) ────────────────────────────────────────────────
@@ -106,7 +106,7 @@ app.use('/api/accounts', plaidLimiter);
 
 // ─── SESSION ──────────────────────────────────────────────────────────────────
 app.use(session({
-  secret: process.env.SESSION_SECRET,
+  secret: process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex'),
   resave: false,
   saveUninitialized: false,
   name: 'mdf_session',          // don't use default 'connect.sid'
@@ -131,14 +131,14 @@ app.post('/api/login', (req, res) => {
   const validPass = process.env.APP_PASSWORD;
 
   // Timing-safe comparison — prevents timing attacks
-  const userMatch = crypto.timingSafeEqual(
-    Buffer.from(username  || '', 'utf8').slice(0, 64),
-    Buffer.from(validUser || '', 'utf8').slice(0, 64)
-  );
-  const passMatch = crypto.timingSafeEqual(
-    Buffer.from(password  || '', 'utf8').slice(0, 128),
-    Buffer.from(validPass || '', 'utf8').slice(0, 128)
-  );
+  // Buffers must be same length for timingSafeEqual
+  const toFixed = (s, len) => {
+    const buf = Buffer.alloc(len, 0);
+    Buffer.from(String(s || ''), 'utf8').copy(buf, 0, 0, len);
+    return buf;
+  };
+  const userMatch = crypto.timingSafeEqual(toFixed(username, 64),  toFixed(validUser, 64));
+  const passMatch = crypto.timingSafeEqual(toFixed(password, 128), toFixed(validPass, 128));
 
   if (userMatch && passMatch) {
     req.session.authenticated = true;
@@ -211,10 +211,12 @@ function loadTokens() {
 function saveTokens(store) {
   try {
     const dir = path.dirname(TOKEN_FILE);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(TOKEN_FILE, encryptData(store), 'utf8');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+    fs.writeFileSync(TOKEN_FILE, encryptData(store), { encoding: 'utf8', mode: 0o600 });
   } catch (e) {
-    console.error('Could not save tokens:', e.message);
+    // On Render free tier the filesystem may be read-only — log and continue
+    console.warn('Could not persist tokens (filesystem may be read-only):', e.message);
+    console.warn('Tokens are in memory only — will need re-linking after restart.');
   }
 }
 
