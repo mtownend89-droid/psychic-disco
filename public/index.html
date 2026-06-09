@@ -362,7 +362,7 @@ body { overscroll-behavior-y: none; }
 .env-production{background:var(--green-dim);color:var(--green);}
 
 /* ── PAGES ── */
-#page-content{padding:26px;flex:1;}
+#page-content{padding:26px;flex:1;min-width:0;overflow-x:hidden;}
 .page{display:none;}.page.active{display:block;animation:fadeIn 0.2s ease;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
 
@@ -653,6 +653,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
 .fd-check-body{color:var(--muted);line-height:1.5;}
 .fd-check-body strong{color:var(--text);font-weight:500;}
 @media(max-width:900px){#fdMainGrid{grid-template-columns:1fr !important;}}
+@media(max-width:900px){#dpMainGrid{grid-template-columns:1fr !important;}}
 
 
 /* ── DEBT PAYOFF ── */
@@ -675,6 +676,58 @@ input[type=range]{width:100%;accent-color:var(--green);}
 .dp-compare-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12.5px;}
 .dp-compare-row:last-child{border-bottom:none;}
 .dp-compare-row.winner{color:var(--green);font-weight:500;}
+
+
+/* ── INLINE EDIT MODE ── */
+.edit-overlay{
+  position:fixed;inset:0;z-index:80;pointer-events:none;
+  background:rgba(46,204,138,0.03);
+  border:2px dashed transparent;transition:border-color 0.2s;
+}
+.edit-mode-active .edit-overlay{border-color:rgba(46,204,138,0.15);}
+.edit-toast{
+  position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+  background:var(--green);color:#fff;border-radius:var(--radius-sm);
+  padding:9px 18px;font-size:12.5px;font-weight:500;
+  z-index:100;opacity:0;transition:opacity 0.2s;pointer-events:none;
+  white-space:nowrap;
+}
+.edit-toast.visible{opacity:1;}
+/* Fields glow green when edit mode is on */
+.edit-mode-active .tbl td[contenteditable=true],
+.edit-mode-active .nw-inp:focus,
+.edit-mode-active .nw-val:focus,
+.edit-mode-active .editable:focus {
+  background:rgba(46,204,138,0.08);
+  outline:1px solid rgba(46,204,138,0.4);
+  border-radius:4px;
+}
+/* Edit mode indicator in topbar */
+.edit-mode-badge{
+  display:none;font-size:10px;padding:3px 9px;border-radius:20px;
+  background:var(--green-dim);color:var(--green);font-weight:700;
+  border:1px solid rgba(46,204,138,0.3);
+}
+.edit-mode-badge.visible{display:inline-block;}
+/* Highlight editable cells when in edit mode */
+.edit-mode-active td.editable-col{
+  cursor:text;
+  background:rgba(255,255,255,0.015);
+}
+.edit-mode-active td.editable-col:hover{
+  background:rgba(46,204,138,0.06);
+}
+/* Inline edit input that appears on cell click */
+.cell-edit-input{
+  width:100%;background:var(--surface3);border:1px solid rgba(46,204,138,0.4);
+  border-radius:4px;padding:3px 7px;color:var(--text);
+  font-family:var(--mono);font-size:12.5px;outline:none;
+}
+/* Edit mode toggle button pulse */
+.btn.edit-active{
+  background:var(--green-dim);color:var(--green);
+  border-color:rgba(46,204,138,0.3);
+}
 
 </style>
 </head><body>
@@ -810,6 +863,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
     </button>
     <div class="topbar-title" id="topbarTitle">Dashboard</div>
     <div class="topbar-right">
+      <span class="edit-mode-badge" id="editModeBadge">✏️ Editing</span>
       <span class="env-badge env-sandbox" id="envBadge">Sandbox</span>
       <button class="btn" onclick="exportCSV()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
       <button class="btn primary" onclick="openLinkHandler()">+ Connect</button>
@@ -833,6 +887,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
         <div><div class="page-title">Dashboard</div><div class="page-sub" id="dashSub">Your financial overview</div></div>
         <div class="page-hdr-right">
           <button class="btn" onclick="toggleEditMode('dashboard')" id="dashEditBtn">⠿ Arrange</button>
+          <button class="btn" onclick="toggleGlobalEdit('dashboard')" id="dashGlobalEditBtn">✏️ Edit</button>
           <button class="btn" onclick="exportCSV()">CSV</button>
           <button class="btn primary" onclick="openExportModal()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button>
         </div>
@@ -905,6 +960,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
         <div><div class="page-title">Budget &amp; Bills</div></div>
         <div class="page-hdr-right">
           <button class="btn" onclick="toggleEditMode('expenses')" id="expEditBtn">⠿ Arrange</button>
+          <button class="btn" onclick="toggleGlobalEdit('expenses')" id="expGlobalEditBtn">✏️ Edit</button>
           <button class="btn primary" onclick="exportBillsExcel()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
         </div>
       </div>
@@ -1045,6 +1101,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
       <div class="page-hdr">
         <div><div class="page-title">Net Worth</div><div class="page-sub">Assets − Liabilities · click any value to edit</div></div>
         <div class="page-hdr-right">
+          <button class="btn" onclick="toggleGlobalEdit('networth')" id="nwGlobalEditBtn">✏️ Edit</button>
           <button class="btn green-outline" onclick="syncNWFromPlaid()">⟳ Sync Plaid</button>
           <button class="btn primary" onclick="exportNWExcel()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
         </div>
@@ -1085,7 +1142,10 @@ input[type=range]{width:100%;accent-color:var(--green);}
     <div id="retirement" class="page">
       <div class="page-hdr">
         <div><div class="page-title">Retirement Planner</div></div>
-        <button class="btn" onclick="toggleEditMode('retirement')" id="retEditBtn">⠿ Arrange</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn" onclick="toggleGlobalEdit('retirement')" id="retGlobalEditBtn">✏️ Edit</button>
+          <button class="btn" onclick="toggleEditMode('retirement')" id="retEditBtn">⠿ Arrange</button>
+        </div>
       </div>
       <div class="edit-bar" id="retEditBar"><span>Drag handles to reorder</span><button class="btn" onclick="toggleEditMode('retirement')">Done</button></div>
       <div class="drag-container" id="retContainer">
@@ -1204,7 +1264,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
 
     <!-- ── CASH FLOW ── -->
     <div id="cashflow" class="page">
-      <div class="page-hdr"><div><div class="page-title">Cash Flow</div><div class="page-sub">Income vs spending over time</div></div></div>
+      <div class="page-hdr"><div><div class="page-title">Cash Flow</div><div class="page-sub">Income vs spending over time</div></div><div class="page-hdr-right"><button class="btn" onclick="refreshAll()">↻ Refresh</button></div></div>
       <div class="g2">
         <div class="card card-sm"><div class="card-title">monthly income vs expenses</div><div class="chart-wrap" style="height:230px"><canvas id="cfMonthlyChart"></canvas></div></div>
         <div class="card card-sm"><div class="card-title">top spending categories</div><div class="chart-wrap" style="height:230px"><canvas id="cfCatChart"></canvas></div></div>
@@ -1229,7 +1289,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
         </div>
       </div>
       <!-- TOP TABS -->
-      <div class="tab-row" id="fdTopTabs" style="margin-bottom:20px">
+      <div class="tab-row" id="fdTopTabs" style="margin-bottom:20px;overflow-x:auto;flex-wrap:nowrap;">
         <button class="tab-btn active" onclick="fdSwitchTab('drill')">🔥 Fire Drill</button>
         <button class="tab-btn" onclick="fdSwitchTab('debt')">💳 Debt Payoff Planner</button>
       </div>
@@ -1239,7 +1299,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
       <!-- SCENARIO SELECTOR -->
       <div style="margin-bottom:20px">
         <div class="card-title" style="margin-bottom:10px">Choose a scenario</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px" id="scenarioCards">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px" id="scenarioCards">
 
           <div class="fd-scenario-card active" onclick="fdSetScenario('job')" data-id="job">
             <div class="fd-sc-icon">💼</div>
@@ -2065,7 +2125,7 @@ function renderBillsTab(){
     const lp=b.last_payment_date?`<div style="font-size:10px;color:var(--hint);margin-top:2px">Last ${fmt2(b.last_payment_amount||0)} · ${new Date(b.last_payment_date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>`:'';
     let poH='—';
     if(balAmt>0&&b.pay>0){if(b.apr>0){const mr=b.apr/100/12;if(b.pay>balAmt*mr){const mo=Math.ceil(-Math.log(1-(balAmt*mr/b.pay))/Math.log(1+mr));const int=b.pay*mo-balAmt;const yr=Math.floor(mo/12),rm=mo%12;poH=`<span class="mono" style="font-size:11px">${yr>0?yr+'y '+rm+'m':mo+'mo'}<br><span style="color:var(--red);font-size:10px">+${fmt2(int)}</span></span>`;}else poH=`<span style="color:var(--red);font-size:11px">↑ pay more</span>`;}else{const mo=Math.ceil(balAmt/b.pay);const yr=Math.floor(mo/12),rm=mo%12;poH=`<span class="mono" style="font-size:11px;color:var(--green)">${yr>0?yr+'y '+rm+'m':mo+'mo'} 0%</span>`;}}
-    return `<tr class="${b.paid?'row-paid':''}" id="br-${oi}">
+    return `<tr class="${b.paid?'row-paid':''}" id="br-${oi}" ondblclick="openEditBillModal(${oi})" style="cursor:default">
       <td><span class="pill pill-${b.cat}" style="cursor:pointer" onclick="gg('billCatFilter').value='${b.cat}';renderBillsTab()">${b.cat}</span></td>
       <td style="font-weight:500;white-space:nowrap">${esc(b.name)}${sb}</td>
       <td style="color:var(--muted);font-size:11.5px">${esc(b.note||'')}</td>
@@ -2232,7 +2292,7 @@ function renderIncomeTab(){
   const el=gg('incomeBody');if(!el)return;
   el.innerHTML=incomeSources.map((s,i)=>{
     const mo=s.amt*(FM[s.freq]||1),an=mo*12;totM+=mo;totA+=an;
-    return `<tr><td style="font-weight:500">${esc(s.name)}</td><td style="color:var(--muted);font-size:11.5px">${FL[s.freq]||s.freq}</td><td class="mono" style="color:var(--cyan)">${fmt2(s.amt)}</td><td class="mono" style="color:var(--cyan)">${fmt2(mo)}</td><td class="mono" style="color:var(--cyan)">${fmt2(an)}</td><td><button class="btn danger" onclick="delIncome(${i})">✕</button></td></tr>`;
+    return `<tr><td style="font-weight:500">${esc(s.name)}</td><td style="color:var(--muted);font-size:11.5px">${FL[s.freq]||s.freq}</td><td class="mono" style="color:var(--cyan)">${fmt2(s.amt)}</td><td class="mono" style="color:var(--cyan)">${fmt2(mo)}</td><td class="mono" style="color:var(--cyan)">${fmt2(an)}</td><td><button class="btn" style="margin-right:4px" onclick="openEditIncomeModal(${i})">✏️</button><button class="btn danger" onclick="delIncome(${i})">✕</button></td></tr>`;
   }).join('');
   const im=gg('incTotalMonthly');if(im)im.textContent=fmt2(totM);
   const ia=gg('incTotalAnnual');if(ia)ia.textContent=fmt2(totA);
@@ -3641,6 +3701,205 @@ function checkAuth() {
       });
   }
   // No token — login screen stays visible
+}
+
+// ── GLOBAL EDIT MODE ─────────────────────────────────────────────────────────
+const globalEditState = {};
+
+function toggleGlobalEdit(page) {
+  globalEditState[page] = !globalEditState[page];
+  const on = globalEditState[page];
+  const btnId = { dashboard:'dashGlobalEditBtn', expenses:'expGlobalEditBtn', networth:'nwGlobalEditBtn', retirement:'retGlobalEditBtn' }[page];
+  const btn = gg(btnId);
+  if (btn) {
+    btn.textContent = on ? '✓ Done editing' : '✏️ Edit';
+    btn.classList.toggle('edit-active', on);
+  }
+  const badge = gg('editModeBadge');
+  if (badge) badge.classList.toggle('visible', on);
+
+  if (page === 'dashboard') applyDashEdit(on);
+  if (page === 'expenses')  applyExpEdit(on);
+  if (page === 'networth')  applyNWEdit(on);
+  if (page === 'retirement') applyRetEdit(on);
+
+  showToast(on ? '✏️ Edit mode on — click any value to change it' : '✓ Changes saved', on ? 'success' : 'success');
+}
+
+// ── DASHBOARD EDIT ────────────────────────────────────────────────────────────
+function applyDashEdit(on) {
+  // Dashboard is Plaid data — edit mode just reminds user data is live
+  const banner = gg('errorBanner');
+  if (on) {
+    if (banner) { banner.textContent = '✏️ Edit mode: Dashboard data comes from Plaid. To edit bills and income, use Budget & Bills.'; banner.style.display = 'block'; banner.style.background = 'var(--blue-dim)'; banner.style.color = 'var(--blue)'; }
+  } else {
+    if (banner) banner.style.display = 'none';
+  }
+}
+
+// ── EXPENSES / BILLS EDIT ─────────────────────────────────────────────────────
+function applyExpEdit(on) {
+  // Make bill name, note, APR, due day, promo all contenteditable
+  const body = gg('billBody');
+  if (!body) return;
+  body.querySelectorAll('tr').forEach((row, ri) => {
+    const cells = row.querySelectorAll('td');
+    if (!cells.length) return;
+    // Col 1=name, 2=lender, 3=APR, 4=due, 8=promo
+    const editCols = [1, 2, 3, 4, 8];
+    editCols.forEach(ci => {
+      const td = cells[ci];
+      if (!td) return;
+      td.classList.toggle('editable-col', on);
+      if (on) {
+        td.setAttribute('contenteditable', 'true');
+        td.style.cursor = 'text';
+        td.style.outline = 'none';
+        td.addEventListener('focus', function() { this.style.background = 'rgba(46,204,138,0.06)'; });
+        td.addEventListener('blur', function() {
+          this.style.background = '';
+          // Save back to bills array
+          const billIdx = parseInt(row.id?.replace('br-', '') ?? '-1');
+          if (billIdx < 0 || billIdx >= bills.length) return;
+          const val = this.textContent.trim();
+          if (ci === 1) bills[billIdx].name = val;
+          if (ci === 2) bills[billIdx].note = val;
+          if (ci === 3) { const n = parseFloat(val); if (!isNaN(n)) bills[billIdx].apr = n; }
+          if (ci === 4) { const n = parseInt(val.replace(/\D/g,'')); if (!isNaN(n)) bills[billIdx].due = n; }
+          if (ci === 8) bills[billIdx].promo = val;
+          saveBills();
+        });
+      } else {
+        td.removeAttribute('contenteditable');
+        td.style.cursor = '';
+      }
+    });
+  });
+
+  // Also make income table editable
+  const incBody = gg('incomeBody');
+  if (incBody) {
+    incBody.querySelectorAll('td').forEach((td, i) => {
+      td.classList.toggle('editable-col', on);
+      if (on) td.setAttribute('contenteditable', 'true');
+      else td.removeAttribute('contenteditable');
+    });
+  }
+}
+
+// ── NET WORTH EDIT ────────────────────────────────────────────────────────────
+function applyNWEdit(on) {
+  // NW tables already have input fields — just highlight them
+  document.querySelectorAll('.nw-inp, .nw-val').forEach(inp => {
+    if (on) {
+      inp.style.background = 'rgba(46,204,138,0.05)';
+      inp.style.borderRadius = '4px';
+      inp.style.padding = '2px 5px';
+      inp.title = 'Click to edit';
+    } else {
+      inp.style.background = '';
+      inp.style.padding = '';
+      inp.title = '';
+    }
+  });
+  // Show a hint
+  const sub = gg('nwGlobalEditBtn');
+  if (sub) sub.title = on ? 'Click any value in the tables to edit it' : '';
+}
+
+// ── RETIREMENT EDIT ────────────────────────────────────────────────────────────
+function applyRetEdit(on) {
+  // Sliders are always editable — just highlight the panel
+  const panel = document.querySelector('.card:has(#u-age)') || document.querySelector('[id="ret-inputs"] .card');
+  if (on) {
+    document.querySelectorAll('#ret-inputs input[type=range], #ret-inputs select').forEach(el => {
+      el.style.outline = on ? '1px solid rgba(46,204,138,0.3)' : '';
+      el.style.borderRadius = '4px';
+    });
+    showToast('✏️ Drag any slider to adjust your retirement inputs', 'success');
+  } else {
+    document.querySelectorAll('#ret-inputs input[type=range], #ret-inputs select').forEach(el => {
+      el.style.outline = '';
+    });
+  }
+}
+
+// ── QUICK-EDIT BILL MODAL ─────────────────────────────────────────────────────
+// Double-click a bill row to open a full edit modal
+function openEditBillModal(idx) {
+  const b = bills[idx];
+  if (!b) return;
+  // Reuse add bill modal but pre-fill
+  gg('newBillCat').value   = b.cat;
+  gg('newBillName').value  = b.name;
+  gg('newBillNote').value  = b.note || '';
+  gg('newBillAPR').value   = b.apr || 0;
+  gg('newBillDue').value   = b.due || '';
+  gg('newBillBal').value   = b.bal || 0;
+  gg('newBillMin').value   = b.min || 0;
+  gg('newBillPay').value   = b.pay || 0;
+  gg('newBillPromo').value = b.promo || '';
+  // Change button to save edit
+  const modal = gg('addBillModal');
+  modal.querySelector('.modal-title').textContent = 'Edit bill';
+  modal.querySelector('.btn.primary').textContent = 'Save changes';
+  modal.querySelector('.btn.primary').onclick = () => saveEditBill(idx);
+  modal.style.display = 'flex';
+}
+
+function saveEditBill(idx) {
+  bills[idx] = {
+    ...bills[idx],
+    cat:   gg('newBillCat').value,
+    name:  gg('newBillName').value,
+    note:  gg('newBillNote').value,
+    apr:   parseFloat(gg('newBillAPR').value) || 0,
+    due:   parseInt(gg('newBillDue').value)   || 0,
+    bal:   parseFloat(gg('newBillBal').value)  || 0,
+    min:   parseFloat(gg('newBillMin').value)  || 0,
+    pay:   parseFloat(gg('newBillPay').value)  || 0,
+    promo: gg('newBillPromo').value,
+  };
+  saveBills();
+  // Reset modal back to "Add" mode
+  const modal = gg('addBillModal');
+  modal.querySelector('.modal-title').textContent = 'Add bill or expense';
+  modal.querySelector('.btn.primary').textContent = 'Add bill';
+  modal.querySelector('.btn.primary').onclick = saveNewBill;
+  closeAddBillModal();
+  renderBillsTab();
+  showToast(bills[idx].name + ' updated ✓', 'success');
+}
+
+// ── QUICK-EDIT INCOME ─────────────────────────────────────────────────────────
+function openEditIncomeModal(idx) {
+  const s = incomeSources[idx];
+  if (!s) return;
+  gg('newIncName').value  = s.name;
+  gg('newIncFreq').value  = s.freq;
+  gg('newIncAmt').value   = s.amt;
+  const modal = gg('addIncomeModal');
+  modal.querySelector('.modal-title').textContent = 'Edit income source';
+  modal.querySelector('.btn.primary').textContent = 'Save changes';
+  modal.querySelector('.btn.primary').onclick = () => saveEditIncome(idx);
+  modal.style.display = 'flex';
+}
+
+function saveEditIncome(idx) {
+  incomeSources[idx] = {
+    name: gg('newIncName').value,
+    freq: gg('newIncFreq').value,
+    amt:  parseFloat(gg('newIncAmt').value) || 0,
+  };
+  saveIncomeSrc();
+  const modal = gg('addIncomeModal');
+  modal.querySelector('.modal-title').textContent = 'Add income source';
+  modal.querySelector('.btn.primary').textContent = 'Add';
+  modal.querySelector('.btn.primary').onclick = saveNewIncome;
+  closeAddIncomeModal();
+  renderIncomeTab();
+  updateBudgetMetrics();
+  showToast(incomeSources[idx].name + ' updated ✓', 'success');
 }
 
 const plaidS=document.createElement('script');
