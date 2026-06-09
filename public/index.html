@@ -679,6 +679,78 @@ input[type=range]{width:100%;accent-color:var(--green);}
 </style>
 </head><body>
 <!-- ── SIDEBAR ── -->
+
+<!-- ── LOGIN SCREEN ── -->
+<div id="loginScreen" style="
+  position:fixed;inset:0;z-index:999;
+  background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+">
+  <div style="
+    background:var(--sidebar);border:1px solid var(--border2);
+    border-radius:var(--radius);padding:36px 32px;
+    width:100%;max-width:360px;text-align:center;
+  ">
+    <div style="
+      width:52px;height:52px;border-radius:14px;
+      background:linear-gradient(135deg,var(--green) 0%,#1ba870 100%);
+      display:flex;align-items:center;justify-content:center;
+      font-size:22px;margin:0 auto 20px;
+      box-shadow:0 0 20px rgba(46,204,138,0.25);
+    ">💰</div>
+    <div style="font-size:18px;font-weight:600;margin-bottom:4px">Matt &amp; Dana Finance</div>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:28px">Sign in to your household account</div>
+
+    <div id="loginError" style="
+      display:none;background:var(--red-dim);color:var(--red);
+      border-radius:var(--radius-sm);padding:10px 14px;
+      font-size:13px;margin-bottom:14px;
+    "></div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+      <input type="text" id="loginUser" placeholder="Username" autocomplete="username"
+        style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);
+          padding:0 14px;background:var(--surface2);color:var(--text);
+          font-family:var(--font);font-size:16px;outline:none;width:100%;
+          transition:border-color 0.15s;"
+        onfocus="this.style.borderColor='rgba(46,204,138,0.5)'"
+        onblur="this.style.borderColor='var(--border)'"
+        onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
+      <div style="position:relative">
+        <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password"
+          style="height:44px;border:1px solid var(--border);border-radius:var(--radius-sm);
+            padding:0 44px 0 14px;background:var(--surface2);color:var(--text);
+            font-family:var(--font);font-size:16px;outline:none;width:100%;
+            transition:border-color 0.15s;"
+          onfocus="this.style.borderColor='rgba(46,204,138,0.5)'"
+          onblur="this.style.borderColor='var(--border)'"
+          onkeydown="if(event.key==='Enter')doLogin()">
+        <button onclick="togglePassVis()" style="
+          position:absolute;right:12px;top:50%;transform:translateY(-50%);
+          background:none;border:none;color:var(--hint);cursor:pointer;
+          font-size:16px;padding:4px;
+        " id="passVisBtn">👁</button>
+      </div>
+    </div>
+
+    <button onclick="doLogin()" id="loginBtn" style="
+      width:100%;height:44px;background:var(--green);color:#fff;
+      border:none;border-radius:var(--radius-sm);
+      font-size:14px;font-weight:600;cursor:pointer;
+      font-family:var(--font);transition:background 0.15s;
+      display:flex;align-items:center;justify-content:center;gap:8px;
+    " onmouseover="this.style.background='#27b87a'" onmouseout="this.style.background='var(--green)'">
+      Sign in
+    </button>
+
+    <div style="font-size:11px;color:var(--hint);margin-top:16px">
+      🔒 Your data never leaves your server
+    </div>
+  </div>
+</div>
+
+<div id="mainContent">
 <nav id="sidebar">
   <div class="sb-logo">
     <div class="sb-logo-mark">💰</div>
@@ -715,6 +787,16 @@ input[type=range]{width:100%;accent-color:var(--green);}
     </div>
     <button class="sb-connect" onclick="openLinkHandler()">
       <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Connect bank
+    </button>
+    <button onclick="doLogout()" style="
+      display:flex;align-items:center;gap:9px;padding:8px 10px;margin-top:6px;
+      background:transparent;border:1px solid var(--border);
+      border-radius:var(--radius-sm);color:var(--hint);font-size:12px;font-weight:500;
+      cursor:pointer;width:100%;font-family:var(--font);transition:all 0.13s;
+    " onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(240,92,92,0.3)'"
+       onmouseout="this.style.color='var(--hint)';this.style.borderColor='var(--border)'">
+      <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sign out
     </button>
   </div>
 </nav>
@@ -1565,6 +1647,8 @@ input[type=range]{width:100%;accent-color:var(--green);}
       </div><!-- /fdTab-debt -->
 
     </div><!-- /firedrill page -->
+
+</div><!-- /mainContent -->
 
 <!-- ── MODALS ── -->
 <div class="modal-bg" id="addBillModal" style="display:none" onclick="if(event.target===this)closeAddBillModal()">
@@ -3457,8 +3541,81 @@ function fdSwitchTab(tab) {
   }
 }
 
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+function togglePassVis() {
+  const inp = document.getElementById('loginPass');
+  const btn = document.getElementById('passVisBtn');
+  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+  else { inp.type = 'password'; btn.textContent = '👁'; }
+}
+
+async function doLogin() {
+  const btn = document.getElementById('loginBtn');
+  const errEl = document.getElementById('loginError');
+  const user = document.getElementById('loginUser').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  if (!user || !pass) { showLoginError('Please enter username and password.'); return; }
+  btn.textContent = 'Signing in…';
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ username: user, password: pass }),
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('loginPass').value = '';
+      document.getElementById('loginUser').value = '';
+      init();
+    } else {
+      showLoginError(data.error || 'Invalid credentials');
+      btn.textContent = 'Sign in';
+      btn.disabled = false;
+    }
+  } catch (e) {
+    showLoginError('Server unreachable. Try again.');
+    btn.textContent = 'Sign in';
+    btn.disabled = false;
+  }
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('loginError');
+  el.textContent = msg; el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+async function doLogout() {
+  try {
+    await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+  } catch(e) {}
+  // Hide app, show login
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('mainContent').style.display = 'none';
+  showToast('Signed out', 'success');
+}
+
+async function checkAuth() {
+  try {
+    const res = await fetch('/api/auth-check', { credentials: 'include' });
+    const data = await res.json();
+    if (data.authenticated) {
+      document.getElementById('loginScreen').style.display = 'none';
+      init();
+    }
+    // else: login screen stays visible (already shown by default)
+  } catch(e) {
+    // Server unreachable — login screen stays
+  }
+}
+
 const plaidS=document.createElement('script');
 plaidS.src='https://cdn.plaid.com/link/v2/stable/link-initialize.js';
 document.head.appendChild(plaidS);
-init();
+// Check if already logged in (valid session), otherwise show login screen
+checkAuth();
 </script></body></html>
