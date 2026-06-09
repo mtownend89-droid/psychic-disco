@@ -750,7 +750,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
   </div>
 </div>
 
-<div id="mainContent">
+<div id="mainContent" style="display:none">
 <nav id="sidebar">
   <div class="sb-logo">
     <div class="sb-logo-mark">💰</div>
@@ -3568,6 +3568,7 @@ async function doLogin() {
     const data = await res.json();
     if (res.ok && data.success) {
       document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('mainContent').style.display = 'block';
       document.getElementById('loginPass').value = '';
       document.getElementById('loginUser').value = '';
       init();
@@ -3593,10 +3594,10 @@ async function doLogout() {
   try {
     await fetch('/api/logout', { method: 'POST', credentials: 'include' });
   } catch(e) {}
-  // Hide app, show login
+  // Clear data, hide app, show login
+  allTxns = []; allAccts = [];
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('mainContent').style.display = 'none';
-  showToast('Signed out', 'success');
 }
 
 async function checkAuth() {
@@ -3605,6 +3606,7 @@ async function checkAuth() {
     const data = await res.json();
     if (data.authenticated) {
       document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('mainContent').style.display = 'block';
       init();
     }
     // else: login screen stays visible (already shown by default)
