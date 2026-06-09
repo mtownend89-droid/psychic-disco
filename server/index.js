@@ -157,6 +157,7 @@ app.post('/api/logout', (req, res) => {
 });
 
 app.get('/api/auth-check', (req, res) => {
+  // Public route — no auth required
   res.json({ authenticated: !!(req.session && req.session.authenticated) });
 });
 
@@ -238,11 +239,12 @@ app.get('/api/health', (req, res) => {
 // Serve static files BEFORE auth middleware so login page assets load
 app.use(express.static(path.join(__dirname, '../public')));
 
-// ─── ALL API ROUTES BELOW REQUIRE AUTH ───────────────────────────────────────
-app.use('/api/', requireAuth);
+// ─── PROTECTED ROUTES — all Plaid/data routes require auth ──────────────────
+// Note: /api/login, /api/logout, /api/auth-check and /api/health are PUBLIC
+// Everything else requires a valid session
 
 // ─── Create link token ────────────────────────────────────────────────────────
-app.post('/api/create_link_token', async (req, res) => {
+app.post('/api/create_link_token', requireAuth, async (req, res) => {
   try {
     const response = await plaidClient.linkTokenCreate({
       user: { client_user_id: 'user-matt-dana' },
@@ -270,7 +272,7 @@ app.post('/api/create_link_token', async (req, res) => {
 });
 
 // ─── Exchange token ───────────────────────────────────────────────────────────
-app.post('/api/exchange_token', async (req, res) => {
+app.post('/api/exchange_token', requireAuth, async (req, res) => {
   const { public_token, institution_name } = req.body;
   if (!public_token || typeof public_token !== 'string') {
     return res.status(400).json({ error: 'Invalid token' });
@@ -295,7 +297,7 @@ app.post('/api/exchange_token', async (req, res) => {
 });
 
 // ─── Accounts + balances ──────────────────────────────────────────────────────
-app.get('/api/accounts', async (req, res) => {
+app.get('/api/accounts', requireAuth, async (req, res) => {
   if (!store.accessTokens.length) return res.json({ accounts: [] });
   try {
     const allAccounts = [];
@@ -313,7 +315,7 @@ app.get('/api/accounts', async (req, res) => {
 });
 
 // ─── Liabilities ─────────────────────────────────────────────────────────────
-app.get('/api/liabilities', async (req, res) => {
+app.get('/api/liabilities', requireAuth, async (req, res) => {
   if (!store.accessTokens.length) return res.json({ liabilities: [], accounts: [] });
   const allCreditCards = [], allStudentLoans = [], allMortgages = [], allAccounts = [];
   for (const item of store.accessTokens) {
@@ -397,7 +399,7 @@ app.get('/api/liabilities', async (req, res) => {
 });
 
 // ─── Transactions ─────────────────────────────────────────────────────────────
-app.get('/api/transactions', async (req, res) => {
+app.get('/api/transactions', requireAuth, async (req, res) => {
   if (!store.accessTokens.length) return res.json({ transactions: [], accounts: [] });
   try {
     const allTransactions = [], allAccounts = [];
@@ -428,7 +430,7 @@ app.get('/api/transactions', async (req, res) => {
 });
 
 // ─── Remove item ──────────────────────────────────────────────────────────────
-app.delete('/api/item/:itemId', async (req, res) => {
+app.delete('/api/item/:itemId', requireAuth, async (req, res) => {
   const { itemId } = req.params;
   // Validate itemId format (alphanumeric only)
   if (!/^[a-zA-Z0-9_-]+$/.test(itemId)) {
