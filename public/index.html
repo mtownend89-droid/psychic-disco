@@ -3543,6 +3543,28 @@ function fdSwitchTab(tab) {
 
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
+// Token-based auth — no cookies, works everywhere including iPad Safari
+
+function authToken() {
+  return sessionStorage.getItem('mdf_token') || '';
+}
+
+function authHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer ' + authToken(),
+  };
+}
+
+// Patch fetch so every /api/ call automatically includes the auth token
+const _origFetch = window.fetch;
+window.fetch = function(url, opts = {}) {
+  if (typeof url === 'string' && url.startsWith('/api/') && !url.includes('/api/login')) {
+    opts.headers = { ...(opts.headers || {}), 'Authorization': 'Bearer ' + authToken() };
+  }
+  return _origFetch(url, opts);
+};
+
 function togglePassVis() {
   const inp = document.getElementById('loginPass');
   const btn = document.getElementById('passVisBtn');
@@ -3551,34 +3573,36 @@ function togglePassVis() {
 }
 
 async function doLogin() {
-  const btn = document.getElementById('loginBtn');
-  const errEl = document.getElementById('loginError');
+  const btn  = document.getElementById('loginBtn');
   const user = document.getElementById('loginUser').value.trim();
   const pass = document.getElementById('loginPass').value;
   if (!user || !pass) { showLoginError('Please enter username and password.'); return; }
+
   btn.textContent = 'Signing in…';
   btn.disabled = true;
+
   try {
-    const res = await fetch('/api/login', {
+    const res  = await _origFetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
       body: JSON.stringify({ username: user, password: pass }),
     });
     const data = await res.json();
-    if (res.ok && data.success) {
-      document.getElementById('loginScreen').style.display = 'none';
-      document.getElementById('mainContent').style.display = 'block';
+
+    if (res.ok && data.success && data.token) {
+      sessionStorage.setItem('mdf_token', data.token);
+      document.getElementById('loginScreen').style.display  = 'none';
+      document.getElementById('mainContent').style.display  = 'block';
       document.getElementById('loginPass').value = '';
       document.getElementById('loginUser').value = '';
       init();
     } else {
-      showLoginError(data.error || 'Invalid credentials');
+      showLoginError(data.error || 'Incorrect username or password');
       btn.textContent = 'Sign in';
       btn.disabled = false;
     }
   } catch (e) {
-    showLoginError('Server unreachable. Try again.');
+    showLoginError('Cannot reach server — try again.');
     btn.textContent = 'Sign in';
     btn.disabled = false;
   }
@@ -3586,33 +3610,37 @@ async function doLogin() {
 
 function showLoginError(msg) {
   const el = document.getElementById('loginError');
-  el.textContent = msg; el.style.display = 'block';
-  setTimeout(() => { el.style.display = 'none'; }, 4000);
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 5000);
 }
 
-async function doLogout() {
-  try {
-    await fetch('/api/logout', { method: 'POST', credentials: 'include' });
-  } catch(e) {}
-  // Clear data, hide app, show login
+function doLogout() {
+  sessionStorage.removeItem('mdf_token');
   allTxns = []; allAccts = [];
-  document.getElementById('loginScreen').style.display = 'flex';
-  document.getElementById('mainContent').style.display = 'none';
+  document.getElementById('loginScreen').style.display  = 'flex';
+  document.getElementById('mainContent').style.display  = 'none';
+  showToast('Signed out', 'success');
 }
 
-async function checkAuth() {
-  try {
-    const res = await fetch('/api/auth-check', { credentials: 'include' });
-    const data = await res.json();
-    if (data.authenticated) {
-      document.getElementById('loginScreen').style.display = 'none';
-      document.getElementById('mainContent').style.display = 'block';
-      init();
-    }
-    // else: login screen stays visible (already shown by default)
-  } catch(e) {
-    // Server unreachable — login screen stays
+function checkAuth() {
+  const token = authToken();
+  if (token) {
+    // Verify token is still valid by hitting health endpoint
+    _origFetch('/api/health')
+      .then(r => r.json())
+      .then(() => {
+        // Token exists — try to use it, init() will fail gracefully if expired
+        document.getElementById('loginScreen').style.display  = 'none';
+        document.getElementById('mainContent').style.display  = 'block';
+        init();
+      })
+      .catch(() => {
+        // Server unreachable — show login
+      });
   }
+  // No token — login screen stays visible
 }
 
 const plaidS=document.createElement('script');
