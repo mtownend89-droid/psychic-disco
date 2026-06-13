@@ -1206,7 +1206,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
     <div class="topbar-title" id="topbarTitle">Dashboard</div>
     <div class="topbar-right">
       <span class="edit-mode-badge" id="editModeBadge">✏️ Editing</span>
-      <span class="env-badge env-sandbox" id="envBadge">Sandbox</span>
+      <span id="connBadge" style="font-size:11px;color:var(--hint);margin-right:6px" title="Connected banks"></span><span class="env-badge env-sandbox" id="envBadge">Sandbox</span>
       <button class="btn" onclick="exportCSV()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
       <button class="btn primary" onclick="openLinkHandler()">+ Connect</button>
     </div>
@@ -2463,8 +2463,29 @@ async function init(){
   try{
     const h=await fetch('/api/health').then(r=>r.json());
     const b=gg('envBadge');if(b){b.textContent=h.env==='production'?'Production':'Sandbox';b.className='env-badge '+(h.env==='production'?'env-production':'env-sandbox');}
+    // Show connection count
+    const connBadge=gg('connBadge');
+    if(connBadge){
+      connBadge.textContent = h.connections>0 ? h.connections+' bank'+(h.connections!==1?'s':'') : 'No banks';
+      connBadge.style.color = h.connections>0 ? 'var(--green)' : 'var(--hint)';
+      connBadge.title = h.connection_names ? h.connection_names.join(', ') : '';
+    }
     const ac=await fetch('/api/accounts').then(r=>r.json());
-    if(ac.accounts?.length){showDashboard();await refreshAll();}
+    // Always show dashboard — let user see it even if no accounts loaded
+    showDashboard();
+    if(ac.accounts?.length){
+      allAccts=ac.accounts;
+      renderAccounts();renderBanks();updateDashMetrics();
+      await loadTransactions();
+    } else {
+      // Show connection status
+      const health = await fetch('/api/health').then(r=>r.json()).catch(()=>({}));
+      if(health.connections>0){
+        // Server has tokens but accounts call returned empty — try full refresh
+        await refreshAll();
+      }
+      // else: genuinely not connected, show connect prompt
+    }
   }catch(e){showError('Cannot reach server.');}
 }
 const saveBills=()=>{try{localStorage.setItem('bills',JSON.stringify(bills));}catch(e){} updateQuickStats();};
@@ -2490,14 +2511,38 @@ async function openLinkHandler(){
 function showDashboard(){gg('connectScreen').style.display='none';showPage('dashboard');setTimeout(updateQuickStats,500);setTimeout(renderSWOT,300);setTimeout(renderSankey,400);showDesktopWelcome();}
 async function refreshAll(){await Promise.all([loadAccounts(),loadTransactions()]);}
 async function loadAccounts(){
-  const d=await fetch('/api/accounts').then(r=>r.json());
-  allAccts=d.accounts||[];
-  renderAccounts();renderBanks();updateDashMetrics();injectPlaidRet();syncBillsFromPlaid();syncNWFromPlaid();
+  try {
+    const d=await fetch('/api/accounts').then(r=>r.json());
+    allAccts=d.accounts||[];
+    // Surface any errors (e.g. banks needing relink)
+    if(d.errors&&d.errors.length){
+      d.errors.forEach(e=>{
+        const msg = e.needsRelink
+          ? e.institution+' needs to be re-linked (login expired). Click + Connect → update login.'
+          : e.institution+' account error: '+e.error;
+        showToast(msg,'error');
+      });
+    }
+    renderAccounts();renderBanks();updateDashMetrics();injectPlaidRet();syncBillsFromPlaid();syncNWFromPlaid();
+    renderAccountChips();
+  } catch(err) {
+    showError('Could not load accounts: '+err.message);
+  }
 }
 async function loadTransactions(){
-  const d=await fetch('/api/transactions').then(r=>r.json());
-  allTxns=d.transactions||[];
-  filterTransactions();renderCharts();updateSpendMetrics();populateFilters();
+  try {
+    const d=await fetch('/api/transactions').then(r=>r.json());
+    allTxns=d.transactions||[];
+    if(d.errors&&d.errors.length){
+      d.errors.forEach(e=>{
+        console.warn('Transaction error:',e.institution,e.error);
+      });
+    }
+    filterTransactions();renderCharts();updateSpendMetrics();populateFilters();setTimeout(renderSankey,300);
+  } catch(err) {
+    console.error('loadTransactions error:',err);
+    showError('Could not load transactions: '+err.message);
+  }
 }
 function injectPlaidRet(){
   const retT=['investment','brokerage','401k','ira','roth','retirement','hsa'];
@@ -2597,9 +2642,18 @@ function buildAcctRowClickable(a) {
 }
 function renderBanks(){
   const el=gg('banksList');if(!el)return;
-  const items=[...new Map(allAccts.map(a=>[a.itemId,a])).values()];
-  if(!items.length){el.innerHTML='<div class="empty">No banks linked</div>';return;}
-  el.innerHTML=items.map(a=>`<div class="acct-row"><div><div class="acct-name">${esc(a.institution)}</div><div class="acct-sub mono" style="font-size:10px">${esc((a.itemId||'').slice(0,20))}…</div></div><button class="btn danger" onclick="removeBank('${esc(a.itemId)}')">Remove</button></div>`).join('');
+  if(!allAccts.length){el.innerHTML='<div class="empty">No banks linked — click + Connect</div>';return;}
+  const byInst={};
+  allAccts.forEach(a=>{const k=a.institution||'Unknown';if(!byInst[k])byInst[k]={name:k,itemId:a.itemId,accounts:[]};byInst[k].accounts.push(a);});
+  el.innerHTML=Object.values(byInst).map(inst=>{
+    const total=inst.accounts.reduce((s,a)=>s+(a.balances?.current??0),0);
+    const isSafeId=(inst.itemId||'').replace(/['"]/g,'');
+    return `<div class="acct-row" style="padding-right:74px;position:relative">
+      <div><div class="acct-name" style="font-weight:600">${esc(inst.name)}</div>
+      <div class="acct-sub">${inst.accounts.length} account${inst.accounts.length!==1?'s':''} · ${fmtK(total)}</div></div>
+      <button class="btn danger" style="position:absolute;right:0;top:50%;transform:translateY(-50%)" onclick="removeBank('${isSafeId}')">Remove</button>
+    </div>`;
+  }).join('');
 }
 async function removeBank(id){
   if(!confirm('Remove this bank?'))return;
@@ -4507,9 +4561,12 @@ let sankeyInst = null;
 function renderSankey() {
   const canvas = gg('sankeyChart');
   if (!canvas) return;
+  // If canvas parent is hidden or has no width, defer
+  const parentW = canvas.parentElement ? canvas.parentElement.clientWidth : 0;
+  if (parentW < 50) { setTimeout(renderSankey, 200); return; }
   const ctx = canvas.getContext('2d');
   const dpr = window.devicePixelRatio || 1;
-  const W = Math.max(200, (canvas.parentElement.clientWidth || 400) - 4);
+  const W = Math.max(200, parentW - 4);
   const H = 260;
   canvas.width  = W * dpr;
   canvas.height = H * dpr;
@@ -4540,9 +4597,18 @@ function renderSankey() {
   })).filter(n => n.value > 0);
 
   // RIGHT: spending categories + bills + savings
-  const dr=getDateRange('dashboard',30);
+  // Use dashboard date range if set, else last 30 days
+  var sankeyFrom, sankeyTo;
+  try {
+    var dr = getDateRange('dashboard', 30);
+    sankeyFrom = dr.from;
+    sankeyTo   = dr.to;
+  } catch(e) {
+    sankeyTo   = new Date().toISOString().slice(0,10);
+    sankeyFrom = new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+  }
   const byCat = {};
-  allTxns.filter(t => t.date>=dr.from && t.date<=dr.to && t.amount > 0).forEach(t => {
+  allTxns.filter(t => t.date >= sankeyFrom && t.date <= sankeyTo && t.amount > 0).forEach(t => {
     const c = fmtCat(t.personal_finance_category?.primary || t.category?.[0] || 'Other');
     byCat[c] = (byCat[c]||0) + t.amount;
   });
