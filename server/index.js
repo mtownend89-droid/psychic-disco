@@ -73,6 +73,8 @@ app.get('/api/health', (req, res) => {
     env:    process.env.PLAID_ENV || 'sandbox',
     user_set: !!APP_USER,
     pass_set: !!APP_PASS,
+    connections: store.accessTokens.length,
+    connection_names: store.accessTokens.map(t => t.institutionName),
   });
 });
 
@@ -170,7 +172,7 @@ app.post('/api/exchange_token', requireAuth, async (req, res) => {
     const r = await plaidClient.itemPublicTokenExchange({ public_token });
     const { access_token, item_id } = r.data;
     if (!store.accessTokens.find(t => t.itemId === item_id)) {
-      store.accessTokens.push({ itemId: item_id, accessToken: access_token, institutionName: institution_name || 'Bank' });
+      store.accessTokens.push({ itemId: item_id, accessToken: access_token, institutionName: institution_name || 'Bank', addedAt: new Date().toISOString() });
       saveTokens(store);
     }
     res.json({ success: true, item_id });
@@ -179,18 +181,37 @@ app.post('/api/exchange_token', requireAuth, async (req, res) => {
   }
 });
 
+// List connected items (banks) — helps debug what's stored
+app.get('/api/items', requireAuth, (req, res) => {
+  res.json({
+    items: store.accessTokens.map(t => ({
+      itemId: t.itemId,
+      institutionName: t.institutionName,
+      addedAt: t.addedAt || null,
+      hasCursor: !!store.cursor[t.itemId],
+    })),
+    count: store.accessTokens.length,
+  });
+});
+
 app.get('/api/accounts', requireAuth, async (req, res) => {
-  if (!store.accessTokens.length) return res.json({ accounts: [] });
-  try {
-    const all = [];
-    for (const item of store.accessTokens) {
+  if (!store.accessTokens.length) return res.json({ accounts: [], items: [] });
+  const all = [], errors = [];
+  for (const item of store.accessTokens) {
+    try {
       const r = await plaidClient.accountsBalanceGet({ access_token: item.accessToken });
       r.data.accounts.forEach(a => all.push({ ...a, institution: item.institutionName, itemId: item.itemId }));
+    } catch (err) {
+      const code = err.response?.data?.error_code || err.message;
+      console.warn(`Accounts error for ${item.institutionName}:`, code);
+      errors.push({ institution: item.institutionName, itemId: item.itemId, error: code });
+      // If ITEM_LOGIN_REQUIRED, flag it so frontend can prompt re-link
+      if (code === 'ITEM_LOGIN_REQUIRED') {
+        errors[errors.length-1].needsRelink = true;
+      }
     }
-    res.json({ accounts: all });
-  } catch (err) {
-    res.status(500).json({ error: err.response?.data?.error_message || err.message });
   }
+  res.json({ accounts: all, items: store.accessTokens.map(t => ({ itemId: t.itemId, institutionName: t.institutionName })), errors: errors.length ? errors : undefined });
 });
 
 app.get('/api/liabilities', requireAuth, async (req, res) => {
@@ -223,30 +244,61 @@ app.get('/api/liabilities', requireAuth, async (req, res) => {
 
 app.get('/api/transactions', requireAuth, async (req, res) => {
   if (!store.accessTokens.length) return res.json({ transactions: [], accounts: [] });
-  try {
-    const txns = [], accts = [];
-    for (const item of store.accessTokens) {
-      let cursor = store.cursor[item.itemId] || null, hasMore = true;
+  const txns = [], accts = [], errors = [];
+
+  for (const item of store.accessTokens) {
+    try {
+      // Try with existing cursor first; if it fails, reset and retry from scratch
+      let cursor = store.cursor[item.itemId] || null;
+      let hasMore = true;
       const added = [];
-      while (hasMore) {
-        const params = { access_token: item.accessToken };
-        if (cursor) params.cursor = cursor;
-        const r = await plaidClient.transactionsSync(params);
-        added.push(...r.data.added);
-        cursor = r.data.next_cursor;
-        hasMore = r.data.has_more;
+
+      try {
+        while (hasMore) {
+          const params = { access_token: item.accessToken };
+          if (cursor) params.cursor = cursor;
+          const r = await plaidClient.transactionsSync(params);
+          added.push(...r.data.added);
+          cursor = r.data.next_cursor;
+          hasMore = r.data.has_more;
+        }
+      } catch (syncErr) {
+        // Cursor may be stale — reset and try once from scratch
+        console.warn(`Cursor reset for ${item.institutionName}:`, syncErr.response?.data?.error_code);
+        delete store.cursor[item.itemId];
+        cursor = null;
+        hasMore = true;
+        added.length = 0;
+        while (hasMore) {
+          const params = { access_token: item.accessToken };
+          const r = await plaidClient.transactionsSync(params);
+          added.push(...r.data.added);
+          cursor = r.data.next_cursor;
+          hasMore = r.data.has_more;
+        }
       }
+
       store.cursor[item.itemId] = cursor;
       saveTokens(store);
       added.forEach(t => txns.push({ ...t, institution: item.institutionName }));
-      const r = await plaidClient.accountsGet({ access_token: item.accessToken });
-      r.data.accounts.forEach(a => accts.push({ ...a, institution: item.institutionName }));
+
+      const acctRes = await plaidClient.accountsGet({ access_token: item.accessToken });
+      acctRes.data.accounts.forEach(a => accts.push({ ...a, institution: item.institutionName, itemId: item.itemId }));
+
+    } catch (err) {
+      const code = err.response?.data?.error_code || err.message;
+      console.error(`Transaction error for ${item.institutionName}:`, code);
+      errors.push({ institution: item.institutionName, error: code });
+      // Still try to get accounts even if transactions fail
+      try {
+        const acctRes = await plaidClient.accountsGet({ access_token: item.accessToken });
+        acctRes.data.accounts.forEach(a => accts.push({ ...a, institution: item.institutionName, itemId: item.itemId }));
+      } catch (_) {}
     }
-    txns.sort((a, b) => new Date(b.date) - new Date(a.date));
-    res.json({ transactions: txns, accounts: accts });
-  } catch (err) {
-    res.status(500).json({ error: err.response?.data?.error_message || err.message });
   }
+
+  txns.sort((a, b) => new Date(b.date) - new Date(a.date));
+  res.json({ transactions: txns, accounts: accts, errors: errors.length ? errors : undefined });
 });
 
 app.delete('/api/item/:itemId', requireAuth, async (req, res) => {
