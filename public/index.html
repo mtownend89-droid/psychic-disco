@@ -26,287 +26,203 @@
   --sidebar-w:228px;--radius:12px;--radius-sm:8px;--radius-xs:5px;
   --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
 }
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html{font-size:14px;scroll-behavior:smooth;}
-body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;-webkit-font-smoothing:antialiased;}
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE DESIGN SYSTEM
+   5 breakpoints:
+   • iPhone     < 480px   — bottom tab bar, single col, touch optimized
+   • iPhone+    480–767px — bottom tab bar, 2-col widgets
+   • iPad mini  768–899px — sidebar, condensed layout
+   • iPad       900–1199px — sidebar, full 2-col
+   • Desktop   1200–1599px — sidebar + wider content
+   • Wide      1600px+    — sidebar + max-width container, extra panels
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── iOS / APPLE DEVICE OPTIMIZATIONS ────────────────────────────────────── */
-/* Safe area insets for notch/Dynamic Island/home indicator */
+/* ── BASE: apply to all devices ─────────────────────────────────────────── */
 :root {
   --safe-top:    env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left:   env(safe-area-inset-left, 0px);
   --safe-right:  env(safe-area-inset-right, 0px);
 }
-
-/* Kill tap highlight flash on all tappable elements */
-*, *::before, *::after {
-  -webkit-tap-highlight-color: transparent;
-  -webkit-touch-callout: none;
-}
-
-/* Allow text selection in content areas */
-p, td, .card, .widget, input, textarea {
-  -webkit-user-select: text;
-  user-select: text;
-}
-
-/* Momentum scrolling on iOS for scroll containers */
-#page-content, .modal, .sb-nav, [style*="overflow-x:auto"], [style*="overflow-y:auto"] {
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-}
-
-/* Sidebar: push down for Dynamic Island / notch status bar */
-#sidebar {
-  padding-top: max(var(--safe-top), 0px);
-  padding-bottom: max(var(--safe-bottom), 12px);
-}
-
-/* Topbar: account for status bar height */
-#topbar {
-  padding-top: max(var(--safe-top), 0px);
-  height: calc(54px + max(var(--safe-top), 0px));
-}
-
-/* Main content: safe left/right/bottom padding */
-#page-content {
-  padding-bottom: calc(26px + var(--safe-bottom));
-}
-
-/* Sidebar always visible on iPad and above */
-@media (min-width: 768px) {
-  #main {
-    margin-left: var(--sidebar-w);
-    padding-left: 0;
-  }
-  #sidebar {
-    transform: none !important;
-  }
-}
-
-/* iPad-optimised layout: wider widgets */
-
-
-/* iPhone layout: sidebar becomes bottom sheet on small screens */
-@media (max-width: 767px) {
-  #sidebar {
-    top: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    width: 100%;
-    height: auto;
-    min-height: unset;
-    flex-direction: row;
-    border-right: none;
-    border-top: 1px solid var(--border);
-    padding: 0 max(var(--safe-left), 8px) max(var(--safe-bottom), 0px);
-    transform: none !important;
-    z-index: 100;
-  }
-  .sb-logo, .sb-section, .sb-footer, .sb-user, .sb-connect, .nav-ic + *:not(.nav-ic) { display: none; }
-  .sb-logo { display: none !important; }
-  .sb-nav {
-    flex-direction: row;
-    padding: 6px 0 0;
-    gap: 0;
-    justify-content: space-around;
-    flex: 1;
-  }
-  .nav-btn {
-    flex-direction: column;
-    align-items: center;
-    gap: 3px;
-    padding: 7px 4px 5px;
-    font-size: 9.5px;
-    font-weight: 500;
-    min-width: 48px;
-    border-radius: 10px;
-    letter-spacing: 0;
-    flex: 1;
-  }
-  .nav-ic { width: 22px; height: 22px; }
-  .nav-ic svg { width: 22px; height: 22px; stroke-width: 1.6; }
-  .nav-btn.active { background: transparent; color: var(--green); }
-  .nav-btn.active .nav-ic { color: var(--green); }
-  #main {
-    margin-left: 0;
-    /* leave room for bottom tab bar */
-    padding-bottom: calc(60px + var(--safe-bottom));
-  }
-  #topbar {
-    left: 0;
-    right: 0;
-    padding-left: max(var(--safe-left), 16px);
-    padding-right: max(var(--safe-right), 16px);
-  }
-  #page-content { padding: 14px max(var(--safe-right), 14px) calc(80px + var(--safe-bottom)) max(var(--safe-left), 14px); }
-  .modal { border-radius: 20px 20px 0 0; max-height: 95vh; margin-top: auto; }
-  .modal-bg { align-items: flex-end; }
-  .wgrid { grid-template-columns: 1fr 1fr; gap: 8px; }
-  .g2, .g-main-side { grid-template-columns: 1fr; }
-  .g3 { grid-template-columns: 1fr 1fr; }
-  .g5 { grid-template-columns: repeat(3, 1fr); }
-}
-
-/* Inputs: prevent iOS auto-zoom (font-size >= 16px on focus) */
-input, select, textarea {
-  font-size: max(16px, 1em) !important;
-  border-radius: var(--radius-sm);
-}
-/* But keep display font-size small via transform trick for selects */
-.sel, .search-inp { font-size: 16px !important; }
-
-/* Smooth native-feeling scrolling */
-html, body { scroll-behavior: smooth; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-behavior: smooth; }
 body { overscroll-behavior-y: none; }
-
-/* Button active states feel snappier on iOS */
-.btn:active, .nav-btn:active, .cn-btn:active, .icon-btn:active, .sb-connect:active {
-  opacity: 0.72;
-  transform: scale(0.97);
-  transition: opacity 0.08s, transform 0.08s;
-}
-
-/* Prettier scrollbars on macOS Safari */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
-
-/* Fix chart canvas on high-DPI Retina */
+*, *::before, *::after { -webkit-tap-highlight-color: transparent; }
+p, td, .card, .widget, input, textarea { -webkit-user-select: text; user-select: text; }
+#page-content, .modal, .sb-nav { -webkit-overflow-scrolling: touch; }
 canvas { image-rendering: -webkit-optimize-contrast; }
 
-/* Prevent text size adjustment on orientation change */
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+/* Prevent iOS auto-zoom — inputs must be ≥16px */
+input, select, textarea { font-size: 16px !important; }
 
+/* Notch/Dynamic Island awareness */
+#sidebar  { padding-top: max(var(--safe-top), 0px); padding-bottom: max(var(--safe-bottom), 12px); }
+#topbar   { padding-top: max(var(--safe-top), 0px); height: calc(54px + max(var(--safe-top), 0px)); }
 
-/* ── iOS / APPLE DEVICE OPTIMIZATIONS ────────────────────────────────────── */
-:root {
-  --safe-top:    env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --safe-left:   env(safe-area-inset-left,  0px);
-  --safe-right:  env(safe-area-inset-right, 0px);
-}
-/* Kill tap flash on all tappable elements */
-*, *::before, *::after {
-  -webkit-tap-highlight-color: transparent;
-  -webkit-touch-callout: none;
-}
-/* Re-allow text selection in content */
-p, td, .card, .widget, input, textarea {
-  -webkit-user-select: text;
-  user-select: text;
-}
-/* Momentum scrolling */
-#page-content, .modal, .sb-nav, [style*="overflow"] {
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-}
-/* Sidebar: Dynamic Island / notch aware */
-#sidebar {
-  padding-top: max(var(--safe-top), 0px);
-  padding-bottom: max(var(--safe-bottom), 12px);
-}
-#topbar {
-  padding-top: max(var(--safe-top), 0px);
-  height: calc(54px + max(var(--safe-top), 0px));
-}
-#page-content {
-  padding-bottom: calc(26px + var(--safe-bottom));
-}
-
-/* iPhone: convert sidebar to bottom tab bar */
-@media (max-width: 767px) {
-  #sidebar {
-    top: auto; bottom: 0; left: 0; right: 0;
-    width: 100%; height: auto; min-height: unset;
-    flex-direction: row;
-    border-right: none;
-    border-top: 1px solid var(--border);
-    padding: 0 max(var(--safe-left), 8px) max(var(--safe-bottom), 0px);
-    transform: none !important;
-    z-index: 100;
-  }
-  .sb-logo, .sb-section, .sb-footer { display: none !important; }
-  .sb-nav {
-    flex-direction: row; padding: 6px 0 0; gap: 0;
-    justify-content: space-around; flex: 1;
-  }
-  .nav-btn {
-    flex-direction: column; align-items: center; gap: 3px;
-    padding: 7px 4px 5px; font-size: 9.5px; font-weight: 500;
-    min-width: 48px; border-radius: 10px; flex: 1;
-  }
-  .nav-ic { width: 22px; height: 22px; }
-  .nav-ic svg { width: 22px; height: 22px; stroke-width: 1.6; }
-  .nav-btn.active { background: transparent; color: var(--green); }
-  .nav-btn.active .nav-ic { color: var(--green); }
-  #main {
-    margin-left: 0;
-    padding-bottom: calc(60px + var(--safe-bottom));
-  }
-  #topbar {
-    padding-left: max(var(--safe-left), 16px);
-    padding-right: max(var(--safe-right), 16px);
-  }
-  #page-content {
-    padding: 14px max(var(--safe-right),14px) calc(84px + var(--safe-bottom)) max(var(--safe-left),14px);
-  }
-  .modal { border-radius: 20px 20px 0 0; max-height: 95vh; }
-  .modal-bg { align-items: flex-end; }
-  .wgrid { grid-template-columns: 1fr 1fr; gap: 8px; }
-  .g2, .g-main-side { grid-template-columns: 1fr; }
-  .g3 { grid-template-columns: 1fr 1fr; }
-  .g5 { grid-template-columns: repeat(3, 1fr); }
-}
-
-/* iPad — sidebar always visible, adjust content grids */
-@media (min-width: 768px) and (max-width: 1024px) {
-  #sidebar {
-    transform: none !important;
-    width: var(--sidebar-w);
-  }
-  #main {
-    margin-left: var(--sidebar-w) !important;
-  }
-  .wgrid { grid-template-columns: repeat(3, 1fr); }
-  .g-main-side { grid-template-columns: 1fr 260px; }
-  .g2 { grid-template-columns: 1fr 1fr; }
-  .g5 { grid-template-columns: repeat(3, 1fr); }
-}
-
-/* Prevent iOS auto-zoom on focus (font-size must be >=16px) */
-input[type=text], input[type=number], input[type=date],
-input[type=email], input[type=password], select, textarea {
-  font-size: 16px !important;
-}
-
-/* Active press feedback */
-.btn:active, .nav-btn:active, .cn-btn:active,
-.icon-btn:active, .sb-connect:active {
-  opacity: 0.7;
-  transform: scale(0.96);
+/* Press feedback */
+.btn:active, .nav-btn:active, .icon-btn:active, .sb-connect:active {
+  opacity: 0.72; transform: scale(0.97);
   transition: opacity 0.08s, transform 0.08s;
 }
 
-/* macOS Safari scrollbars */
+/* macOS scrollbars */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.13); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
 
-/* Retina canvas sharpness */
-canvas { image-rendering: -webkit-optimize-contrast; }
+/* ── DESKTOP ONLY FEATURES ──────────────────────────────────────────────── */
+/* These classes are hidden on mobile/tablet, shown on desktop */
+.desktop-only { display: none !important; }
+.mobile-only  { display: flex !important; }
+.tablet-only  { display: none !important; }
 
-/* Prevent text size change on rotation */
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+/* ── ≥1200px DESKTOP ─────────────────────────────────────────────────────── */
+@media (min-width: 1200px) {
+  :root { --sidebar-w: 228px; }
+  .desktop-only { display: flex !important; }
+  .mobile-only  { display: none  !important; }
+  #page-content { padding: 28px 32px; max-width: 1400px; }
+  #main { margin-left: var(--sidebar-w); }
+  #sidebar { transform: none !important; }
+  .wgrid { grid-template-columns: repeat(5, 1fr); }
+  .g2    { grid-template-columns: 1fr 1fr; }
+  .g3    { grid-template-columns: 1fr 1fr 1fr; }
+  .g5    { grid-template-columns: repeat(5, 1fr); }
+  .g-main-side { grid-template-columns: 1fr 320px; }
+  /* Wider topbar actions */
+  .topbar-right { gap: 12px; }
+  /* Larger widget values */
+  .wvalue { font-size: 24px; }
+  /* Show desktop extras */
+  #desktopQuickStats { display: grid !important; }
+  #desktopSidePanels { display: grid !important; }
+}
 
-/* Smooth scroll & prevent over-bounce */
-html, body { scroll-behavior: smooth; }
-body { overscroll-behavior-y: none; }
+/* ── ≥1600px WIDE DESKTOP ────────────────────────────────────────────────── */
+@media (min-width: 1600px) {
+  :root { --sidebar-w: 248px; }
+  #page-content { max-width: 1600px; padding: 30px 40px; }
+  .wgrid { grid-template-columns: repeat(5, 1fr); gap: 14px; }
+  .g-main-side { grid-template-columns: 1fr 360px; }
+  .sb-nav .nav-btn { font-size: 13.5px; padding: 10px 14px; }
+  /* Extra sidebar section visible at wide */
+  .wide-only { display: flex !important; }
+}
+
+/* ── 900px–1199px: iPad landscape / small desktop ───────────────────────── */
+@media (min-width: 900px) and (max-width: 1199px) {
+  :root { --sidebar-w: 210px; }
+  #main { margin-left: var(--sidebar-w); }
+  #sidebar { transform: none !important; width: var(--sidebar-w); }
+  #page-content { padding: 20px 22px; }
+  .wgrid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .g2    { grid-template-columns: 1fr 1fr; }
+  .g3    { grid-template-columns: 1fr 1fr 1fr; }
+  .g5    { grid-template-columns: repeat(3, 1fr); }
+  .g-main-side { grid-template-columns: 1fr 280px; }
+  .tablet-only  { display: flex !important; }
+  .mobile-only  { display: none  !important; }
+}
+
+/* ── 768px–899px: iPad mini / portrait ──────────────────────────────────── */
+@media (min-width: 768px) and (max-width: 899px) {
+  :root { --sidebar-w: 200px; }
+  #main { margin-left: var(--sidebar-w) !important; }
+  #sidebar { transform: none !important; width: var(--sidebar-w) !important; }
+  #page-content { padding: 16px 18px; }
+  .wgrid { grid-template-columns: repeat(3, 1fr); gap: 9px; }
+  .g2    { grid-template-columns: 1fr 1fr; }
+  .g3    { grid-template-columns: 1fr 1fr; }
+  .g5    { grid-template-columns: repeat(3, 1fr); }
+  .g-main-side { grid-template-columns: 1fr; }
+  /* Collapse sidebar labels slightly */
+  .nav-btn { font-size: 12px; padding: 8px 10px; }
+  .sb-section { font-size: 9px; padding: 10px 10px 4px; }
+  .tablet-only  { display: flex !important; }
+  .mobile-only  { display: none  !important; }
+}
+
+/* ── 480px–767px: iPhone Plus / large phone ─────────────────────────────── */
+@media (max-width: 767px) {
+  /* Bottom tab bar */
+  #sidebar {
+    position: fixed;
+    top: auto; bottom: 0; left: 0; right: 0;
+    width: 100%; height: auto; min-height: unset;
+    flex-direction: row;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    padding: 0 max(var(--safe-left), 4px) max(var(--safe-bottom), 0px);
+    transform: none !important;
+    z-index: 100;
+    border-radius: 0;
+  }
+  .sb-logo, .sb-section, .sb-footer { display: none !important; }
+  .sb-nav {
+    flex-direction: row; padding: 4px 0 0; gap: 0;
+    justify-content: space-around; flex: 1;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+  }
+  .nav-btn {
+    flex-direction: column; align-items: center; gap: 2px;
+    padding: 6px 4px 4px; font-size: 9px; font-weight: 500;
+    min-width: 44px; border-radius: 8px; flex: 1; max-width: 72px;
+    white-space: nowrap;
+  }
+  .nav-ic { width: 20px; height: 20px; }
+  .nav-ic svg { width: 20px; height: 20px; stroke-width: 1.6; }
+  .nav-btn.active { background: transparent; color: var(--green); }
+  .nav-btn.active .nav-ic { color: var(--green); }
+  #main {
+    margin-left: 0 !important;
+    padding-bottom: calc(56px + var(--safe-bottom));
+  }
+  #topbar {
+    padding: max(var(--safe-top),0px) max(var(--safe-right),14px) 0 max(var(--safe-left),14px);
+    height: calc(50px + max(var(--safe-top), 0px));
+  }
+  .topbar-title { font-size: 14px; }
+  #page-content {
+    padding: 12px max(var(--safe-right),12px) calc(72px + var(--safe-bottom)) max(var(--safe-left),12px);
+  }
+  /* Sheet modals slide up from bottom */
+  .modal { border-radius: 20px 20px 0 0; max-height: 92vh; }
+  .modal-bg { align-items: flex-end; }
+  /* Grids */
+  .wgrid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .g2, .g-main-side, .g3 { grid-template-columns: 1fr; }
+  .g5 { grid-template-columns: repeat(2, 1fr); }
+  /* Tighter cards */
+  .card { padding: 14px; }
+  .wvalue { font-size: 18px; }
+  /* Hide desktop-only extras */
+  .desktop-only, .tablet-only { display: none !important; }
+  /* Table: allow horizontal scroll, don't clip */
+  .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  /* Smaller topbar buttons */
+  .topbar-btn { height: 30px; padding: 0 10px; font-size: 11px; }
+  /* Page header stacks */
+  .page-hdr { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .page-hdr-right { width: 100%; justify-content: flex-start; }
+  /* Drag handles always visible on touch */
+  .dh { opacity: 1 !important; pointer-events: auto !important; }
+}
+
+/* ── <480px: small iPhone ────────────────────────────────────────────────── */
+@media (max-width: 479px) {
+  .nav-btn { min-width: 36px; font-size: 8.5px; padding: 5px 2px 4px; }
+  .nav-ic { width: 18px; height: 18px; }
+  .nav-ic svg { width: 18px; height: 18px; }
+  .wgrid { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .widget { padding: 12px 14px; }
+  .wvalue { font-size: 17px; }
+  #page-content { padding: 10px 10px calc(70px + var(--safe-bottom)); }
+  .card { padding: 12px; }
+  .page-title { font-size: 16px; }
+  /* Collapse topbar — just show title and hamburger */
+  .topbar-right .btn:not(.primary) { display: none; }
+}
 
 /* ── SIDEBAR ── */
 #sidebar{
@@ -729,6 +645,71 @@ input[type=range]{width:100%;accent-color:var(--green);}
   border-color:rgba(46,204,138,0.3);
 }
 
+
+/* ── DESKTOP EXTRAS ─────────────────────────────────────────────────────── */
+/* Quick stats bar — only on desktop */
+#desktopQuickStats {
+  display: none;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0;
+  background: var(--sidebar);
+  border-bottom: 1px solid var(--border);
+  padding: 0;
+}
+.qs-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 20px;
+  border-right: 1px solid var(--border);
+  cursor: pointer; transition: background 0.13s;
+}
+.qs-item:last-child { border-right: none; }
+.qs-item:hover { background: rgba(255,255,255,0.03); }
+.qs-icon { font-size: 18px; flex-shrink: 0; }
+.qs-label { font-size: 10px; color: var(--hint); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+.qs-value { font-family: var(--mono); font-size: 14px; font-weight: 500; margin-top: 1px; }
+
+/* Desktop sidebar extras */
+.sb-nav-label {
+  font-size: 10px; color: var(--hint); padding: 3px 14px;
+  font-family: var(--mono); display: none;
+}
+@media (min-width: 1200px) {
+  .sb-nav-label { display: block; }
+  #desktopQuickStats { display: grid; }
+}
+
+/* Desktop keyboard shortcut hints */
+.kbd-hint {
+  display: none; margin-left: auto;
+  font-size: 9.5px; font-family: var(--mono);
+  color: var(--hint); background: var(--surface3);
+  padding: 1px 5px; border-radius: 3px;
+}
+@media (min-width: 1200px) { .kbd-hint { display: inline-block; } }
+
+/* Desktop: wider table columns, more padding */
+@media (min-width: 1200px) {
+  .tbl td, .tbl th { padding: 11px 8px 11px 0; }
+  .card { padding: 22px; }
+  .card-sm { padding: 18px; }
+}
+
+/* Desktop: hover tooltips on widgets */
+@media (min-width: 1200px) {
+  .widget { cursor: default; }
+  .widget:hover .wsub { color: var(--muted); }
+}
+
+/* Wide sidebar with section labels */
+@media (min-width: 1400px) {
+  .nav-btn { padding: 9px 16px; }
+}
+
+/* Desktop: sticky section headers on long pages */
+@media (min-width: 1200px) {
+  .drag-handle-row { position: sticky; top: 54px; z-index: 10; background: var(--bg); padding: 6px 0 2px; }
+}
+
 </style>
 </head><body>
 <!-- ── SIDEBAR ── -->
@@ -813,23 +794,23 @@ input[type=range]{width:100%;accent-color:var(--green);}
     <button class="nav-btn active" onclick="showPage('dashboard')">
       <span class="nav-ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>Dashboard
     </button>
-    <button class="nav-btn" onclick="showPage('transactions')">
+    <button class="nav-btn" onclick="showPage('transactions')"><span class="kbd-hint">T</span>
       <span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span>Transactions
     </button>
-    <button class="nav-btn" onclick="showPage('expenses')">
+    <button class="nav-btn" onclick="showPage('expenses')"><span class="kbd-hint">B</span>
       <span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span>Budget &amp; Bills
     </button>
-    <button class="nav-btn" onclick="showPage('networth')">
+    <button class="nav-btn" onclick="showPage('networth')"><span class="kbd-hint">N</span>
       <span class="nav-ic"><svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></span>Net Worth
     </button>
-    <button class="nav-btn" onclick="showPage('retirement')">
+    <button class="nav-btn" onclick="showPage('retirement')"><span class="kbd-hint">R</span>
       <span class="nav-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>Retirement
     </button>
     <div class="sb-section">Reports</div>
-    <button class="nav-btn" onclick="showPage('cashflow')">
+    <button class="nav-btn" onclick="showPage('cashflow')"><span class="kbd-hint">C</span>
       <span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M2 20h20M5 20V10l7-7 7 7v10"/></svg></span>Cash Flow
     </button>
-    <button class="nav-btn" onclick="showPage('firedrill')">
+    <button class="nav-btn" onclick="showPage('firedrill')"><span class="kbd-hint">F</span>
       <span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M12 2c0 6-8 8-8 14a8 8 0 0016 0c0-6-8-8-8-14z"/><path d="M12 12c0 3-2 4-2 6a2 2 0 004 0c0-2-2-3-2-6z"/></svg></span>Fire Drill
     </button>
   </div>
@@ -857,7 +838,44 @@ input[type=range]{width:100%;accent-color:var(--green);}
 
 <!-- ── MAIN ── -->
 <div id="main">
-  <div id="topbar">
+  <div id="desktopQuickStats">
+  <div class="qs-item" onclick="showPage('dashboard')">
+    <span class="qs-icon">💰</span>
+    <div>
+      <div class="qs-label">Net Balance</div>
+      <div class="qs-value" id="qs-net-bal">—</div>
+    </div>
+  </div>
+  <div class="qs-item" onclick="showPage('expenses')">
+    <span class="qs-icon">📊</span>
+    <div>
+      <div class="qs-label">Monthly Bills</div>
+      <div class="qs-value" id="qs-bills">—</div>
+    </div>
+  </div>
+  <div class="qs-item" onclick="showPage('networth')">
+    <span class="qs-icon">📈</span>
+    <div>
+      <div class="qs-label">Net Worth</div>
+      <div class="qs-value" id="qs-nw">—</div>
+    </div>
+  </div>
+  <div class="qs-item" onclick="showPage('expenses')">
+    <span class="qs-icon">💳</span>
+    <div>
+      <div class="qs-label">Total Debt</div>
+      <div class="qs-value" id="qs-debt">—</div>
+    </div>
+  </div>
+  <div class="qs-item" onclick="showPage('retirement')">
+    <span class="qs-icon">🎯</span>
+    <div>
+      <div class="qs-label">Retirement Savings</div>
+      <div class="qs-value" id="qs-ret">—</div>
+    </div>
+  </div>
+</div>
+<div id="topbar">
     <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Open navigation">
       <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
@@ -1732,7 +1750,7 @@ async function init(){
     if(ac.accounts?.length){showDashboard();await refreshAll();}
   }catch(e){showError('Cannot reach server.');}
 }
-const saveBills=()=>{try{localStorage.setItem('bills',JSON.stringify(bills));}catch(e){}};
+const saveBills=()=>{try{localStorage.setItem('bills',JSON.stringify(bills));}catch(e){} updateQuickStats();};
 const saveIncomeSrc=()=>{try{localStorage.setItem('incomeSources',JSON.stringify(incomeSources));}catch(e){}};
 const saveZeroBkts=()=>{try{localStorage.setItem('zeroBuckets',JSON.stringify(zeroBuckets));}catch(e){}};
 const saveNW=()=>{try{localStorage.setItem('nwAssets',JSON.stringify(nwAssets));localStorage.setItem('nwLiab',JSON.stringify(nwLiab));}catch(e){}};
@@ -1752,7 +1770,7 @@ async function openLinkHandler(){
     }).open();
   }catch(e){showToast('Failed to open Plaid Link.','error');}
 }
-function showDashboard(){gg('connectScreen').style.display='none';showPage('dashboard');}
+function showDashboard(){gg('connectScreen').style.display='none';showPage('dashboard');setTimeout(updateQuickStats,500);showDesktopWelcome();}
 async function refreshAll(){await Promise.all([loadAccounts(),loadTransactions()]);}
 async function loadAccounts(){
   const d=await fetch('/api/accounts').then(r=>r.json());
@@ -1877,6 +1895,7 @@ function updateDashMetrics(){
   const tot=allAccts.reduce((s,a)=>a.type==='credit'?s-(a.balances.current??0):s+(a.balances.current??0),0);
   const nb=gg('mNetBal');if(nb){nb.textContent=fmtK(tot);nb.className='wvalue '+(tot>=0?'green':'red');}
   const ac=gg('mAcctCount');if(ac)ac.textContent=allAccts.length;
+  updateQuickStats();
 }
 function updateSpendMetrics(){
   const cut=new Date(Date.now()-30*86400000);
@@ -2506,7 +2525,7 @@ async function doLogin() {
     if (res.ok && data.success && data.token) {
       sessionStorage.setItem('mdf_token', data.token);
       document.getElementById('loginScreen').style.display  = 'none';
-      document.getElementById('mainContent').style.display  = 'block';
+      document.getElementById('mainContent').style.display  = 'contents';
       document.getElementById('loginPass').value = '';
       document.getElementById('loginUser').value = '';
       init();
@@ -2548,7 +2567,7 @@ function checkAuth() {
       .then(() => {
         // Token exists — try to use it, init() will fail gracefully if expired
         document.getElementById('loginScreen').style.display  = 'none';
-        document.getElementById('mainContent').style.display  = 'block';
+        document.getElementById('mainContent').style.display  = 'contents';
         init();
       })
       .catch(() => {
@@ -3246,6 +3265,136 @@ function dpExport(){
   XLSX.writeFile(wb,'Matt_Dana_DebtPayoff_'+todayStr()+'.xlsx');
   showToast('Debt payoff plan exported!','success');
 }
+
+
+// ── DESKTOP FEATURES ─────────────────────────────────────────────────────────
+const isDesktop = () => window.innerWidth >= 1200;
+const isTablet  = () => window.innerWidth >= 768 && window.innerWidth < 1200;
+const isMobile  = () => window.innerWidth < 768;
+
+// ── Quick stats bar (desktop only) ───────────────────────────────────────────
+function updateQuickStats() {
+  if (!isDesktop()) return;
+  // Net balance
+  const netBal = allAccts.reduce((s,a) => a.type==='credit' ? s-(a.balances.current??0) : s+(a.balances.current??0), 0);
+  const qn = gg('qs-net-bal'); if (qn) { qn.textContent = fmtK(netBal); qn.style.color = netBal >= 0 ? 'var(--green)' : 'var(--red)'; }
+  // Monthly bills
+  const bil = bills.reduce((s,b) => s+b.pay, 0);
+  const qb = gg('qs-bills'); if (qb) { qb.textContent = fmt2(bil); qb.style.color = 'var(--red)'; }
+  // Net worth
+  const nw = nwAssets.reduce((s,a)=>s+a.value,0) - nwLiab.reduce((s,l)=>s+l.value,0);
+  const qw = gg('qs-nw'); if (qw) { qw.textContent = fmtM(nw); qw.style.color = nw >= 0 ? 'var(--green)' : 'var(--red)'; }
+  // Total debt
+  const debt = bills.reduce((s,b) => s+Math.abs(b.bal||0), 0);
+  const qd = gg('qs-debt'); if (qd) { qd.textContent = fmtM(debt); qd.style.color = 'var(--red)'; }
+  // Retirement
+  const retTypes = ['investment','brokerage','401k','ira','roth','retirement','hsa'];
+  const retBal = allAccts.filter(a => retTypes.some(t => (a.type||'').toLowerCase().includes(t)||(a.subtype||'').toLowerCase().includes(t))).reduce((s,a) => s+(a.balances.current??0), 0);
+  const qr = gg('qs-ret'); if (qr) { qr.textContent = fmtM(retBal||U.saved); qr.style.color = 'var(--cyan)'; }
+}
+
+// ── Keyboard shortcuts (desktop only) ────────────────────────────────────────
+document.addEventListener('keydown', function(e) {
+  if (!isDesktop()) return;
+  // Don't fire when typing in inputs
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+  // Don't fire with modifier keys (except shift)
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const map = {
+    'd': 'dashboard', 'D': 'dashboard',
+    't': 'transactions', 'T': 'transactions',
+    'b': 'expenses', 'B': 'expenses',
+    'n': 'networth', 'N': 'networth',
+    'r': 'retirement', 'R': 'retirement',
+    'c': 'cashflow', 'C': 'cashflow',
+    'f': 'firedrill', 'F': 'firedrill',
+  };
+  if (map[e.key]) {
+    e.preventDefault();
+    showPage(map[e.key]);
+  }
+  // ? opens keyboard shortcut help
+  if (e.key === '?') {
+    showToast('D=Dashboard T=Transactions B=Budget N=NetWorth R=Retirement C=CashFlow F=FireDrill', 'success');
+  }
+  // Escape closes modals
+  if (e.key === 'Escape') {
+    ['addBillModal','addIncomeModal','exportModal'].forEach(id => {
+      const el = gg(id); if (el) el.style.display = 'none';
+    });
+  }
+});
+
+// ── Desktop: resize handler ───────────────────────────────────────────────────
+let _resizeTimer;
+window.addEventListener('resize', function() {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(function() {
+    updateQuickStats();
+    // Re-init drag on resize (touch vs mouse mode changes)
+    ['dashContainer','expContainer','retContainer','fdDrillContainer','fdDebtContainer'].forEach(id => {
+      const el = gg(id); if (el) initDrag(el);
+    });
+  }, 250);
+});
+
+// ── Desktop: column resizing hint on first visit ─────────────────────────────
+function showDesktopWelcome() {
+  if (!isDesktop() || localStorage.getItem('desktop_welcomed')) return;
+  setTimeout(() => {
+    showToast('💡 Keyboard shortcuts: D T B N R C F — press ? for help', 'success');
+    localStorage.setItem('desktop_welcomed', '1');
+  }, 2000);
+}
+
+// ── Mobile: swipe between pages ───────────────────────────────────────────────
+(function() {
+  if (typeof window === 'undefined') return;
+  let touchStartX = 0, touchStartY = 0;
+  const PAGES = ['dashboard','transactions','expenses','networth','retirement','cashflow','firedrill'];
+
+  document.addEventListener('touchstart', function(e) {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  document.addEventListener('touchend', function(e) {
+    if (!isMobile()) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    // Only horizontal swipes > 60px that aren't mostly vertical
+    if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx) * 0.8) return;
+    // Don't swipe when on sliders or scrollable elements
+    if (e.target.type === 'range') return;
+    const activePage = document.querySelector('.page.active');
+    if (!activePage) return;
+    const currentIdx = PAGES.indexOf(activePage.id);
+    if (currentIdx === -1) return;
+    if (dx < 0 && currentIdx < PAGES.length - 1) showPage(PAGES[currentIdx + 1]);
+    if (dx > 0 && currentIdx > 0) showPage(PAGES[currentIdx - 1]);
+  }, { passive: true });
+})();
+
+// ── Mobile: pull-to-refresh on dashboard ─────────────────────────────────────
+(function() {
+  let startY = 0, pulling = false;
+  const threshold = 80;
+  document.addEventListener('touchstart', function(e) {
+    if (document.querySelector('#dashboard.active') && window.scrollY === 0) {
+      startY = e.touches[0].clientY;
+      pulling = true;
+    }
+  }, { passive: true });
+  document.addEventListener('touchend', function(e) {
+    if (!pulling) return;
+    const dy = e.changedTouches[0].clientY - startY;
+    if (dy > threshold) {
+      refreshAll();
+      showToast('↻ Refreshing...', 'success');
+    }
+    pulling = false;
+  }, { passive: true });
+})();
 
 const plaidS=document.createElement('script');
 plaidS.src='https://cdn.plaid.com/link/v2/stable/link-initialize.js';
