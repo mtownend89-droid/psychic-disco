@@ -19,7 +19,7 @@
   /* Borders — more visible */
   --border:rgba(255,255,255,0.09);--border2:rgba(255,255,255,0.15);
   /* Text — brighter, higher contrast */
-  --text:#f0f2fa;--muted:#a0a4bc;--hint:#606480;
+  --text:#f0f2fa;--muted:#b0b4cc;--hint:#7c80a0;
   /* Accent colors — slightly brighter for readability on dark bg */
   --green:#3dda91;--green-dim:rgba(61,218,145,0.12);--green-glow:rgba(61,218,145,0.25);
   --red:#f46a6a;--red-dim:rgba(244,106,106,0.12);
@@ -311,12 +311,12 @@ input, select, textarea { font-size: 16px !important; }
 .wvalue{font-family:var(--mono);font-size:22px;font-weight:600;line-height:1.1;}
 .wvalue.green{color:var(--green);}.wvalue.red{color:var(--red);}.wvalue.blue{color:var(--blue);}
 .wvalue.amber{color:var(--amber);}.wvalue.purple{color:var(--purple);}.wvalue.cyan{color:var(--cyan);}
-.wsub{font-size:10.5px;color:var(--hint);margin-top:5px;}
+.wsub{font-size:10.5px;color:var(--muted);margin-top:5px;}
 
 /* ── CARDS ── */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:0 1px 3px rgba(0,0,0,0.25);}
 .card-sm{padding:16px;}
-.card-title{font-size:11px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:0.09em;margin-bottom:12px;}
+.card-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.09em;margin-bottom:12px;}
 
 /* ── LAYOUT GRIDS ── */
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
@@ -349,26 +349,26 @@ input, select, textarea { font-size: 16px !important; }
 .page-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
 .page-title{font-size:20px;font-weight:600;cursor:default;}
 .page-title[contenteditable="true"]{background:var(--surface3);border-radius:6px;padding:2px 8px;outline:1px solid var(--green);}
-.page-sub{font-size:12px;color:var(--muted);margin-top:3px;}
+.page-sub{font-size:12px;color:var(--text);opacity:0.72;margin-top:3px;}
 .page-hdr-right{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
 
 /* ── TAB ROW ── */
 .tab-row{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:18px;}
-.tab-btn{padding:9px 16px;background:none;border:none;color:var(--hint);font-size:13px;cursor:pointer;font-family:var(--font);font-weight:400;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.13s;}
+.tab-btn{padding:9px 16px;background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;font-family:var(--font);font-weight:400;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.13s;}
 .tab-btn:hover{color:var(--muted);}
 .tab-btn.active{color:var(--text);border-bottom-color:var(--green);font-weight:500;}
 .tab-panel{display:none;}.tab-panel.active{display:block;}
 
 /* ── TABLES ── */
 .tbl{width:100%;border-collapse:collapse;}
-.tbl th{text-align:left;font-size:10px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:0.1em;padding:0 6px 10px 0;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap;}
-.tbl th:hover{color:var(--muted);}
+.tbl th{text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;padding:0 6px 10px 0;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap;}
+.tbl th:hover{color:var(--text);}
 .tbl th.sorted{color:var(--green);}
 .tbl th .sa{font-size:9px;margin-left:3px;}
 .tbl td{padding:10px 6px 10px 0;border-bottom:1px solid var(--border);vertical-align:middle;font-size:13.5px;}
 .tbl tr:last-child td{border-bottom:none;}
 .tbl tr:hover td{background:rgba(255,255,255,0.015);}
-.tbl tr.row-paid td{opacity:0.38;text-decoration:line-through;}
+.tbl tr.row-paid td{opacity:0.48;text-decoration:line-through;color:var(--muted);}
 .tbl tr.tbl-total td{font-weight:600;border-top:1px solid var(--border2);border-bottom:none;padding-top:12px;}
 
 /* ── PILLS ── */
@@ -377,7 +377,7 @@ input, select, textarea { font-size: 16px !important; }
 .pill-LOAN{background:var(--amber-dim);color:var(--amber);}
 .pill-HM{background:var(--green-dim);color:var(--green);}
 .pill-CAR{background:var(--purple-dim);color:var(--purple);}
-.pill-PH,.pill-TV,.pill-OTHER{background:rgba(255,255,255,0.06);color:var(--muted);}
+.pill-PH,.pill-TV,.pill-OTHER{background:rgba(255,255,255,0.08);color:var(--text);}
 .pill-FAM{background:var(--red-dim);color:var(--red);}
 .pill-SAVE{background:var(--cyan-dim);color:var(--cyan);}
 .badge-live{font-size:9px;background:var(--green-dim);color:var(--green);padding:1px 5px;border-radius:10px;margin-left:5px;font-weight:700;vertical-align:middle;}
@@ -386,7 +386,7 @@ input, select, textarea { font-size: 16px !important; }
 /* ── STATUS ── */
 .st-ov{color:var(--red);font-size:11.5px;font-weight:600;}
 .st-due{color:var(--amber);font-size:11.5px;font-weight:600;}
-.st-ok{color:var(--hint);font-size:11.5px;}
+.st-ok{color:var(--muted);font-size:11.5px;}
 .st-paid{color:var(--green);font-size:11.5px;font-weight:600;}
 
 /* ── FILTERS ── */
@@ -406,11 +406,11 @@ input, select, textarea { font-size: 16px !important; }
 .modal{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:24px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;}
 .modal-title{font-size:16px;font-weight:600;margin-bottom:3px;}
 .modal-sub{font-size:12.5px;color:var(--muted);margin-bottom:18px;}
-.modal-section{font-size:10px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:0.1em;margin:14px 0 8px;}
+.modal-section{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin:14px 0 8px;}
 .modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--border);}
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:9px;margin-bottom:12px;}
 .form-field{display:flex;flex-direction:column;gap:4px;}
-.form-field label{font-size:11px;color:var(--muted);font-weight:500;}
+.form-field label{font-size:12px;color:var(--text);font-weight:500;}
 .form-field input,.form-field select{height:34px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 11px;background:var(--surface2);color:var(--text);font-size:13px;outline:none;font-family:var(--font);transition:border-color 0.13s;}
 .form-field input:focus,.form-field select:focus{border-color:rgba(46,204,138,0.4);}
 .chk-group{display:flex;flex-direction:column;gap:9px;margin-bottom:12px;}
@@ -428,7 +428,7 @@ input, select, textarea { font-size: 16px !important; }
 /* ── SLIDERS ── */
 .slider-block{margin-bottom:13px;}
 .slider-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;font-size:12.5px;}
-.slider-hdr span{color:var(--muted);}
+.slider-hdr span{color:var(--text);}
 .slider-hdr strong{font-family:var(--mono);font-size:12.5px;color:var(--text);}
 input[type=range]{width:100%;accent-color:var(--green);}
 .plaid-note{font-size:10.5px;color:var(--green);margin-bottom:5px;}
@@ -442,7 +442,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
 
 /* ── ZERO BUDGET ── */
 .zb-row{display:flex;align-items:center;gap:8px;margin-bottom:9px;}
-.zb-label{min-width:110px;font-size:12.5px;color:var(--muted);}
+.zb-label{min-width:110px;font-size:12.5px;color:var(--text);}
 .zb-bg{flex:1;height:7px;border-radius:4px;background:var(--surface3);overflow:hidden;}
 .zb-fill{height:100%;border-radius:4px;transition:width 0.18s;}
 .zb-val{min-width:56px;text-align:right;font-family:var(--mono);font-size:12px;font-weight:500;}
@@ -450,7 +450,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
 
 /* ── CALENDAR ── */
 .cal-grid{display:grid;grid-template-columns:82px 1fr 1fr 1fr 1fr;}
-.cal-hdr{padding:7px 9px;font-size:9.5px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:0.09em;}
+.cal-hdr{padding:7px 9px;font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.09em;}
 .cal-cell{padding:9px 9px;font-size:12px;border-top:1px solid var(--border);}
 .cal-cell:first-child{font-weight:500;}
 
@@ -460,7 +460,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
 .drag-section.dragging{opacity:0.3;}
 .drag-section.drag-over{outline:2px dashed var(--green);outline-offset:5px;border-radius:var(--radius);}
 .dh-row{display:flex;align-items:center;gap:7px;margin-bottom:10px;}
-.dh{display:flex;align-items:center;gap:6px;cursor:grab;color:var(--hint);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;user-select:none;padding:3px 5px;border-radius:4px;transition:all 0.13s;opacity:0.5;}
+.dh{display:flex;align-items:center;gap:6px;cursor:grab;color:var(--muted);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;user-select:none;padding:3px 5px;border-radius:4px;transition:all 0.13s;opacity:0.5;}
 .dh:hover{opacity:1;color:var(--muted);background:rgba(255,255,255,0.05);}
 .dh:hover{color:var(--muted);background:rgba(255,255,255,0.04);}
 .dh:active{cursor:grabbing;}
@@ -471,13 +471,13 @@ input[type=range]{width:100%;accent-color:var(--green);}
 .acct-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);}
 .acct-row:last-child{border-bottom:none;}
 .acct-name{font-size:13px;font-weight:500;}
-.acct-sub{font-size:10.5px;color:var(--hint);margin-top:2px;}
+.acct-sub{font-size:10.5px;color:var(--muted);margin-top:2px;}
 .acct-bal{font-family:var(--mono);font-size:13px;font-weight:500;}
-.acct-type{font-size:10px;color:var(--hint);margin-top:2px;text-align:right;}
+.acct-type{font-size:10px;color:var(--muted);margin-top:2px;text-align:right;}
 
 /* ── ALLOC BARS ── */
 .alloc-row{display:flex;align-items:center;gap:9px;margin-bottom:9px;}
-.alloc-name{min-width:115px;font-size:12.5px;color:var(--muted);}
+.alloc-name{min-width:115px;font-size:12.5px;color:var(--text);}
 .alloc-bg{flex:1;height:7px;border-radius:4px;background:var(--surface3);overflow:hidden;}
 .alloc-fill{height:100%;border-radius:4px;transition:width 0.3s;}
 .alloc-pct{min-width:32px;text-align:right;font-family:var(--mono);font-size:12px;font-weight:500;}
@@ -486,7 +486,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
 .error-banner{background:var(--red-dim);color:var(--red);border-radius:var(--radius-sm);padding:11px 14px;font-size:13px;margin-bottom:14px;display:none;}
 .spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin 0.65s linear infinite;display:inline-block;}
 @keyframes spin{to{transform:rotate(360deg);}}
-.empty{text-align:center;padding:2.5rem;color:var(--hint);font-size:13px;}
+.empty{text-align:center;padding:2.5rem;color:var(--muted);font-size:13px;}
 .editable{outline:none;border-radius:4px;padding:1px 4px;display:inline-block;min-width:50px;transition:background 0.13s;}
 .editable:focus{background:var(--surface3);}
 .mono{font-family:var(--mono);}
@@ -564,7 +564,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
 .fd-toggle input:checked + .fd-toggle-slider::before{transform:translateX(16px);}
 .fd-income-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:13px;}
 .fd-income-name{min-width:130px;font-weight:500;}
-.fd-income-orig{min-width:70px;color:var(--hint);font-family:var(--mono);font-size:12px;text-decoration:line-through;}
+.fd-income-orig{min-width:70px;color:var(--muted);font-family:var(--mono);font-size:12px;text-decoration:line-through;}
 .fd-extra-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px;}
 .fd-impact-ok{font-size:11px;color:var(--green);font-weight:600;}
 .fd-impact-min{font-size:11px;color:var(--amber);font-weight:600;}
@@ -671,7 +671,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
 .qs-item:last-child { border-right: none; }
 .qs-item:hover { background: rgba(255,255,255,0.03); }
 .qs-icon { font-size: 18px; flex-shrink: 0; }
-.qs-label { font-size: 10px; color: var(--hint); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+.qs-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
 .qs-value { font-family: var(--mono); font-size: 14px; font-weight: 500; margin-top: 1px; }
 
 /* Desktop sidebar extras */
@@ -756,7 +756,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
 .color-picker-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);}
 .color-picker-row:last-child{border-bottom:none;}
 .color-picker-label{font-size:13px;color:var(--text);}
-.color-picker-sub{font-size:11px;color:var(--hint);margin-top:2px;}
+.color-picker-sub{font-size:11px;color:var(--muted);margin-top:2px;}
 .color-swatch{display:flex;align-items:center;gap:8px;}
 .color-swatch input[type=color]{width:36px;height:36px;border:1.5px solid var(--border2);border-radius:var(--radius-xs);cursor:pointer;background:none;padding:2px;}
 .color-swatch input[type=color]::-webkit-color-swatch-wrapper{padding:0;border-radius:4px;}
@@ -798,7 +798,8 @@ input[type=range]{width:100%;accent-color:var(--green);}
 
 
 /* Account name editing */
-.acct-row { position: relative; }
+.acct-row { position: relative; transition:background 0.13s; }
+.acct-row-clickable:hover { background:rgba(255,255,255,0.04); border-radius:var(--radius-sm); margin:0 -8px; padding-left:8px; }
 .acct-edit-btn {
   display: none; position: absolute; right: 0; top: 50%;
   transform: translateY(-50%); background: var(--surface3);
@@ -811,6 +812,84 @@ input[type=range]{width:100%;accent-color:var(--green);}
 .nav-btn { user-select: none; }
 .nav-btn.sb-dragging { opacity: 0.4; }
 .nav-btn.sb-drag-over { border-top: 2px solid var(--green); }
+
+
+/* ── DATE RANGE PICKER ── */
+.date-range-bar {
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap; margin-bottom: 14px;
+}
+.drp-btn {
+  height: 30px; padding: 0 12px; border-radius: 20px;
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text); font-size: 12px; cursor: pointer;
+  font-family: var(--font); transition: all 0.13s; white-space: nowrap;
+}
+.drp-btn:hover  { border-color: var(--border2); background: var(--surface3); }
+.drp-btn.active { border-color: var(--green); background: rgba(61,218,145,0.1); color: var(--green); font-weight: 600; }
+.drp-custom {
+  display: none; align-items: center; gap: 7px;
+  padding: 6px 10px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.drp-custom.visible { display: flex; }
+.drp-custom label  { font-size: 11.5px; color: var(--muted); }
+.drp-custom input[type=date] {
+  height: 30px; padding: 0 8px;
+  background: var(--surface3); border: 1px solid var(--border);
+  border-radius: var(--radius-xs); color: var(--text);
+  font-family: var(--font); font-size: 12.5px; outline: none;
+  color-scheme: dark;
+}
+.drp-custom input[type=date]:focus { border-color: var(--green); }
+/* Scroll-wheel date selector */
+.scroll-date-modal {
+  position: fixed; inset: 0; z-index: 200;
+  display: none; align-items: flex-end; justify-content: center;
+  background: rgba(0,0,0,0.55);
+}
+.scroll-date-modal.open { display: flex; }
+.scroll-date-sheet {
+  background: var(--sidebar); border-radius: 20px 20px 0 0;
+  padding: 20px 24px 32px; width: 100%; max-width: 420px;
+  border-top: 1px solid var(--border2);
+}
+.scroll-date-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; text-align: center; }
+.scroll-date-wheels {
+  display: flex; gap: 0; justify-content: center; margin-bottom: 20px;
+  height: 200px; overflow: hidden; position: relative;
+}
+.scroll-date-wheels::before, .scroll-date-wheels::after {
+  content: ''; position: absolute; left: 0; right: 0; height: 70px;
+  z-index: 2; pointer-events: none;
+}
+.scroll-date-wheels::before {
+  top: 0;
+  background: linear-gradient(to bottom, var(--sidebar) 0%, transparent 100%);
+}
+.scroll-date-wheels::after {
+  bottom: 0;
+  background: linear-gradient(to top, var(--sidebar) 0%, transparent 100%);
+}
+.scroll-date-wheel {
+  flex: 1; overflow-y: scroll; scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  text-align: center;
+}
+.scroll-date-wheel::-webkit-scrollbar { display: none; }
+.scroll-date-item {
+  height: 40px; line-height: 40px; font-size: 16px;
+  scroll-snap-align: center; color: var(--hint);
+  transition: color 0.1s, font-size 0.1s; cursor: pointer;
+}
+.scroll-date-item.selected { color: var(--text); font-size: 17px; font-weight: 600; }
+.scroll-date-sel-line {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  left: 16px; right: 16px; height: 42px; border-top: 1.5px solid var(--border2);
+  border-bottom: 1.5px solid var(--border2); pointer-events: none; z-index: 3;
+}
+.scroll-date-btns { display: flex; gap: 10px; }
+.scroll-date-btns button { flex: 1; height: 44px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; font-family: var(--font); cursor: pointer; border: none; }
 
 </style>
 </head><body>
@@ -1047,11 +1126,12 @@ input[type=range]{width:100%;accent-color:var(--green);}
         </div>
         <div class="drag-section" data-id="charts">
           <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Spending charts</div></div>
+          <div id="dashChartDateBar"></div>
           <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:0">
             <div class="card card-sm">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-                <div class="card-title" style="margin-bottom:0">💸 Money flow (30d)</div>
-                <span style="font-size:10.5px;color:var(--hint)" id="spendChartLabel">Sankey diagram</span>
+                <div class="card-title" style="margin-bottom:0">💸 Money flow</div>
+                <span style="font-size:10.5px;color:var(--muted)" id="spendChartLabel">Sankey diagram</span>
               </div>
               <div id="sankeyWrap" style="width:100%"><canvas id="sankeyChart" style="width:100%;height:240px;display:block"></canvas></div>
               <div id="catChartWrap" style="display:none;height:240px"><canvas id="catChart"></canvas></div>
@@ -1954,6 +2034,45 @@ input[type=range]{width:100%;accent-color:var(--green);}
   </div>
 </div>
 
+<!-- Account Transactions Modal -->
+<div class="modal-bg" id="acctTxnModal" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal" style="max-width:680px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px">
+      <div class="modal-title" id="acctTxnTitle">Account Transactions</div>
+      <button onclick="gg('acctTxnModal').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:0;line-height:1">×</button>
+    </div>
+    <div class="modal-sub" id="acctTxnCount"></div>
+    <div style="overflow-x:auto;max-height:480px;overflow-y:auto">
+      <table class="tbl" style="width:100%">
+        <thead><tr>
+          <th>Date</th><th>Description</th><th>Category</th><th style="text-align:right">Amount</th>
+        </tr></thead>
+        <tbody id="acctTxnBody"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:14px;display:flex;justify-content:flex-end">
+      <button class="btn" onclick="gg('acctTxnModal').style.display='none'">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Scroll Date Picker Sheet -->
+<div class="scroll-date-modal" id="scrollDateModal">
+  <div class="scroll-date-sheet">
+    <div class="scroll-date-title" id="scrollDateTitle">Select date</div>
+    <div class="scroll-date-wheels">
+      <div class="scroll-date-sel-line"></div>
+      <div class="scroll-date-wheel" id="sdpMonth"></div>
+      <div class="scroll-date-wheel" id="sdpDay"></div>
+      <div class="scroll-date-wheel" id="sdpYear"></div>
+    </div>
+    <div class="scroll-date-btns">
+      <button style="background:var(--surface3);color:var(--muted)" onclick="sdpCancel()">Cancel</button>
+      <button style="background:var(--green);color:#fff" onclick="sdpConfirm()">Set date</button>
+    </div>
+  </div>
+</div>
+
 </div><!-- /mainContent -->
 
 <!-- ── MODALS ── -->
@@ -2028,7 +2147,7 @@ const PAL = new Proxy([], {
     return src[k];
   }
 });
-Chart.defaults.color='#484c65';Chart.defaults.borderColor='rgba(255,255,255,0.05)';
+Chart.defaults.color='#7c80a0';Chart.defaults.borderColor='rgba(255,255,255,0.05)';
 Chart.defaults.font.family="'DM Sans', sans-serif";
 
 // ── BILLS DATA ────────────────────────────────────────────────────────────────
@@ -2284,7 +2403,37 @@ function refreshRetAccounts(){
 function renderAccounts(){
   const el=gg('accountsList');if(!el)return;
   if(!allAccts.length){el.innerHTML='<div class="empty">No accounts</div>';return;}
-  el.innerHTML = allAccts.map(a => buildAcctRow(a)).filter(Boolean).join('');
+  el.innerHTML = allAccts.map(a => buildAcctRowClickable(a)).filter(Boolean).join('');
+}
+
+function buildAcctRowClickable(a) {
+  var id  = a.account_id || a.itemId || a.name || '';
+  var st  = getAcctStyle(id);
+  if (st.hidden) return '';
+  var bal = a.balances ? (a.balances.current != null ? a.balances.current : (a.balances.available || 0)) : 0;
+  var iC  = a.type === 'credit';
+  var displayName = st.name || a.name || '';
+  var badge = st.badge ? st.badge + ' ' : '';
+  var fw = (st.fontStyle === 'bold' || st.fontStyle === 'bold italic') ? '700' : '500';
+  var fi = (st.fontStyle === 'italic' || st.fontStyle === 'bold italic') ? 'italic' : 'normal';
+  var col = st.color ? 'color:' + st.color + ';' : '';
+  var nameStyle = 'font-weight:' + fw + ';font-style:' + fi + ';' + col;
+  var balColor = iC ? 'var(--red)' : 'var(--green)';
+  var safeId = id.replace(/"/g, '&quot;');
+  var safeName = displayName.replace(/"/g, '&quot;');
+  var instTxt = esc(a.institution || a.institutionName || '');
+  var maskTxt = a.mask ? ' · ****' + esc(a.mask) : '';
+  return '<div class="acct-row acct-row-clickable" title="Click to view transactions" data-acct-id="' + safeId + '" style="cursor:pointer;padding-right:64px">'
+    + '<div>'
+    + '<div class="acct-name" style="' + nameStyle + '">' + badge + esc(displayName) + '</div>'
+    + '<div class="acct-sub">' + instTxt + maskTxt + '</div>'
+    + '</div>'
+    + '<div style="text-align:right">'
+    + '<div class="acct-bal" style="color:' + balColor + '">' + (iC?'-':'') + fmtK(bal) + '</div>'
+    + '<div class="acct-type">' + esc(a.subtype || a.type || '') + '</div>'
+    + '</div>'
+    + '<button class="acct-edit-btn" data-acct-id="' + safeId + '" data-acct-name="' + safeName + '" title="Edit display">✏️</button>'
+    + '</div>';
 }
 function renderBanks(){
   const el=gg('banksList');if(!el)return;
@@ -2505,8 +2654,8 @@ function renderCalendar(){
   const rows=weeks.map(w=>{const it=w.inc.reduce((s,i)=>s+i.a,0),bt=w.bil.reduce((s,b)=>s+b.a,0),net=it-bt;running+=net;return{...w,it,bt,net,running};});
   const cb=gg('calendarBody');if(!cb)return;
   cb.innerHTML=rows.map((w,i)=>{
-    const iH=w.inc.map(x=>`<div style="font-size:11px;color:var(--green)">+${fmt2(x.a)} <span style="color:var(--hint)">${x.n.split(' ')[0]}</span></div>`).join('');
-    const bH=w.bil.map(x=>`<div style="font-size:11px;color:${x.paid?'var(--hint)':'var(--red)'};${x.paid?'text-decoration:line-through':''}">-${fmt2(x.a)} <span style="color:var(--hint)">${x.n.split(' ')[0]}</span></div>`).join('');
+    const iH=w.inc.map(x=>`<div style="font-size:11px;color:var(--green)">+${fmt2(x.a)} <span style="color:var(--muted)">${x.n.split(' ')[0]}</span></div>`).join('');
+    const bH=w.bil.map(x=>`<div style="font-size:11px;color:${x.paid?'var(--muted)':'var(--red)'};${x.paid?'text-decoration:line-through':''}">-${fmt2(x.a)} <span style="color:var(--muted)">${x.n.split(' ')[0]}</span></div>`).join('');
     const bc=w.running<0?'var(--red)':w.running<500?'var(--amber)':'var(--green)';
     return `<div class="cal-grid" style="${i%2===0?'background:rgba(255,255,255,0.012)':''}">
       <div class="cal-cell" style="font-weight:500;font-size:12px">${mo}/${w.s}–${w.e}</div>
@@ -2519,7 +2668,7 @@ function renderCalendar(){
   const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const mos=Array.from({length:6},(_,i)=>{const d=new Date(yr,mo-1+i,1);return{l:mn[d.getMonth()],inc:monthlyIncome(),bil:monthlyBills()};});
   const pc=gg('plChart');if(pc){if(BC.pl)BC.pl.destroy();BC.pl=new Chart(pc,{type:'bar',data:{labels:mos.map(m=>m.l),datasets:[{label:'Income',data:mos.map(m=>Math.round(m.inc)),backgroundColor:'#2ecc8a',borderRadius:3},{label:'Bills',data:mos.map(m=>Math.round(m.bil)),backgroundColor:'#f05c5c',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11},boxWidth:9}}},scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>fmtM(v)},grid:{color:'rgba(255,255,255,0.03)'}}}}})}
-  const ub=gg('upcomingBills');if(ub){const td=new Date();ub.innerHTML=bills.filter(b=>b.due&&b.pay>0).sort((a,b)=>a.due-b.due).map(b=>{const dd=b.next_due_date?new Date(b.next_due_date):new Date(td.getFullYear(),td.getMonth(),b.due);const du=Math.ceil((dd-td)/86400000);const sc=du<0?'st-ov':du<=5?'st-due':'st-ok';return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:12.5px;${b.paid?'opacity:0.35;':''}"><div><div style="font-weight:500">${esc(b.name)}</div><div style="font-size:11px;color:var(--hint)">Due ${b.next_due_date?new Date(b.next_due_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'day '+b.due}</div></div><div style="text-align:right"><div class="mono" style="color:var(--red)">${fmt2(b.pay)}</div><div class="${sc}">${du<0?'Overdue':du===0?'Today':du===1?'Tomorrow':'In '+du+'d'}</div></div></div>`;}).join('');}
+  const ub=gg('upcomingBills');if(ub){const td=new Date();ub.innerHTML=bills.filter(b=>b.due&&b.pay>0).sort((a,b)=>a.due-b.due).map(b=>{const dd=b.next_due_date?new Date(b.next_due_date):new Date(td.getFullYear(),td.getMonth(),b.due);const du=Math.ceil((dd-td)/86400000);const sc=du<0?'st-ov':du<=5?'st-due':'st-ok';return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:12.5px;${b.paid?'opacity:0.35;':''}"><div><div style="font-weight:500">${esc(b.name)}</div><div style="font-size:11px;color:var(--muted)">Due ${b.next_due_date?new Date(b.next_due_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'day '+b.due}</div></div><div style="text-align:right"><div class="mono" style="color:var(--red)">${fmt2(b.pay)}</div><div class="${sc}">${du<0?'Overdue':du===0?'Today':du===1?'Tomorrow':'In '+du+'d'}</div></div></div>`;}).join('');}
 }
 
 // ── ZERO BUDGET ───────────────────────────────────────────────────────────────
@@ -2614,7 +2763,7 @@ function switchExpTab(tab){
   if(tab==='calendar')renderCalendar();
   if(tab==='zero')renderZeroBudget();
   if(tab==='income')renderIncomeTab();
-  if(tab==='cashflow'){renderCashFlow();setTimeout(()=>{const c=gg('cfContainer');if(c){initDrag(c);c.querySelectorAll('.dh').forEach(h=>{h.style.opacity='1';h.style.pointerEvents='auto';});}},100);}
+  if(tab==='cashflow'){setTimeout(()=>{const b=gg('cfDateRangeBar');if(b&&!b.querySelector('.drp-btn'))b.innerHTML=buildDateRangeBar('cashflow',90);},50);renderCashFlow();setTimeout(()=>{const c=gg('cfContainer');if(c){initDrag(c);c.querySelectorAll('.dh').forEach(h=>{h.style.opacity='1';h.style.pointerEvents='auto';});}},100);}
 }
 
 // ── NET WORTH ─────────────────────────────────────────────────────────────────
@@ -2697,7 +2846,8 @@ function exportNWExcel(){
 
 // ── CASH FLOW ─────────────────────────────────────────────────────────────────
 function renderCashFlow(){
-  const byM={};allTxns.forEach(t=>{const m=t.date.slice(0,7);if(!byM[m])byM[m]={inc:0,exp:0,cnt:0};if(t.amount<0)byM[m].inc+=Math.abs(t.amount);else byM[m].exp+=t.amount;byM[m].cnt++;});
+  const cfDr=getDateRange('cashflow',90);
+  const byM={};allTxns.filter(t=>t.date>=cfDr.from&&t.date<=cfDr.to).forEach(t=>{const m=t.date.slice(0,7);if(!byM[m])byM[m]={inc:0,exp:0,cnt:0};if(t.amount<0)byM[m].inc+=Math.abs(t.amount);else byM[m].exp+=t.amount;byM[m].cnt++;});
   const months=Object.keys(byM).sort().slice(-12);
   const tb=gg('cfBody');
   if(tb){if(!months.length){tb.innerHTML='<tr><td colspan="5" class="empty">No data — connect accounts first.</td></tr>';return;}tb.innerHTML=months.map(m=>{const d=byM[m];const net=d.inc-d.exp;return `<tr><td class="mono">${m}</td><td class="mono" style="color:var(--cyan)">${fmt2(d.inc)}</td><td class="mono" style="color:var(--red)">${fmt2(d.exp)}</td><td class="mono" style="font-weight:700;color:${net>=0?'var(--cyan)':'var(--red)'}">${net>=0?'+':''}${fmt2(net)}</td><td style="color:var(--hint)">${d.cnt}</td></tr>`;}).join('');}
@@ -2822,7 +2972,7 @@ function closeExportModal(){gg('exportModal').style.display='none';}
 function exportExcel(){
   if(!allTxns.length&&!allAccts.length){showToast('No data','error');return;}
   const from=gg('exportFrom').value,to=gg('exportTo').value;
-  const fil=allTxns.filter(t=>(!from||t.date>=from)&&(!to||t.date<=to));
+  const fil=allTxns.filter(t=>(from?t.date>=from:true)&&(to?t.date<=to:true));
   const wb=XLSX.utils.book_new();
   if(gg('chkTransactions').checked){const d=[['Date','Merchant','Category','Amount','Type','Bank']];fil.forEach(t=>d.push([t.date,t.merchant_name||t.name||'',fmtCat(t.personal_finance_category?.primary||t.category?.[0]||'Other'),parseFloat(t.amount.toFixed(2)),t.amount>0?'Debit':'Credit',t.institution||'']));XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d),'Transactions');}
   if(gg('chkAccounts').checked){const d=[['Institution','Name','Type','Subtype','Mask','Balance']];allAccts.forEach(a=>d.push([a.institution||'',a.name,a.type,a.subtype||'',a.mask?'****'+a.mask:'',parseFloat((a.balances.current??0).toFixed(2))]));XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d),'Accounts');}
@@ -4048,9 +4198,9 @@ function renderSankey() {
   })).filter(n => n.value > 0);
 
   // RIGHT: spending categories + bills + savings
-  const cut = new Date(Date.now() - 30*86400000);
+  const dr=getDateRange('dashboard',30);
   const byCat = {};
-  allTxns.filter(t => new Date(t.date) >= cut && t.amount > 0).forEach(t => {
+  allTxns.filter(t => t.date>=dr.from && t.date<=dr.to && t.amount > 0).forEach(t => {
     const c = fmtCat(t.personal_finance_category?.primary || t.category?.[0] || 'Other');
     byCat[c] = (byCat[c]||0) + t.amount;
   });
@@ -5013,6 +5163,267 @@ document.addEventListener('click', function(e) {
   var name = btn.getAttribute('data-acct-name') || '';
   acctEditOpen(id, name);
 });
+
+
+// ── ACCOUNT → TRANSACTIONS ───────────────────────────────────────────────────
+document.addEventListener('click', function(e) {
+  var row = e.target.closest('.acct-row-clickable');
+  if (!row) return;
+  if (e.target.closest('.acct-edit-btn')) return;
+  var acctId = row.getAttribute('data-acct-id');
+  if (!acctId) return;
+  showAcctTransactions(acctId);
+});
+
+function showAcctTransactions(acctId) {
+  // Find account object
+  var acct = allAccts.find(function(a) { return (a.account_id||a.name) === acctId; });
+  var st = getAcctStyle(acctId);
+  var displayName = (st && st.name) || (acct && acct.name) || acctId;
+
+  // Filter transactions for this account, last 30 days
+  var cutoff = new Date(Date.now() - 30*24*60*60*1000);
+  var txns = allTxns.filter(function(t) {
+    return t.account_id === acctId && new Date(t.date) >= cutoff;
+  });
+
+  // Build modal content
+  var total = txns.reduce(function(s,t) { return s + t.amount; }, 0);
+  var rows = txns.length
+    ? txns.map(function(t) {
+        var amt = t.amount;
+        var col = amt > 0 ? 'var(--red)' : 'var(--green)';
+        var cat = fmtCat(t.personal_finance_category?.primary || t.category?.[0] || '');
+        return '<tr>'
+          + '<td style="color:var(--muted);white-space:nowrap">' + esc(t.date) + '</td>'
+          + '<td style="font-weight:500">' + esc(t.name || t.merchant_name || '') + '</td>'
+          + '<td><span class="pill pill-CC" style="font-size:9px">' + esc(cat) + '</span></td>'
+          + '<td class="mono" style="color:' + col + ';text-align:right">' + (amt>0?'-':'+')+fmt2(Math.abs(amt)) + '</td>'
+          + '</tr>';
+      }).join('')
+    : '<tr><td colspan="4" class="empty">No transactions in last 30 days</td></tr>';
+
+  var modal = gg('acctTxnModal');
+  if (!modal) return;
+  gg('acctTxnTitle').textContent = displayName + ' — Last 30 days';
+  gg('acctTxnCount').textContent = txns.length + ' transactions · net ' + (total>0?'-':'') + fmt2(Math.abs(total));
+  gg('acctTxnBody').innerHTML = rows;
+  modal.style.display = 'flex';
+}
+
+// ── SCROLL DATE PICKER ────────────────────────────────────────────────────────
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+let _sdpCallback = null;
+let _sdpDate = new Date();
+
+function sdpOpen(title, currentDate, callback) {
+  _sdpCallback = callback;
+  _sdpDate = currentDate ? new Date(currentDate) : new Date();
+  gg('scrollDateTitle').textContent = title || 'Select date';
+  sdpBuildWheels();
+  gg('scrollDateModal').classList.add('open');
+}
+
+function sdpBuildWheels() {
+  const y = _sdpDate.getFullYear();
+  const m = _sdpDate.getMonth();   // 0-based
+  const d = _sdpDate.getDate();
+  const now = new Date();
+  const minY = 2020, maxY = now.getFullYear();
+
+  // Month wheel
+  const mw = gg('sdpMonth'); mw.innerHTML = '';
+  ['','',''].concat(MONTHS).concat(['','']).forEach((label, i) => {
+    const div = document.createElement('div');
+    div.className = 'scroll-date-item' + (i-3 === m ? ' selected' : '');
+    div.textContent = label;
+    div.setAttribute('data-val', i-3);
+    mw.appendChild(div);
+  });
+
+  // Day wheel
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const dw = gg('sdpDay'); dw.innerHTML = '';
+  ['','',''].concat(Array.from({length:daysInMonth},(_,i)=>String(i+1))).concat(['','']).forEach((label,i) => {
+    const div = document.createElement('div');
+    div.className = 'scroll-date-item' + (i-3 === d-1 ? ' selected' : '');
+    div.textContent = label;
+    dw.appendChild(div);
+  });
+
+  // Year wheel
+  const years = [];
+  for (let i = minY; i <= maxY; i++) years.push(i);
+  const yw = gg('sdpYear'); yw.innerHTML = '';
+  ['','',''].concat(years).concat(['','']).forEach((label,i) => {
+    const div = document.createElement('div');
+    div.className = 'scroll-date-item' + (label === y ? ' selected' : '');
+    div.textContent = label;
+    yw.appendChild(div);
+  });
+
+  // Scroll to selected items
+  [mw, dw, yw].forEach(wheel => {
+    const sel = wheel.querySelector('.selected');
+    if (sel) {
+      const idx = [...wheel.children].indexOf(sel);
+      wheel.scrollTop = (idx - 2) * 40;
+    }
+  });
+
+  // Snap on scroll
+  [mw, dw, yw].forEach(wheel => {
+    wheel.onscroll = function() {
+      clearTimeout(wheel._snapTimer);
+      wheel._snapTimer = setTimeout(() => {
+        const idx = Math.round(wheel.scrollTop / 40) + 2;
+        const items = [...wheel.children];
+        items.forEach((el, i) => el.classList.toggle('selected', i === idx));
+        wheel.scrollTop = (idx - 2) * 40;
+      }, 80);
+    };
+  });
+}
+
+function sdpGetSelected() {
+  function getVal(wheel) {
+    const sel = wheel.querySelector('.selected');
+    return sel ? sel.textContent : '';
+  }
+  const mLabel = getVal(gg('sdpMonth'));
+  const dLabel = getVal(gg('sdpDay'));
+  const yLabel = getVal(gg('sdpYear'));
+  const m = MONTHS.indexOf(mLabel);
+  const d = parseInt(dLabel, 10);
+  const y = parseInt(yLabel, 10);
+  if (isNaN(m) || isNaN(d) || isNaN(y)) return null;
+  return new Date(y, m, d);
+}
+
+function sdpConfirm() {
+  const date = sdpGetSelected();
+  gg('scrollDateModal').classList.remove('open');
+  if (date && _sdpCallback) _sdpCallback(date);
+}
+
+function sdpCancel() {
+  gg('scrollDateModal').classList.remove('open');
+}
+
+// ── DATE RANGE BAR ────────────────────────────────────────────────────────────
+// Global date range state per context
+const _dateRanges = {};
+
+function toISODate(d) {
+  // YYYY-MM-DD
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+day;
+}
+
+function buildDateRangeBar(ctx, defaultDays, onChangeFn) {
+  // ctx: unique context id (e.g. 'transactions', 'dashboard', 'cashflow')
+  if (!_dateRanges[ctx]) {
+    const end   = new Date();
+    const start = new Date(Date.now() - (defaultDays||30)*86400000);
+    _dateRanges[ctx] = { days: defaultDays||30, from: toISODate(start), to: toISODate(end) };
+  }
+  const dr = _dateRanges[ctx];
+  const presets = [7,14,30,60,90,180,365];
+
+  return '<div class="date-range-bar" id="drb-'+ctx+'">'
+    + presets.map(d =>
+        '<button class="drp-btn'+(dr.days===d?' active':'')+'" onclick="setDateRange(\''+ctx+'\','+d+',null,null)">'
+        + (d<30 ? d+'d' : d===30?'30d':d===60?'60d':d===90?'3mo':d===180?'6mo':'1yr')
+        + '</button>'
+      ).join('')
+    + '<button class="drp-btn'+(dr.days===0?' active':'')+'" onclick="toggleCustomRange(\''+ctx+'\')" id="drb-custom-btn-'+ctx+'">📅 Custom</button>'
+    + '<div class="drp-custom'+(dr.days===0?' visible':'')+'" id="drb-custom-'+ctx+'">'
+    + '  <label>From</label>'
+    + '  <input type="date" id="drb-from-'+ctx+'" value="'+dr.from+'" onchange="setDateRange(\''+ctx+'\',0,this.value,gg(\'drb-to-'+ctx+'\').value)" style="color-scheme:dark">'
+    + '  <button class="drp-btn" onclick="sdpOpen(\'Start date\',gg(\'drb-from-'+ctx+'\').value, d=>{gg(\'drb-from-'+ctx+'\').value=toISODate(d);setDateRange(\''+ctx+'\',0,toISODate(d),gg(\'drb-to-'+ctx+'\').value)})">🗓</button>'
+    + '  <label>To</label>'
+    + '  <input type="date" id="drb-to-'+ctx+'" value="'+dr.to+'" onchange="setDateRange(\''+ctx+'\',0,gg(\'drb-from-'+ctx+'\').value,this.value)" style="color-scheme:dark">'
+    + '  <button class="drp-btn" onclick="sdpOpen(\'End date\',gg(\'drb-to-'+ctx+'\').value, d=>{gg(\'drb-to-'+ctx+'\').value=toISODate(d);setDateRange(\''+ctx+'\',0,gg(\'drb-from-'+ctx+'\').value,toISODate(d))})">🗓</button>'
+    + '</div>'
+    + '</div>';
+}
+
+function setDateRange(ctx, days, from, to) {
+  const dr = _dateRanges[ctx] || {};
+  if (days > 0) {
+    const end   = new Date();
+    const start = new Date(Date.now() - days*86400000);
+    dr.days = days; dr.from = toISODate(start); dr.to = toISODate(end);
+    // Hide custom, update preset buttons
+    const customDiv = gg('drb-custom-'+ctx); if (customDiv) customDiv.classList.remove('visible');
+    const bar = gg('drb-'+ctx);
+    if (bar) bar.querySelectorAll('.drp-btn').forEach(b => {
+      const isThis = b.textContent === (days===30?'30d':days===60?'60d':days===90?'3mo':days===180?'6mo':days===365?'1yr':days+'d');
+      b.classList.toggle('active', isThis && !b.textContent.includes('📅'));
+    });
+  } else {
+    dr.days = 0;
+    dr.from = from || dr.from;
+    dr.to   = to   || dr.to;
+    const bar = gg('drb-'+ctx);
+    if (bar) bar.querySelectorAll('.drp-btn:not([id*=custom])').forEach(b => b.classList.remove('active'));
+    const cb = gg('drb-custom-btn-'+ctx); if (cb) cb.classList.add('active');
+  }
+  _dateRanges[ctx] = dr;
+  // Trigger the callback for this context
+  if (typeof _drCallbacks !== 'undefined' && _drCallbacks[ctx]) _drCallbacks[ctx](dr.from, dr.to);
+}
+
+function toggleCustomRange(ctx) {
+  const div = gg('drb-custom-'+ctx); if (!div) return;
+  const visible = div.classList.contains('visible');
+  div.classList.toggle('visible', !visible);
+  const cb = gg('drb-custom-btn-'+ctx); if (cb) cb.classList.toggle('active', !visible);
+  if (!visible) setDateRange(ctx, 0, gg('drb-from-'+ctx)?.value, gg('drb-to-'+ctx)?.value);
+}
+
+function getDateRange(ctx, defaultDays) {
+  if (!_dateRanges[ctx]) {
+    const end = new Date(), start = new Date(Date.now()-(defaultDays||30)*86400000);
+    _dateRanges[ctx] = { days:defaultDays||30, from:toISODate(start), to:toISODate(end) };
+  }
+  return _dateRanges[ctx];
+}
+
+// Callback registry
+const _drCallbacks = {};
+function onDateRangeChange(ctx, fn) { _drCallbacks[ctx] = fn; }
+
+
+// ── INITIALIZE DATE RANGE BARS ────────────────────────────────────────────────
+function initDateRangeBars() {
+  // Dashboard
+  const dashBar = gg('dashChartDateBar');
+  if (dashBar) {
+    dashBar.innerHTML = buildDateRangeBar('dashboard', 30);
+    onDateRangeChange('dashboard', function(from, to) {
+      renderCharts();
+    });
+  }
+  // Transactions
+  const txnBar = gg('txnDateRangeBar');
+  if (txnBar) {
+    txnBar.innerHTML = buildDateRangeBar('transactions', 30);
+    onDateRangeChange('transactions', function(from, to) {
+      filterTransactions();
+    });
+  }
+  // Cash flow
+  const cfBar = gg('cfDateRangeBar');
+  if (cfBar) {
+    cfBar.innerHTML = buildDateRangeBar('cashflow', 90);
+    onDateRangeChange('cashflow', function(from, to) {
+      renderCashFlow();
+    });
+  }
+}
 
 const plaidS=document.createElement('script');
 plaidS.src='https://cdn.plaid.com/link/v2/stable/link-initialize.js';
