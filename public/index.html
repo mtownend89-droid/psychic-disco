@@ -2943,21 +2943,89 @@ const FD_LEVERS = [
 ];
 
 function fdRenderLevers() {
-  const el = gg('fdLeversSimple'); if (!el) return;
-  el.innerHTML = FD_LEVERS.map(lev => {
-    const on = fdLeverEnabled[lev.id];
-    const amt = fdLeverAmounts[lev.id];
-    const monthly = lev.type==='monthly' ? amt : Math.round(amt*(lev.id==='k401'?0.72:1)/12);
-    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;padding:8px 10px;background:${on?'rgba(46,204,138,0.05)':'var(--surface2)'};border:1px solid ${on?'rgba(46,204,138,0.25)':'var(--border)'};border-radius:var(--radius-sm)">
-      <span style="font-size:16px">${lev.icon}</span>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:12.5px;font-weight:500">${lev.name}</div>
-        <div style="font-size:10.5px;color:var(--hint)">${lev.sub}</div>
-        ${on?`<div style="display:flex;align-items:center;gap:7px;margin-top:6px"><input type="range" min="0" max="${lev.max}" value="${amt}" step="${Math.round(lev.max/40)}" style="flex:1" oninput="fdLeverAmounts['${lev.id}']=+this.value;this.parentElement.querySelector('.lev-val').textContent=fmt2(+this.value)+(${JSON.stringify(lev.type))==='monthly'?'"/mo"':'"(one-time)"'});fdCalc()"><span class="lev-val mono" style="font-size:12px;color:var(--green);min-width:80px;text-align:right">${fmt2(amt)}${lev.type==='monthly'?'/mo':'(one-time)'}</span></div>`:''}
-      </div>
-      <label class="fd-toggle"><input type="checkbox" ${on?'checked':''} onchange="fdLeverEnabled['${lev.id}']=this.checked;fdRenderLevers();fdCalc()"><span class="fd-toggle-slider"></span></label>
-    </div>`;
-  }).join('');
+  var el = gg('fdLeversSimple');
+  if (!el) return;
+  var rows = [];
+  for (var i = 0; i < FD_LEVERS.length; i++) {
+    var lev = FD_LEVERS[i];
+    var on  = fdLeverEnabled[lev.id];
+    var amt = fdLeverAmounts[lev.id];
+    var mo  = (lev.type === 'monthly');
+    var div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:9px;padding:8px 10px;'
+      + 'background:' + (on ? 'rgba(46,204,138,0.05)' : 'var(--surface2)') + ';'
+      + 'border:1px solid ' + (on ? 'rgba(46,204,138,0.25)' : 'var(--border)') + ';'
+      + 'border-radius:var(--radius-sm)';
+    // icon
+    var iconSpan = document.createElement('span');
+    iconSpan.style.fontSize = '16px';
+    iconSpan.textContent = lev.icon;
+    div.appendChild(iconSpan);
+    // text block
+    var info = document.createElement('div');
+    info.style.cssText = 'flex:1;min-width:0';
+    var title = document.createElement('div');
+    title.style.cssText = 'font-size:12.5px;font-weight:500';
+    title.textContent = lev.name;
+    var sub = document.createElement('div');
+    sub.style.cssText = 'font-size:10.5px;color:var(--hint)';
+    sub.textContent = lev.sub;
+    info.appendChild(title);
+    info.appendChild(sub);
+    // slider row (only if enabled)
+    if (on) {
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:7px;margin-top:6px';
+      var inp = document.createElement('input');
+      inp.type  = 'range';
+      inp.min   = '0';
+      inp.max   = String(lev.max);
+      inp.value = String(amt);
+      inp.step  = String(Math.max(1, Math.round(lev.max / 40)));
+      inp.style.flex = '1';
+      inp.id    = 'lev-range-' + lev.id;
+      (function(lid, isMonthly) {
+        inp.addEventListener('input', function() {
+          var v = +this.value;
+          fdLeverAmounts[lid] = v;
+          var lbl = gg('lev-lbl-' + lid);
+          if (lbl) lbl.textContent = fmt2(v) + (isMonthly ? '/mo' : ' one-time');
+          fdCalc();
+        });
+      })(lev.id, mo);
+      var lbl = document.createElement('span');
+      lbl.id = 'lev-lbl-' + lev.id;
+      lbl.className = 'lev-val mono';
+      lbl.style.cssText = 'font-size:12px;color:var(--green);min-width:80px;text-align:right';
+      lbl.textContent = fmt2(amt) + (mo ? '/mo' : ' one-time');
+      row.appendChild(inp);
+      row.appendChild(lbl);
+      info.appendChild(row);
+    }
+    div.appendChild(info);
+    // toggle
+    var label = document.createElement('label');
+    label.className = 'fd-toggle';
+    var cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id   = 'lev-cb-' + lev.id;
+    if (on) cb.checked = true;
+    (function(lid) {
+      cb.addEventListener('change', function() {
+        fdLeverEnabled[lid] = this.checked;
+        fdRenderLevers();
+        fdCalc();
+      });
+    })(lev.id);
+    var slider = document.createElement('span');
+    slider.className = 'fd-toggle-slider';
+    label.appendChild(cb);
+    label.appendChild(slider);
+    div.appendChild(label);
+    rows.push(div);
+  }
+  el.innerHTML = '';
+  rows.forEach(function(r) { el.appendChild(r); });
 }
 
 function fdCalc() {
