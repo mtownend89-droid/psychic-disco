@@ -1258,7 +1258,22 @@ input[type=range]{width:100%;accent-color:var(--green);}
               <div id="sankeyWrap" style="width:100%"><canvas id="sankeyChart" style="width:100%;height:240px;display:block"></canvas></div>
               <div id="catChartWrap" style="display:none;height:240px"><canvas id="catChart"></canvas></div>
             </div>
-            <div class="card card-sm"><div class="card-title">daily spending (30d)</div><div class="chart-wrap" style="height:220px"><canvas id="dailyChart"></canvas></div></div>
+            <div class="card card-sm">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+                <div class="card-title" style="margin-bottom:0">📊 Income vs Spending</div>
+                <div style="display:flex;gap:4px">
+                  <button class="drp-btn active" id="plBtn-daily"   onclick="setPLPeriod('daily')">Daily</button>
+                  <button class="drp-btn"         id="plBtn-weekly"  onclick="setPLPeriod('weekly')">Weekly</button>
+                  <button class="drp-btn"         id="plBtn-monthly" onclick="setPLPeriod('monthly')">Monthly</button>
+                </div>
+              </div>
+              <div style="display:flex;gap:14px;margin-bottom:8px;font-size:11.5px;flex-wrap:wrap">
+                <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--green);margin-right:4px"></span>Income</span>
+                <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--red);margin-right:4px"></span>Spending</span>
+                <span style="margin-left:auto;color:var(--muted)" id="plNetLabel"></span>
+              </div>
+              <div class="chart-wrap" style="height:220px"><canvas id="dailyChart"></canvas></div>
+            </div>
           </div>
         </div>
         <div class="drag-section" data-id="swot">
@@ -2419,6 +2434,7 @@ function showPage(page){
   if(page==='networth'){renderNetWorth();loadSO('networth');setTimeout(()=>{const c=gg('nwContainer');if(c)initDrag(c);},100);}
 
   if(page==='firedrill'){initFireDrill();}
+  if(page==='settings'){setTimeout(renderSettingsPage,50);}
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
@@ -2673,9 +2689,155 @@ function renderCharts(){
   const byCat={};rec.forEach(t=>{const c=fmtCat(t.personal_finance_category?.primary||t.category?.[0]||'Other');byCat[c]=(byCat[c]||0)+t.amount;});
   const sorted=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,10);
   // catChart replaced by Sankey diagram
-  const byD={};rec.forEach(t=>{byD[t.date]=(byD[t.date]||0)+t.amount;});const days=Object.keys(byD).sort().slice(-30);
-  if(dailyChartI)dailyChartI.destroy();
-  dailyChartI=new Chart(gg('dailyChart'),{type:'bar',data:{labels:days.map(d=>d.slice(5)),datasets:[{data:days.map(d=>Math.round(byD[d])),backgroundColor:'#5b8def',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9},maxRotation:45,autoSkip:true,maxTicksLimit:10},grid:{display:false}},y:{ticks:{font:{size:9.5},callback:v=>'$'+v},grid:{color:'rgba(255,255,255,0.03)'}}}}});
+  renderPLChart();
+}
+
+// ── P&L CHART ──────────────────────────────────────────────────────────────
+var _plPeriod = 'daily';
+
+function setPLPeriod(period) {
+  _plPeriod = period;
+  ['daily','weekly','monthly'].forEach(function(p) {
+    var btn = gg('plBtn-' + p);
+    if (btn) btn.classList.toggle('active', p === period);
+  });
+  renderPLChart();
+}
+
+function renderPLChart() {
+  var dr = getDateRange('dashboard', 30);
+  var from = dr.from, to = dr.to;
+  // All transactions in range
+  var txns = allTxns.filter(function(t) { return t.date >= from && t.date <= to; });
+
+  // Income: from incomeSources (pre-loaded monthly amounts)
+  var FM = {weekly:52/12,biweekly:26/12,monthly:1,quarterly:1/3,annual:1/12};
+  var monthlyIncome = incomeSources.reduce(function(s,src) { return s + src.amt*(FM[src.freq]||1); }, 0);
+
+  // Build period buckets
+  var incBuckets = {}, expBuckets = {};
+
+  function getPeriodKey(dateStr) {
+    if (_plPeriod === 'daily') return dateStr;
+    if (_plPeriod === 'monthly') return dateStr.slice(0,7);
+    // Weekly — ISO week
+    var d = new Date(dateStr + 'T12:00:00');
+    var day = d.getDay() || 7;
+    var mon = new Date(d); mon.setDate(d.getDate() - day + 1);
+    return mon.toISOString().slice(0,10);
+  }
+
+  // Expense buckets from transactions
+  txns.filter(function(t) { return t.amount > 0; }).forEach(function(t) {
+    var k = getPeriodKey(t.date);
+    expBuckets[k] = (expBuckets[k]||0) + t.amount;
+  });
+
+  // Income buckets — distribute monthly income across periods
+  var startDate = new Date(from + 'T12:00:00');
+  var endDate   = new Date(to   + 'T12:00:00');
+  var daysDiff  = Math.max(1, Math.round((endDate - startDate) / 86400000));
+  var dailyIncome = monthlyIncome / 30.4;
+
+  if (_plPeriod === 'daily') {
+    // One entry per day in range
+    var cur = new Date(startDate);
+    while (cur <= endDate) {
+      var k = cur.toISOString().slice(0,10);
+      incBuckets[k] = Math.round(dailyIncome);
+      cur.setDate(cur.getDate() + 1);
+    }
+  } else if (_plPeriod === 'weekly') {
+    var weeklyIncome = monthlyIncome * 12 / 52;
+    // One entry per week start
+    var keys = Object.keys(expBuckets);
+    var allKeys = new Set(keys);
+    var cur2 = new Date(startDate);
+    var day2 = cur2.getDay() || 7;
+    cur2.setDate(cur2.getDate() - day2 + 1);
+    while (cur2 <= endDate) {
+      allKeys.add(cur2.toISOString().slice(0,10));
+      cur2.setDate(cur2.getDate() + 7);
+    }
+    allKeys.forEach(function(k) { incBuckets[k] = Math.round(weeklyIncome); });
+  } else {
+    // Monthly
+    var monthlyKeys = new Set(Object.keys(expBuckets).map(function(k) { return k.slice(0,7); }));
+    var y = startDate.getFullYear(), m = startDate.getMonth();
+    var endY = endDate.getFullYear(), endM = endDate.getMonth();
+    while (y < endY || (y === endY && m <= endM)) {
+      monthlyKeys.add(y + '-' + String(m+1).padStart(2,'0'));
+      m++; if (m > 11) { m = 0; y++; }
+    }
+    monthlyKeys.forEach(function(k) { incBuckets[k] = Math.round(monthlyIncome); });
+  }
+
+  // Merge and sort keys
+  var allKeys = Array.from(new Set([...Object.keys(incBuckets), ...Object.keys(expBuckets)])).sort();
+  if (allKeys.length > 60) allKeys = allKeys.slice(-60);
+
+  // Format labels
+  var labels = allKeys.map(function(k) {
+    if (_plPeriod === 'monthly') return k.slice(0,7);
+    var d = new Date(k + 'T12:00:00');
+    return (d.getMonth()+1) + '/' + d.getDate();
+  });
+
+  var incData = allKeys.map(function(k) { return Math.round(incBuckets[k]||0); });
+  var expData = allKeys.map(function(k) { return Math.round(expBuckets[k]||0); });
+
+  // Net label
+  var totalInc = incData.reduce(function(a,b){return a+b;},0);
+  var totalExp = expData.reduce(function(a,b){return a+b;},0);
+  var net = totalInc - totalExp;
+  var netEl = gg('plNetLabel');
+  if (netEl) {
+    netEl.textContent = 'Net: ' + (net >= 0 ? '+' : '') + fmt2(net);
+    netEl.style.color = net >= 0 ? 'var(--green)' : 'var(--red)';
+  }
+
+  var el = gg('dailyChart'); if (!el) return;
+  if (dailyChartI) dailyChartI.destroy();
+
+  var textColor = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#f0f2fa';
+  var mutedColor= getComputedStyle(document.documentElement).getPropertyValue('--muted').trim() || '#b0b4cc';
+
+  dailyChartI = new Chart(el, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'Income',   data: incData, backgroundColor: 'rgba(61,218,145,0.75)', borderRadius: 3, order: 2 },
+        { label: 'Spending', data: expData, backgroundColor: 'rgba(244,106,106,0.75)', borderRadius: 3, order: 1 },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(c) { return ' ' + c.dataset.label + ': $' + c.parsed.y.toLocaleString(); },
+            afterBody: function(items) {
+              var inc = items.find(function(i) { return i.dataset.label==='Income'; });
+              var exp = items.find(function(i) { return i.dataset.label==='Spending'; });
+              if (inc && exp) {
+                var n = (inc.parsed.y||0) - (exp.parsed.y||0);
+                return ['Net: ' + (n>=0?'+':'') + '$' + Math.abs(n).toLocaleString()];
+              }
+              return [];
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { font:{size:9}, maxRotation:45, autoSkip:true, maxTicksLimit:12, color:mutedColor }, grid:{display:false} },
+        y: { ticks: { font:{size:9.5}, callback:function(v){return '$'+v;}, color:mutedColor }, grid:{color:'rgba(255,255,255,0.04)'} }
+      }
+    }
+  });
 }
 
 // ── BILLS ─────────────────────────────────────────────────────────────────────
@@ -4117,56 +4279,53 @@ function showDesktopWelcome() {
 // Swipes left/right anywhere on the page to navigate between tabs.
 // Respects sliders, horizontal-scroll containers, and tab rows.
 (function() {
-  var _sx = 0, _sy = 0, _locked = false;
+  var _sx = 0, _sy = 0, _moving = false, _vertLock = false;
 
   document.addEventListener('touchstart', function(e) {
-    _sx     = e.touches[0].clientX;
-    _sy     = e.touches[0].clientY;
-    _locked = false;
+    _sx       = e.touches[0].clientX;
+    _sy       = e.touches[0].clientY;
+    _moving   = false;
+    _vertLock = false;
   }, { passive: true });
 
   document.addEventListener('touchmove', function(e) {
-    // Detect vertical-dominant moves early and lock out swipe
-    if (_locked) return;
+    if (_vertLock) return;
     var dx = e.touches[0].clientX - _sx;
     var dy = e.touches[0].clientY - _sy;
-    if (Math.abs(dy) > Math.abs(dx) * 0.9 && Math.abs(dy) > 8) _locked = true;
+    if (!_moving && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) _moving = true;
+    if (_moving && Math.abs(dy) > Math.abs(dx) * 1.2) _vertLock = true;
   }, { passive: true });
 
   document.addEventListener('touchend', function(e) {
-    if (!isMobile() || _locked) return;
+    if (!isMobile()) return;
+    if (_vertLock) return;
+
     var dx = e.changedTouches[0].clientX - _sx;
     var dy = e.changedTouches[0].clientY - _sy;
+    if (Math.abs(dx) < 45) return;
+    if (Math.abs(dy) > Math.abs(dx) * 0.75) return;
 
-    // Swipe threshold — 50px horizontal, less than 60% vertical
-    if (Math.abs(dx) < 50) return;
-    if (Math.abs(dy) > Math.abs(dx) * 0.6) return;
-
-    // Don't fire on form elements
+    // Block only on true interactive form elements
     var el = e.target;
-    var depth = 0;
-    while (el && el !== document.body && depth++ < 8) {
-      var t = el.tagName;
-      if (t === 'INPUT' || t === 'SELECT' || t === 'TEXTAREA' || t === 'BUTTON') return;
-      if (el.type === 'range') return;
-      // Only block if THIS element is an actual horizontal scroll container
-      // AND currently has scroll position (not just overflow:auto with no scroll)
-      var isHScroll = el.scrollWidth > el.clientWidth + 10;
-      if (isHScroll) {
-        var canScrollLeft  = el.scrollLeft > 5;
-        var canScrollRight = el.scrollLeft < el.scrollWidth - el.clientWidth - 5;
-        if ((dx > 0 && canScrollLeft) || (dx < 0 && canScrollRight)) return;
+    for (var i = 0; i < 6 && el && el !== document.body; i++, el = el.parentElement) {
+      var tag = (el.tagName || '').toUpperCase();
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+      if (tag === 'INPUT' && el.type === 'range') return;
+      // Block only if element has explicit overflow-x scroll style AND can actually scroll
+      var st = window.getComputedStyle(el);
+      var ox = st.overflowX;
+      if ((ox === 'scroll' || ox === 'auto') && el.scrollWidth > el.clientWidth + 8) {
+        if (dx > 0 && el.scrollLeft > 2) return;   // right swipe but can scroll left
+        if (dx < 0 && el.scrollLeft < el.scrollWidth - el.clientWidth - 2) return;
       }
-      el = el.parentElement;
     }
 
-    // Build page list from current sidebar order
+    // Get page order from sidebar (respects user's custom drag order)
     var nav = document.getElementById('sbNav');
     if (!nav) return;
     var pages = [];
     nav.querySelectorAll('.nav-btn').forEach(function(b) {
-      var oc = b.getAttribute('onclick') || '';
-      var m  = oc.match(/showPage\('([^']+)'\)/);
+      var m = (b.getAttribute('onclick') || '').match(/showPage\('([^']+)'\)/);
       if (m) pages.push(m[1]);
     });
 
@@ -4175,13 +4334,8 @@ function showDesktopWelcome() {
     var idx = pages.indexOf(active.id);
     if (idx < 0) return;
 
-    if (dx < 0 && idx < pages.length - 1) {
-      // Swipe LEFT → go to NEXT page (forward)
-      showPage(pages[idx + 1]);
-    } else if (dx > 0 && idx > 0) {
-      // Swipe RIGHT → go to PREVIOUS page (back)
-      showPage(pages[idx - 1]);
-    }
+    if (dx < 0 && idx < pages.length - 1) showPage(pages[idx + 1]);  // swipe left  → next
+    else if (dx > 0 && idx > 0)           showPage(pages[idx - 1]);  // swipe right → prev
   }, { passive: true });
 })();
 
@@ -4404,12 +4558,30 @@ function renderSankey() {
     ...(savings > 50 ? [{label:'Savings', value:Math.round(savings), color:'#3dda91'}] : []),
   ].filter(n => n.value > 0);
 
-  if (!incNodes.length || !outNodes.length) {
-    ctx.fillStyle = '#606480';
+  // If no transaction data, show bills-only flow
+  if (!incNodes.length) {
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim() || '#a0a4bc';
     ctx.font = '13px DM Sans, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('No transaction data yet', W/2, H/2);
+    ctx.fillText('No income sources configured', W/2, H/2);
     return;
+  }
+  if (!outNodes.length) {
+    // No transactions yet — show income → bills flow only
+    const billGroups = {};
+    bills.forEach(function(b) { if (b.pay > 0) billGroups[b.cat] = (billGroups[b.cat]||0) + b.pay; });
+    const catColors = {CC:'#f46a6a',HM:'#6b9ef5',LOAN:'#f5b042',CAR:'#b09afa',PH:'#45c8fc',FAM:'#f472b6',OTHER:'#94a3b8'};
+    Object.entries(billGroups).sort((a,b)=>b[1]-a[1]).forEach(function([cat,val],i) {
+      var oColors = ['#f46a6a','#6b9ef5','#f5b042','#b09afa','#45c8fc','#fb923c','#34d399'];
+      outNodes.push({label:cat, value:Math.round(val), color:catColors[cat]||oColors[i%oColors.length]});
+    });
+    if (!outNodes.length) {
+      ctx.fillStyle = '#a0a4bc';
+      ctx.font = '13px DM Sans, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Connect accounts to see spending flow', W/2, H/2);
+      return;
+    }
   }
 
   // ── Layout constants ─────────────────────────────────────────────────────
@@ -5197,6 +5369,8 @@ function bootSettings() {
   if (av && cu) { av.style.background = cu.color; av.textContent = cu.avatar; }
   if (un && cu) un.textContent = cu.name;
   if (ul && cu) { const t = getActiveTheme(); ul.textContent = t.name || 'Custom'; }
+  // Pre-render settings page so it's ready when user navigates to it
+  setTimeout(renderSettingsPage, 300);
 }
 
 
