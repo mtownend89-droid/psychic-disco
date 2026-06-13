@@ -1280,286 +1280,155 @@ input[type=range]{width:100%;accent-color:var(--green);}
 
 
     <!-- ── FIRE DRILL ── -->
+
+
     <div id="firedrill" class="page">
       <div class="page-hdr">
-        <div><div class="page-title" id="fdPageTitle">🔥 Fire Drill Scenarios</div><div class="page-sub" id="fdPageSub">Simulate financial emergencies — adjust bills and build a survival plan</div></div>
+        <div>
+          <div class="page-title" id="fdPageTitle">🔥 Fire Drill &amp; Debt Planner</div>
+          <div class="page-sub" id="fdPageSub">Simulate emergencies · plan debt payoff · drag sections to arrange</div>
+        </div>
         <div class="page-hdr-right" id="fdPageActions">
           <button class="btn" onclick="fdReset()">↺ Reset</button>
           <button class="btn primary" onclick="fdExport()">Export plan</button>
         </div>
       </div>
-      <!-- TOP TABS -->
-      <div class="tab-row" id="fdTopTabs" style="margin-bottom:20px;overflow-x:auto;flex-wrap:nowrap;">
+
+      <div class="tab-row" id="fdTopTabs">
         <button class="tab-btn active" onclick="fdSwitchTab('drill')">🔥 Fire Drill</button>
-        <button class="tab-btn" onclick="fdSwitchTab('debt')">💳 Debt Payoff Planner</button>
+        <button class="tab-btn" onclick="fdSwitchTab('debt')">💳 Debt Payoff</button>
       </div>
-      <!-- FIRE DRILL PANEL -->
+
+      <!-- ═══ FIRE DRILL TAB ═══════════════════════════════════════════════════ -->
       <div id="fdTab-drill">
-
-      <!-- SCENARIO SELECTOR -->
-      <div style="margin-bottom:20px">
-        <div class="card-title" style="margin-bottom:10px">Choose a scenario</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px" id="scenarioCards">
-
-          <div class="fd-scenario-card active" onclick="fdSetScenario('job')" data-id="job">
-            <div class="fd-sc-icon">💼</div>
-            <div class="fd-sc-name">Job Loss</div>
-            <div class="fd-sc-sub">One or both incomes gone</div>
-          </div>
-          <div class="fd-scenario-card" onclick="fdSetScenario('hurricane')" data-id="hurricane">
-            <div class="fd-sc-icon">🌀</div>
-            <div class="fd-sc-name">Hurricane</div>
-            <div class="fd-sc-sub">Displacement &amp; repairs</div>
-          </div>
-          <div class="fd-scenario-card" onclick="fdSetScenario('illness')" data-id="illness">
-            <div class="fd-sc-icon">🏥</div>
-            <div class="fd-sc-name">Illness / Injury</div>
-            <div class="fd-sc-sub">Medical costs &amp; lost work</div>
-          </div>
-          <div class="fd-scenario-card" onclick="fdSetScenario('divorce')" data-id="divorce">
-            <div class="fd-sc-icon">⚖️</div>
-            <div class="fd-sc-name">Separation</div>
-            <div class="fd-sc-sub">Split finances, legal costs</div>
-          </div>
-          <div class="fd-scenario-card" onclick="fdSetScenario('market')" data-id="market">
-            <div class="fd-sc-icon">📉</div>
-            <div class="fd-sc-name">Market Crash</div>
-            <div class="fd-sc-sub">Portfolio &amp; home value drop</div>
-          </div>
-          <div class="fd-scenario-card" onclick="fdSetScenario('custom')" data-id="custom">
-            <div class="fd-sc-icon">⚙️</div>
-            <div class="fd-sc-name">Custom</div>
-            <div class="fd-sc-sub">Build your own scenario</div>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- SCENARIO DESCRIPTION BANNER -->
-      <div class="insight warn" id="fdScenarioBanner" style="margin-bottom:18px">
-        <strong id="fdBannerTitle">Job Loss</strong> — <span id="fdBannerDesc">Simulating complete loss of one or both paychecks. Adjust income below to reflect what remains.</span>
-      </div>
-
-      <!-- MAIN LAYOUT -->
-      <div style="display:grid;grid-template-columns:1fr 320px;gap:14px;margin-bottom:20px" id="fdMainGrid">
-
-        <!-- LEFT COLUMN -->
-        <div>
-
-          <!-- INCOME SHOCKS -->
-          <div class="card" style="margin-bottom:14px">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-              <div class="card-title" style="margin-bottom:0">Income adjustments</div>
-              <span style="font-size:11px;color:var(--hint)">Slide to 0 to simulate job loss</span>
-            </div>
-            <div id="fdIncomeSliders"></div>
-            <div style="display:flex;justify-content:space-between;font-size:13px;padding:10px 0 0;border-top:1px solid var(--border);margin-top:4px">
-              <span style="color:var(--muted)">Monthly income (scenario)</span>
-              <span class="mono" style="font-weight:600;color:var(--cyan)" id="fdTotalIncome">—</span>
-            </div>
-          </div>
-
-          <!-- EXTRA COSTS -->
-          <div class="card" style="margin-bottom:14px">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-              <div class="card-title" style="margin-bottom:0">Scenario-specific extra costs</div>
-              <button class="btn" onclick="fdAddExtraCost()">+ Add cost</button>
-            </div>
-            <div id="fdExtraCosts"></div>
-            <div style="display:flex;justify-content:space-between;font-size:13px;padding:10px 0 0;border-top:1px solid var(--border);margin-top:4px">
-              <span style="color:var(--muted)">Total extra monthly costs</span>
-              <span class="mono" style="font-weight:600;color:var(--red)" id="fdTotalExtra">—</span>
-            </div>
-          </div>
-
-          <!-- BILL ADJUSTMENTS -->
-          <div class="card" style="margin-bottom:14px">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-              <div class="card-title" style="margin-bottom:0">Bill payment adjustments</div>
-              <div style="display:flex;gap:8px">
-                <button class="btn" onclick="fdSetAllBills('min')">All minimums</button>
-                <button class="btn" onclick="fdSetAllBills('zero')">Defer all</button>
-                <button class="btn" onclick="fdSetAllBills('full')">Restore full</button>
-              </div>
-            </div>
-            <div style="font-size:11.5px;color:var(--hint);margin-bottom:10px">Slide payments down to minimum or $0 to see your survival runway. Red = below minimum, yellow = at minimum, green = normal.</div>
-            <div style="overflow-x:auto">
-              <table class="tbl" id="fdBillTable">
-                <thead><tr>
-                  <th>Bill</th>
-                  <th>Normal pay</th>
-                  <th>Min required</th>
-                  <th style="min-width:180px">Scenario payment</th>
-                  <th>Impact</th>
-                </tr></thead>
-                <tbody id="fdBillBody"></tbody>
-                <tfoot><tr class="tbl-total">
-                  <td colspan="2">Totals</td>
-                  <td id="fdTotalMin" class="mono" style="color:var(--amber)"></td>
-                  <td id="fdTotalScenario" class="mono" style="color:var(--cyan)"></td>
-                  <td></td>
-                </tr></tfoot>
-              </table>
-            </div>
-          </div>
-
-          <!-- EMERGENCY LEVERS -->
-          <div class="card">
-            <div class="card-title" style="margin-bottom:14px">Emergency levers — available options</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" id="fdLevers">
-
-              <div class="fd-lever" id="lev-savings">
-                <div class="fd-lever-top">
-                  <div>
-                    <div class="fd-lever-title">Tap savings / emergency fund</div>
-                    <div class="fd-lever-sub">Checking + savings balance</div>
-                  </div>
-                  <label class="fd-toggle"><input type="checkbox" id="lev-savings-on" onchange="fdCalc()"><span class="fd-toggle-slider"></span></label>
-                </div>
-                <div class="fd-lever-body">
-                  <div class="slider-hdr" style="margin-bottom:4px"><span style="font-size:12px;color:var(--muted)">Monthly draw</span><strong id="lev-savings-val">$500</strong></div>
-                  <input type="range" id="lev-savings-amt" min="0" max="5000" value="500" step="100" oninput="fdCalc()">
-                  <div style="font-size:11px;color:var(--hint);margin-top:4px">Available: <span id="lev-savings-avail" class="mono">—</span></div>
-                </div>
-              </div>
-
-              <div class="fd-lever" id="lev-heloc">
-                <div class="fd-lever-top">
-                  <div>
-                    <div class="fd-lever-title">Draw on HELOC</div>
-                    <div class="fd-lever-sub">Home equity line of credit</div>
-                  </div>
-                  <label class="fd-toggle"><input type="checkbox" id="lev-heloc-on" onchange="fdCalc()"><span class="fd-toggle-slider"></span></label>
-                </div>
-                <div class="fd-lever-body">
-                  <div class="slider-hdr" style="margin-bottom:4px"><span style="font-size:12px;color:var(--muted)">Monthly draw</span><strong id="lev-heloc-val">$1,000</strong></div>
-                  <input type="range" id="lev-heloc-amt" min="0" max="10000" value="1000" step="100" oninput="fdCalc()">
-                  <div style="font-size:11px;color:var(--hint);margin-top:4px">Available: <span id="lev-heloc-avail" class="mono">—</span></div>
-                </div>
-              </div>
-
-              <div class="fd-lever" id="lev-401k">
-                <div class="fd-lever-top">
-                  <div>
-                    <div class="fd-lever-title">401k hardship withdrawal</div>
-                    <div class="fd-lever-sub">10% penalty + taxes apply</div>
-                  </div>
-                  <label class="fd-toggle"><input type="checkbox" id="lev-401k-on" onchange="fdCalc()"><span class="fd-toggle-slider"></span></label>
-                </div>
-                <div class="fd-lever-body">
-                  <div class="slider-hdr" style="margin-bottom:4px"><span style="font-size:12px;color:var(--muted)">One-time amount</span><strong id="lev-401k-val">$5,000</strong></div>
-                  <input type="range" id="lev-401k-amt" min="0" max="50000" value="5000" step="500" oninput="fdCalc()">
-                  <div style="font-size:11px;color:var(--hint);margin-top:4px">After penalties: <span id="lev-401k-net" class="mono">—</span></div>
-                </div>
-              </div>
-
-              <div class="fd-lever" id="lev-refi">
-                <div class="fd-lever-top">
-                  <div>
-                    <div class="fd-lever-title">Mortgage forbearance / refi</div>
-                    <div class="fd-lever-sub">Pause or reduce mortgage</div>
-                  </div>
-                  <label class="fd-toggle"><input type="checkbox" id="lev-refi-on" onchange="fdCalc()"><span class="fd-toggle-slider"></span></label>
-                </div>
-                <div class="fd-lever-body">
-                  <div class="slider-hdr" style="margin-bottom:4px"><span style="font-size:12px;color:var(--muted)">Monthly savings</span><strong id="lev-refi-val">$500</strong></div>
-                  <input type="range" id="lev-refi-amt" min="0" max="3000" value="500" step="100" oninput="fdCalc()">
-                  <div style="font-size:11px;color:var(--hint);margin-top:4px">Mortgage is <span class="mono">$2,638/mo</span></div>
-                </div>
-              </div>
-
-              <div class="fd-lever" id="lev-sell">
-                <div class="fd-lever-top">
-                  <div>
-                    <div class="fd-lever-title">Sell vehicle / asset</div>
-                    <div class="fd-lever-sub">One-time cash infusion</div>
-                  </div>
-                  <label class="fd-toggle"><input type="checkbox" id="lev-sell-on" onchange="fdCalc()"><span class="fd-toggle-slider"></span></label>
-                </div>
-                <div class="fd-lever-body">
-                  <div class="slider-hdr" style="margin-bottom:4px"><span style="font-size:12px;color:var(--muted)">Sale proceeds</span><strong id="lev-sell-val">$10,000</strong></div>
-                  <input type="range" id="lev-sell-amt" min="0" max="50000" value="10000" step="500" oninput="fdCalc()">
-                </div>
-              </div>
-
-              <div class="fd-lever" id="lev-insurance">
-                <div class="fd-lever-top">
-                  <div>
-                    <div class="fd-lever-title">Insurance / FEMA payout</div>
-                    <div class="fd-lever-sub">Homeowner, health, unemployment</div>
-                  </div>
-                  <label class="fd-toggle"><input type="checkbox" id="lev-insurance-on" onchange="fdCalc()"><span class="fd-toggle-slider"></span></label>
-                </div>
-                <div class="fd-lever-body">
-                  <div class="slider-hdr" style="margin-bottom:4px"><span style="font-size:12px;color:var(--muted)">Monthly benefit</span><strong id="lev-insurance-val">$1,500</strong></div>
-                  <input type="range" id="lev-insurance-amt" min="0" max="10000" value="1500" step="100" oninput="fdCalc()">
-                </div>
-              </div>
-
-            </div>
-          </div>
-
+        <div class="insight warn" id="fdScenarioBanner" style="margin-bottom:14px">
+          <strong id="fdBannerTitle">Job Loss</strong> — <span id="fdBannerDesc">Slide income sources to zero to model full job loss or partial amounts for reduced hours.</span>
         </div>
 
-        <!-- RIGHT COLUMN — LIVE RESULTS -->
-        <div>
-
-          <!-- RUNWAY GAUGE -->
-          <div class="card" style="padding:18px;margin-bottom:12px;text-align:center">
-            <div class="card-title" style="margin-bottom:6px">Survival runway</div>
-            <div id="fdRunwayNum" style="font-size:48px;font-weight:500;font-family:var(--mono);line-height:1;margin-bottom:4px">—</div>
-            <div id="fdRunwayLabel" style="font-size:13px;color:var(--muted);margin-bottom:14px">months until $0</div>
-            <div style="height:10px;border-radius:5px;background:var(--surface3);overflow:hidden;margin-bottom:8px">
-              <div id="fdRunwayBar" style="height:100%;border-radius:5px;background:var(--green);transition:width 0.4s;width:0%"></div>
-            </div>
-            <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--hint)">
-              <span>Critical</span><span>Stable</span><span>Safe</span>
-            </div>
-          </div>
-
-          <!-- MONTHLY SUMMARY -->
-          <div class="card" style="padding:16px;margin-bottom:12px">
-            <div class="card-title" style="margin-bottom:12px">Monthly summary</div>
-            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--muted)">Income (scenario)</span><span class="mono" style="color:var(--cyan)" id="fd-sum-income">—</span></div>
-            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--muted)">Bills (scenario)</span><span class="mono" style="color:var(--red)" id="fd-sum-bills">—</span></div>
-            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--muted)">Extra costs</span><span class="mono" style="color:var(--red)" id="fd-sum-extra">—</span></div>
-            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px"><span style="color:var(--muted)">Emergency levers</span><span class="mono" style="color:var(--green)" id="fd-sum-levers">—</span></div>
-            <div style="display:flex;justify-content:space-between;padding:9px 0 0;font-size:14px;font-weight:600"><span>Net monthly</span><span class="mono" id="fd-sum-net">—</span></div>
-          </div>
-
-          <!-- STATUS ALERTS -->
-          <div id="fdAlerts" style="margin-bottom:12px"></div>
-
-          <!-- RUNWAY CHART -->
-          <div class="card" style="padding:16px;margin-bottom:12px">
-            <div class="card-title" style="margin-bottom:10px">Balance over time</div>
-            <div style="position:relative;height:160px">
-              <canvas id="fdRunwayChart" role="img" aria-label="Projected balance runway chart"></canvas>
-            </div>
-          </div>
-
-          <!-- ACTIONS CHECKLIST -->
-          <div class="card" style="padding:16px">
-            <div class="card-title" style="margin-bottom:12px">Immediate action checklist</div>
-            <div id="fdChecklist"></div>
-          </div>
-
+        <!-- Scenario cards -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px" id="scenarioCards">
+          <div class="fd-scenario-card active" onclick="fdSetScenario('job')" data-id="job"><div class="fd-sc-icon">💼</div><div class="fd-sc-name">Job Loss</div><div class="fd-sc-sub">One or both incomes gone</div></div>
+          <div class="fd-scenario-card" onclick="fdSetScenario('hurricane')" data-id="hurricane"><div class="fd-sc-icon">🌀</div><div class="fd-sc-name">Hurricane</div><div class="fd-sc-sub">Displacement &amp; repairs</div></div>
+          <div class="fd-scenario-card" onclick="fdSetScenario('illness')" data-id="illness"><div class="fd-sc-icon">🏥</div><div class="fd-sc-name">Illness / Injury</div><div class="fd-sc-sub">Medical costs &amp; lost work</div></div>
+          <div class="fd-scenario-card" onclick="fdSetScenario('divorce')" data-id="divorce"><div class="fd-sc-icon">⚖️</div><div class="fd-sc-name">Separation</div><div class="fd-sc-sub">Split finances, legal costs</div></div>
+          <div class="fd-scenario-card" onclick="fdSetScenario('market')" data-id="market"><div class="fd-sc-icon">📉</div><div class="fd-sc-name">Market Crash</div><div class="fd-sc-sub">Portfolio &amp; home value drop</div></div>
+          <div class="fd-scenario-card" onclick="fdSetScenario('custom')" data-id="custom"><div class="fd-sc-icon">⚙️</div><div class="fd-sc-name">Custom</div><div class="fd-sc-sub">Build your own</div></div>
         </div>
-      </div>
 
-      <!-- NOTES -->
-      <div class="card">
-        <div class="card-title" style="margin-bottom:8px">Scenario notes</div>
-        <textarea id="fdNotes" placeholder="Record your plan, contacts, decisions, and next steps here…"
-          style="width:100%;min-height:80px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;color:var(--text);font-family:var(--font);font-size:13px;resize:vertical;outline:none;line-height:1.6"
-          oninput="localStorage.setItem('fdNotes',this.value)"></textarea>
-      </div>
+        <!-- Draggable sections -->
+        <div class="drag-container" id="fdDrillContainer">
+
+          <div class="drag-section" data-id="fd-income">
+            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Income adjustments</div></div>
+            <div class="card" style="margin-bottom:0">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <div class="card-title" style="margin-bottom:0">Income adjustments</div>
+                <span style="font-size:11px;color:var(--hint)">Slide to 0 = job loss</span>
+              </div>
+              <div id="fdIncomeSliders"></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;padding:10px 0 0;border-top:1px solid var(--border);margin-top:4px">
+                <span style="color:var(--muted)">Monthly income (scenario)</span>
+                <span class="mono" style="font-weight:600;color:var(--cyan)" id="fdTotalIncome">—</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="drag-section" data-id="fd-bills">
+            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Bill payment adjustments</div></div>
+            <div class="card" style="margin-bottom:0">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+                <div class="card-title" style="margin-bottom:0">Bill payment adjustments</div>
+                <div style="display:flex;gap:7px">
+                  <button class="btn" onclick="fdSetAllBills('min')">All minimums</button>
+                  <button class="btn" onclick="fdSetAllBills('zero')">Defer all</button>
+                  <button class="btn" onclick="fdSetAllBills('full')">Restore full</button>
+                </div>
+              </div>
+              <div style="font-size:11.5px;color:var(--hint);margin-bottom:10px">Slide payments down to minimum or $0. 🟢 Normal &nbsp;🟡 Minimum &nbsp;🔴 Deferred</div>
+              <div style="overflow-x:auto">
+                <table class="tbl" id="fdBillTable">
+                  <thead><tr><th>Bill</th><th>Normal</th><th>Min</th><th style="min-width:160px">Scenario payment</th><th>Impact</th></tr></thead>
+                  <tbody id="fdBillBody"></tbody>
+                  <tfoot><tr class="tbl-total"><td colspan="2">Totals</td><td id="fdTotalMin" class="mono" style="color:var(--amber)"></td><td id="fdTotalScenario" class="mono" style="color:var(--cyan)"></td><td></td></tr></tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="drag-section" data-id="fd-extra">
+            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Extra costs &amp; emergency levers</div></div>
+            <div class="g2" style="margin-bottom:0">
+              <div class="card">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                  <div class="card-title" style="margin-bottom:0">Extra scenario costs</div>
+                  <button class="btn" onclick="fdAddExtraCost()">+ Add cost</button>
+                </div>
+                <div id="fdExtraCosts"></div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;padding:10px 0 0;border-top:1px solid var(--border);margin-top:4px">
+                  <span style="color:var(--muted)">Total extra monthly costs</span>
+                  <span class="mono" style="font-weight:600;color:var(--red)" id="fdTotalExtra">—</span>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-title" style="margin-bottom:12px">Emergency levers</div>
+                <div id="fdLeversSimple"></div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;padding:10px 0 0;border-top:1px solid var(--border);margin-top:4px">
+                  <span style="color:var(--muted)">Monthly lever income</span>
+                  <span class="mono" style="font-weight:600;color:var(--green)" id="fdTotalLevers">—</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="drag-section" data-id="fd-results">
+            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Results &amp; runway</div></div>
+            <div class="g2" style="margin-bottom:0">
+              <div>
+                <div class="wgrid" style="margin-bottom:12px">
+                  <div class="widget w-cyan"><div class="wlabel">Income</div><div class="wvalue cyan" id="fd-sum-income">—</div><div class="wsub">scenario/mo</div></div>
+                  <div class="widget w-red"><div class="wlabel">Bills</div><div class="wvalue red" id="fd-sum-bills">—</div><div class="wsub">scenario/mo</div></div>
+                  <div class="widget w-red"><div class="wlabel">Extra costs</div><div class="wvalue red" id="fd-sum-extra">—</div><div class="wsub">/mo</div></div>
+                  <div class="widget w-green"><div class="wlabel">Levers</div><div class="wvalue green" id="fd-sum-levers">—</div><div class="wsub">/mo help</div></div>
+                </div>
+                <div class="card" style="margin-bottom:12px">
+                  <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:600;padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:12px">
+                    <span>Net monthly</span><span id="fd-sum-net" class="mono">—</span>
+                  </div>
+                  <div id="fdAlerts"></div>
+                </div>
+                <div class="card">
+                  <div class="card-title" style="margin-bottom:10px">Action checklist</div>
+                  <div id="fdChecklist"></div>
+                </div>
+              </div>
+              <div>
+                <div class="card" style="padding:16px;margin-bottom:12px;text-align:center">
+                  <div class="card-title" style="margin-bottom:8px">Survival runway</div>
+                  <div id="fdRunwayNum" style="font-size:52px;font-weight:500;font-family:var(--mono);line-height:1;margin-bottom:4px;color:var(--cyan)">—</div>
+                  <div id="fdRunwayLabel" style="font-size:13px;color:var(--muted);margin-bottom:14px">months until $0</div>
+                  <div style="height:10px;border-radius:5px;background:var(--surface3);overflow:hidden;margin-bottom:6px">
+                    <div id="fdRunwayBar" style="height:100%;border-radius:5px;background:var(--green);transition:width 0.4s;width:0%"></div>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--hint)"><span>Critical</span><span>Stable</span><span>Safe</span></div>
+                </div>
+                <div class="card" style="padding:16px;margin-bottom:12px">
+                  <div class="card-title" style="margin-bottom:8px">Balance over time</div>
+                  <div style="height:160px;position:relative"><canvas id="fdRunwayChart"></canvas></div>
+                </div>
+                <div class="card" style="padding:16px">
+                  <div class="card-title" style="margin-bottom:8px">Scenario notes</div>
+                  <textarea id="fdNotes" placeholder="Record your plan, contacts, decisions…" style="width:100%;min-height:70px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 11px;color:var(--text);font-family:var(--font);font-size:13px;resize:vertical;outline:none;line-height:1.6" oninput="localStorage.setItem('fdNotes',this.value)"></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /fdDrillContainer -->
       </div><!-- /fdTab-drill -->
 
-      <!-- DEBT PAYOFF PANEL -->
+      <!-- ═══ DEBT PAYOFF TAB ══════════════════════════════════════════════════ -->
       <div id="fdTab-debt" style="display:none">
-        <!-- WIDGETS ROW -->
-        <div class="wgrid" style="margin-bottom:18px">
+        <div class="wgrid" style="margin-bottom:16px">
           <div class="widget w-red"><div class="wlabel">Total Debt</div><div class="wvalue red" id="dp-total-debt">—</div><div class="wsub">all balances</div></div>
           <div class="widget w-amber"><div class="wlabel">Monthly Interest</div><div class="wvalue amber" id="dp-monthly-int">—</div><div class="wsub">being charged</div></div>
           <div class="widget w-cyan"><div class="wlabel">Monthly Payment</div><div class="wvalue cyan" id="dp-monthly-pay">—</div><div class="wsub">current total</div></div>
@@ -1567,143 +1436,84 @@ input[type=range]{width:100%;accent-color:var(--green);}
           <div class="widget w-purple"><div class="wlabel">Total Interest</div><div class="wvalue purple" id="dp-total-int">—</div><div class="wsub">you'll pay</div></div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 320px;gap:14px" id="dpMainGrid">
+        <div class="drag-container" id="fdDebtContainer">
 
-          <!-- LEFT: STRATEGY + DEBT TABLE -->
-          <div>
-
-            <!-- STRATEGY SELECTOR -->
-            <div class="card" style="margin-bottom:14px">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div class="drag-section" data-id="dp-strategy">
+            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Strategy &amp; extra payment</div></div>
+            <div class="card" style="margin-bottom:0">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
                 <div class="card-title" style="margin-bottom:0">Payoff strategy</div>
                 <button class="btn green-outline" onclick="dpSyncPlaid()">⟳ Sync Plaid</button>
               </div>
-              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px" id="dpStrategyCards">
-                <div class="fd-scenario-card active" onclick="dpSetStrategy('snowball')" data-id="snowball">
-                  <div class="fd-sc-icon">⛄</div>
-                  <div class="fd-sc-name">Debt Snowball</div>
-                  <div class="fd-sc-sub">Smallest balance first — quick wins</div>
-                </div>
-                <div class="fd-scenario-card" onclick="dpSetStrategy('avalanche')" data-id="avalanche">
-                  <div class="fd-sc-icon">🏔️</div>
-                  <div class="fd-sc-name">Debt Avalanche</div>
-                  <div class="fd-sc-sub">Highest APR first — saves most money</div>
-                </div>
-                <div class="fd-scenario-card" onclick="dpSetStrategy('hybrid')" data-id="hybrid">
-                  <div class="fd-sc-icon">⚖️</div>
-                  <div class="fd-sc-name">Hybrid</div>
-                  <div class="fd-sc-sub">Balance wins + savings</div>
-                </div>
-                <div class="fd-scenario-card" onclick="dpSetStrategy('custom')" data-id="custom-dp">
-                  <div class="fd-sc-icon">✏️</div>
-                  <div class="fd-sc-name">Custom Order</div>
-                  <div class="fd-sc-sub">Drag to set your own priority</div>
-                </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px" id="dpStrategyCards">
+                <div class="fd-scenario-card active" onclick="dpSetStrategy('snowball')" data-id="snowball"><div class="fd-sc-icon">⛄</div><div class="fd-sc-name">Debt Snowball</div><div class="fd-sc-sub">Smallest balance first</div></div>
+                <div class="fd-scenario-card" onclick="dpSetStrategy('avalanche')" data-id="avalanche"><div class="fd-sc-icon">🏔️</div><div class="fd-sc-name">Debt Avalanche</div><div class="fd-sc-sub">Highest APR first</div></div>
+                <div class="fd-scenario-card" onclick="dpSetStrategy('hybrid')" data-id="hybrid"><div class="fd-sc-icon">⚖️</div><div class="fd-sc-name">Hybrid</div><div class="fd-sc-sub">Balance speed + savings</div></div>
+                <div class="fd-scenario-card" onclick="dpSetStrategy('custom')" data-id="custom-dp"><div class="fd-sc-icon">✏️</div><div class="fd-sc-name">Custom Order</div><div class="fd-sc-sub">Your own priority</div></div>
               </div>
-              <div class="insight info" id="dpStrategyInsight" style="margin-bottom:0"></div>
-            </div>
-
-            <!-- EXTRA PAYMENT SLIDER -->
-            <div class="card" style="margin-bottom:14px">
-              <div class="card-title" style="margin-bottom:12px">Extra monthly payment</div>
+              <div class="insight info" id="dpStrategyInsight" style="margin-bottom:14px"></div>
               <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
-                <span style="font-size:13px;color:var(--muted);min-width:130px">Extra toward debt</span>
+                <span style="font-size:13px;color:var(--muted);min-width:140px">Extra monthly payment</span>
                 <input type="range" id="dp-extra" min="0" max="2000" value="0" step="50" style="flex:1" oninput="dpCalc()">
-                <span class="mono" style="font-weight:600;font-size:14px;color:var(--green);min-width:60px;text-align:right" id="dp-extra-val">$0/mo</span>
+                <span class="mono" style="font-weight:600;font-size:14px;color:var(--green);min-width:65px;text-align:right" id="dp-extra-val">$0/mo</span>
               </div>
-              <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
                 <button class="btn" onclick="gg('dp-extra').value=100;dpCalc()">+$100</button>
                 <button class="btn" onclick="gg('dp-extra').value=200;dpCalc()">+$200</button>
                 <button class="btn" onclick="gg('dp-extra').value=500;dpCalc()">+$500</button>
                 <button class="btn" onclick="gg('dp-extra').value=1000;dpCalc()">+$1,000</button>
-                <span style="font-size:12px;color:var(--hint);margin-left:auto;align-self:center">Months saved: <span id="dp-months-saved" style="color:var(--green);font-weight:600">—</span> · Interest saved: <span id="dp-int-saved" style="color:var(--green);font-weight:600">—</span></span>
+                <span style="font-size:12px;color:var(--hint);margin-left:auto">Months saved: <span id="dp-months-saved" style="color:var(--green);font-weight:600">—</span> · Interest saved: <span id="dp-int-saved" style="color:var(--green);font-weight:600">—</span></span>
               </div>
             </div>
+          </div>
 
-            <!-- DEBT TABLE -->
-            <div class="card">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div class="drag-section" data-id="dp-table">
+            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Debt payoff order</div></div>
+            <div class="card" style="margin-bottom:0">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
                 <div class="card-title" style="margin-bottom:0">Your debts — payoff order</div>
                 <span style="font-size:11px;color:var(--hint)" id="dpOrderHint">Sorted by strategy</span>
               </div>
               <div style="overflow-x:auto">
                 <table class="tbl" id="dpDebtTable">
-                  <thead><tr>
-                    <th style="width:28px">#</th>
-                    <th>Debt</th>
-                    <th>Balance</th>
-                    <th>APR</th>
-                    <th>Min pay</th>
-                    <th>Extra pay</th>
-                    <th>Payoff</th>
-                    <th>Interest cost</th>
-                    <th>Status</th>
-                  </tr></thead>
+                  <thead><tr><th>#</th><th>Debt</th><th>Balance</th><th>APR</th><th>Min</th><th>Extra</th><th>Payoff</th><th>Interest</th><th>Status</th></tr></thead>
                   <tbody id="dpDebtBody"></tbody>
-                  <tfoot><tr class="tbl-total">
-                    <td colspan="2">Totals</td>
-                    <td id="dp-foot-bal" class="mono" style="color:var(--red)"></td>
-                    <td></td>
-                    <td id="dp-foot-min" class="mono" style="color:var(--amber)"></td>
-                    <td id="dp-foot-extra" class="mono" style="color:var(--green)"></td>
-                    <td id="dp-foot-payoff"></td>
-                    <td id="dp-foot-int" class="mono" style="color:var(--red)"></td>
-                    <td></td>
-                  </tr></tfoot>
+                  <tfoot><tr class="tbl-total"><td colspan="2">Totals</td><td id="dp-foot-bal" class="mono" style="color:var(--red)"></td><td></td><td id="dp-foot-min" class="mono" style="color:var(--amber)"></td><td id="dp-foot-extra" class="mono" style="color:var(--green)"></td><td id="dp-foot-payoff"></td><td id="dp-foot-int" class="mono" style="color:var(--red)"></td><td></td></tr></tfoot>
                 </table>
               </div>
             </div>
-
           </div>
 
-          <!-- RIGHT: CHARTS + SUMMARY + TACTICS -->
-          <div>
+          <div class="drag-section" data-id="dp-charts">
+            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Charts &amp; comparison</div></div>
+            <div class="g2" style="margin-bottom:0">
+              <div class="card card-sm"><div class="card-title">Payoff timeline</div><div style="height:180px;position:relative"><canvas id="dpTimelineChart"></canvas></div></div>
+              <div class="card card-sm"><div class="card-title">Interest cost by debt</div><div style="height:180px;position:relative"><canvas id="dpIntChart"></canvas></div></div>
+            </div>
+          </div>
 
-            <!-- PAYOFF TIMELINE CHART -->
-            <div class="card" style="padding:16px;margin-bottom:12px">
-              <div class="card-title" style="margin-bottom:10px">Payoff timeline</div>
-              <div style="position:relative;height:180px">
-                <canvas id="dpTimelineChart" role="img" aria-label="Debt payoff timeline chart"></canvas>
+          <div class="drag-section" data-id="dp-tactics">
+            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Comparison &amp; tactics</div></div>
+            <div class="g2" style="margin-bottom:0">
+              <div class="card card-sm"><div class="card-title" style="margin-bottom:10px">Strategy comparison</div><div id="dpCompare"></div></div>
+              <div class="card card-sm"><div class="card-title" style="margin-bottom:10px">Quick win tactics</div><div id="dpTactics"></div></div>
+            </div>
+          </div>
+
+          <div class="drag-section" data-id="dp-schedule">
+            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Payoff schedule</div></div>
+            <div class="card" style="margin-bottom:0">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <div class="card-title" style="margin-bottom:0">Month-by-month payoff schedule</div>
+                <button class="btn primary" onclick="dpExport()">Export plan</button>
+              </div>
+              <div style="overflow-x:auto;max-height:300px;overflow-y:auto">
+                <table class="tbl" id="dpScheduleTable"><thead id="dpScheduleHead"></thead><tbody id="dpScheduleBody"></tbody></table>
               </div>
             </div>
-
-            <!-- INTEREST BREAKDOWN -->
-            <div class="card" style="padding:16px;margin-bottom:12px">
-              <div class="card-title" style="margin-bottom:10px">Interest by debt</div>
-              <div style="position:relative;height:160px">
-                <canvas id="dpIntChart" role="img" aria-label="Interest cost by debt"></canvas>
-              </div>
-            </div>
-
-            <!-- STRATEGY COMPARISON -->
-            <div class="card" style="padding:16px;margin-bottom:12px">
-              <div class="card-title" style="margin-bottom:12px">Strategy comparison</div>
-              <div id="dpCompare"></div>
-            </div>
-
-            <!-- QUICK TACTICS -->
-            <div class="card" style="padding:16px">
-              <div class="card-title" style="margin-bottom:12px">Quick win tactics</div>
-              <div id="dpTactics"></div>
-            </div>
-
           </div>
-        </div>
 
-        <!-- PAYOFF SCHEDULE -->
-        <div class="card" style="margin-top:14px;padding:16px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-            <div class="card-title" style="margin-bottom:0">Month-by-month payoff schedule</div>
-            <button class="btn primary" onclick="dpExport()"><svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export plan</button>
-          </div>
-          <div style="overflow-x:auto;max-height:320px;overflow-y:auto">
-            <table class="tbl" id="dpScheduleTable">
-              <thead id="dpScheduleHead"></thead>
-              <tbody id="dpScheduleBody"></tbody>
-            </table>
-          </div>
-        </div>
-
+        </div><!-- /fdDebtContainer -->
       </div><!-- /fdTab-debt -->
 
     </div><!-- /firedrill page -->
@@ -1895,7 +1705,7 @@ function showPage(page){
   if(page==='expenses'){renderBillsTab();renderCalendar();renderZeroBudget();renderIncomeTab();updateBudgetMetrics();}
   if(page==='networth')renderNetWorth();
   if(page==='cashflow')renderCashFlow();
-  if(page==='firedrill'){initFireDrill();fdSwitchTab('drill');}
+  if(page==='firedrill'){initFireDrill();}
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
@@ -2636,971 +2446,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-// ── FIRE DRILL ────────────────────────────────────────────────────────────────
-const FD_SCENARIOS = {
-  job: {
-    name:'Job Loss',
-    banner:'Simulating complete or partial loss of income. Slide income sources to zero to model full job loss, or partial amounts for reduced hours / one partner working.',
-    incomeScale:{matt:0,dana:1,auto:0,bonus:0},
-    extraCosts:[{name:'Job search / resume services',amt:100},{name:'Health insurance (COBRA)',amt:600}],
-    severity:'danger',
-  },
-  hurricane: {
-    name:'Hurricane / Natural Disaster',
-    banner:'Modeling temporary displacement, hotel stays, repairs, and deductibles. Florida residents: assume 2–4 weeks displacement minimum.',
-    incomeScale:{},
-    extraCosts:[{name:'Temporary housing / hotel',amt:3000},{name:'Food & supplies',amt:800},{name:'Insurance deductible (spread)',amt:500},{name:'Repairs not covered',amt:1000}],
-    severity:'warn',
-  },
-  illness: {
-    name:'Illness / Injury',
-    banner:'Modeling medical bills, reduced work capacity, and out-of-pocket costs. Adjust income if unable to work.',
-    incomeScale:{matt:0.5,dana:1},
-    extraCosts:[{name:'Medical bills / copays',amt:500},{name:'Prescriptions',amt:200},{name:'Home care / transport',amt:300}],
-    severity:'warn',
-  },
-  divorce: {
-    name:'Separation / Divorce',
-    banner:'Modeling split finances — one income, possible legal fees, and single-household costs. Bills may need to be split or fully covered by one person.',
-    incomeScale:{matt:1,dana:0,auto:0.5,bonus:1},
-    extraCosts:[{name:'Legal fees',amt:1500},{name:'Second housing costs',amt:1200},{name:'Child / support payments',amt:0}],
-    severity:'warn',
-  },
-  market: {
-    name:'Market Crash',
-    banner:'Modeling a 30–50% portfolio drop and potential home value decline. Investment accounts drop but income remains. Focus: stop discretionary spending.',
-    incomeScale:{},
-    extraCosts:[{name:'Margin call / forced sale',amt:0},{name:'Increased insurance premiums',amt:150}],
-    severity:'info',
-  },
-  custom: {
-    name:'Custom Scenario',
-    banner:'Build your own scenario. Adjust income, add costs, and toggle levers to model any financial emergency.',
-    incomeScale:{},
-    extraCosts:[],
-    severity:'info',
-  },
-};
-
-let fdCurrentScenario = 'job';
-let fdIncomeOverrides = {};  // { sourceIndex: scaledAmt }
-let fdExtraCosts = [];        // [{ name, amt }]
-let fdBillOverrides = {};     // { billIndex: scenarioPay }
-let fdRunwayChartInst = null;
-
-function fdSetScenario(id) {
-  fdCurrentScenario = id;
-  const sc = FD_SCENARIOS[id];
-
-  // Update card highlight
-  document.querySelectorAll('.fd-scenario-card').forEach(c => {
-    c.classList.toggle('active', c.dataset.id === id);
-  });
-
-  // Banner
-  const banner = gg('fdScenarioBanner');
-  if (banner) {
-    banner.className = 'insight ' + (sc.severity || 'warn');
-    banner.style.marginBottom = '18px';
-  }
-  const bt = gg('fdBannerTitle'); if (bt) bt.textContent = sc.name;
-  const bd = gg('fdBannerDesc'); if (bd) bd.textContent = sc.banner;
-
-  // Reset overrides then apply scenario defaults
-  fdIncomeOverrides = {};
-  fdExtraCosts = sc.extraCosts.map(e => ({ ...e }));
-  fdBillOverrides = {};
-
-  // Apply income scale
-  const scaleMap = { matt: 0, dana: 1, auto: 2, bonus: 3 };
-  Object.entries(sc.incomeScale || {}).forEach(([key, scale]) => {
-    const idx = scaleMap[key];
-    if (idx !== undefined && incomeSources[idx]) {
-      const orig = incomeSources[idx].amt;
-      const fm = { weekly: 52/12, biweekly: 26/12, monthly: 1, quarterly: 1/3, annual: 1/12 };
-      fdIncomeOverrides[idx] = Math.round(orig * (fm[incomeSources[idx].freq] || 1) * scale);
-    }
-  });
-
-  fdRenderIncomeSliders();
-  fdRenderExtraCosts();
-  fdRenderBillTable();
-  fdCalc();
-
-  // Restore notes
-  const notes = gg('fdNotes');
-  if (notes) notes.value = localStorage.getItem('fdNotes') || '';
-}
-
-function fdRenderIncomeSliders() {
-  const el = gg('fdIncomeSliders'); if (!el) return;
-  const fm = { weekly: 52/12, biweekly: 26/12, monthly: 1, quarterly: 1/3, annual: 1/12 };
-  el.innerHTML = incomeSources.map((src, i) => {
-    const origMo = Math.round(src.amt * (fm[src.freq] || 1));
-    const scenMo = fdIncomeOverrides[i] !== undefined ? fdIncomeOverrides[i] : origMo;
-    const pct = origMo > 0 ? Math.round(scenMo / origMo * 100) : 0;
-    const color = pct === 0 ? 'var(--red)' : pct < 75 ? 'var(--amber)' : 'var(--cyan)';
-    return `<div class="fd-income-row">
-      <span class="fd-income-name">${esc(src.name)}</span>
-      <span class="fd-income-orig">${fmt2(origMo)}/mo</span>
-      <input type="range" min="0" max="${origMo}" value="${scenMo}" step="50"
-        style="flex:1" oninput="fdIncomeOverrides[${i}]=+this.value;gg('fdi-val-${i}').textContent=fmt2(+this.value)+'/mo';gg('fdi-pct-${i}').textContent=Math.round(+this.value/${origMo}*100)+'%';fdCalcQuick()">
-      <span id="fdi-val-${i}" class="mono" style="min-width:72px;text-align:right;font-weight:600;color:${color}">${fmt2(scenMo)}/mo</span>
-      <span id="fdi-pct-${i}" style="min-width:34px;text-align:right;font-size:11px;color:var(--hint)">${pct}%</span>
-    </div>`;
-  }).join('');
-}
-
-function fdRenderExtraCosts() {
-  const el = gg('fdExtraCosts'); if (!el) return;
-  if (!fdExtraCosts.length) {
-    el.innerHTML = '<div style="color:var(--hint);font-size:12.5px;padding:8px 0">No extra costs — click "+ Add cost" to add scenario-specific expenses.</div>';
-    gg('fdTotalExtra').textContent = '$0';
-    return;
-  }
-  el.innerHTML = fdExtraCosts.map((c, i) => `
-    <div class="fd-extra-row">
-      <input type="text" value="${esc(c.name)}" placeholder="Cost name"
-        style="flex:1;height:32px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;color:var(--text);font-family:var(--font);font-size:13px;outline:none"
-        onblur="fdExtraCosts[${i}].name=this.value">
-      <input type="number" value="${c.amt}" min="0" step="50"
-        style="width:90px;height:32px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px;color:var(--cyan);font-family:var(--mono);font-size:13px;outline:none"
-        oninput="fdExtraCosts[${i}].amt=+this.value;fdCalcQuick()">
-      <span style="font-size:12px;color:var(--muted)">/mo</span>
-      <button class="btn danger" onclick="fdExtraCosts.splice(${i},1);fdRenderExtraCosts();fdCalc()">✕</button>
-    </div>`).join('');
-  const tot = fdExtraCosts.reduce((s, c) => s + c.amt, 0);
-  gg('fdTotalExtra').textContent = fmt2(tot);
-}
-
-function fdAddExtraCost() {
-  fdExtraCosts.push({ name: 'New cost', amt: 0 });
-  fdRenderExtraCosts();
-}
-
-function fdRenderBillTable() {
-  const tb = gg('fdBillBody'); if (!tb) return;
-  tb.innerHTML = bills.map((b, i) => {
-    const normal = b.pay;
-    const min = b.min || 0;
-    const scen = fdBillOverrides[i] !== undefined ? fdBillOverrides[i] : normal;
-    const pct = normal > 0 ? Math.round(scen / normal * 100) : 100;
-    let impactHtml, barColor;
-    if (scen === 0) { impactHtml = '<span class="fd-impact-defer">Deferred</span>'; barColor = 'var(--red)'; }
-    else if (scen <= min + 1) { impactHtml = '<span class="fd-impact-min">Minimum only</span>'; barColor = 'var(--amber)'; }
-    else { impactHtml = '<span class="fd-impact-ok">Normal</span>'; barColor = 'var(--green)'; }
-    return `<tr>
-      <td style="font-weight:500;font-size:12.5px">${esc(b.name)}<br><span class="pill pill-${b.cat}" style="font-size:9px">${b.cat}</span></td>
-      <td class="mono" style="color:var(--muted);font-size:12px">${fmt2(normal)}</td>
-      <td class="mono" style="color:var(--amber);font-size:12px">${min > 0 ? fmt2(min) : '—'}</td>
-      <td>
-        <div style="display:flex;align-items:center;gap:8px">
-          <input type="range" min="0" max="${normal}" value="${scen}" step="${Math.max(1,Math.round(normal/50))}"
-            style="flex:1;min-width:80px"
-            oninput="fdBillOverrides[${i}]=+this.value;gg('fdb-val-${i}').textContent=fmt2(+this.value);fdUpdateBillRow(${i},+this.value,${normal},${min});fdCalcQuick()">
-          <span id="fdb-val-${i}" class="mono" style="min-width:58px;font-size:12px;font-weight:600;color:${barColor}">${fmt2(scen)}</span>
-        </div>
-        <div style="height:4px;border-radius:2px;background:var(--surface3);overflow:hidden;margin-top:4px">
-          <div id="fdb-bar-${i}" style="height:100%;border-radius:2px;background:${barColor};width:${pct}%;transition:width 0.2s"></div>
-        </div>
-      </td>
-      <td id="fdb-imp-${i}">${impactHtml}</td>
-    </tr>`;
-  }).join('');
-  fdUpdateBillTotals();
-}
-
-function fdUpdateBillRow(i, scen, normal, min) {
-  let color, impactHtml;
-  if (scen === 0) { color = 'var(--red)'; impactHtml = '<span class="fd-impact-defer">Deferred</span>'; }
-  else if (scen <= min + 1) { color = 'var(--amber)'; impactHtml = '<span class="fd-impact-min">Minimum only</span>'; }
-  else { color = 'var(--green)'; impactHtml = '<span class="fd-impact-ok">Normal</span>'; }
-  const pct = normal > 0 ? Math.round(scen / normal * 100) : 100;
-  const val = gg('fdb-val-'+i); if (val) val.style.color = color;
-  const bar = gg('fdb-bar-'+i); if (bar) { bar.style.background = color; bar.style.width = pct+'%'; }
-  const imp = gg('fdb-imp-'+i); if (imp) imp.innerHTML = impactHtml;
-  fdUpdateBillTotals();
-}
-
-function fdUpdateBillTotals() {
-  const totalMin = bills.reduce((s, b) => s + (b.min || 0), 0);
-  const totalScen = bills.reduce((s, b, i) => s + (fdBillOverrides[i] !== undefined ? fdBillOverrides[i] : b.pay), 0);
-  const tm = gg('fdTotalMin'); if (tm) tm.textContent = fmt2(totalMin);
-  const ts = gg('fdTotalScenario'); if (ts) ts.textContent = fmt2(totalScen);
-}
-
-function fdSetAllBills(mode) {
-  bills.forEach((b, i) => {
-    if (mode === 'min') fdBillOverrides[i] = b.min || 0;
-    else if (mode === 'zero') fdBillOverrides[i] = 0;
-    else fdBillOverrides[i] = b.pay;
-  });
-  fdRenderBillTable();
-  fdCalc();
-}
-
-function fdGetLeverVal(id) {
-  const on = gg('lev-'+id+'-on');
-  const amt = gg('lev-'+id+'-amt');
-  return (on && on.checked && amt) ? +amt.value : 0;
-}
-
-function fdCalcQuick() {
-  // Fast recalc without full re-render
-  const inc = fdScenarioIncome();
-  const bil = fdScenarioBills();
-  const ext = fdExtraCosts.reduce((s, c) => s + c.amt, 0);
-  const lev = fdLeverTotal();
-  const net = inc - bil - ext + lev;
-  const ti = gg('fdTotalIncome'); if (ti) ti.textContent = fmt2(inc);
-  const te = gg('fdTotalExtra'); if (te) te.textContent = fmt2(ext);
-  const si = gg('fd-sum-income'); if (si) si.textContent = fmt2(inc);
-  const sb = gg('fd-sum-bills'); if (sb) sb.textContent = fmt2(bil);
-  const se = gg('fd-sum-extra'); if (se) se.textContent = fmt2(ext);
-  const sl = gg('fd-sum-levers'); if (sl) sl.textContent = '+'+fmt2(lev);
-  const sn = gg('fd-sum-net'); if (sn) { sn.textContent = fmt2(net); sn.style.color = net >= 0 ? 'var(--cyan)' : 'var(--red)'; }
-  fdCalcRunway(net);
-}
-
-function fdScenarioIncome() {
-  const fm = { weekly: 52/12, biweekly: 26/12, monthly: 1, quarterly: 1/3, annual: 1/12 };
-  return incomeSources.reduce((s, src, i) => {
-    if (fdIncomeOverrides[i] !== undefined) return s + fdIncomeOverrides[i];
-    return s + src.amt * (fm[src.freq] || 1);
-  }, 0);
-}
-
-function fdScenarioBills() {
-  return bills.reduce((s, b, i) => s + (fdBillOverrides[i] !== undefined ? fdBillOverrides[i] : b.pay), 0);
-}
-
-function fdLeverTotal() {
-  let total = 0;
-  ['savings','heloc','insurance'].forEach(id => { total += fdGetLeverVal(id); });
-  // 401k and sell are one-time — spread over 12 months for monthly equivalent
-  const k401 = fdGetLeverVal('401k');
-  const sell = fdGetLeverVal('sell');
-  const refi = fdGetLeverVal('refi');
-  total += Math.round((k401 * 0.72) / 12); // after 10% penalty + ~18% taxes
-  total += Math.round(sell / 12);
-  total += refi;
-  return total;
-}
-
-function fdCalcRunway(net) {
-  // Get available cash from nwAssets
-  const cashAssets = nwAssets.filter(a => a.cat === 'Cash & Bank').reduce((s, a) => s + a.value, 0);
-  const savingsLever = fdGetLeverVal('savings');
-  const helocLever = fdGetLeverVal('heloc');
-  const helocBal = Math.abs(bills.find(b => b.name.includes('HELOC'))?.bal || 45000);
-  const helocAvailable = Math.max(0, 100000 - helocBal); // assume $100k limit
-
-  // One-time funds
-  const k401Gross = fdGetLeverVal('401k');
-  const sellAmt = fdGetLeverVal('sell');
-  const oneTime = Math.round(k401Gross * 0.72) + sellAmt;
-
-  // Monthly buffer = cash assets + recurring lever income
-  let balance = cashAssets + oneTime;
-  const monthlyNet = net; // already includes lever monthly amounts
-
-  let months = 0;
-  if (monthlyNet >= 0) {
-    months = 999; // infinite runway
-  } else {
-    let bal = balance;
-    while (bal > 0 && months < 120) {
-      bal += monthlyNet;
-      months++;
-    }
-  }
-
-  // Update runway gauge
-  const rn = gg('fdRunwayNum');
-  const rl = gg('fdRunwayLabel');
-  const rb = gg('fdRunwayBar');
-  if (rn) {
-    if (months >= 999) { rn.textContent = '∞'; rn.style.color = 'var(--cyan)'; }
-    else { rn.textContent = months; rn.style.color = months < 3 ? 'var(--red)' : months < 6 ? 'var(--amber)' : 'var(--cyan)'; }
-  }
-  if (rl) rl.textContent = months >= 999 ? 'cash-flow positive' : months === 1 ? 'month until $0' : 'months until $0';
-  if (rb) {
-    const pct = months >= 999 ? 100 : Math.min(100, Math.round(months / 24 * 100));
-    rb.style.width = pct + '%';
-    rb.style.background = months < 3 ? 'var(--red)' : months < 6 ? 'var(--amber)' : 'var(--green)';
-  }
-
-  // Update runway chart
-  fdDrawRunwayChart(balance, monthlyNet, months);
-
-  // Update checklist and alerts
-  fdUpdateChecklist(months, net, cashAssets);
-  fdUpdateAlerts(months, net);
-
-  // Update lever availability
-  const sa = gg('lev-savings-avail'); if (sa) sa.textContent = fmt2(cashAssets);
-  const ha = gg('lev-heloc-avail'); if (ha) ha.textContent = fmt2(helocAvailable);
-  const kn = gg('lev-401k-net'); if (kn) kn.textContent = fmt2(Math.round(k401Gross * 0.72));
-
-  // Update lever values display
-  ['savings','heloc','401k','refi','sell','insurance'].forEach(id => {
-    const sl = gg('lev-'+id+'-amt');
-    const vl = gg('lev-'+id+'-val');
-    if (sl && vl) {
-      const v = +sl.value;
-      if (id === '401k') vl.textContent = fmt2(v);
-      else vl.textContent = fmt2(v) + (id === 'sell' ? '' : '/mo');
-      const lcard = gg('lev-'+id)?.closest?.('.fd-lever') || gg('lev-'+id);
-      if (lcard) {
-        const on = gg('lev-'+id+'-on');
-        if (on) lcard.classList.toggle('active', on.checked);
-      }
-    }
-  });
-  document.querySelectorAll('.fd-lever').forEach(el => {
-    const cb = el.querySelector('input[type=checkbox]');
-    if (cb) el.classList.toggle('active', cb.checked);
-  });
-}
-
-function fdDrawRunwayChart(startBalance, monthlyNet, totalMonths) {
-  const el = gg('fdRunwayChart'); if (!el) return;
-  const months = Math.min(totalMonths >= 999 ? 24 : totalMonths + 2, 24);
-  const labels = [], data = [];
-  let bal = startBalance;
-  for (let m = 0; m <= months; m++) {
-    labels.push('Mo ' + m);
-    data.push(Math.round(Math.max(bal, 0)));
-    bal += monthlyNet;
-  }
-  if (fdRunwayChartInst) fdRunwayChartInst.destroy();
-  fdRunwayChartInst = new Chart(el, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        data,
-        borderColor: totalMonths < 3 ? '#f05c5c' : totalMonths < 6 ? '#f0a540' : '#2ecc8a',
-        backgroundColor: totalMonths < 3 ? 'rgba(240,92,92,0.1)' : totalMonths < 6 ? 'rgba(240,165,64,0.1)' : 'rgba(46,204,138,0.08)',
-        borderWidth: 2, fill: true, tension: 0.3, pointRadius: 0,
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + fmt2(c.parsed.y) } } },
-      scales: {
-        x: { grid: { display: false }, ticks: { font: { size: 9 }, maxTicksLimit: 8 } },
-        y: { ticks: { callback: v => fmtM(v), font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.03)' } }
-      }
-    }
-  });
-}
-
-function fdUpdateAlerts(months, net) {
-  const el = gg('fdAlerts'); if (!el) return;
-  const alerts = [];
-  if (months < 3) alerts.push({ type: 'danger', msg: '⚠️ Critical: less than 3 months runway. Immediate action required — contact creditors now.' });
-  else if (months < 6) alerts.push({ type: 'warn', msg: '⚡ Warning: ' + months + ' months runway. Activate emergency levers and reduce all non-essential payments.' });
-  else if (months >= 999) alerts.push({ type: 'good', msg: '✓ Cash-flow positive in this scenario — income covers all obligations.' });
-  else alerts.push({ type: 'info', msg: '📊 ' + months + ' months runway. Monitor closely and reduce spending where possible.' });
-  el.innerHTML = alerts.map(a => `<div class="insight ${a.type}" style="margin-bottom:8px">${a.msg}</div>`).join('');
-}
-
-function fdUpdateChecklist(months, net, cashAssets) {
-  const el = gg('fdChecklist'); if (!el) return;
-  const items = [];
-  const sc = FD_SCENARIOS[fdCurrentScenario];
-
-  if (fdCurrentScenario === 'job' || fdCurrentScenario === 'illness') {
-    items.push({ icon: '📞', text: '<strong>File for unemployment</strong> — apply within 7 days of job loss at floridajobs.org. ~$275/wk max in Florida.' });
-    items.push({ icon: '🏥', text: '<strong>COBRA health insurance</strong> — you have 60 days to elect. Costs ~$600–$800/mo for a family.' });
-  }
-  if (fdCurrentScenario === 'hurricane') {
-    items.push({ icon: '📋', text: '<strong>File insurance claim immediately</strong> — document all damage with photos before cleanup.' });
-    items.push({ icon: '🏛️', text: '<strong>Register with FEMA</strong> — disasterassistance.gov within 60 days of disaster declaration.' });
-    items.push({ icon: '🔌', text: '<strong>Contact all creditors</strong> — most banks offer hurricane hardship programs: 90-day payment deferrals.' });
-  }
-  if (months < 6) {
-    items.push({ icon: '🏦', text: '<strong>Call your mortgage servicer</strong> — request forbearance before missing a payment. M&T Bank hardship line.' });
-    items.push({ icon: '💳', text: '<strong>Call credit card companies</strong> — request hardship rates. AMEX, Chase, and Capital One all have programs.' });
-    items.push({ icon: '🚗', text: '<strong>Contact auto lenders</strong> — Wells Fargo and Capital One offer 1–3 month payment deferrals.' });
-  }
-  if (cashAssets < 2000) {
-    items.push({ icon: '💰', text: '<strong>Apply for SNAP / food assistance</strong> — apply at myflorida.com/accessflorida if income drops significantly.' });
-  }
-  items.push({ icon: '📊', text: '<strong>Review all subscriptions</strong> — cancel Xfinity, streaming, and non-essential services immediately.' });
-  items.push({ icon: '📞', text: '<strong>T-Mobile hardship program</strong> — T-Mobile offers payment deferrals for qualifying customers.' });
-  items.push({ icon: '⚡', text: '<strong>FPL / Utilities assistance</strong> — call Lake Worth utilities and FPL to enroll in payment plans.' });
-
-  el.innerHTML = items.map(item => `
-    <div class="fd-check-item">
-      <span class="fd-check-icon">${item.icon}</span>
-      <span class="fd-check-body">${item.text}</span>
-    </div>`).join('');
-}
-
-function fdCalc() {
-  fdRenderIncomeSliders();
-  fdRenderExtraCosts();
-  fdCalcQuick();
-}
-
-function fdReset() {
-  fdIncomeOverrides = {};
-  fdExtraCosts = [];
-  fdBillOverrides = {};
-  fdSetScenario(fdCurrentScenario);
-}
-
-function fdExport() {
-  const sc = FD_SCENARIOS[fdCurrentScenario];
-  const inc = fdScenarioIncome();
-  const bil = fdScenarioBills();
-  const ext = fdExtraCosts.reduce((s, c) => s + c.amt, 0);
-  const lev = fdLeverTotal();
-  const net = inc - bil - ext + lev;
-
-  const wb = XLSX.utils.book_new();
-  const d = [
-    ['Fire Drill Scenario Report', '', ''],
-    ['Scenario', sc.name, ''],
-    ['Generated', new Date().toLocaleDateString(), ''],
-    ['', '', ''],
-    ['MONTHLY SUMMARY', '', ''],
-    ['Income (scenario)', fmt2(inc), ''],
-    ['Bills (scenario)', fmt2(bil), ''],
-    ['Extra costs', fmt2(ext), ''],
-    ['Emergency levers', '+'+fmt2(lev), ''],
-    ['Net monthly', fmt2(net), net >= 0 ? 'POSITIVE' : 'DEFICIT'],
-    ['', '', ''],
-    ['BILL ADJUSTMENTS', '', ''],
-    ['Bill', 'Normal Pay', 'Scenario Pay'],
-    ...bills.map((b, i) => [b.name, b.pay, fdBillOverrides[i] !== undefined ? fdBillOverrides[i] : b.pay]),
-    ['', '', ''],
-    ['NOTES', '', ''],
-    [gg('fdNotes')?.value || '', '', ''],
-  ];
-  const ws = XLSX.utils.aoa_to_sheet(d);
-  ws['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 16 }];
-  XLSX.utils.book_append_sheet(wb, ws, 'Fire Drill');
-  XLSX.writeFile(wb, 'Matt_Dana_FireDrill_' + todayStr() + '.xlsx');
-  showToast('Fire drill plan exported!', 'success');
-}
-
-function initFireDrill() {
-  fdSetScenario('job');
-  // Wire up lever slider labels
-  ['savings','heloc','401k','refi','sell','insurance'].forEach(id => {
-    const sl = gg('lev-'+id+'-amt');
-    if (sl) sl.addEventListener('input', () => {
-      const vl = gg('lev-'+id+'-val');
-      if (vl) vl.textContent = fmt2(+sl.value) + (id === '401k' || id === 'sell' ? '' : '/mo');
-      fdCalcQuick();
-    });
-    const cb = gg('lev-'+id+'-on');
-    if (cb) cb.addEventListener('change', () => {
-      const lev = cb.closest('.fd-lever');
-      if (lev) lev.classList.toggle('active', cb.checked);
-      fdCalcQuick();
-    });
-  });
-}
-
-
-// ── DEBT PAYOFF PLANNER ───────────────────────────────────────────────────────
-let dpStrategy = 'snowball';
-let dpDebtList = [];   // working copy, sorted by strategy
-let dpTimelineChartInst = null;
-let dpIntChartInst = null;
-
-function dpInit() {
-  dpBuildDebtList();
-  dpSetStrategy('snowball');
-  const notes = gg('fdNotes');
-  if (notes) notes.value = localStorage.getItem('fdNotes') || '';
-}
-
-function dpBuildDebtList() {
-  // Pull from bills — anything with a balance and APR or min payment
-  dpDebtList = bills
-    .filter(b => Math.abs(b.bal || 0) > 0 && b.pay > 0)
-    .map((b, origIdx) => ({
-      origIdx,
-      name: b.name,
-      cat: b.cat,
-      balance: Math.abs(b.bal || 0),
-      apr: b.apr || 0,
-      min: b.min || b.pay,
-      pay: b.pay,
-      promo: b.promo || '',
-      note: b.note || '',
-      plaid: b.plaid_synced || false,
-    }));
-}
-
-function dpSyncPlaid() {
-  dpBuildDebtList();
-  dpCalc();
-  showToast('Debt list refreshed from Plaid ✓', 'success');
-}
-
-function dpSetStrategy(id) {
-  dpStrategy = id;
-  document.querySelectorAll('#dpStrategyCards .fd-scenario-card').forEach(c => {
-    c.classList.toggle('active', c.dataset.id === id || (id === 'custom' && c.dataset.id === 'custom-dp'));
-  });
-  dpSortDebts();
-  dpUpdateStrategyInsight();
-  dpCalc();
-}
-
-function dpSortDebts() {
-  if (dpStrategy === 'snowball') {
-    dpDebtList.sort((a, b) => a.balance - b.balance);
-  } else if (dpStrategy === 'avalanche') {
-    dpDebtList.sort((a, b) => b.apr - a.apr);
-  } else if (dpStrategy === 'hybrid') {
-    // Score: 50% balance rank + 50% APR rank
-    const n = dpDebtList.length;
-    const byBal = [...dpDebtList].sort((a,b) => a.balance - b.balance);
-    const byApr = [...dpDebtList].sort((a,b) => b.apr - a.apr);
-    dpDebtList.forEach(d => {
-      d._score = (byBal.indexOf(d) / n) * 0.5 + (byApr.indexOf(d) / n) * 0.5;
-    });
-    dpDebtList.sort((a,b) => a._score - b._score);
-  }
-  // custom: user-defined order, don't re-sort
-  const hint = gg('dpOrderHint');
-  if (hint) {
-    const hints = {
-      snowball: 'Smallest balance → biggest',
-      avalanche: 'Highest APR → lowest',
-      hybrid: 'Best balance of speed & savings',
-      custom: 'Drag rows to reorder',
-    };
-    hint.textContent = hints[dpStrategy] || '';
-  }
-}
-
-function dpUpdateStrategyInsight() {
-  const el = gg('dpStrategyInsight'); if (!el) return;
-  const insights = {
-    snowball: 'Snowball: pay minimums on everything, throw all extra money at the smallest balance. When it\'s gone, roll that payment to the next. Builds momentum with quick wins — best for motivation.',
-    avalanche: 'Avalanche: pay minimums on everything, throw all extra money at the highest APR debt. Mathematically optimal — saves the most in total interest. Best if you can stay disciplined.',
-    hybrid: 'Hybrid: balances quick wins (snowball) with interest savings (avalanche). Scores each debt on both criteria. Good middle ground when you want both motivation and efficiency.',
-    custom: 'Custom: drag the rows in the table to set your own payoff priority. Useful when you have specific goals like freeing up a minimum payment or paying off a family loan first.',
-  };
-  el.className = 'insight info';
-  el.textContent = insights[dpStrategy] || '';
-}
-
-function dpCalcDebt(debt, extraForThis) {
-  // Returns months to payoff and total interest paid
-  const bal = debt.balance;
-  const apr = debt.apr;
-  const pay = debt.min + extraForThis;
-  if (bal <= 0) return { months: 0, interest: 0, totalPaid: 0 };
-  if (apr === 0) {
-    const months = Math.ceil(bal / pay);
-    return { months, interest: 0, totalPaid: bal };
-  }
-  const mr = apr / 100 / 12;
-  if (pay <= bal * mr) {
-    // Can't pay off — interest exceeds payment
-    return { months: 999, interest: 999999, totalPaid: 999999 };
-  }
-  const months = Math.ceil(-Math.log(1 - (bal * mr / pay)) / Math.log(1 + mr));
-  const totalPaid = pay * months;
-  const interest = totalPaid - bal;
-  return { months: Math.max(1, months), interest: Math.max(0, interest), totalPaid };
-}
-
-function dpCalc() {
-  const extra = +(gg('dp-extra')?.value || 0);
-  const ev = gg('dp-extra-val'); if (ev) ev.textContent = '$' + extra + '/mo';
-
-  // Build payoff schedule using strategy
-  // Available extra rolls over when a debt is paid off (snowball effect)
-  let schedule = dpDebtList.map(d => ({
-    ...d,
-    remaining: d.balance,
-    paid: false,
-    payoffMonth: 0,
-    totalInterest: 0,
-    extraThisRound: 0,
-  }));
-
-  // Assign initial extra to first unpaid debt
-  let month = 0;
-  const MAX_MONTHS = 360;
-  const monthlyData = []; // for chart: { month, total }
-  let totalInterestPaid = 0;
-  let freedPayments = 0; // snowball: freed minimums roll to next
-
-  // Pre-calculate without extra for comparison
-  const calcBaseline = () => {
-    let totalInt = 0, maxMonths = 0;
-    dpDebtList.forEach(d => {
-      const r = dpCalcDebt(d, 0);
-      totalInt += r.interest;
-      maxMonths = Math.max(maxMonths, r.months);
-    });
-    return { totalInt, maxMonths };
-  };
-
-  // Simulate month by month
-  let monthlySnapshot = [];
-  let remainings = dpDebtList.map(d => d.balance);
-  let paid = dpDebtList.map(() => false);
-  let payoffMonths = dpDebtList.map(() => 0);
-  let accInterest = dpDebtList.map(() => 0);
-  let rolledExtra = 0; // freed minimums from paid-off debts
-
-  for (let m = 1; m <= MAX_MONTHS; m++) {
-    if (paid.every(p => p)) break;
-    // Find first unpaid index
-    const firstUnpaid = paid.findIndex(p => !p);
-    // Distribute: mins to all + extra to first unpaid
-    let totalBal = 0;
-    dpDebtList.forEach((d, i) => {
-      if (paid[i]) return;
-      const mr = d.apr / 100 / 12;
-      const intCharge = remainings[i] * mr;
-      accInterest[i] += intCharge;
-      let payment = d.min;
-      if (i === firstUnpaid) payment += extra + rolledExtra;
-      payment = Math.min(payment, remainings[i] + intCharge);
-      remainings[i] = Math.max(0, remainings[i] + intCharge - payment);
-      if (remainings[i] < 0.01) {
-        remainings[i] = 0;
-        if (!paid[i]) {
-          paid[i] = true;
-          payoffMonths[i] = m;
-          rolledExtra += d.min; // snowball: roll freed minimum
-        }
-      }
-      totalBal += remainings[i];
-    });
-    monthlySnapshot.push({ m, total: Math.round(totalBal) });
-  }
-
-  // Build debt table results
-  const tbody = gg('dpDebtBody'); if (!tbody) return;
-  let totalBal = 0, totalMin = 0, totalExtra = 0, totalInt = 0, maxMonth = 0;
-
-  tbody.innerHTML = dpDebtList.map((d, i) => {
-    const months = payoffMonths[i] || 999;
-    const interest = Math.round(accInterest[i]);
-    totalBal += d.balance;
-    totalMin += d.min;
-    totalInt += interest;
-    if (months < 999) maxMonth = Math.max(maxMonth, months);
-
-    const payoffDate = months < 999
-      ? new Date(Date.now() + months * 30.4 * 86400000).toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
-      : 'Never ⚠️';
-
-    const extraForThis = i === dpDebtList.findIndex((_, ii) => !paid[ii]) ? extra : 0;
-    if (i === 0) totalExtra = extra;
-
-    // Progress bar
-    const origBal = d.balance;
-    const pctPaid = 0; // starting fresh
-    const barColor = d.apr > 20 ? 'var(--red)' : d.apr > 10 ? 'var(--amber)' : 'var(--green)';
-    const priorityNum = i + 1;
-    const isFirst = i === 0;
-
-    let statusHtml = months < 999
-      ? `<span style="font-size:11px;color:var(--green);font-weight:600">${months}mo</span>`
-      : `<span style="font-size:11px;color:var(--red);font-weight:600">↑ pay more</span>`;
-
-    return `<tr>
-      <td><span class="dp-priority-num ${isFirst ? 'active' : ''}">${priorityNum}</span></td>
-      <td>
-        <div style="font-weight:500;font-size:12.5px">${esc(d.name)}${d.plaid ? '<span class="badge-live">live</span>' : ''}</div>
-        <div style="font-size:10.5px;color:var(--hint)">${esc(d.note)}${d.promo ? ' · ' + esc(d.promo) : ''}</div>
-        <div class="dp-payoff-bar-bg"><div class="dp-payoff-bar" style="width:0%;background:${barColor}"></div></div>
-      </td>
-      <td class="mono" style="color:var(--red);font-size:12.5px">${fmt2(d.balance)}</td>
-      <td style="font-size:12px">${d.apr > 0 ? `<span class="mono">${d.apr.toFixed(2)}%</span>` : '<span style="color:var(--green);font-size:11px;font-weight:700">0%</span>'}</td>
-      <td class="mono" style="color:var(--amber);font-size:12px">${fmt2(d.min)}</td>
-      <td class="mono" style="color:var(--green);font-size:12px">${isFirst && extra > 0 ? '+' + fmt2(extra) : '—'}</td>
-      <td style="font-size:12px;white-space:nowrap">${payoffDate}</td>
-      <td class="mono" style="color:${interest > 500 ? 'var(--red)' : 'var(--muted)'};font-size:12px">${fmt2(interest)}</td>
-      <td>${statusHtml}</td>
-    </tr>`;
-  }).join('');
-
-  // Foot
-  const now = new Date(Date.now() + maxMonth * 30.4 * 86400000);
-  const fd = gg('dp-foot-bal'); if (fd) fd.textContent = fmt2(totalBal);
-  const fm = gg('dp-foot-min'); if (fm) fm.textContent = fmt2(totalMin);
-  const fe = gg('dp-foot-extra'); if (fe) fe.textContent = extra > 0 ? '+' + fmt2(extra) : '—';
-  const fp = gg('dp-foot-payoff'); if (fp) fp.textContent = maxMonth < 999 ? now.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—';
-  const fi = gg('dp-foot-int'); if (fi) fi.textContent = fmt2(totalInt);
-
-  // Top widgets
-  const monthlyInterest = dpDebtList.reduce((s, d) => s + d.balance * d.apr / 100 / 12, 0);
-  const setW = (id, v) => { const el = gg(id); if (el) el.textContent = v; };
-  setW('dp-total-debt', fmtM(totalBal));
-  setW('dp-monthly-int', fmt2(monthlyInterest));
-  setW('dp-monthly-pay', fmt2(totalMin + extra));
-  setW('dp-payoff-date', maxMonth < 999 ? now.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—');
-  setW('dp-total-int', fmtM(totalInt));
-
-  // Extra savings vs baseline
-  const baseline = calcBaseline();
-  const intSaved = Math.max(0, baseline.totalInt - totalInt);
-  const monthsSaved = Math.max(0, baseline.maxMonths - maxMonth);
-  const ms = gg('dp-months-saved'); if (ms) ms.textContent = monthsSaved > 0 ? monthsSaved + ' months' : '—';
-  const is = gg('dp-int-saved'); if (is) is.textContent = intSaved > 0 ? fmtM(intSaved) : '—';
-
-  // Charts
-  dpDrawTimelineChart(monthlySnapshot);
-  dpDrawIntChart();
-
-  // Strategy comparison
-  dpDrawComparison(totalBal, totalMin);
-
-  // Tactics
-  dpDrawTactics();
-
-  // Schedule
-  dpDrawSchedule(monthlySnapshot);
-}
-
-function dpDrawTimelineChart(snapshots) {
-  const el = gg('dpTimelineChart'); if (!el) return;
-  if (dpTimelineChartInst) dpTimelineChartInst.destroy();
-  const labels = snapshots.filter((_, i) => i % 3 === 0).map(s => 'Mo ' + s.m);
-  const data = snapshots.filter((_, i) => i % 3 === 0).map(s => s.total);
-  dpTimelineChartInst = new Chart(el, {
-    type: 'line',
-    data: { labels, datasets: [{ data, borderColor: '#2ecc8a', backgroundColor: 'rgba(46,204,138,0.08)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 0 }] },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + fmt2(c.parsed.y) } } },
-      scales: {
-        x: { grid: { display: false }, ticks: { font: { size: 9 }, maxTicksLimit: 8 } },
-        y: { ticks: { callback: v => fmtM(v), font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.03)' } }
-      }
-    }
-  });
-}
-
-function dpDrawIntChart() {
-  const el = gg('dpIntChart'); if (!el) return;
-  const debts = dpDebtList.filter(d => d.apr > 0).slice(0, 8);
-  const interests = debts.map(d => {
-    const r = dpCalcDebt(d, 0);
-    return Math.round(r.interest);
-  });
-  if (dpIntChartInst) dpIntChartInst.destroy();
-  dpIntChartInst = new Chart(el, {
-    type: 'bar', indexAxis: 'y',
-    data: {
-      labels: debts.map(d => d.name.length > 18 ? d.name.slice(0, 16) + '…' : d.name),
-      datasets: [{ data: interests, backgroundColor: debts.map(d => d.apr > 25 ? '#f05c5c' : d.apr > 15 ? '#f0a540' : '#5b8def'), borderRadius: 3 }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + fmt2(c.parsed.x) + ' interest' } } },
-      scales: {
-        x: { ticks: { callback: v => fmtM(v), font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.03)' } },
-        y: { grid: { display: false }, ticks: { font: { size: 10 } } }
-      }
-    }
-  });
-}
-
-function dpDrawComparison(totalBal, totalMin) {
-  const el = gg('dpCompare'); if (!el) return;
-  const extra = +(gg('dp-extra')?.value || 0);
-  const strategies = ['snowball', 'avalanche', 'hybrid'];
-  const results = strategies.map(strat => {
-    // Quick simulation per strategy
-    let sorted = [...dpDebtList];
-    if (strat === 'snowball') sorted.sort((a, b) => a.balance - b.balance);
-    else if (strat === 'avalanche') sorted.sort((a, b) => b.apr - a.apr);
-    else {
-      const n = sorted.length;
-      const bb = [...sorted].sort((a, b) => a.balance - b.balance);
-      const ba = [...sorted].sort((a, b) => b.apr - a.apr);
-      sorted.forEach(d => { d._s = (bb.indexOf(d) / n) * 0.5 + (ba.indexOf(d) / n) * 0.5; });
-      sorted.sort((a, b) => a._s - b._s);
-    }
-    let rems = sorted.map(d => d.balance);
-    let paid = sorted.map(() => false);
-    let totalInt = 0, maxM = 0, rolled = 0;
-    for (let m = 1; m <= 360; m++) {
-      if (paid.every(p => p)) break;
-      const fi = paid.findIndex(p => !p);
-      sorted.forEach((d, i) => {
-        if (paid[i]) return;
-        const mr = d.apr / 100 / 12;
-        const ic = rems[i] * mr;
-        totalInt += ic;
-        let pay = d.min;
-        if (i === fi) pay += extra + rolled;
-        pay = Math.min(pay, rems[i] + ic);
-        rems[i] = Math.max(0, rems[i] + ic - pay);
-        if (rems[i] < 0.01) { rems[i] = 0; if (!paid[i]) { paid[i] = true; rolled += d.min; maxM = m; } }
-      });
-    }
-    return { strat, months: maxM, interest: Math.round(totalInt) };
-  });
-  const minInt = Math.min(...results.map(r => r.interest));
-  const minMo = Math.min(...results.map(r => r.months));
-  const names = { snowball: '⛄ Snowball', avalanche: '🏔️ Avalanche', hybrid: '⚖️ Hybrid' };
-  el.innerHTML = `
-    <div class="dp-compare-row" style="font-size:10.5px;color:var(--hint);font-weight:700;text-transform:uppercase;letter-spacing:0.08em">
-      <span>Strategy</span><span>Payoff</span><span>Total interest</span>
-    </div>` +
-    results.map(r => {
-      const isWinner = r.interest === minInt;
-      const isFastest = r.months === minMo;
-      const active = r.strat === dpStrategy;
-      return `<div class="dp-compare-row ${isWinner ? 'winner' : ''}" style="${active ? 'background:rgba(46,204,138,0.05);border-radius:6px;padding:7px 6px;margin:0 -6px;' : ''}">
-        <span>${names[r.strat]}${active ? ' ←' : ''}</span>
-        <span class="mono">${r.months}mo ${isFastest ? '🏆' : ''}</span>
-        <span class="mono" style="color:${isWinner ? 'var(--green)' : 'var(--red)'}">${fmtM(r.interest)} ${isWinner ? '✓' : ''}</span>
-      </div>`;
-    }).join('');
-}
-
-function dpDrawTactics() {
-  const el = gg('dpTactics'); if (!el) return;
-  const tactics = [];
-  const highApr = dpDebtList.filter(d => d.apr > 20).sort((a, b) => b.apr - a.apr);
-  const promoEnding = dpDebtList.filter(d => d.promo && d.promo.toLowerCase().includes('0%'));
-  const smallBal = dpDebtList.filter(d => d.balance < 500 && d.balance > 0);
-  const totalCC = dpDebtList.filter(d => d.cat === 'CC').reduce((s, d) => s + d.balance, 0);
-
-  if (highApr.length) {
-    tactics.push({ icon: '🔥', text: `<strong>Balance transfer</strong> — ${esc(highApr[0].name)} at ${highApr[0].apr}% APR is costing you ${fmt2(highApr[0].balance * highApr[0].apr / 100 / 12)}/mo in interest. A 0% BT card could save that immediately.` });
-  }
-  if (promoEnding.length) {
-    tactics.push({ icon: '⏰', text: `<strong>Watch promo expirations</strong> — ${esc(promoEnding[0].name)} has a 0% promo ending soon. Pay this off before it expires or the back-interest may hit.` });
-  }
-  if (smallBal.length) {
-    tactics.push({ icon: '✅', text: `<strong>Quick win available</strong> — ${esc(smallBal[0].name)} only has ${fmt2(smallBal[0].balance)} left. Paying it off frees ${fmt2(smallBal[0].min)}/mo and eliminates one payment.` });
-  }
-  if (totalCC > 10000) {
-    tactics.push({ icon: '🏠', text: `<strong>HELOC consolidation</strong> — you have ${fmt2(totalCC)} in CC debt at high APRs. Rolling into your HELOC (7.75%) could save significant interest — but only if you stop using the cards.` });
-  }
-  tactics.push({ icon: '📞', text: `<strong>Call for lower rates</strong> — call Capital One, AMEX, and CITI and ask for a hardship APR reduction. Longtime customers often get 5–10% knocked off.` });
-  tactics.push({ icon: '💰', text: `<strong>Round up payments</strong> — even rounding each payment to the nearest $50 can shave months off your payoff date and save hundreds in interest.` });
-  tactics.push({ icon: '🎯', text: `<strong>Apply windfalls</strong> — any tax refund, bonus, or extra income should go directly to your #1 priority debt before lifestyle inflation kicks in.` });
-
-  el.innerHTML = tactics.slice(0, 5).map(t => `
-    <div class="dp-tactic">
-      <span class="dp-tactic-icon">${t.icon}</span>
-      <span class="dp-tactic-body">${t.text}</span>
-    </div>`).join('');
-}
-
-function dpDrawSchedule(snapshots) {
-  const thead = gg('dpScheduleHead');
-  const tbody = gg('dpScheduleBody');
-  if (!thead || !tbody) return;
-
-  // Headers: Month | Total Balance | [each debt name]
-  const shortNames = dpDebtList.map(d => d.name.split(' ').slice(0, 2).join(' '));
-  thead.innerHTML = `<tr><th>Month</th><th>Total bal</th>${shortNames.map(n => `<th>${esc(n)}</th>`).join('')}</tr>`;
-
-  // Recalculate month by month with full per-debt tracking
-  let rems = dpDebtList.map(d => d.balance);
-  let paid = dpDebtList.map(() => false);
-  let rolled = 0;
-  const extra = +(gg('dp-extra')?.value || 0);
-  const rows = [];
-
-  for (let m = 1; m <= 360; m++) {
-    if (paid.every(p => p)) break;
-    const fi = paid.findIndex(p => !p);
-    dpDebtList.forEach((d, i) => {
-      if (paid[i]) return;
-      const mr = d.apr / 100 / 12;
-      const ic = rems[i] * mr;
-      let pay = d.min;
-      if (i === fi) pay += extra + rolled;
-      pay = Math.min(pay, rems[i] + ic);
-      rems[i] = Math.max(0, rems[i] + ic - pay);
-      if (rems[i] < 0.01) { rems[i] = 0; if (!paid[i]) { paid[i] = true; rolled += d.min; } }
-    });
-    const total = rems.reduce((s, v) => s + v, 0);
-    if (m <= 60 || m % 6 === 0) { // show monthly for first 5 years, then every 6mo
-      rows.push({ m, total: Math.round(total), rems: [...rems] });
-    }
-    if (total < 1) break;
-  }
-
-  tbody.innerHTML = rows.map((row, ri) => {
-    const date = new Date(Date.now() + row.m * 30.4 * 86400000);
-    const dateStr = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-    const cells = dpDebtList.map((d, i) => {
-      const v = row.rems[i];
-      if (v < 1) return `<td style="color:var(--green);font-size:11px">✓ Paid</td>`;
-      return `<td class="mono" style="font-size:11.5px;color:var(--muted)">${fmt2(v)}</td>`;
-    }).join('');
-    const isEven = ri % 2 === 0;
-    return `<tr style="${isEven ? 'background:rgba(255,255,255,0.01)' : ''}">
-      <td style="white-space:nowrap;font-size:12px;color:var(--muted)">${dateStr}</td>
-      <td class="mono" style="font-weight:600;color:${row.total < 5000 ? 'var(--green)' : 'var(--text)'};font-size:12.5px">${fmt2(row.total)}</td>
-      ${cells}
-    </tr>`;
-  }).join('');
-}
-
-function dpExport() {
-  const wb = XLSX.utils.book_new();
-  const extra = +(gg('dp-extra')?.value || 0);
-  const d = [
-    ['Debt Payoff Plan', '', ''],
-    ['Strategy', dpStrategy.charAt(0).toUpperCase() + dpStrategy.slice(1), ''],
-    ['Extra monthly payment', fmt2(extra), ''],
-    ['Generated', new Date().toLocaleDateString(), ''],
-    ['', '', ''],
-    ['DEBT LIST', '', ''],
-    ['Priority', 'Debt', 'Balance', 'APR', 'Min Pay', 'Payoff Date', 'Interest Cost'],
-  ];
-  dpDebtList.forEach((debt, i) => {
-    const r = dpCalcDebt(debt, i === 0 ? extra : 0);
-    const pd = r.months < 999
-      ? new Date(Date.now() + r.months * 30.4 * 86400000).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-      : 'Cannot pay off';
-    d.push([i + 1, debt.name, debt.balance, debt.apr + '%', debt.min, pd, Math.round(r.interest)]);
-  });
-  const ws = XLSX.utils.aoa_to_sheet(d);
-  ws['!cols'] = [{ wch: 10 }, { wch: 24 }, { wch: 14 }, { wch: 8 }, { wch: 12 }, { wch: 16 }, { wch: 16 }];
-  XLSX.utils.book_append_sheet(wb, ws, 'Debt Payoff Plan');
-  XLSX.writeFile(wb, 'Matt_Dana_DebtPayoff_' + todayStr() + '.xlsx');
-  showToast('Debt payoff plan exported!', 'success');
-}
-
-// ── TAB SWITCHER ──────────────────────────────────────────────────────────────
-function fdSwitchTab(tab) {
-  const drillEl = gg('fdTab-drill');
-  const debtEl = gg('fdTab-debt');
-  const tabs = document.querySelectorAll('#fdTopTabs .tab-btn');
-  tabs.forEach((b, i) => b.classList.toggle('active', (i === 0 && tab === 'drill') || (i === 1 && tab === 'debt')));
-  if (drillEl) drillEl.style.display = tab === 'drill' ? 'block' : 'none';
-  if (debtEl) debtEl.style.display = tab === 'debt' ? 'block' : 'none';
-  if (tab === 'debt') {
-    dpInit();
-    // Update header
-    const pt = gg('fdPageTitle'); if (pt) pt.textContent = '💳 Debt Payoff Planner';
-    const ps = gg('fdPageSub'); if (ps) ps.textContent = 'Choose a strategy, set an extra payment, and see your exact payoff date';
-    const pa = gg('fdPageActions');
-    if (pa) pa.innerHTML = '<button class="btn primary" onclick="dpExport()">Export plan</button>';
-  } else {
-    const pt = gg('fdPageTitle'); if (pt) pt.textContent = '🔥 Fire Drill Scenarios';
-    const ps = gg('fdPageSub'); if (ps) ps.textContent = 'Simulate financial emergencies — adjust bills and build a survival plan';
-    const pa = gg('fdPageActions');
-    if (pa) pa.innerHTML = '<button class="btn" onclick="fdReset()">↺ Reset</button><button class="btn primary" onclick="fdExport()">Export plan</button>';
-  }
-}
-
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 // Token-based auth — no cookies, works everywhere including iPad Safari
@@ -3900,6 +2745,428 @@ function saveEditIncome(idx) {
   renderIncomeTab();
   updateBudgetMetrics();
   showToast(incomeSources[idx].name + ' updated ✓', 'success');
+}
+
+// ── FIRE DRILL ────────────────────────────────────────────────────────────────
+const FD_SCENARIOS = {
+  job:      { name:'Job Loss',         cls:'danger', banner:'Slide income sources to zero for full job loss, or partial for reduced hours / one partner working.', incomeScale:{0:0,2:0,3:0}, extraCosts:[{name:'Job search costs',amt:100},{name:'Health insurance (COBRA)',amt:600}] },
+  hurricane:{ name:'Hurricane',        cls:'warn',   banner:'Modeling displacement, hotel stays, deductibles and repairs. Florida: assume 2–4 weeks displacement minimum.', incomeScale:{}, extraCosts:[{name:'Temporary housing/hotel',amt:3000},{name:'Food & supplies',amt:800},{name:'Insurance deductible',amt:500},{name:'Uncovered repairs',amt:1000}] },
+  illness:  { name:'Illness / Injury', cls:'warn',   banner:'Modeling medical bills and reduced work capacity. Adjust income for time off work.', incomeScale:{0:0.5}, extraCosts:[{name:'Medical bills/copays',amt:500},{name:'Prescriptions',amt:200},{name:'Home care/transport',amt:300}] },
+  divorce:  { name:'Separation',       cls:'warn',   banner:'Modeling split finances — one income, legal fees, and single-household costs.', incomeScale:{1:0,2:0.5}, extraCosts:[{name:'Legal fees',amt:1500},{name:'Second housing',amt:1200}] },
+  market:   { name:'Market Crash',     cls:'info',   banner:'Portfolio down 30–50%, home value drops. Income unchanged. Focus: stop all discretionary spending.', incomeScale:{}, extraCosts:[{name:'Increased insurance',amt:150}] },
+  custom:   { name:'Custom Scenario',  cls:'info',   banner:'Build your own. Adjust any income source, add costs, and toggle levers.', incomeScale:{}, extraCosts:[] },
+};
+
+let fdCurrentScenario = 'job';
+let fdIncomeOverrides = {};
+let fdExtraCosts = [];
+let fdBillOverrides = {};
+let fdLeverAmounts = { savings:500, heloc:1000, k401:5000, refi:500, sell:10000, insurance:1500 };
+let fdLeverEnabled = { savings:false, heloc:false, k401:false, refi:false, sell:false, insurance:false };
+let fdRunwayChartInst = null;
+
+// ── DRAG for fire drill containers ───────────────────────────────────────────
+function initFdDrag() {
+  ['fdDrillContainer','fdDebtContainer'].forEach(id => {
+    const c = gg(id); if (!c) return;
+    initDrag(c);
+    c.querySelectorAll('.dh').forEach(h => { h.style.opacity='1'; h.style.pointerEvents='auto'; });
+  });
+}
+
+function fdSwitchTab(tab) {
+  const drill = gg('fdTab-drill');
+  const debt  = gg('fdTab-debt');
+  document.querySelectorAll('#fdTopTabs .tab-btn').forEach((b,i) => b.classList.toggle('active', (i===0&&tab==='drill')||(i===1&&tab==='debt')));
+  if (drill) drill.style.display = tab==='drill' ? 'block' : 'none';
+  if (debt)  debt.style.display  = tab==='debt'  ? 'block' : 'none';
+  if (tab === 'debt') { dpInit(); }
+  const pa = gg('fdPageActions');
+  if (pa) {
+    if (tab === 'drill') pa.innerHTML = '<button class="btn" onclick="fdReset()">↺ Reset</button><button class="btn primary" onclick="fdExport()">Export plan</button>';
+    else pa.innerHTML = '<button class="btn primary" onclick="dpExport()">Export plan</button>';
+  }
+  setTimeout(initFdDrag, 50);
+}
+
+function initFireDrill() {
+  fdSetScenario('job');
+  setTimeout(initFdDrag, 50);
+  const notes = gg('fdNotes');
+  if (notes) notes.value = localStorage.getItem('fdNotes') || '';
+}
+
+function fdSetScenario(id) {
+  fdCurrentScenario = id;
+  const sc = FD_SCENARIOS[id];
+  document.querySelectorAll('#scenarioCards .fd-scenario-card').forEach(c => c.classList.toggle('active', c.dataset.id === id));
+  const banner = gg('fdScenarioBanner');
+  if (banner) banner.className = 'insight ' + (sc.cls||'warn');
+  const bt = gg('fdBannerTitle'); if (bt) bt.textContent = sc.name;
+  const bd = gg('fdBannerDesc');  if (bd) bd.textContent = sc.banner;
+  fdIncomeOverrides = {};
+  fdExtraCosts = sc.extraCosts.map(e => ({...e}));
+  fdBillOverrides = {};
+  const fm = {weekly:52/12,biweekly:26/12,monthly:1,quarterly:1/3,annual:1/12};
+  Object.entries(sc.incomeScale||{}).forEach(([idx, scale]) => {
+    const i = parseInt(idx);
+    if (incomeSources[i]) fdIncomeOverrides[i] = Math.round(incomeSources[i].amt * (fm[incomeSources[i].freq]||1) * scale);
+  });
+  fdRender();
+}
+
+function fdScenarioIncome() {
+  const fm = {weekly:52/12,biweekly:26/12,monthly:1,quarterly:1/3,annual:1/12};
+  return incomeSources.reduce((s,src,i) => fdIncomeOverrides[i]!==undefined ? s+fdIncomeOverrides[i] : s+src.amt*(fm[src.freq]||1), 0);
+}
+function fdScenarioBills() {
+  return bills.reduce((s,b,i) => s+(fdBillOverrides[i]!==undefined ? fdBillOverrides[i] : b.pay), 0);
+}
+function fdLeverTotal() {
+  let t = 0;
+  if (fdLeverEnabled.savings)   t += fdLeverAmounts.savings;
+  if (fdLeverEnabled.heloc)     t += fdLeverAmounts.heloc;
+  if (fdLeverEnabled.insurance) t += fdLeverAmounts.insurance;
+  if (fdLeverEnabled.refi)      t += fdLeverAmounts.refi;
+  if (fdLeverEnabled.k401)      t += Math.round(fdLeverAmounts.k401 * 0.72 / 12);
+  if (fdLeverEnabled.sell)      t += Math.round(fdLeverAmounts.sell / 12);
+  return t;
+}
+
+function fdRender() {
+  fdRenderIncomeSliders();
+  fdRenderExtraCosts();
+  fdRenderBillTable();
+  fdRenderLevers();
+  fdCalc();
+}
+
+function fdRenderIncomeSliders() {
+  const el = gg('fdIncomeSliders'); if (!el) return;
+  const fm = {weekly:52/12,biweekly:26/12,monthly:1,quarterly:1/3,annual:1/12};
+  el.innerHTML = incomeSources.map((src,i) => {
+    const orig = Math.round(src.amt*(fm[src.freq]||1));
+    const scen = fdIncomeOverrides[i]!==undefined ? fdIncomeOverrides[i] : orig;
+    const pct  = orig>0 ? Math.round(scen/orig*100) : 0;
+    const col  = pct===0?'var(--red)':pct<75?'var(--amber)':'var(--cyan)';
+    return `<div class="fd-income-row">
+      <span class="fd-income-name">${esc(src.name)}</span>
+      <span class="fd-income-orig">${fmt2(orig)}/mo</span>
+      <input type="range" min="0" max="${orig||100}" value="${scen}" step="50" style="flex:1"
+        oninput="fdIncomeOverrides[${i}]=+this.value;gg('fdi-v-${i}').textContent=fmt2(+this.value)+'/mo';gg('fdi-p-${i}').textContent=Math.round(+this.value/${orig||1}*100)+'%';fdCalc()">
+      <span id="fdi-v-${i}" class="mono" style="min-width:72px;text-align:right;font-weight:600;color:${col}">${fmt2(scen)}/mo</span>
+      <span id="fdi-p-${i}" style="min-width:34px;text-align:right;font-size:11px;color:var(--hint)">${pct}%</span>
+    </div>`;
+  }).join('');
+}
+
+function fdRenderExtraCosts() {
+  const el = gg('fdExtraCosts'); if (!el) return;
+  if (!fdExtraCosts.length) { el.innerHTML = '<div style="color:var(--hint);font-size:12.5px;padding:6px 0">No extra costs — click "+ Add cost" to add.</div>'; gg('fdTotalExtra').textContent='$0'; return; }
+  el.innerHTML = fdExtraCosts.map((c,i) => `<div class="fd-extra-row">
+    <input type="text" value="${esc(c.name)}" placeholder="Cost name" style="flex:1;height:30px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 9px;color:var(--text);font-family:var(--font);font-size:13px;outline:none" onblur="fdExtraCosts[${i}].name=this.value">
+    <input type="number" value="${c.amt}" min="0" step="50" style="width:80px;height:30px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 9px;color:var(--cyan);font-family:var(--mono);font-size:13px;outline:none" oninput="fdExtraCosts[${i}].amt=+this.value;fdCalc()">
+    <span style="font-size:12px;color:var(--muted)">/mo</span>
+    <button class="btn danger" onclick="fdExtraCosts.splice(${i},1);fdRenderExtraCosts();fdCalc()">✕</button>
+  </div>`).join('');
+  gg('fdTotalExtra').textContent = fmt2(fdExtraCosts.reduce((s,c)=>s+c.amt,0));
+}
+
+function fdAddExtraCost() { fdExtraCosts.push({name:'New cost',amt:0}); fdRenderExtraCosts(); }
+
+function fdRenderBillTable() {
+  const tb = gg('fdBillBody'); if (!tb) return;
+  tb.innerHTML = bills.map((b,i) => {
+    const normal=b.pay, min=b.min||0;
+    const scen=fdBillOverrides[i]!==undefined?fdBillOverrides[i]:normal;
+    const pct=normal>0?Math.round(scen/normal*100):100;
+    let col, impH;
+    if(scen===0){col='var(--red)';impH='<span class="fd-impact-defer">Deferred</span>';}
+    else if(scen<=min+1){col='var(--amber)';impH='<span class="fd-impact-min">Minimum</span>';}
+    else{col='var(--green)';impH='<span class="fd-impact-ok">Normal</span>';}
+    return `<tr>
+      <td style="font-weight:500;font-size:12px">${esc(b.name)}<br><span class="pill pill-${b.cat}" style="font-size:9px">${b.cat}</span></td>
+      <td class="mono" style="color:var(--muted);font-size:11.5px">${fmt2(normal)}</td>
+      <td class="mono" style="color:var(--amber);font-size:11.5px">${min>0?fmt2(min):'—'}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:7px">
+          <input type="range" min="0" max="${normal}" value="${scen}" step="${Math.max(1,Math.round(normal/40))}" style="flex:1;min-width:70px"
+            oninput="fdBillOverrides[${i}]=+this.value;gg('fdb-v-${i}').textContent=fmt2(+this.value);fdUpdateBillRow(${i},+this.value,${normal},${min});fdCalc()">
+          <span id="fdb-v-${i}" class="mono" style="min-width:55px;font-size:11.5px;font-weight:600;color:${col}">${fmt2(scen)}</span>
+        </div>
+        <div style="height:3px;border-radius:2px;background:var(--surface3);overflow:hidden;margin-top:3px"><div id="fdb-b-${i}" style="height:100%;border-radius:2px;background:${col};width:${pct}%;transition:width 0.2s"></div></div>
+      </td>
+      <td id="fdb-i-${i}">${impH}</td>
+    </tr>`;
+  }).join('');
+  const totMin=bills.reduce((s,b)=>s+(b.min||0),0);
+  const totScen=bills.reduce((s,b,i)=>s+(fdBillOverrides[i]!==undefined?fdBillOverrides[i]:b.pay),0);
+  const tm=gg('fdTotalMin'); if(tm)tm.textContent=fmt2(totMin);
+  const ts=gg('fdTotalScenario'); if(ts)ts.textContent=fmt2(totScen);
+}
+
+function fdUpdateBillRow(i,scen,normal,min) {
+  let col,impH;
+  if(scen===0){col='var(--red)';impH='<span class="fd-impact-defer">Deferred</span>';}
+  else if(scen<=min+1){col='var(--amber)';impH='<span class="fd-impact-min">Minimum</span>';}
+  else{col='var(--green)';impH='<span class="fd-impact-ok">Normal</span>';}
+  const pct=normal>0?Math.round(scen/normal*100):100;
+  const vEl=gg('fdb-v-'+i); if(vEl){vEl.textContent=fmt2(scen);vEl.style.color=col;}
+  const bEl=gg('fdb-b-'+i); if(bEl){bEl.style.background=col;bEl.style.width=pct+'%';}
+  const iEl=gg('fdb-i-'+i); if(iEl)iEl.innerHTML=impH;
+  const totScen=bills.reduce((s,b,ii)=>s+(fdBillOverrides[ii]!==undefined?fdBillOverrides[ii]:b.pay),0);
+  const ts=gg('fdTotalScenario'); if(ts)ts.textContent=fmt2(totScen);
+}
+
+function fdSetAllBills(mode) {
+  bills.forEach((b,i)=>{ if(mode==='min')fdBillOverrides[i]=b.min||0; else if(mode==='zero')fdBillOverrides[i]=0; else delete fdBillOverrides[i]; });
+  fdRenderBillTable(); fdCalc();
+}
+
+const FD_LEVERS = [
+  {id:'savings',   icon:'💰', name:'Tap savings',           sub:'Checking + savings balance',     type:'monthly', max:5000,  default:500},
+  {id:'heloc',     icon:'🏠', name:'Draw on HELOC',          sub:'Home equity line of credit',      type:'monthly', max:10000, default:1000},
+  {id:'insurance', icon:'📋', name:'Insurance / FEMA',       sub:'Homeowner, health, unemployment', type:'monthly', max:10000, default:1500},
+  {id:'refi',      icon:'🏦', name:'Mortgage forbearance',   sub:'Pause or reduce payment',         type:'monthly', max:3000,  default:500},
+  {id:'k401',      icon:'📈', name:'401k hardship withdraw', sub:'10% penalty + taxes (~28% lost)', type:'onetime', max:50000, default:5000},
+  {id:'sell',      icon:'🚗', name:'Sell vehicle / asset',   sub:'One-time cash / ÷12 months',      type:'onetime', max:50000, default:10000},
+];
+
+function fdRenderLevers() {
+  const el = gg('fdLeversSimple'); if (!el) return;
+  el.innerHTML = FD_LEVERS.map(lev => {
+    const on = fdLeverEnabled[lev.id];
+    const amt = fdLeverAmounts[lev.id];
+    const monthly = lev.type==='monthly' ? amt : Math.round(amt*(lev.id==='k401'?0.72:1)/12);
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px;padding:8px 10px;background:${on?'rgba(46,204,138,0.05)':'var(--surface2)'};border:1px solid ${on?'rgba(46,204,138,0.25)':'var(--border)'};border-radius:var(--radius-sm)">
+      <span style="font-size:16px">${lev.icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12.5px;font-weight:500">${lev.name}</div>
+        <div style="font-size:10.5px;color:var(--hint)">${lev.sub}</div>
+        ${on?`<div style="display:flex;align-items:center;gap:7px;margin-top:6px"><input type="range" min="0" max="${lev.max}" value="${amt}" step="${Math.round(lev.max/40)}" style="flex:1" oninput="fdLeverAmounts['${lev.id}']=+this.value;this.parentElement.querySelector('.lev-val').textContent=fmt2(+this.value)+(${JSON.stringify(lev.type))==='monthly'?'"/mo"':'"(one-time)"'});fdCalc()"><span class="lev-val mono" style="font-size:12px;color:var(--green);min-width:80px;text-align:right">${fmt2(amt)}${lev.type==='monthly'?'/mo':'(one-time)'}</span></div>`:''}
+      </div>
+      <label class="fd-toggle"><input type="checkbox" ${on?'checked':''} onchange="fdLeverEnabled['${lev.id}']=this.checked;fdRenderLevers();fdCalc()"><span class="fd-toggle-slider"></span></label>
+    </div>`;
+  }).join('');
+}
+
+function fdCalc() {
+  const inc = fdScenarioIncome();
+  const bil = fdScenarioBills();
+  const ext = fdExtraCosts.reduce((s,c)=>s+c.amt,0);
+  const lev = fdLeverTotal();
+  const net = inc - bil - ext + lev;
+  const set=(id,v)=>{const el=gg(id);if(el)el.textContent=v;};
+  set('fdTotalIncome',fmt2(inc)); set('fdTotalExtra',fmt2(ext)); set('fdTotalLevers',fmt2(lev));
+  set('fd-sum-income',fmt2(inc)); set('fd-sum-bills',fmt2(bil)); set('fd-sum-extra',fmt2(ext));
+  set('fd-sum-levers','+'+fmt2(lev));
+  const sn=gg('fd-sum-net'); if(sn){sn.textContent=fmt2(Math.abs(net))+(net<0?' deficit':'');sn.style.color=net>=0?'var(--cyan)':'var(--red)';}
+  const cash=nwAssets.filter(a=>a.cat==='Cash & Bank').reduce((s,a)=>s+a.value,0);
+  const oneTime=(fdLeverEnabled.k401?Math.round(fdLeverAmounts.k401*0.72):0)+(fdLeverEnabled.sell?fdLeverAmounts.sell:0);
+  let balance=cash+oneTime, months=0;
+  if(net>=0){months=999;}else{let b=balance;while(b>0&&months<120){b+=net;months++;}}
+  const rn=gg('fdRunwayNum'); if(rn){rn.textContent=months>=999?'∞':months;rn.style.color=months<3?'var(--red)':months<6?'var(--amber)':'var(--cyan)';}
+  const rl=gg('fdRunwayLabel'); if(rl)rl.textContent=months>=999?'cash-flow positive':months===1?'month until $0':'months until $0';
+  const rb=gg('fdRunwayBar'); if(rb){const pct=months>=999?100:Math.min(100,Math.round(months/24*100));rb.style.width=pct+'%';rb.style.background=months<3?'var(--red)':months<6?'var(--amber)':'var(--green)';}
+  fdDrawRunwayChart(balance,net,months);
+  fdUpdateAlerts(months,net);
+  fdUpdateChecklist(months,net,cash);
+}
+
+function fdDrawRunwayChart(bal,net,total) {
+  const el=gg('fdRunwayChart'); if(!el)return;
+  const mo=Math.min(total>=999?24:total+2,24);
+  const labels=[],data=[];let b=bal;
+  for(let m=0;m<=mo;m++){labels.push('Mo '+m);data.push(Math.round(Math.max(b,0)));b+=net;}
+  if(fdRunwayChartInst)fdRunwayChartInst.destroy();
+  fdRunwayChartInst=new Chart(el,{type:'line',data:{labels,datasets:[{data,borderColor:total<3?'#f05c5c':total<6?'#f0a540':'#2ecc8a',backgroundColor:total<3?'rgba(240,92,92,0.1)':total<6?'rgba(240,165,64,0.1)':'rgba(46,204,138,0.08)',borderWidth:2,fill:true,tension:0.3,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt2(c.parsed.y)}}},scales:{x:{grid:{display:false},ticks:{font:{size:9},maxTicksLimit:7}},y:{ticks:{callback:v=>fmtM(v),font:{size:9}},grid:{color:'rgba(255,255,255,0.03)'}}}}});
+}
+
+function fdUpdateAlerts(months,net) {
+  const el=gg('fdAlerts'); if(!el)return;
+  let cls,msg;
+  if(months<3){cls='danger';msg='⚠️ Critical: less than 3 months runway. Contact creditors now before missing payments.';}
+  else if(months<6){cls='warn';msg='⚡ Warning: '+months+' months runway. Activate emergency levers and reduce all non-essential payments.';}
+  else if(months>=999){cls='good';msg='✓ Cash-flow positive in this scenario — income covers all obligations.';}
+  else{cls='info';msg='📊 '+months+' months runway. Monitor closely and reduce spending where possible.';}
+  el.innerHTML=`<div class="insight ${cls}" style="margin-bottom:0">${msg}</div>`;
+}
+
+function fdUpdateChecklist(months,net,cash) {
+  const el=gg('fdChecklist'); if(!el)return;
+  const items=[];
+  if(fdCurrentScenario==='job'||fdCurrentScenario==='illness'){items.push({icon:'📞',text:'<strong>File for unemployment</strong> — apply within 7 days at floridajobs.org. Up to $275/wk in Florida.'});items.push({icon:'🏥',text:'<strong>COBRA health insurance</strong> — you have 60 days to elect. ~$600–800/mo for a family.'});}
+  if(fdCurrentScenario==='hurricane'){items.push({icon:'📋',text:'<strong>File insurance claim immediately</strong> — document all damage with photos before cleanup.'});items.push({icon:'🏛️',text:'<strong>Register with FEMA</strong> — disasterassistance.gov within 60 days of disaster declaration.'});}
+  if(months<6){items.push({icon:'🏦',text:'<strong>Call M&T mortgage servicer</strong> — request forbearance before missing a payment.'});items.push({icon:'💳',text:'<strong>Call credit card companies</strong> — request hardship APR reduction. AMEX, Chase, Capital One all have programs.'});items.push({icon:'🚗',text:'<strong>Contact auto lenders</strong> — Wells Fargo and Capital One offer 1–3 month payment deferrals.'});}
+  if(cash<2000)items.push({icon:'💰',text:'<strong>Apply for SNAP food assistance</strong> — myflorida.com/accessflorida'});
+  items.push({icon:'📱',text:'<strong>T-Mobile hardship program</strong> — call to request payment deferral.'});
+  items.push({icon:'⚡',text:'<strong>Utilities assistance</strong> — call Lake Worth utilities to enroll in payment plan.'});
+  el.innerHTML=items.slice(0,5).map(it=>`<div class="fd-check-item"><span class="fd-check-icon">${it.icon}</span><span class="fd-check-body">${it.text}</span></div>`).join('');
+}
+
+function fdReset() { fdIncomeOverrides={}; fdExtraCosts=[]; fdBillOverrides={}; fdLeverEnabled={savings:false,heloc:false,k401:false,refi:false,sell:false,insurance:false}; fdSetScenario(fdCurrentScenario); }
+
+function fdExport() {
+  const sc=FD_SCENARIOS[fdCurrentScenario];
+  const wb=XLSX.utils.book_new();
+  const d=[['Fire Drill Plan',''],['Scenario',sc.name],['Generated',new Date().toLocaleDateString()],[''],['MONTHLY SUMMARY',''],['Income',fmt2(fdScenarioIncome())],['Bills',fmt2(fdScenarioBills())],['Extra costs',fmt2(fdExtraCosts.reduce((s,c)=>s+c.amt,0))],['Emergency levers','+'+fmt2(fdLeverTotal())],[''],['BILL ADJUSTMENTS','',''],['Bill','Normal','Scenario'],...bills.map((b,i)=>[b.name,b.pay,fdBillOverrides[i]!==undefined?fdBillOverrides[i]:b.pay]),[''],['NOTES',gg('fdNotes')?.value||'']];
+  const ws=XLSX.utils.aoa_to_sheet(d); ws['!cols']=[{wch:28},{wch:16},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,ws,'Fire Drill');
+  XLSX.writeFile(wb,'Matt_Dana_FireDrill_'+todayStr()+'.xlsx');
+  showToast('Fire drill plan exported!','success');
+}
+
+// ── DEBT PAYOFF PLANNER ───────────────────────────────────────────────────────
+let dpStrategy='snowball', dpDebtList=[], dpTLChartInst=null, dpIntChartInst=null;
+
+function dpInit() { dpBuildDebtList(); dpSetStrategy('snowball'); }
+
+function dpBuildDebtList() {
+  dpDebtList=bills.filter(b=>Math.abs(b.bal||0)>0&&b.pay>0).map((b,i)=>({origIdx:i,name:b.name,cat:b.cat,balance:Math.abs(b.bal||0),apr:b.apr||0,min:b.min||b.pay,pay:b.pay,promo:b.promo||'',note:b.note||'',plaid:b.plaid_synced||false}));
+}
+
+function dpSyncPlaid(){dpBuildDebtList();dpCalc();showToast('Debt list refreshed ✓','success');}
+
+function dpSetStrategy(id){
+  dpStrategy=id;
+  document.querySelectorAll('#dpStrategyCards .fd-scenario-card').forEach(c=>c.classList.toggle('active',c.dataset.id===id||(id==='custom'&&c.dataset.id==='custom-dp')));
+  dpSortDebts(); dpUpdateStrategyInsight(); dpCalc();
+}
+
+function dpSortDebts(){
+  if(dpStrategy==='snowball')dpDebtList.sort((a,b)=>a.balance-b.balance);
+  else if(dpStrategy==='avalanche')dpDebtList.sort((a,b)=>b.apr-a.apr);
+  else if(dpStrategy==='hybrid'){const n=dpDebtList.length;const bb=[...dpDebtList].sort((a,b)=>a.balance-b.balance);const ba=[...dpDebtList].sort((a,b)=>b.apr-a.apr);dpDebtList.forEach(d=>{d._s=(bb.indexOf(d)/n)*0.5+(ba.indexOf(d)/n)*0.5;});dpDebtList.sort((a,b)=>a._s-b._s);}
+  const hint=gg('dpOrderHint');if(hint)hint.textContent={snowball:'Smallest balance first',avalanche:'Highest APR first',hybrid:'Balanced speed+savings',custom:'Your custom order'}[dpStrategy]||'';
+}
+
+function dpUpdateStrategyInsight(){
+  const el=gg('dpStrategyInsight');if(!el)return;
+  const map={snowball:'Snowball: all extra money attacks the smallest balance first. When paid off, that payment rolls to the next. Quick wins keep motivation high.',avalanche:'Avalanche: all extra money attacks the highest APR debt first. Mathematically saves the most interest. Best if you stay disciplined.',hybrid:'Hybrid: scores each debt 50% on balance size and 50% on APR. A practical middle ground between speed and savings.',custom:'Custom: drag sections or set your own priority. Useful when paying off a specific card or family loan matters most.'};
+  el.textContent=map[dpStrategy]||'';
+}
+
+function dpCalcDebt(debt,extra){
+  const bal=debt.balance,apr=debt.apr,pay=debt.min+extra;
+  if(bal<=0)return{months:0,interest:0};
+  if(apr===0){const m=Math.ceil(bal/pay);return{months:m,interest:0};}
+  const mr=apr/100/12;
+  if(pay<=bal*mr)return{months:999,interest:999999};
+  const m=Math.ceil(-Math.log(1-(bal*mr/pay))/Math.log(1+mr));
+  return{months:Math.max(1,m),interest:Math.max(0,pay*m-bal)};
+}
+
+function dpCalc(){
+  const extra=+(gg('dp-extra')?.value||0);
+  const ev=gg('dp-extra-val');if(ev)ev.textContent='$'+extra+'/mo';
+  let rems=dpDebtList.map(d=>d.balance),paid=dpDebtList.map(()=>false),payoffMo=dpDebtList.map(()=>0),accInt=dpDebtList.map(()=>0),rolled=0;
+  const snapshots=[];
+  for(let m=1;m<=360;m++){
+    if(paid.every(p=>p))break;
+    const fi=paid.findIndex(p=>!p);
+    dpDebtList.forEach((d,i)=>{if(paid[i])return;const mr=d.apr/100/12;const ic=rems[i]*mr;accInt[i]+=ic;let pay=d.min;if(i===fi)pay+=extra+rolled;pay=Math.min(pay,rems[i]+ic);rems[i]=Math.max(0,rems[i]+ic-pay);if(rems[i]<0.01){rems[i]=0;if(!paid[i]){paid[i]=true;payoffMo[i]=m;rolled+=d.min;}}});
+    snapshots.push({m,total:Math.round(rems.reduce((s,v)=>s+v,0))});
+  }
+  const tb=gg('dpDebtBody');if(!tb)return;
+  let tBal=0,tMin=0,tInt=0,maxMo=0;
+  tb.innerHTML=dpDebtList.map((d,i)=>{
+    const mo=payoffMo[i]||999,int=Math.round(accInt[i]);
+    tBal+=d.balance;tMin+=d.min;tInt+=int;if(mo<999)maxMo=Math.max(maxMo,mo);
+    const pd=mo<999?new Date(Date.now()+mo*30.4*86400000).toLocaleDateString('en-US',{month:'short',year:'2-digit'}):'Never ⚠️';
+    const bc=d.apr>20?'var(--red)':d.apr>10?'var(--amber)':'var(--green)';
+    return `<tr><td><span class="dp-priority-num ${i===0?'active':''}">${i+1}</span></td><td style="font-weight:500;font-size:12px">${esc(d.name)}${d.plaid?'<span class="badge-live">live</span>':''}<br><span style="font-size:10px;color:var(--hint)">${esc(d.note)}${d.promo?' · '+esc(d.promo):''}</span></td><td class="mono" style="color:var(--red);font-size:12px">${fmt2(d.balance)}</td><td style="font-size:12px">${d.apr>0?`<span class="mono">${d.apr.toFixed(2)}%</span>`:'<span style="color:var(--green);font-size:11px;font-weight:700">0%</span>'}</td><td class="mono" style="color:var(--amber);font-size:12px">${fmt2(d.min)}</td><td class="mono" style="color:var(--green);font-size:12px">${i===0&&extra>0?'+'+fmt2(extra):'—'}</td><td style="font-size:12px;white-space:nowrap">${pd}</td><td class="mono" style="color:${int>500?'var(--red)':'var(--muted)'};font-size:12px">${fmt2(int)}</td><td style="font-size:11px;color:${mo<999?'var(--green)':'var(--red)'};font-weight:600">${mo<999?mo+'mo':'↑ pay'}</td></tr>`;
+  }).join('');
+  const now=new Date(Date.now()+maxMo*30.4*86400000);
+  const set=(id,v)=>{const el=gg(id);if(el)el.textContent=v;};
+  set('dp-foot-bal',fmt2(tBal));set('dp-foot-min',fmt2(tMin));set('dp-foot-extra',extra>0?'+'+fmt2(extra):'—');set('dp-foot-payoff',maxMo<999?now.toLocaleDateString('en-US',{month:'short',year:'numeric'}):'—');set('dp-foot-int',fmt2(tInt));
+  const mInt=dpDebtList.reduce((s,d)=>s+d.balance*d.apr/100/12,0);
+  set('dp-total-debt',fmtM(tBal));set('dp-monthly-int',fmt2(mInt));set('dp-monthly-pay',fmt2(tMin+extra));set('dp-payoff-date',maxMo<999?now.toLocaleDateString('en-US',{month:'short',year:'numeric'}):'—');set('dp-total-int',fmtM(tInt));
+  const baseInt=dpDebtList.reduce((s,d)=>{const r=dpCalcDebt(d,0);return s+r.interest;},0);
+  const baseMo=dpDebtList.reduce((m,d)=>{const r=dpCalcDebt(d,0);return Math.max(m,r.months<999?r.months:0);},0);
+  const ms=gg('dp-months-saved');if(ms)ms.textContent=extra>0&&baseMo>maxMo?Math.max(0,baseMo-maxMo)+' months':'—';
+  const is=gg('dp-int-saved');if(is)is.textContent=extra>0&&baseInt>tInt?fmtM(Math.max(0,baseInt-tInt)):'—';
+  dpDrawTimelineChart(snapshots);dpDrawIntChart();dpDrawComparison(tBal,tMin);dpDrawTactics();dpDrawSchedule(snapshots);
+}
+
+function dpDrawTimelineChart(snaps){
+  const el=gg('dpTimelineChart');if(!el)return;
+  if(dpTLChartInst)dpTLChartInst.destroy();
+  const filtered=snaps.filter((_,i)=>i%2===0);
+  dpTLChartInst=new Chart(el,{type:'line',data:{labels:filtered.map(s=>'Mo '+s.m),datasets:[{data:filtered.map(s=>s.total),borderColor:'#2ecc8a',backgroundColor:'rgba(46,204,138,0.08)',borderWidth:2,fill:true,tension:0.3,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt2(c.parsed.y)}}},scales:{x:{grid:{display:false},ticks:{font:{size:9},maxTicksLimit:8}},y:{ticks:{callback:v=>fmtM(v),font:{size:9}},grid:{color:'rgba(255,255,255,0.03)'}}}}});
+}
+
+function dpDrawIntChart(){
+  const el=gg('dpIntChart');if(!el)return;
+  const debts=dpDebtList.filter(d=>d.apr>0).slice(0,8);
+  const ints=debts.map(d=>Math.round(dpCalcDebt(d,0).interest));
+  if(dpIntChartInst)dpIntChartInst.destroy();
+  dpIntChartInst=new Chart(el,{type:'bar',indexAxis:'y',data:{labels:debts.map(d=>d.name.length>16?d.name.slice(0,14)+'…':d.name),datasets:[{data:ints,backgroundColor:debts.map(d=>d.apr>25?'#f05c5c':d.apr>15?'#f0a540':'#5b8def'),borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+fmt2(c.parsed.x)+' interest'}}},scales:{x:{ticks:{callback:v=>fmtM(v),font:{size:9}},grid:{color:'rgba(255,255,255,0.03)'}},y:{grid:{display:false},ticks:{font:{size:9.5}}}}}});
+}
+
+function dpDrawComparison(tBal,tMin){
+  const el=gg('dpCompare');if(!el)return;
+  const extra=+(gg('dp-extra')?.value||0);
+  const strats=['snowball','avalanche','hybrid'];
+  const results=strats.map(strat=>{
+    let sorted=[...dpDebtList];
+    if(strat==='snowball')sorted.sort((a,b)=>a.balance-b.balance);
+    else if(strat==='avalanche')sorted.sort((a,b)=>b.apr-a.apr);
+    else{const n=sorted.length;const bb=[...sorted].sort((a,b)=>a.balance-b.balance);const ba=[...sorted].sort((a,b)=>b.apr-a.apr);sorted.forEach(d=>{d._s2=(bb.indexOf(d)/n)*0.5+(ba.indexOf(d)/n)*0.5;});sorted.sort((a,b)=>a._s2-b._s2);}
+    let rems=sorted.map(d=>d.balance),paid=sorted.map(()=>false),tInt=0,maxM=0,rolled=0;
+    for(let m=1;m<=360;m++){if(paid.every(p=>p))break;const fi=paid.findIndex(p=>!p);sorted.forEach((d,i)=>{if(paid[i])return;const mr=d.apr/100/12;const ic=rems[i]*mr;tInt+=ic;let pay=d.min;if(i===fi)pay+=extra+rolled;pay=Math.min(pay,rems[i]+ic);rems[i]=Math.max(0,rems[i]+ic-pay);if(rems[i]<0.01){rems[i]=0;if(!paid[i]){paid[i]=true;rolled+=d.min;maxM=m;}}});}
+    return{strat,months:maxM,interest:Math.round(tInt)};
+  });
+  const minInt=Math.min(...results.map(r=>r.interest));
+  const minMo=Math.min(...results.map(r=>r.months));
+  const names={snowball:'⛄ Snowball',avalanche:'🏔️ Avalanche',hybrid:'⚖️ Hybrid'};
+  el.innerHTML='<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--hint);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;padding:4px 0;border-bottom:1px solid var(--border)"><span>Strategy</span><span>Payoff</span><span>Interest</span></div>'+results.map(r=>`<div class="dp-compare-row ${r.interest===minInt?'winner':''}" style="${r.strat===dpStrategy?'background:rgba(46,204,138,0.05);border-radius:6px;padding:5px 6px;margin:2px -6px;':''}"><span>${names[r.strat]}${r.strat===dpStrategy?' ←':''}</span><span class="mono">${r.months}mo${r.months===minMo?' 🏆':''}</span><span class="mono" style="color:${r.interest===minInt?'var(--green)':'var(--red)'}">${fmtM(r.interest)}</span></div>`).join('');
+}
+
+function dpDrawTactics(){
+  const el=gg('dpTactics');if(!el)return;
+  const tactics=[];
+  const highApr=dpDebtList.filter(d=>d.apr>20).sort((a,b)=>b.apr-a.apr);
+  const promo=dpDebtList.filter(d=>d.promo&&d.promo.toLowerCase().includes('0%'));
+  const small=dpDebtList.filter(d=>d.balance<500&&d.balance>0);
+  const ccTotal=dpDebtList.filter(d=>d.cat==='CC').reduce((s,d)=>s+d.balance,0);
+  if(highApr.length)tactics.push({icon:'🔥',text:`<strong>Balance transfer</strong> — ${esc(highApr[0].name)} at ${highApr[0].apr}% APR costs ${fmt2(highApr[0].balance*highApr[0].apr/100/12)}/mo in interest. A 0% BT card saves this immediately.`});
+  if(promo.length)tactics.push({icon:'⏰',text:`<strong>Promo expiring</strong> — ${esc(promo[0].name)} has a 0% offer. Pay it off before expiry or back-interest hits.`});
+  if(small.length)tactics.push({icon:'✅',text:`<strong>Quick win</strong> — ${esc(small[0].name)} only has ${fmt2(small[0].balance)} left. Eliminating it frees ${fmt2(small[0].min)}/mo immediately.`});
+  if(ccTotal>10000)tactics.push({icon:'🏠',text:`<strong>HELOC consolidation</strong> — ${fmt2(ccTotal)} in CC debt at high APRs. Rolling into HELOC (7.75%) could save hundreds — but stop using the cards.`});
+  tactics.push({icon:'📞',text:'<strong>Call for lower rates</strong> — Capitol One, AMEX, and CITI all have hardship rate reduction programs. Ask directly.'});
+  tactics.push({icon:'🎯',text:'<strong>Apply tax refund / bonus</strong> — any windfall goes directly to priority #1 before lifestyle inflation kicks in.'});
+  el.innerHTML=tactics.slice(0,5).map(t=>`<div class="dp-tactic"><span class="dp-tactic-icon">${t.icon}</span><span class="dp-tactic-body">${t.text}</span></div>`).join('');
+}
+
+function dpDrawSchedule(snaps){
+  const thead=gg('dpScheduleHead'),tbody=gg('dpScheduleBody');if(!thead||!tbody)return;
+  const names=dpDebtList.map(d=>d.name.split(' ').slice(0,2).join(' '));
+  thead.innerHTML=`<tr><th>Month</th><th>Total</th>${names.map(n=>`<th>${esc(n)}</th>`).join('')}</tr>`;
+  let rems=dpDebtList.map(d=>d.balance),paid=dpDebtList.map(()=>false),rolled=0;
+  const extra=+(gg('dp-extra')?.value||0);
+  const rows=[];
+  for(let m=1;m<=360;m++){
+    if(paid.every(p=>p))break;
+    const fi=paid.findIndex(p=>!p);
+    dpDebtList.forEach((d,i)=>{if(paid[i])return;const mr=d.apr/100/12;const ic=rems[i]*mr;let pay=d.min;if(i===fi)pay+=extra+rolled;pay=Math.min(pay,rems[i]+ic);rems[i]=Math.max(0,rems[i]+ic-pay);if(rems[i]<0.01){rems[i]=0;if(!paid[i]){paid[i]=true;rolled+=d.min;}}});
+    const tot=rems.reduce((s,v)=>s+v,0);
+    if(m<=60||m%6===0)rows.push({m,tot:Math.round(tot),rems:[...rems]});
+    if(tot<1)break;
+  }
+  tbody.innerHTML=rows.map((r,ri)=>{
+    const date=new Date(Date.now()+r.m*30.4*86400000).toLocaleDateString('en-US',{month:'short',year:'numeric'});
+    return `<tr style="${ri%2===0?'background:rgba(255,255,255,0.01)':''}"><td class="mono" style="font-size:11.5px;color:var(--muted);white-space:nowrap">${date}</td><td class="mono" style="font-weight:600;font-size:12px;color:${r.tot<5000?'var(--green)':'var(--text)'}">${fmt2(r.tot)}</td>${dpDebtList.map((d,i)=>r.rems[i]<1?'<td style="color:var(--green);font-size:11px">✓</td>':`<td class="mono" style="font-size:11px;color:var(--muted)">${fmt2(r.rems[i])}</td>`).join('')}</tr>`;
+  }).join('');
+}
+
+function dpExport(){
+  const extra=+(gg('dp-extra')?.value||0);
+  const wb=XLSX.utils.book_new();
+  const d=[['Debt Payoff Plan',''],['Strategy',dpStrategy],['Extra/mo',fmt2(extra)],['Generated',new Date().toLocaleDateString()],[''],['DEBT LIST','','','',''],['#','Debt','Balance','APR','Min Pay','Payoff','Interest'],...dpDebtList.map((d,i)=>{const r=dpCalcDebt(d,i===0?extra:0);const pd=r.months<999?new Date(Date.now()+r.months*30.4*86400000).toLocaleDateString('en-US',{month:'short',year:'numeric'}):'Cannot pay off';return[i+1,d.name,d.balance,d.apr+'%',d.min,pd,Math.round(r.interest)];})];
+  const ws=XLSX.utils.aoa_to_sheet(d);ws['!cols']=[{wch:6},{wch:24},{wch:14},{wch:8},{wch:12},{wch:16},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,ws,'Debt Payoff');
+  XLSX.writeFile(wb,'Matt_Dana_DebtPayoff_'+todayStr()+'.xlsx');
+  showToast('Debt payoff plan exported!','success');
 }
 
 const plaidS=document.createElement('script');
