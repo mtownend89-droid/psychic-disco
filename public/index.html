@@ -147,85 +147,126 @@ input, select, textarea { font-size: 16px !important; }
   .mobile-only  { display: none  !important; }
 }
 
-/* ── 480px–767px: iPhone Plus / large phone ─────────────────────────────── */
+/* ── MOBILE (≤767px): BOTTOM TAB BAR — iPhone 12 / iPhone Plus ──────────── */
+/* The sidebar becomes a horizontal tab bar pinned to the bottom.
+   It NEVER covers page content. Swipe left/right to navigate pages.         */
 @media (max-width: 767px) {
-  /* Bottom tab bar */
+
+  /* Sidebar → bottom strip */
   #sidebar {
-    position: fixed;
-    top: auto; bottom: 0; left: 0; right: 0;
-    width: 100%; height: auto; min-height: unset;
-    flex-direction: row;
-    border-right: none;
-    border-top: 1px solid var(--border);
-    padding: 0 max(var(--safe-left), 4px) max(var(--safe-bottom), 0px);
+    position: fixed !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: unset !important;
+    max-height: 66px !important;
+    flex-direction: row !important;
+    border-right: none !important;
+    border-top: 1.5px solid var(--border) !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    padding-bottom: max(var(--safe-bottom), 0px) !important;
     transform: none !important;
-    z-index: 100;
-    border-radius: 0;
+    z-index: 100 !important;
+    background: var(--sidebar) !important;
+    box-shadow: 0 -1px 0 var(--border);
+    overflow: visible !important;
   }
-  .sb-logo, .sb-section, .sb-footer { display: none !important; }
+  .sb-logo, .sb-section, .sb-footer, .sb-user { display: none !important; }
+
+  /* Nav: horizontal scrolling icon row */
   .sb-nav {
-    flex-direction: row; padding: 4px 0 0; gap: 0;
-    justify-content: space-around; flex: 1;
-    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    padding: 6px 4px 2px !important;
+    gap: 0 !important;
+    flex: 1 !important;
+    overflow-x: scroll !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
   }
+  .sb-nav::-webkit-scrollbar { display: none !important; }
+
+  /* Each nav button: icon + tiny label */
   .nav-btn {
-    flex-direction: column; align-items: center; gap: 2px;
-    padding: 6px 4px 4px; font-size: 9px; font-weight: 500;
-    min-width: 44px; border-radius: 8px; flex: 1; max-width: 72px;
-    white-space: nowrap;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 2px !important;
+    padding: 4px 6px 4px !important;
+    font-size: 9px !important;
+    font-weight: 500 !important;
+    min-width: 52px !important;
+    max-width: 64px !important;
+    flex-shrink: 0 !important;
+    border-radius: 8px !important;
+    border-bottom: 2px solid transparent !important;
+    white-space: nowrap !important;
+    color: var(--muted) !important;
+    background: transparent !important;
   }
-  .nav-ic { width: 20px; height: 20px; }
-  .nav-ic svg { width: 20px; height: 20px; stroke-width: 1.6; }
-  .nav-btn.active { background: transparent; color: var(--green); }
-  .nav-btn.active .nav-ic { color: var(--green); }
+  .nav-btn .kbd-hint { display: none !important; }
+  .nav-ic { width: 22px !important; height: 22px !important; }
+  .nav-ic svg { width: 22px !important; height: 22px !important; stroke-width: 1.5 !important; }
+  .nav-btn.active {
+    color: var(--green) !important;
+    background: rgba(61,218,145,0.08) !important;
+    border-bottom-color: var(--green) !important;
+  }
+  .nav-btn.active .nav-ic { color: var(--green) !important; }
+
+  /* Main content: no left margin, space for bottom bar */
   #main {
     margin-left: 0 !important;
-    padding-bottom: calc(56px + var(--safe-bottom));
+    width: 100% !important;
+    padding-bottom: calc(70px + max(var(--safe-bottom), 0px)) !important;
   }
   #topbar {
-    padding: max(var(--safe-top),0px) max(var(--safe-right),14px) 0 max(var(--safe-left),14px);
+    padding-top: max(var(--safe-top), 0px);
     height: calc(50px + max(var(--safe-top), 0px));
+    padding-left: max(var(--safe-left), 14px);
+    padding-right: max(var(--safe-right), 14px);
   }
-  .topbar-title { font-size: 14px; }
+  .topbar-title { font-size: 15px !important; }
+  .topbar-right .btn:not(.primary):not(.green-outline) { display: none !important; }
   #page-content {
-    padding: 12px max(var(--safe-right),12px) calc(72px + var(--safe-bottom)) max(var(--safe-left),12px);
+    padding: 14px max(var(--safe-right),12px) calc(80px + max(var(--safe-bottom),0px)) max(var(--safe-left),12px) !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
   }
-  /* Sheet modals slide up from bottom */
-  .modal { border-radius: 20px 20px 0 0; max-height: 92vh; }
-  .modal-bg { align-items: flex-end; }
-  /* Grids */
-  .wgrid { grid-template-columns: 1fr 1fr; gap: 8px; }
-  .g2, .g-main-side, .g3 { grid-template-columns: 1fr; }
-  .g5 { grid-template-columns: repeat(2, 1fr); }
-  /* Tighter cards */
-  .card { padding: 14px; }
-  .wvalue { font-size: 18px; }
-  /* Hide desktop-only extras */
+  .page { max-width: 100vw; overflow-x: hidden; }
+  .modal { border-radius: 20px 20px 0 0 !important; max-height: 92vh !important; }
+  .modal-bg { align-items: flex-end !important; }
+  .wgrid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  .g2, .g-main-side, .g3, #fdMainGrid, #dpMainGrid { grid-template-columns: 1fr !important; }
+  .g5 { grid-template-columns: repeat(2, 1fr) !important; }
+  .card { padding: 14px !important; }
+  .wvalue { font-size: 18px !important; }
+  .page-hdr { flex-direction: column !important; align-items: flex-start !important; gap: 8px !important; }
+  .page-hdr-right { width: 100% !important; flex-wrap: wrap !important; }
+  .dh { opacity: 0.7 !important; pointer-events: auto !important; }
   .desktop-only, .tablet-only { display: none !important; }
-  /* Table: allow horizontal scroll, don't clip */
-  .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  /* Smaller topbar buttons */
-  .topbar-btn { height: 30px; padding: 0 10px; font-size: 11px; }
-  /* Page header stacks */
-  .page-hdr { flex-direction: column; align-items: flex-start; gap: 8px; }
-  .page-hdr-right { width: 100%; justify-content: flex-start; }
-  /* Drag handles always visible on touch */
-  .dh { opacity: 1 !important; pointer-events: auto !important; }
+  .date-range-bar { gap: 5px !important; }
+  .drp-btn { font-size: 11px !important; padding: 0 9px !important; }
 }
 
-/* ── <480px: small iPhone ────────────────────────────────────────────────── */
-@media (max-width: 479px) {
-  .nav-btn { min-width: 36px; font-size: 8.5px; padding: 5px 2px 4px; }
-  .nav-ic { width: 18px; height: 18px; }
-  .nav-ic svg { width: 18px; height: 18px; }
-  .wgrid { grid-template-columns: 1fr 1fr; gap: 6px; }
-  .widget { padding: 12px 14px; }
-  .wvalue { font-size: 17px; }
-  #page-content { padding: 10px 10px calc(70px + var(--safe-bottom)); }
-  .card { padding: 12px; }
-  .page-title { font-size: 16px; }
-  /* Collapse topbar — just show title and hamburger */
-  .topbar-right .btn:not(.primary) { display: none; }
+/* ── iPhone 12 / Small phones (≤390px) ─────────────────────────────────────── */
+@media (max-width: 390px) {
+  .nav-btn { min-width: 46px !important; max-width: 56px !important; font-size: 8px !important; padding: 3px 3px 4px !important; }
+  .nav-ic { width: 20px !important; height: 20px !important; }
+  .nav-ic svg { width: 20px !important; height: 20px !important; }
+  .wgrid { grid-template-columns: 1fr 1fr !important; gap: 6px !important; }
+  .widget { padding: 10px 12px !important; }
+  .wvalue { font-size: 16px !important; }
+  #page-content { padding: 10px 10px calc(76px + max(var(--safe-bottom),0px)) !important; }
+  .card { padding: 11px !important; }
+  .page-title { font-size: 16px !important; }
+  .wlabel { font-size: 10px !important; }
 }
 
 /* ── SIDEBAR ── */
@@ -496,38 +537,9 @@ input[type=range]{width:100%;accent-color:var(--green);}
 #toast.error{border-left:3px solid var(--red);}
 
 /* ── RESPONSIVE ── */
-@media(max-width:767px){
-  #sidebar{transform:translateX(-100%);}
-  #sidebar.open{transform:translateX(0);}
-  #main{margin-left:0;}
-  .g2,.g3,.g-main-side{grid-template-columns:1fr;}
-}
-@media(max-width:600px){
-  #page-content{padding:14px;}
-  .wgrid{grid-template-columns:1fr 1fr;}
-  .g5{grid-template-columns:1fr 1fr;}
-}
-
-/* Hamburger button — only shows on iPhone */
-.hamburger-btn {
-  display: none;
-  width: 36px; height: 36px; padding: 0;
-  background: none; border: none; color: var(--text);
-  cursor: pointer; align-items: center; justify-content: center;
-  border-radius: var(--radius-sm); flex-shrink: 0;
-}
-.hamburger-btn:hover { background: rgba(255,255,255,0.07); }
-@media (max-width: 767px) {
-  .hamburger-btn { display: flex; }
-}
-
-/* Sidebar overlay backdrop on iPhone */
-#sidebarOverlay {
-  display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,0.55); z-index: 49;
-  backdrop-filter: blur(2px);
-}
-#sidebarOverlay.visible { display: block; }
+/* Hamburger and overlay only needed if sidebar is a drawer — not on iPhone (bottom tab) */
+.hamburger-btn { display: none; }
+#sidebarOverlay { display: none; }
 
 
 /* ── FIRE DRILL ── */
@@ -891,6 +903,34 @@ input[type=range]{width:100%;accent-color:var(--green);}
 .scroll-date-btns { display: flex; gap: 10px; }
 .scroll-date-btns button { flex: 1; height: 44px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; font-family: var(--font); cursor: pointer; border: none; }
 
+
+/* ── Mobile page dots ── */
+#mobilePageDots { display: none; }
+@media (max-width: 767px) {
+  #mobilePageDots {
+    display: flex !important;
+    position: sticky; top: calc(50px + max(var(--safe-top),0px));
+    background: transparent; z-index: 10;
+  }
+}
+.page-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--border2); transition: all 0.2s;
+  cursor: pointer;
+}
+.page-dot.active {
+  width: 16px; border-radius: 3px;
+  background: var(--green);
+}
+
+/* Prevent page content from being wider than viewport on iPhone */
+@media (max-width: 767px) {
+  .page { max-width: 100vw; overflow-x: hidden; }
+  #page-content { max-width: 100vw; overflow-x: hidden; }
+  /* Swipe indicator area — never interfere with content */
+  #swipeFlash { display: none; }
+}
+
 </style>
 </head><body>
 <!-- ── SIDEBAR ── -->
@@ -1040,6 +1080,12 @@ input[type=range]{width:100%;accent-color:var(--green);}
 
 <!-- ── MAIN ── -->
 <div id="main">
+  <!-- Mobile page indicator dots — only shows on phone -->
+  <div id="mobilePageDots" style="
+    display:none; justify-content:center; gap:5px;
+    padding:6px 0 2px; position:relative; z-index:5;
+    height:16px;
+  "></div>
   <div id="desktopQuickStats">
   <div class="qs-item" onclick="showPage('dashboard')">
     <span class="qs-icon">💰</span>
@@ -1081,6 +1127,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
     <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Open navigation">
       <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
+    <div id="swipeFlash" style="position:fixed;inset:0;pointer-events:none;z-index:200;opacity:0;transition:opacity 0.25s,transform 0.25s;background:transparent;"></div>
     <div class="topbar-title" id="topbarTitle">Dashboard</div>
     <div class="topbar-right">
       <span class="edit-mode-badge" id="editModeBadge">✏️ Editing</span>
@@ -2270,6 +2317,7 @@ function showPage(page){
   const nb=document.querySelector(`.nav-btn[onclick="showPage('${page}')"]`);if(nb)nb.classList.add('active');
   const tt=gg('topbarTitle');if(tt)tt.textContent=getPageTitle(page);
   makeEditableTitle(page);
+  updatePageDots(page);
   if(page==='retirement'){showPage('networth');switchNWTab('retirement');return;}
   if(page==='networth')setTimeout(()=>{const c=gg('retContainer');if(c)initDrag(c);},100);
   if(page==='expenses'){renderBillsTab();renderCalendar();renderZeroBudget();renderIncomeTab();updateBudgetMetrics();setTimeout(()=>{const c=gg('cfContainer');if(c){initDrag(c);c.querySelectorAll('.dh').forEach(h=>{h.style.opacity='1';h.style.pointerEvents='auto';});}},200);}
@@ -3970,31 +4018,80 @@ function showDesktopWelcome() {
 }
 
 // ── Mobile: swipe between pages ───────────────────────────────────────────────
+// Swipes left/right anywhere on the page to navigate between tabs.
+// Respects sliders, horizontal-scroll containers, and tab rows.
 (function() {
-  if (typeof window === 'undefined') return;
-  let touchStartX = 0, touchStartY = 0;
-  const PAGES = ['dashboard','transactions','expenses','networth','firedrill'];
+  var _sx = 0, _sy = 0, _sEl = null;
 
   document.addEventListener('touchstart', function(e) {
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
+    _sx  = e.touches[0].clientX;
+    _sy  = e.touches[0].clientY;
+    _sEl = e.target;
   }, { passive: true });
 
   document.addEventListener('touchend', function(e) {
     if (!isMobile()) return;
-    const dx = e.changedTouches[0].clientX - touchStartX;
-    const dy = e.changedTouches[0].clientY - touchStartY;
-    // Only horizontal swipes > 60px that aren't mostly vertical
-    if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx) * 0.8) return;
-    // Don't swipe when on sliders or scrollable elements
-    if (e.target.type === 'range') return;
-    const activePage = document.querySelector('.page.active');
+    var dx = e.changedTouches[0].clientX - _sx;
+    var dy = e.changedTouches[0].clientY - _sy;
+
+    // Must be a dominant horizontal swipe
+    if (Math.abs(dx) < 55) return;
+    if (Math.abs(dy) > Math.abs(dx) * 0.65) return;
+
+    // Don't swipe on interactive elements or scroll containers
+    var el = _sEl;
+    while (el && el !== document.body) {
+      var tag = el.tagName;
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+      if (el.type === 'range') return;
+      // Don't swipe on horizontally-scrollable elements (tables, nav bar, etc.)
+      var ow = el.scrollWidth, cw = el.clientWidth;
+      if (ow > cw + 2) {
+        // Allow swipe only if the element can't scroll the direction we swiped
+        var scrollable = (dx < 0 && el.scrollLeft < ow - cw - 2) ||
+                         (dx > 0 && el.scrollLeft > 2);
+        if (scrollable) return;
+      }
+      el = el.parentElement;
+    }
+
+    // Get ordered list of pages from sidebar nav buttons
+    var nav = document.getElementById('sbNav');
+    if (!nav) return;
+    var pages = Array.prototype.slice.call(
+      nav.querySelectorAll('.nav-btn[onclick*="showPage"]')
+    ).map(function(b) {
+      var m = (b.getAttribute('onclick')||'').match(/showPage\('([^']+)'\)/);
+      return m ? m[1] : null;
+    }).filter(Boolean);
+
+    var activePage = document.querySelector('.page.active');
     if (!activePage) return;
-    const currentIdx = PAGES.indexOf(activePage.id);
-    if (currentIdx === -1) return;
-    if (dx < 0 && currentIdx < PAGES.length - 1) showPage(PAGES[currentIdx + 1]);
-    if (dx > 0 && currentIdx > 0) showPage(PAGES[currentIdx - 1]);
+    var idx = pages.indexOf(activePage.id);
+    if (idx === -1) return;
+
+    if (dx < 0 && idx < pages.length - 1) {
+      // Swipe left → next page
+      showPage(pages[idx + 1]);
+      swipeFlash('right');
+    } else if (dx > 0 && idx > 0) {
+      // Swipe right → previous page
+      showPage(pages[idx - 1]);
+      swipeFlash('left');
+    }
   }, { passive: true });
+
+  // Brief visual flash to confirm swipe direction
+  function swipeFlash(dir) {
+    var flash = document.getElementById('swipeFlash');
+    if (!flash) return;
+    flash.style.opacity = '1';
+    flash.style.transform = dir === 'right' ? 'translateX(8px)' : 'translateX(-8px)';
+    setTimeout(function() {
+      flash.style.opacity = '0';
+      flash.style.transform = 'translateX(0)';
+    }, 250);
+  }
 })();
 
 // ── Mobile: pull-to-refresh on dashboard ─────────────────────────────────────
@@ -5423,6 +5520,39 @@ function initDateRangeBars() {
       renderCashFlow();
     });
   }
+}
+
+
+// ── MOBILE PAGE DOTS ─────────────────────────────────────────────────────────
+function updatePageDots(activePage) {
+  var container = document.getElementById('mobilePageDots');
+  if (!container) return;
+  if (window.innerWidth > 767) { container.innerHTML = ''; return; }
+
+  var nav = document.getElementById('sbNav');
+  if (!nav) return;
+  var pages = Array.prototype.slice.call(
+    nav.querySelectorAll('.nav-btn[onclick*="showPage"]')
+  ).map(function(b) {
+    var m = (b.getAttribute('onclick')||'').match(/showPage\('([^']+)'\)/);
+    return m ? m[1] : null;
+  }).filter(Boolean);
+
+  if (!container._built || container.children.length !== pages.length) {
+    var dotHtml = '';
+    for (var pi = 0; pi < pages.length; pi++) {
+      dotHtml += '<div class="page-dot" data-page="' + pages[pi] + '"></div>';
+    }
+    container.innerHTML = dotHtml;
+    // Wire clicks via delegation
+    Array.prototype.forEach.call(container.children, function(dot) {
+      dot.addEventListener('click', function() { showPage(this.getAttribute('data-page')); });
+    });
+    container._built = true;
+  }
+  Array.prototype.forEach.call(container.children, function(dot, i) {
+    dot.classList.toggle('active', pages[i] === activePage);
+  });
 }
 
 const plaidS=document.createElement('script');
