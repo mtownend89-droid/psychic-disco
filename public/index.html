@@ -796,6 +796,22 @@ input[type=range]{width:100%;accent-color:var(--green);}
 .toggle-sw input:checked + .toggle-sl{background:var(--green);}
 .toggle-sw input:checked + .toggle-sl::before{transform:translateX(18px);}
 
+
+/* Account name editing */
+.acct-row { position: relative; }
+.acct-edit-btn {
+  display: none; position: absolute; right: 0; top: 50%;
+  transform: translateY(-50%); background: var(--surface3);
+  border: 1px solid var(--border); border-radius: var(--radius-xs);
+  color: var(--muted); cursor: pointer; font-size: 11px;
+  padding: 2px 7px; font-family: var(--font);
+}
+.acct-row:hover .acct-edit-btn { display: block; }
+/* Sidebar drag */
+.nav-btn { user-select: none; }
+.nav-btn.sb-dragging { opacity: 0.4; }
+.nav-btn.sb-drag-over { border-top: 2px solid var(--green); }
+
 </style>
 </head><body>
 <!-- ── SIDEBAR ── -->
@@ -895,7 +911,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
     <div class="sb-logo-mark">💰</div>
     <div><div class="sb-logo-text">Matt &amp; Dana</div><div class="sb-logo-sub">Personal Finance</div></div>
   </div>
-  <div class="sb-nav">
+  <div class="sb-nav" id="sbNav">
     <button class="nav-btn active" onclick="showPage('dashboard')">
       <span class="nav-ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>Dashboard
     </button>
@@ -909,7 +925,6 @@ input[type=range]{width:100%;accent-color:var(--green);}
       <span class="nav-ic"><svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></span>Net Worth &amp; Retirement
     </button>
 
-    <div class="sb-section">Reports</div>
 
     <button class="nav-btn" onclick="showPage('settings')"><span class="kbd-hint">S</span>
       <span class="nav-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span>Settings &amp; Themes
@@ -1036,9 +1051,10 @@ input[type=range]{width:100%;accent-color:var(--green);}
             <div class="card card-sm">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
                 <div class="card-title" style="margin-bottom:0">💸 Money flow (30d)</div>
-                <span style="font-size:10.5px;color:var(--hint)">Sankey diagram</span>
+                <span style="font-size:10.5px;color:var(--hint)" id="spendChartLabel">Sankey diagram</span>
               </div>
-              <canvas id="sankeyChart" style="width:100%;height:220px;display:block"></canvas>
+              <div id="sankeyWrap" style="width:100%"><canvas id="sankeyChart" style="width:100%;height:240px;display:block"></canvas></div>
+              <div id="catChartWrap" style="display:none;height:240px"><canvas id="catChart"></canvas></div>
             </div>
             <div class="card card-sm"><div class="card-title">daily spending (30d)</div><div class="chart-wrap" style="height:220px"><canvas id="dailyChart"></canvas></div></div>
           </div>
@@ -1891,6 +1907,53 @@ input[type=range]{width:100%;accent-color:var(--green);}
       </div>
     </div>
 
+<!-- Account Edit Modal -->
+<div class="modal-bg" id="acctEditModal" style="display:none" onclick="if(event.target===this)gg('acctEditModal').style.display='none'">
+  <div class="modal">
+    <div class="modal-title">Edit account display</div>
+    <div class="modal-sub">Customize how this account appears in the app</div>
+    <input type="hidden" id="acctEditId">
+    <div class="form-grid">
+      <div class="form-field" style="grid-column:1/-1">
+        <label>Display name</label>
+        <input type="text" id="acctEditName" placeholder="Custom name for this account">
+      </div>
+      <div class="form-field">
+        <label>Label color</label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="color" id="acctEditColor" value="#f0f2fa" style="width:44px;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:2px;background:none;cursor:pointer">
+          <span style="font-size:12px;color:var(--muted)">Text color for this account</span>
+        </div>
+      </div>
+      <div class="form-field">
+        <label>Font style</label>
+        <select id="acctEditFont">
+          <option value="normal">Normal</option>
+          <option value="bold">Bold</option>
+          <option value="italic">Italic</option>
+          <option value="bold italic">Bold Italic</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Badge / Icon</label>
+        <input type="text" id="acctEditBadge" placeholder="e.g. 🏦 or leave blank" maxlength="4">
+      </div>
+      <div class="form-field">
+        <label>Hide from lists</label>
+        <label class="fd-toggle" style="margin-top:4px">
+          <input type="checkbox" id="acctEditHide">
+          <span class="fd-toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="acctEditReset()">Reset to default</button>
+      <button class="btn" onclick="gg('acctEditModal').style.display='none'">Cancel</button>
+      <button class="btn primary" onclick="acctEditSave()">Save</button>
+    </div>
+  </div>
+</div>
+
 </div><!-- /mainContent -->
 
 <!-- ── MODALS ── -->
@@ -2105,6 +2168,8 @@ async function init(){
   ['dashboard','expenses','retirement','networth','transactions'].forEach(loadSO);
   setTimeout(initAllEditableTabs, 100);
   bootSettings();
+  loadSidebarOrder();
+  setTimeout(initSidebarDrag, 200);
   const sel=gg('calMonthSel');
   if(sel){const now=new Date();for(let i=0;i<12;i++){const d=new Date(now.getFullYear(),now.getMonth()+i,1);const o=document.createElement('option');o.value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;o.textContent=d.toLocaleString('default',{month:'long',year:'numeric'});if(i===0)o.selected=true;sel.appendChild(o);}}
   const today=new Date().toISOString().slice(0,10);
@@ -2219,7 +2284,7 @@ function refreshRetAccounts(){
 function renderAccounts(){
   const el=gg('accountsList');if(!el)return;
   if(!allAccts.length){el.innerHTML='<div class="empty">No accounts</div>';return;}
-  el.innerHTML=allAccts.map(a=>{const bal=a.balances.current??a.balances.available??0;const iC=a.type==='credit';return `<div class="acct-row"><div><div class="acct-name">${esc(a.name)}</div><div class="acct-sub">${esc(a.institution)} · ****${esc(a.mask||'????')}</div></div><div style="text-align:right"><div class="acct-bal" style="color:${iC?'var(--red)':'var(--green)'}">${iC?'-':''}${fmtK(bal)}</div><div class="acct-type">${a.subtype||a.type}</div></div></div>`;}).join('');
+  el.innerHTML = allAccts.map(a => buildAcctRow(a)).filter(Boolean).join('');
 }
 function renderBanks(){
   const el=gg('banksList');if(!el)return;
@@ -2279,7 +2344,36 @@ function updateSpendMetrics(){
   const tc=gg('mTxnCount');if(tc)tc.textContent=rec.length;
 }
 function renderCharts(){
-  setTimeout(renderSankey, 100);
+  const spendType = (typeof ST !== 'undefined' && ST.chartTypes && ST.chartTypes.spending) || 'sankey';
+  if (spendType === 'sankey') {
+    // Show sankey, hide catChart container
+    const sc = gg('sankeyWrap'); if (sc) sc.style.display = 'block';
+    const cc = gg('catChartWrap'); if (cc) cc.style.display = 'none';
+    setTimeout(renderSankey, 100);
+  } else {
+    // Show catChart, hide sankey
+    const sc = gg('sankeyWrap'); if (sc) sc.style.display = 'none';
+    const cc = gg('catChartWrap'); if (cc) cc.style.display = 'block';
+    setTimeout(() => {
+      const cut = new Date(Date.now()-30*86400000);
+      const rec = allTxns.filter(t=>new Date(t.date)>=cut&&t.amount>0);
+      const byCat={};rec.forEach(t=>{const c=fmtCat(t.personal_finance_category?.primary||t.category?.[0]||'Other');byCat[c]=(byCat[c]||0)+t.amount;});
+      const sorted=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,10);
+      if(catChartI)catChartI.destroy();
+      const chartType = spendType === 'pie' ? 'pie' : spendType === 'bar' ? 'bar' : 'doughnut';
+      const isBar = chartType === 'bar';
+      const el = gg('catChart');
+      if (!el) return;
+      catChartI = new Chart(el, {
+        type: chartType,
+        data: {
+          labels: sorted.map(([k])=>k),
+          datasets:[{data:sorted.map(([,v])=>Math.round(v)),backgroundColor:PAL,borderWidth:2,borderColor:'#1c1f28',borderRadius:isBar?3:0}]
+        },
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:isBar?'top':'right',labels:{font:{size:10.5},boxWidth:9,padding:7}},tooltip:{callbacks:{label:c=>' $'+c.parsed.toLocaleString()}}},scales:isBar?{x:{grid:{display:false}},y:{ticks:{callback:v=>'$'+v}}}:{}}
+      });
+    }, 100);
+  }
   setTimeout(renderSWOT, 200);
   const cut=new Date(Date.now()-30*86400000);
   const rec=allTxns.filter(t=>new Date(t.date)>=cut&&t.amount>0);
@@ -3922,147 +4016,170 @@ function renderSankey() {
   const canvas = gg('sankeyChart');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-
-  // Set pixel dimensions
-  const W = canvas.parentElement.clientWidth - 32;
-  const H = 220;
-  canvas.width  = W * (window.devicePixelRatio || 1);
-  canvas.height = H * (window.devicePixelRatio || 1);
+  const dpr = window.devicePixelRatio || 1;
+  const W = Math.max(200, (canvas.parentElement.clientWidth || 400) - 4);
+  const H = 260;
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
   canvas.style.width  = W + 'px';
   canvas.style.height = H + 'px';
-  ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+  ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, W, H);
 
-  // ── Build data from app state ─────────────────────────────────────────────
   const FM = {weekly:52/12,biweekly:26/12,monthly:1,quarterly:1/3,annual:1/12};
   const totalIncome = incomeSources.reduce((s,src) => s + src.amt*(FM[src.freq]||1), 0);
+
   if (totalIncome <= 0) {
-    ctx.fillStyle = '#606480';
-    ctx.font = '13px DM Sans, sans-serif';
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--hint') || '#606480';
+    ctx.font = '13px ' + (getComputedStyle(document.documentElement).getPropertyValue('--font') || 'DM Sans, sans-serif');
     ctx.textAlign = 'center';
-    ctx.fillText('Connect accounts to see money flow', W/2, H/2);
+    ctx.fillText('Add income sources to see money flow', W/2, H/2);
     return;
   }
 
-  // Build spending categories from transactions (30d)
+  // ── Build nodes ──────────────────────────────────────────────────────────
+  const PAL_COLORS = (window._activePalette || ['#3dda91','#6b9ef5','#f46a6a','#b09afa','#f5b042','#45c8fc','#fb923c','#34d399']);
+
+  // LEFT: income sources
+  const incNodes = incomeSources.map((s, i) => ({
+    label: s.name.split(' ').slice(0,2).join(' '),
+    value: Math.round(s.amt*(FM[s.freq]||1)),
+    color: PAL_COLORS[i % PAL_COLORS.length],
+  })).filter(n => n.value > 0);
+
+  // RIGHT: spending categories + bills + savings
   const cut = new Date(Date.now() - 30*86400000);
   const byCat = {};
   allTxns.filter(t => new Date(t.date) >= cut && t.amount > 0).forEach(t => {
     const c = fmtCat(t.personal_finance_category?.primary || t.category?.[0] || 'Other');
     byCat[c] = (byCat[c]||0) + t.amount;
   });
-
-  const topCats = Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,6);
-  const totalSpend = topCats.reduce((s,[,v])=>s+v,0);
-  const totalBills = bills.reduce((s,b)=>s+b.pay,0);
+  const topCats = Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const totalBills = bills.reduce((s,b) => s+b.pay, 0);
+  const totalSpend = topCats.reduce((s,[,v])=>s+v, 0);
   const savings    = Math.max(0, totalIncome - totalSpend - totalBills);
 
-  // ── Layout ────────────────────────────────────────────────────────────────
-  const PAD   = 10;
-  const COL1X = PAD + 80;   // Income source column
-  const COL2X = W / 2;      // Middle (income total)
-  const COL3X = W - PAD - 80; // Spending column
-  const NODE_W = 14;
-  const MIN_H  = 4;
-
-  // Income nodes
-  const incNodes = incomeSources.map(s => ({
-    label: s.name.split(' ')[0],
-    value: s.amt*(FM[s.freq]||1),
-    color: '#3dda91',
-  }));
-
-  // Outflow nodes
+  const outColors = ['#f46a6a','#6b9ef5','#f5b042','#b09afa','#45c8fc','#fb923c'];
   const outNodes = [
-    ...topCats.map(([k,v],i) => ({label:k.split(' ')[0], value:v, color:['#6b9ef5','#f46a6a','#f5b042','#b09afa','#45c8fc','#f472b6'][i%6]})),
-    {label:'Bills', value:totalBills, color:'#f46a6a'},
-    ...(savings > 0 ? [{label:'Savings', value:savings, color:'#3dda91'}] : []),
-  ];
+    ...topCats.map(([k,v],i) => ({label:k.split(' ')[0], value:Math.round(v), color:outColors[i%outColors.length]})),
+    {label:'Bills', value:Math.round(totalBills), color:'#f46a6a'},
+    ...(savings > 50 ? [{label:'Savings', value:Math.round(savings), color:'#3dda91'}] : []),
+  ].filter(n => n.value > 0);
 
-  // Normalize heights to fit in H - 2*PAD
-  const availH = H - PAD*3;
-  const incTotal  = incNodes.reduce((s,n)=>s+n.value,0);
-  const outTotal  = outNodes.reduce((s,n)=>s+n.value,0);
-  const scaleInc  = availH / incTotal;
-  const scaleOut  = availH / Math.max(outTotal, incTotal);
+  if (!incNodes.length || !outNodes.length) {
+    ctx.fillStyle = '#606480';
+    ctx.font = '13px DM Sans, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No transaction data yet', W/2, H/2);
+    return;
+  }
 
-  // Assign Y positions
-  let y = PAD;
+  // ── Layout constants ─────────────────────────────────────────────────────
+  const LABEL_W  = 90;  // label width on each side
+  const NODE_W   = 12;  // width of node bar
+  const GAP      = 5;   // gap between node bars
+  const PAD_TOP  = 14;
+  const PAD_BOT  = 14;
+  const NODE_GAP = 5;
+  const availH   = H - PAD_TOP - PAD_BOT;
+
+  const LX = LABEL_W;          // left node x
+  const RX = W - LABEL_W - NODE_W;  // right node x
+
+  // Scale nodes so total height = availH
+  const incTotal = incNodes.reduce((s,n)=>s+n.value,0);
+  const outTotal = outNodes.reduce((s,n)=>s+n.value,0);
+  const incScale = (availH - (incNodes.length-1)*NODE_GAP) / incTotal;
+  const outScale = (availH - (outNodes.length-1)*NODE_GAP) / outTotal;
+
+  let y = PAD_TOP;
   incNodes.forEach(n => {
-    n.h = Math.max(MIN_H, n.value * scaleInc);
-    n.y = y; y += n.h + 4;
+    n.h = Math.max(6, Math.round(n.value * incScale));
+    n.y = y; y += n.h + NODE_GAP;
   });
-  y = PAD;
+  y = PAD_TOP;
   outNodes.forEach(n => {
-    n.h = Math.max(MIN_H, n.value * scaleOut);
-    n.y = y; y += n.h + 4;
+    n.h = Math.max(6, Math.round(n.value * outScale));
+    n.y = y; y += n.h + NODE_GAP;
   });
 
-  // ── Draw flows ────────────────────────────────────────────────────────────
-  ctx.globalAlpha = 0.35;
-  incNodes.forEach(src => {
-    outNodes.forEach(dst => {
-      const ratio = dst.value / outTotal;
-      const flowH = Math.max(1, src.h * ratio);
-      const srcY  = src.y + (src.h - flowH) / 2;
-      const dstY  = dst.y + (dst.h - flowH) / 2;
-      const grad  = ctx.createLinearGradient(COL1X + NODE_W, 0, COL3X, 0);
-      grad.addColorStop(0, src.color);
-      grad.addColorStop(1, dst.color);
+  // ── Draw flows (bezier curves from each inc to each out) ─────────────────
+  // Track vertical fill position within each node
+  const incFill = incNodes.map(n => n.y);
+  const outFill = outNodes.map(n => n.y);
+
+  incNodes.forEach((src, si) => {
+    outNodes.forEach((dst, di) => {
+      // Flow proportion = proportional share of income going to each outflow
+      const ratio   = (dst.value / outTotal);
+      const srcFH   = Math.max(1, src.h * ratio);
+      const dstFH   = Math.max(1, dst.h * (src.value / incTotal));
+
+      const x0 = LX + NODE_W, y0 = incFill[si];
+      const x1 = RX,          y1 = outFill[di];
+
+      incFill[si] += srcFH;
+      outFill[di] += dstFH;
+
+      const mx = (x0 + x1) / 2;
+      const grad = ctx.createLinearGradient(x0, 0, x1, 0);
+      grad.addColorStop(0, src.color + 'aa');
+      grad.addColorStop(1, dst.color + 'aa');
+
       ctx.beginPath();
-      ctx.moveTo(COL1X + NODE_W, srcY);
-      ctx.bezierCurveTo(
-        COL2X, srcY,
-        COL2X, dstY,
-        COL3X, dstY
-      );
-      ctx.lineTo(COL3X, dstY + flowH);
-      ctx.bezierCurveTo(
-        COL2X, dstY + flowH,
-        COL2X, srcY + flowH,
-        COL1X + NODE_W, srcY + flowH
-      );
+      ctx.moveTo(x0, y0);
+      ctx.bezierCurveTo(mx, y0, mx, y1, x1, y1);
+      ctx.lineTo(x1, y1 + dstFH);
+      ctx.bezierCurveTo(mx, y1 + dstFH, mx, y0 + srcFH, x0, y0 + srcFH);
       ctx.closePath();
       ctx.fillStyle = grad;
       ctx.fill();
     });
   });
-  ctx.globalAlpha = 1;
 
-  // ── Draw nodes ────────────────────────────────────────────────────────────
-  ctx.font = '700 10px DM Sans, sans-serif';
+  // ── Draw node bars ────────────────────────────────────────────────────────
+  const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#f0f2fa';
+  const mutedColor = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim() || '#a0a4bc';
+
   incNodes.forEach(n => {
+    // Node bar
     ctx.fillStyle = n.color;
-    ctx.fillRect(COL1X, n.y, NODE_W, n.h);
-    ctx.fillStyle = '#f0f2fa';
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(LX, n.y, NODE_W, n.h, 3) : ctx.fillRect(LX, n.y, NODE_W, n.h);
+    ctx.fill();
+    // Label (right-aligned, left of node)
     ctx.textAlign = 'right';
-    ctx.fillText(n.label.slice(0,8), COL1X - 4, n.y + n.h/2 + 4);
-    ctx.textAlign = 'right';
-    ctx.fillStyle = '#a0a4bc';
-    ctx.font = '9px DM Mono, monospace';
-    ctx.fillText(fmtM(n.value), COL1X - 4, n.y + n.h/2 + 14);
-    ctx.font = '700 10px DM Sans, sans-serif';
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold 11px DM Sans, sans-serif';
+    ctx.fillText(n.label, LX - 5, n.y + n.h/2 - 3);
+    ctx.fillStyle = mutedColor;
+    ctx.font = '10px DM Mono, monospace';
+    ctx.fillText('$' + (n.value >= 1000 ? (n.value/1000).toFixed(1)+'K' : n.value), LX - 5, n.y + n.h/2 + 9);
   });
 
   outNodes.forEach(n => {
+    // Node bar
     ctx.fillStyle = n.color;
-    ctx.fillRect(COL3X - NODE_W, n.y, NODE_W, n.h);
-    ctx.fillStyle = '#f0f2fa';
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(RX, n.y, NODE_W, n.h, 3) : ctx.fillRect(RX, n.y, NODE_W, n.h);
+    ctx.fill();
+    // Label (left-aligned, right of node)
     ctx.textAlign = 'left';
-    ctx.font = '700 10px DM Sans, sans-serif';
-    ctx.fillText(n.label.slice(0,8), COL3X + 4, n.y + n.h/2 + 4);
-    ctx.fillStyle = '#a0a4bc';
-    ctx.font = '9px DM Mono, monospace';
-    ctx.fillText(fmtM(n.value), COL3X + 4, n.y + n.h/2 + 14);
-    ctx.font = '700 10px DM Sans, sans-serif';
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold 11px DM Sans, sans-serif';
+    ctx.fillText(n.label, RX + NODE_W + 5, n.y + n.h/2 - 3);
+    ctx.fillStyle = mutedColor;
+    ctx.font = '10px DM Mono, monospace';
+    ctx.fillText('$' + (n.value >= 1000 ? (n.value/1000).toFixed(1)+'K' : n.value), RX + NODE_W + 5, n.y + n.h/2 + 9);
   });
 
-  // ── Center label ──────────────────────────────────────────────────────────
-  ctx.fillStyle = '#606480';
-  ctx.font = '10px DM Sans, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('Income', COL1X + NODE_W/2, H - 2);
-  ctx.fillText('Spending', COL3X - NODE_W/2, H - 2);
+  // ── Header labels ─────────────────────────────────────────────────────────
+  ctx.fillStyle = mutedColor;
+  ctx.font = 'bold 9px DM Sans, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('INCOME', LX, 10);
+  ctx.textAlign = 'right';
+  ctx.fillText('SPENDING', RX, 10);
 }
 
 // ── SWOT ANALYSIS ─────────────────────────────────────────────────────────────
@@ -4262,13 +4379,13 @@ const MONO_OPTIONS = [
   {val:"monospace", label:'System Mono'},
 ];
 const CHART_OPTIONS = {
-  spending:   {label:'Spending chart (dashboard)', options:['sankey','bar','doughnut','pie','horizontal-bar']},
+  spending:   {label:'Spending chart (dashboard)', options:['sankey','bar','doughnut','pie','area']},
   daily:      {label:'Daily spending', options:['bar','line','area']},
   billCat:    {label:'Bills by category', options:['doughnut','pie','bar','horizontal-bar']},
   zeroBudget: {label:'Zero budget allocation', options:['doughnut','pie','bar']},
   income:     {label:'Income breakdown', options:['doughnut','pie','bar']},
   timeline:   {label:'Payoff timeline', options:['line','area','bar']},
-  cashflow:   {label:'Monthly cash flow', options:['bar','line','area']},
+  cashflow:   {label:'Monthly cash flow', options:['bar','line','area','sankey']},
   nwMain:     {label:'Net worth chart', options:['doughnut','bar','pie']},
 };
 
@@ -4743,6 +4860,159 @@ function bootSettings() {
   if (un && cu) un.textContent = cu.name;
   if (ul && cu) { const t = getActiveTheme(); ul.textContent = t.name || 'Custom'; }
 }
+
+
+// ── ACCOUNT CUSTOMIZATION ────────────────────────────────────────────────────
+let acctStyles = JSON.parse(localStorage.getItem('acctStyles') || '{}');
+
+function saveAcctStyles() { localStorage.setItem('acctStyles', JSON.stringify(acctStyles)); }
+
+function getAcctStyle(acctId) { return acctStyles[acctId] || {}; }
+
+function acctEditOpen(acctId, currentName) {
+  const st = getAcctStyle(acctId);
+  gg('acctEditId').value  = acctId;
+  gg('acctEditName').value = st.name || currentName || '';
+  gg('acctEditColor').value = st.color || '#f0f2fa';
+  gg('acctEditFont').value  = st.fontStyle || 'normal';
+  gg('acctEditBadge').value = st.badge || '';
+  gg('acctEditHide').checked = !!st.hidden;
+  gg('acctEditModal').style.display = 'flex';
+}
+
+function acctEditSave() {
+  const id = gg('acctEditId').value;
+  acctStyles[id] = {
+    name:      gg('acctEditName').value.trim() || undefined,
+    color:     gg('acctEditColor').value,
+    fontStyle: gg('acctEditFont').value,
+    badge:     gg('acctEditBadge').value.trim() || undefined,
+    hidden:    gg('acctEditHide').checked || undefined,
+  };
+  // Remove undefined keys
+  Object.keys(acctStyles[id]).forEach(k => acctStyles[id][k] === undefined && delete acctStyles[id][k]);
+  saveAcctStyles();
+  gg('acctEditModal').style.display = 'none';
+  renderAccounts();
+  showToast('Account display updated ✓', 'success');
+}
+
+function acctEditReset() {
+  const id = gg('acctEditId').value;
+  delete acctStyles[id];
+  saveAcctStyles();
+  gg('acctEditModal').style.display = 'none';
+  renderAccounts();
+  showToast('Reset to default ✓', 'success');
+}
+
+// ── STYLED ACCOUNT ROW ────────────────────────────────────────────────────────
+function buildAcctRow(a) {
+  var id  = a.account_id || a.itemId || a.name || '';
+  var st  = getAcctStyle(id);
+  if (st.hidden) return '';
+  var bal = a.balances ? (a.balances.current != null ? a.balances.current : (a.balances.available || 0)) : 0;
+  var iC  = a.type === 'credit';
+  var displayName = st.name || a.name || '';
+  var badge = st.badge ? st.badge + ' ' : '';
+  var fw = (st.fontStyle === 'bold' || st.fontStyle === 'bold italic') ? '700' : '500';
+  var fs = (st.fontStyle === 'italic' || st.fontStyle === 'bold italic') ? 'italic' : 'normal';
+  var col = st.color ? 'color:' + st.color + ';' : '';
+  var nameStyle = 'font-weight:' + fw + ';font-style:' + fs + ';' + col;
+  var balColor = iC ? 'var(--red)' : 'var(--green)';
+  var balTxt   = (iC ? '-' : '') + fmtK(bal);
+  var instTxt  = esc(a.institution || a.institutionName || '');
+  var maskTxt  = a.mask ? ' &middot; ****' + esc(a.mask) : '';
+  var typeTxt  = esc(a.subtype || a.type || '');
+  var safeId   = esc(id).replace(/'/g, '&#39;');
+  var safeName = esc(displayName).replace(/'/g, '&#39;');
+
+  return '<div class="acct-row" style="padding-right:64px">'
+    + '<div>'
+    + '<div class="acct-name" style="' + nameStyle + '">' + badge + esc(displayName) + '</div>'
+    + '<div class="acct-sub">' + instTxt + maskTxt + '</div>'
+    + '</div>'
+    + '<div style="text-align:right">'
+    + '<div class="acct-bal" style="color:' + balColor + '">' + balTxt + '</div>'
+    + '<div class="acct-type">' + typeTxt + '</div>'
+    + '</div>'
+    + '<button class="acct-edit-btn" data-acct-id="' + safeId + '" data-acct-name="' + safeName + '">&#9999;&#65039; Edit</button>'
+    + '</div>';
+}
+
+
+
+// ── SIDEBAR DRAG & DROP ──────────────────────────────────────────────────────
+function initSidebarDrag() {
+  const nav = gg('sbNav'); if (!nav) return;
+  let dragSrcBtn = null;
+
+  nav.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.setAttribute('draggable', 'true');
+
+    btn.addEventListener('dragstart', e => {
+      dragSrcBtn = btn;
+      btn.classList.add('sb-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', btn.getAttribute('onclick') || '');
+    });
+    btn.addEventListener('dragend', () => {
+      btn.classList.remove('sb-dragging');
+      nav.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('sb-drag-over'));
+      saveSidebarOrder();
+      dragSrcBtn = null;
+    });
+    btn.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (dragSrcBtn && btn !== dragSrcBtn) {
+        nav.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('sb-drag-over'));
+        btn.classList.add('sb-drag-over');
+      }
+    });
+    btn.addEventListener('dragleave', () => btn.classList.remove('sb-drag-over'));
+    btn.addEventListener('drop', e => {
+      e.preventDefault();
+      btn.classList.remove('sb-drag-over');
+      if (!dragSrcBtn || btn === dragSrcBtn) return;
+      const allBtns = [...nav.querySelectorAll('.nav-btn')];
+      const si = allBtns.indexOf(dragSrcBtn);
+      const ti = allBtns.indexOf(btn);
+      if (si < ti) nav.insertBefore(dragSrcBtn, btn.nextSibling);
+      else         nav.insertBefore(dragSrcBtn, btn);
+    });
+  });
+}
+
+function saveSidebarOrder() {
+  const nav = gg('sbNav'); if (!nav) return;
+  const order = [...nav.querySelectorAll('.nav-btn')].map(b => {
+    const m = (b.getAttribute('onclick')||'').match(/showPage\('([^']+)'\)/);
+    return m ? m[1] : null;
+  }).filter(Boolean);
+  localStorage.setItem('sidebarOrder', JSON.stringify(order));
+}
+
+function loadSidebarOrder() {
+  const nav = gg('sbNav'); if (!nav) return;
+  try {
+    const order = JSON.parse(localStorage.getItem('sidebarOrder'));
+    if (!order || !order.length) return;
+    order.forEach(pageId => {
+      const btn = nav.querySelector('.nav-btn[onclick*="' + pageId + '"]');
+      if (btn) nav.appendChild(btn);
+    });
+  } catch(e) {}
+}
+
+
+// Delegated handler for account edit buttons
+document.addEventListener('click', function(e) {
+  var btn = e.target.closest('.acct-edit-btn');
+  if (!btn) return;
+  var id   = btn.getAttribute('data-acct-id')   || '';
+  var name = btn.getAttribute('data-acct-name') || '';
+  acctEditOpen(id, name);
+});
 
 const plaidS=document.createElement('script');
 plaidS.src='https://cdn.plaid.com/link/v2/stable/link-initialize.js';
