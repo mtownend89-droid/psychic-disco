@@ -14,15 +14,19 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root{
-  --bg:#0d0f14;--sidebar:#111318;--surface:#161920;--surface2:#1c1f28;--surface3:#232734;
-  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.1);
-  --text:#e4e6f0;--muted:#8b8fa8;--hint:#484c65;
-  --green:#2ecc8a;--green-dim:rgba(46,204,138,0.1);--green-glow:rgba(46,204,138,0.2);
-  --red:#f05c5c;--red-dim:rgba(240,92,92,0.1);
-  --amber:#f0a540;--amber-dim:rgba(240,165,64,0.1);
-  --blue:#5b8def;--blue-dim:rgba(91,141,239,0.1);
-  --purple:#a78bfa;--purple-dim:rgba(167,139,250,0.1);
-  --cyan:#38bdf8;--cyan-dim:rgba(56,189,248,0.1);
+  /* Backgrounds — slightly lighter for better readability */
+  --bg:#0f1117;--sidebar:#15181f;--surface:#1c1f28;--surface2:#232735;--surface3:#2b2f42;
+  /* Borders — more visible */
+  --border:rgba(255,255,255,0.09);--border2:rgba(255,255,255,0.15);
+  /* Text — brighter, higher contrast */
+  --text:#f0f2fa;--muted:#a0a4bc;--hint:#606480;
+  /* Accent colors — slightly brighter for readability on dark bg */
+  --green:#3dda91;--green-dim:rgba(61,218,145,0.12);--green-glow:rgba(61,218,145,0.25);
+  --red:#f46a6a;--red-dim:rgba(244,106,106,0.12);
+  --amber:#f5b042;--amber-dim:rgba(245,176,66,0.12);
+  --blue:#6b9ef5;--blue-dim:rgba(107,158,245,0.12);
+  --purple:#b09afa;--purple-dim:rgba(176,154,250,0.12);
+  --cyan:#45c8fc;--cyan-dim:rgba(69,200,252,0.12);
   --sidebar-w:228px;--radius:12px;--radius-sm:8px;--radius-xs:5px;
   --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
 }
@@ -245,7 +249,7 @@ input, select, textarea { font-size: 16px !important; }
 .nav-btn{
   display:flex;align-items:center;gap:10px;padding:8px 10px;
   border-radius:var(--radius-sm);color:var(--muted);cursor:pointer;
-  font-size:13px;font-weight:400;border:none;background:none;width:100%;text-align:left;
+  font-size:13.5px;font-weight:400;border:none;background:none;width:100%;text-align:left;
   transition:all 0.13s;position:relative;
 }
 .nav-btn:hover{color:var(--text);background:rgba(255,255,255,0.04);}
@@ -269,7 +273,7 @@ input, select, textarea { font-size: 16px !important; }
 .sb-connect svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
 
 /* ── TOPBAR ── */
-#main{margin-left:var(--sidebar-w);flex:1;min-height:100vh;display:flex;flex-direction:column;}
+#main{margin-left:var(--sidebar-w);flex:1;min-height:100vh;display:flex;flex-direction:column;min-width:0;}
 #topbar{height:54px;background:var(--sidebar);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 26px;position:sticky;top:0;z-index:40;}
 .topbar-title{font-size:15px;font-weight:600;}
 .topbar-right{display:flex;align-items:center;gap:8px;}
@@ -278,7 +282,7 @@ input, select, textarea { font-size: 16px !important; }
 .env-production{background:var(--green-dim);color:var(--green);}
 
 /* ── PAGES ── */
-#page-content{padding:26px;flex:1;min-width:0;overflow-x:hidden;}
+#page-content{padding:26px;flex:1;min-width:0;overflow-x:hidden;width:100%;}
 .page{display:none;}.page.active{display:block;animation:fadeIn 0.2s ease;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
 
@@ -304,13 +308,13 @@ input, select, textarea { font-size: 16px !important; }
 .w-purple::after{background:var(--purple);}
 .w-cyan::after{background:var(--cyan);}
 .wlabel{font-size:11px;color:var(--muted);font-weight:400;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;}
-.wvalue{font-family:var(--mono);font-size:22px;font-weight:500;line-height:1.1;}
+.wvalue{font-family:var(--mono);font-size:22px;font-weight:600;line-height:1.1;}
 .wvalue.green{color:var(--green);}.wvalue.red{color:var(--red);}.wvalue.blue{color:var(--blue);}
 .wvalue.amber{color:var(--amber);}.wvalue.purple{color:var(--purple);}.wvalue.cyan{color:var(--cyan);}
 .wsub{font-size:10.5px;color:var(--hint);margin-top:5px;}
 
 /* ── CARDS ── */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:0 1px 3px rgba(0,0,0,0.25);}
 .card-sm{padding:16px;}
 .card-title{font-size:11px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:0.09em;margin-bottom:12px;}
 
@@ -343,7 +347,8 @@ input, select, textarea { font-size: 16px !important; }
 
 /* ── PAGE HEADER ── */
 .page-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
-.page-title{font-size:20px;font-weight:600;}
+.page-title{font-size:20px;font-weight:600;cursor:default;}
+.page-title[contenteditable="true"]{background:var(--surface3);border-radius:6px;padding:2px 8px;outline:1px solid var(--green);}
 .page-sub{font-size:12px;color:var(--muted);margin-top:3px;}
 .page-hdr-right{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
 
@@ -360,7 +365,7 @@ input, select, textarea { font-size: 16px !important; }
 .tbl th:hover{color:var(--muted);}
 .tbl th.sorted{color:var(--green);}
 .tbl th .sa{font-size:9px;margin-left:3px;}
-.tbl td{padding:10px 6px 10px 0;border-bottom:1px solid var(--border);vertical-align:middle;font-size:13px;}
+.tbl td{padding:10px 6px 10px 0;border-bottom:1px solid var(--border);vertical-align:middle;font-size:13.5px;}
 .tbl tr:last-child td{border-bottom:none;}
 .tbl tr:hover td{background:rgba(255,255,255,0.015);}
 .tbl tr.row-paid td{opacity:0.38;text-decoration:line-through;}
@@ -455,11 +460,12 @@ input[type=range]{width:100%;accent-color:var(--green);}
 .drag-section.dragging{opacity:0.3;}
 .drag-section.drag-over{outline:2px dashed var(--green);outline-offset:5px;border-radius:var(--radius);}
 .dh-row{display:flex;align-items:center;gap:7px;margin-bottom:10px;}
-.dh{display:flex;align-items:center;gap:6px;cursor:grab;color:var(--hint);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;user-select:none;padding:3px 5px;border-radius:4px;transition:all 0.13s;}
+.dh{display:flex;align-items:center;gap:6px;cursor:grab;color:var(--hint);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;user-select:none;padding:3px 5px;border-radius:4px;transition:all 0.13s;opacity:0.5;}
+.dh:hover{opacity:1;color:var(--muted);background:rgba(255,255,255,0.05);}
 .dh:hover{color:var(--muted);background:rgba(255,255,255,0.04);}
 .dh:active{cursor:grabbing;}
 .dh svg{width:13px;height:13px;fill:currentColor;}
-.edit-bar{display:none;align-items:center;justify-content:space-between;background:var(--green-dim);border:1px solid rgba(46,204,138,0.18);border-radius:var(--radius-sm);padding:9px 14px;margin-bottom:14px;font-size:12px;color:var(--green);}
+.edit-bar{display:none;align-items:center;justify-content:space-between;background:var(--green-dim);border:1px solid rgba(61,218,145,0.18);border-radius:var(--radius-sm);padding:9px 14px;margin-bottom:14px;font-size:12px;color:var(--green);}
 
 /* ── ACCOUNTS LIST ── */
 .acct-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);}
@@ -807,9 +813,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
       <span class="nav-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>Retirement
     </button>
     <div class="sb-section">Reports</div>
-    <button class="nav-btn" onclick="showPage('cashflow')"><span class="kbd-hint">C</span>
-      <span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M2 20h20M5 20V10l7-7 7 7v10"/></svg></span>Cash Flow
-    </button>
+
     <button class="nav-btn" onclick="showPage('firedrill')"><span class="kbd-hint">F</span>
       <span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M12 2c0 6-8 8-8 14a8 8 0 0016 0c0-6-8-8-8-14z"/><path d="M12 12c0 3-2 4-2 6a2 2 0 004 0c0-2-2-3-2-6z"/></svg></span>Fire Drill
     </button>
@@ -945,6 +949,9 @@ input[type=range]{width:100%;accent-color:var(--green);}
         <div><div class="page-title">Transactions</div></div>
         <div class="page-hdr-right"><button class="btn" onclick="refreshAll()">↻ Refresh</button><button class="btn primary" onclick="exportCSV()">Export CSV</button></div>
       </div>
+      <div class="drag-container" id="txnContainer">
+        <div class="drag-section" data-id="txn-table">
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Transactions</div></div>
       <div class="card">
         <div class="filter-row">
           <input class="search-inp" id="txnSearch" placeholder="Search transactions…" oninput="filterTransactions()">
@@ -970,6 +977,8 @@ input[type=range]{width:100%;accent-color:var(--green);}
           </table>
         </div>
       </div>
+          </div><!-- /drag-section -->
+        </div><!-- /drag-container -->
     </div>
 
     <!-- ── BUDGET & BILLS ── -->
@@ -991,10 +1000,11 @@ input[type=range]{width:100%;accent-color:var(--green);}
         <div class="widget w-amber"><div class="wlabel">Zero-Budget Gap</div><div class="wvalue amber" id="bUnalloc">—</div><div class="wsub">unallocated</div></div>
       </div>
       <div class="tab-row" id="expTabRow">
-        <button class="tab-btn active" onclick="switchExpTab('bills')">Bills &amp; Expenses</button>
-        <button class="tab-btn" onclick="switchExpTab('calendar')">P&amp;L Calendar</button>
-        <button class="tab-btn" onclick="switchExpTab('zero')">Zero Budget</button>
-        <button class="tab-btn" onclick="switchExpTab('income')">Income Sources</button>
+        <button class="tab-btn active" onclick="switchExpTab('bills')" id="exp-tab-bills">Bills &amp; Expenses</button>
+        <button class="tab-btn" onclick="switchExpTab('calendar')" id="exp-tab-calendar">P&amp;L Calendar</button>
+        <button class="tab-btn" onclick="switchExpTab('cashflow')" id="exp-tab-cashflow">Cash Flow</button>
+        <button class="tab-btn" onclick="switchExpTab('zero')" id="exp-tab-zero">Zero Budget</button>
+        <button class="tab-btn" onclick="switchExpTab('income')" id="exp-tab-income">Income Sources</button>
       </div>
 
       <!-- BILLS PANEL -->
@@ -1131,15 +1141,19 @@ input[type=range]{width:100%;accent-color:var(--green);}
         <div class="widget w-blue"><div class="wlabel">Debt-to-Asset</div><div class="wvalue blue" id="nwDTA">—</div><div class="wsub">lower is better</div></div>
         <div class="widget w-purple"><div class="wlabel">Last Updated</div><div class="wvalue purple" id="nwDate" style="font-size:13px">—</div><div class="wsub">snapshot date</div></div>
       </div>
-      <div class="g-main-side">
-        <div>
-          <div class="card" style="margin-bottom:14px">
+      <div class="drag-container" id="nwContainer">
+        <div class="drag-section" data-id="nw-assets">
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Assets</div></div>
+          <div class="card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px">
               <div class="card-title" style="margin-bottom:0">Assets</div>
               <button class="btn" onclick="addNWRow('asset')">+ Add asset</button>
             </div>
             <table class="tbl"><thead><tr><th style="width:40%">Item</th><th>Value</th><th>Notes</th><th></th></tr></thead><tbody id="nwAssetsBody"></tbody></table>
           </div>
+        </div>
+        <div class="drag-section" data-id="nw-liab">
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Liabilities</div></div>
           <div class="card">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px">
               <div class="card-title" style="margin-bottom:0">Liabilities</div>
@@ -1148,10 +1162,15 @@ input[type=range]{width:100%;accent-color:var(--green);}
             <table class="tbl"><thead><tr><th style="width:40%">Item</th><th>Balance</th><th>Notes</th><th></th></tr></thead><tbody id="nwLiabBody"></tbody></table>
           </div>
         </div>
-        <div>
-          <div class="card" style="padding:16px;margin-bottom:12px"><div class="card-title">asset vs liability</div><div class="chart-wrap" style="height:210px"><canvas id="nwChart"></canvas></div></div>
-          <div class="card" style="padding:16px;margin-bottom:12px"><div class="card-title">asset allocation</div><div class="chart-wrap" style="height:170px"><canvas id="nwAllocChart"></canvas></div></div>
-          <div class="card" style="padding:16px"><div class="card-title">financial health</div><div id="nwHealthPanel"></div></div>
+        <div class="drag-section" data-id="nw-charts">
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Charts &amp; health</div></div>
+          <div class="g2">
+            <div>
+              <div class="card" style="padding:16px;margin-bottom:12px"><div class="card-title">asset vs liability</div><div class="chart-wrap" style="height:210px"><canvas id="nwChart"></canvas></div></div>
+              <div class="card" style="padding:16px"><div class="card-title">financial health</div><div id="nwHealthPanel"></div></div>
+            </div>
+            <div class="card" style="padding:16px"><div class="card-title">asset allocation</div><div class="chart-wrap" style="height:320px"><canvas id="nwAllocChart"></canvas></div></div>
+          </div>
         </div>
       </div>
     </div>
@@ -1281,24 +1300,6 @@ input[type=range]{width:100%;accent-color:var(--green);}
     </div>
 
     <!-- ── CASH FLOW ── -->
-    <div id="cashflow" class="page">
-      <div class="page-hdr"><div><div class="page-title">Cash Flow</div><div class="page-sub">Income vs spending over time</div></div><div class="page-hdr-right"><button class="btn" onclick="refreshAll()">↻ Refresh</button></div></div>
-      <div class="g2">
-        <div class="card card-sm"><div class="card-title">monthly income vs expenses</div><div class="chart-wrap" style="height:230px"><canvas id="cfMonthlyChart"></canvas></div></div>
-        <div class="card card-sm"><div class="card-title">top spending categories</div><div class="chart-wrap" style="height:230px"><canvas id="cfCatChart"></canvas></div></div>
-      </div>
-      <div class="card card-sm"><div class="card-title">month-by-month summary</div>
-        <table class="tbl"><thead><tr><th>Month</th><th>Income</th><th>Expenses</th><th>Net</th><th>Transactions</th></tr></thead>
-        <tbody id="cfBody"><tr><td colspan="5" class="empty">Connect accounts and load transactions to see cash flow data.</td></tr></tbody></table>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-
-    <!-- ── FIRE DRILL ── -->
-
 
     <div id="firedrill" class="page">
       <div class="page-hdr">
@@ -1692,13 +1693,13 @@ function toggleEditMode(p){
   const c=gg(cMap[p]),b=gg(bMap[p]),btn=gg(btnMap[p]);
   if(b)b.style.display=on?'flex':'none';
   if(btn)btn.textContent=on?'✓ Done':'⠿ Arrange';
-  c&&c.querySelectorAll('.dh').forEach(h=>{h.style.opacity=on?'1':'0.2';h.style.pointerEvents=on?'auto':'none';});
+  c&&c.querySelectorAll('.dh').forEach(h=>{h.style.opacity='1';h.style.pointerEvents='auto';});
   if(!on)saveSO(p);
 }
 function initDrag(c){
   if(!c)return;
   c.querySelectorAll('.dh').forEach(h=>{
-    h.style.opacity='0.2';h.style.pointerEvents='none';
+    h.style.opacity='1';h.style.pointerEvents='auto';
     h.addEventListener('dragstart',e=>{dragSrc=h.closest('.drag-section');dragSrc.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
     h.addEventListener('dragend',()=>{dragSrc&&dragSrc.classList.remove('dragging');c.querySelectorAll('.drag-section').forEach(s=>s.classList.remove('drag-over'));dragSrc=null;});
   });
@@ -1708,29 +1709,32 @@ function initDrag(c){
     s.addEventListener('drop',e=>{e.preventDefault();s.classList.remove('drag-over');if(dragSrc&&s!==dragSrc){const kids=[...c.children];const si=kids.indexOf(dragSrc),ti=kids.indexOf(s);si<ti?c.insertBefore(dragSrc,s.nextSibling):c.insertBefore(dragSrc,s);}});
   });
 }
-function saveSO(p){const cMap={dashboard:'dashContainer',expenses:'expContainer',retirement:'retContainer'};try{const c=gg(cMap[p]);localStorage.setItem('so-'+p,JSON.stringify([...c.querySelectorAll('.drag-section')].map(s=>s.dataset.id)));}catch(e){}}
-function loadSO(p){const cMap={dashboard:'dashContainer',expenses:'expContainer',retirement:'retContainer'};try{const sv=JSON.parse(localStorage.getItem('so-'+p));if(!sv)return;const c=gg(cMap[p]);sv.forEach(id=>{const el=c.querySelector(`[data-id="${id}"]`);if(el)c.appendChild(el);});}catch(e){}}
+function saveSO(p){const cMap={dashboard:'dashContainer',expenses:'expContainer',retirement:'retContainer',networth:'nwContainer',transactions:'txnContainer'};try{const c=gg(cMap[p]);if(!c)return;localStorage.setItem('so-'+p,JSON.stringify([...c.querySelectorAll('.drag-section')].map(s=>s.dataset.id)));}catch(e){}}
+function loadSO(p){const cMap={dashboard:'dashContainer',expenses:'expContainer',retirement:'retContainer',networth:'nwContainer',transactions:'txnContainer'};try{const sv=JSON.parse(localStorage.getItem('so-'+p));if(!sv)return;const c=gg(cMap[p]);if(!c)return;sv.forEach(id=>{const el=c.querySelector('[data-id="'+id+'"]');if(el)c.appendChild(el);});}catch(e){}}
 
 // ── PAGE NAV ──────────────────────────────────────────────────────────────────
-const PT={dashboard:'Dashboard',transactions:'Transactions',expenses:'Budget & Bills',networth:'Net Worth',retirement:'Retirement',cashflow:'Cash Flow',firedrill:'🔥 Fire Drill'};
+const PT={dashboard:'Dashboard',transactions:'Transactions',expenses:'Budget & Bills',networth:'Net Worth',retirement:'Retirement',firedrill:'🔥 Fire Drill'};
 function showPage(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(n=>n.classList.remove('active'));
   const pg=gg(page);if(pg)pg.classList.add('active');
   const nb=document.querySelector(`.nav-btn[onclick="showPage('${page}')"]`);if(nb)nb.classList.add('active');
-  const tt=gg('topbarTitle');if(tt)tt.textContent=PT[page]||page;
+  const tt=gg('topbarTitle');if(tt)tt.textContent=getPageTitle(page);
+  makeEditableTitle(page);
   if(page==='retirement')calcAll();
-  if(page==='expenses'){renderBillsTab();renderCalendar();renderZeroBudget();renderIncomeTab();updateBudgetMetrics();}
-  if(page==='networth')renderNetWorth();
-  if(page==='cashflow')renderCashFlow();
+  if(page==='expenses'){renderBillsTab();renderCalendar();renderZeroBudget();renderIncomeTab();updateBudgetMetrics();setTimeout(()=>{const c=gg('cfContainer');if(c){initDrag(c);c.querySelectorAll('.dh').forEach(h=>{h.style.opacity='1';h.style.pointerEvents='auto';});}},200);}
+  if(page==='networth'){renderNetWorth();loadSO('networth');setTimeout(()=>{const c=gg('nwContainer');if(c)initDrag(c);},100);}
+
   if(page==='firedrill'){initFireDrill();}
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 async function init(){
   ['dashEditBar','expEditBar','retEditBar'].forEach(id=>{const el=gg(id);if(el)el.style.display='none';});
-  ['dashContainer','expContainer','retContainer'].forEach(id=>initDrag(gg(id)));
-  ['dashboard','expenses','retirement'].forEach(loadSO);
+  ['dashContainer','expContainer','retContainer','txnContainer','nwContainer','fdDrillContainer','fdDebtContainer'].forEach(id=>{
+    const el=gg(id); if(el){initDrag(el);}
+  });
+  ['dashboard','expenses','retirement','networth','transactions'].forEach(loadSO);
   const sel=gg('calMonthSel');
   if(sel){const now=new Date();for(let i=0;i<12;i++){const d=new Date(now.getFullYear(),now.getMonth()+i,1);const o=document.createElement('option');o.value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;o.textContent=d.toLocaleString('default',{month:'long',year:'numeric'});if(i===0)o.selected=true;sel.appendChild(o);}}
   const today=new Date().toISOString().slice(0,10);
@@ -2138,12 +2142,14 @@ function saveNewIncome(){
   incomeSources.push(s);saveIncomeSrc();closeAddIncomeModal();renderIncomeTab();showToast(s.name+' added!','success');updateBudgetMetrics();
 }
 function switchExpTab(tab){
-  document.querySelectorAll('#expTabRow .tab-btn').forEach((b,i)=>b.classList.toggle('active',['bills','calendar','zero','income'][i]===tab));
-  ['ep-bills','ep-calendar','ep-zero','ep-income'].forEach(id=>{const el=gg(id);if(el)el.style.display='none';});
+  document.querySelectorAll('#expTabRow .tab-btn').forEach(b=>b.classList.remove('active'));
+  const activeBtn=gg('exp-tab-'+tab);if(activeBtn)activeBtn.classList.add('active');
+  ['ep-bills','ep-calendar','ep-cashflow','ep-zero','ep-income'].forEach(id=>{const el=gg(id);if(el)el.style.display='none';});
   const p=gg('ep-'+tab);if(p)p.style.display='block';
   if(tab==='calendar')renderCalendar();
   if(tab==='zero')renderZeroBudget();
   if(tab==='income')renderIncomeTab();
+  if(tab==='cashflow'){renderCashFlow();setTimeout(()=>{const c=gg('cfContainer');if(c){initDrag(c);c.querySelectorAll('.dh').forEach(h=>{h.style.opacity='1';h.style.pointerEvents='auto';});}},100);}
 }
 
 // ── NET WORTH ─────────────────────────────────────────────────────────────────
@@ -3306,7 +3312,7 @@ document.addEventListener('keydown', function(e) {
     'b': 'expenses', 'B': 'expenses',
     'n': 'networth', 'N': 'networth',
     'r': 'retirement', 'R': 'retirement',
-    'c': 'cashflow', 'C': 'cashflow',
+
     'f': 'firedrill', 'F': 'firedrill',
   };
   if (map[e.key]) {
@@ -3351,7 +3357,7 @@ function showDesktopWelcome() {
 (function() {
   if (typeof window === 'undefined') return;
   let touchStartX = 0, touchStartY = 0;
-  const PAGES = ['dashboard','transactions','expenses','networth','retirement','cashflow','firedrill'];
+  const PAGES = ['dashboard','transactions','expenses','networth','retirement','firedrill'];
 
   document.addEventListener('touchstart', function(e) {
     touchStartX = e.touches[0].clientX;
@@ -3396,9 +3402,86 @@ function showDesktopWelcome() {
   }, { passive: true });
 })();
 
+
+// ── INLINE TITLE EDITING ─────────────────────────────────────────────────────
+const pageTitles = JSON.parse(localStorage.getItem('pageTitles') || '{}');
+
+function savePageTitles() {
+  localStorage.setItem('pageTitles', JSON.stringify(pageTitles));
+}
+
+function getPageTitle(page) {
+  const defaults = {
+    dashboard:'Dashboard', transactions:'Transactions',
+    expenses:'Budget & Bills', networth:'Net Worth',
+    retirement:'Retirement', firedrill:'🔥 Fire Drill'
+  };
+  return pageTitles[page] || defaults[page] || page;
+}
+
+function makeEditableTitle(page) {
+  // Make the topbar title double-click editable
+  const tt = gg('topbarTitle');
+  if (!tt) return;
+  tt.title = 'Double-click to rename';
+  tt.style.cursor = 'default';
+  tt.ondblclick = function() {
+    const current = pageTitles[page] || tt.textContent;
+    const input = document.createElement('input');
+    input.value = current;
+    input.style.cssText = 'background:var(--surface3);border:1px solid var(--green);border-radius:6px;'
+      + 'color:var(--text);font-family:var(--font);font-size:15px;font-weight:600;'
+      + 'padding:2px 8px;outline:none;width:220px;';
+    tt.innerHTML = '';
+    tt.appendChild(input);
+    input.focus();
+    input.select();
+    function save() {
+      const val = input.value.trim() || current;
+      pageTitles[page] = val;
+      savePageTitles();
+      tt.textContent = val;
+      makeEditableTitle(page);
+      // Also update sidebar nav label
+      const nb = document.querySelector(`.nav-btn[onclick="showPage('${page}')"]`);
+      if (nb) {
+        // Find the text node (last child after icon and kbd-hint)
+        const nodes = [...nb.childNodes].filter(n => n.nodeType === 3);
+        if (nodes.length) nodes[nodes.length-1].textContent = val;
+      }
+      showToast('✓ Renamed to "' + val + '"', 'success');
+    }
+    input.onblur = save;
+    input.onkeydown = function(e) { if(e.key==='Enter') save(); if(e.key==='Escape'){tt.textContent=current;makeEditableTitle(page);} };
+  };
+}
+
+// Patch showPage to apply custom titles and make them editable
+const _origShowPage = showPage;
+
 const plaidS=document.createElement('script');
 plaidS.src='https://cdn.plaid.com/link/v2/stable/link-initialize.js';
 document.head.appendChild(plaidS);
 // Check if already logged in (valid session), otherwise show login screen
 checkAuth();
 </script></body></html>
+      <!-- CASH FLOW PANEL -->
+      <div class="tab-panel" id="ep-cashflow">
+        <div class="drag-container" id="cfContainer">
+          <div class="drag-section" data-id="cf-charts">
+            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Cash flow charts</div></div>
+            <div class="g2" style="margin-bottom:0">
+              <div class="card card-sm"><div class="card-title">Monthly income vs expenses</div><div style="height:230px;position:relative"><canvas id="cfMonthlyChart"></canvas></div></div>
+              <div class="card card-sm"><div class="card-title">Top spending categories</div><div style="height:230px;position:relative"><canvas id="cfCatChart"></canvas></div></div>
+            </div>
+          </div>
+          <div class="drag-section" data-id="cf-table">
+            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Month-by-month summary</div></div>
+            <div class="card" style="margin-bottom:0">
+              <div class="card-title" style="margin-bottom:12px">Month-by-month summary</div>
+              <table class="tbl"><thead><tr><th>Month</th><th>Income</th><th>Expenses</th><th>Net</th><th>Transactions</th></tr></thead>
+              <tbody id="cfBody"><tr><td colspan="5" class="empty">Connect accounts to see cash flow data.</td></tr></tbody></table>
+            </div>
+          </div>
+        </div>
+      </div>
