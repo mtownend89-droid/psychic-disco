@@ -931,6 +931,81 @@ input[type=range]{width:100%;accent-color:var(--green);}
   #swipeFlash { display: none; }
 }
 
+
+/* ── APPLE MOBILE: Charts stack vertically for full-width readability ──────── */
+@media (max-width: 767px) {
+  /* Dashboard: Sankey + daily chart stack */
+  #dashChartDateBar ~ div[style*="grid-template-columns:1.4fr"] {
+    grid-template-columns: 1fr !important;
+  }
+  /* Any side-by-side chart grid inside drag sections */
+  .drag-section .g2 { grid-template-columns: 1fr !important; }
+  /* Net worth charts stack */
+  .drag-section[data-id="nw-charts"] .g2 { grid-template-columns: 1fr !important; }
+  /* Debt payoff charts stack */
+  .drag-section[data-id="dp-charts"] .g2 { grid-template-columns: 1fr !important; }
+  /* Fire drill results */
+  .drag-section[data-id="fd-results"] .g2 { grid-template-columns: 1fr !important; }
+  /* Bills chart section */
+  .drag-section[data-id="bills-charts"] .g2 { grid-template-columns: 1fr !important; }
+  /* Cashflow charts */
+  .drag-section[data-id="cf-charts"] .g2 { grid-template-columns: 1fr !important; }
+  /* SWOT 2-col → single col */
+  #swotGrid { grid-template-columns: 1fr !important; }
+  /* Scenario cards wrap properly */
+  #scenarioCards { grid-template-columns: repeat(2, 1fr) !important; }
+  #dpStrategyCards { grid-template-columns: repeat(2, 1fr) !important; }
+  /* Taller canvases for better readability on phone */
+  .chart-wrap { height: 220px !important; }
+  canvas[id$="Chart"] { min-height: 200px; }
+  #sankeyChart { height: 280px !important; }
+  /* Accounts section stacks too */
+  .drag-section[data-id="accts-banks"] .g2 { grid-template-columns: 1fr !important; }
+  /* Typography settings in Settings page */
+  #typographySettings { grid-template-columns: 1fr !important; }
+  /* Chart settings */
+  #chartSettings { grid-template-columns: 1fr !important; }
+  /* Retirement comparison grid */
+  .g3 { grid-template-columns: 1fr !important; }
+}
+
+
+.dash-chart-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; }
+@media (max-width: 767px) { .dash-chart-grid { grid-template-columns: 1fr !important; gap: 12px !important; } }
+
+
+/* Account chips */
+.acct-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--surface2); color: var(--text);
+  font-size: 12.5px; cursor: pointer; transition: all 0.13s;
+  white-space: nowrap; font-family: var(--font);
+}
+.acct-chip:hover { border-color: var(--border2); background: var(--surface3); }
+.acct-chip.selected {
+  border-color: var(--green);
+  background: rgba(61,218,145,0.1);
+  color: var(--green); font-weight: 600;
+}
+.acct-chip-bal {
+  font-family: var(--mono); font-size: 11.5px;
+  color: var(--muted); font-weight: 400;
+}
+.acct-chip.selected .acct-chip-bal { color: var(--green); }
+/* Dash transaction rows */
+.dash-txn-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 0; border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.dash-txn-row:last-child { border-bottom: none; }
+.dash-txn-name { font-weight: 500; color: var(--text); }
+.dash-txn-cat  { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+.dash-txn-date { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.dash-txn-amt  { font-family: var(--mono); font-weight: 600; flex-shrink: 0; margin-left: 10px; }
+
 </style>
 </head><body>
 <!-- ── SIDEBAR ── -->
@@ -1174,7 +1249,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
         <div class="drag-section" data-id="charts">
           <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Spending charts</div></div>
           <div id="dashChartDateBar"></div>
-          <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:0">
+          <div class="dash-chart-grid" style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:0">
             <div class="card card-sm">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
                 <div class="card-title" style="margin-bottom:0">💸 Money flow</div>
@@ -1203,10 +1278,30 @@ input[type=range]{width:100%;accent-color:var(--green);}
         </div>
 
         <div class="drag-section" data-id="accts-banks">
-          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Accounts &amp; institutions</div></div>
-          <div class="g2">
-            <div class="card card-sm"><div class="card-title">accounts &amp; balances</div><div id="accountsList"><div class="empty"><span class="spinner"></span></div></div></div>
-            <div class="card card-sm"><div class="card-title">linked institutions</div><div id="banksList"><div class="empty">No banks linked</div></div></div>
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Accounts &amp; balances</div></div>
+          <div class="card" style="margin-bottom:0">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div class="card-title" style="margin-bottom:0">Accounts &amp; balances</div>
+              <span style="font-size:11px;color:var(--muted)">Tap account to see transactions</span>
+            </div>
+            <!-- Account selector chips -->
+            <div id="acctChips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px"></div>
+            <!-- Account list -->
+            <div id="accountsList"><div class="empty"><span class="spinner"></span></div></div>
+            <!-- Collapsible transactions panel -->
+            <div id="dashAcctTxnPanel" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                <div style="font-size:13px;font-weight:600" id="dashAcctTxnTitle">Transactions</div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:11.5px;color:var(--muted)" id="dashAcctTxnMeta"></span>
+                  <button onclick="toggleDashTxnPanel()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0;line-height:1" id="dashAcctTxnToggle">▲</button>
+                </div>
+              </div>
+              <div id="dashAcctTxnList" style="max-height:320px;overflow-y:auto"></div>
+              <div style="text-align:center;padding:8px 0 0">
+                <button class="btn" onclick="showPage('transactions')">View all transactions →</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -2452,6 +2547,7 @@ function renderAccounts(){
   const el=gg('accountsList');if(!el)return;
   if(!allAccts.length){el.innerHTML='<div class="empty">No accounts</div>';return;}
   el.innerHTML = allAccts.map(a => buildAcctRowClickable(a)).filter(Boolean).join('');
+  renderAccountChips();
 }
 
 function buildAcctRowClickable(a) {
@@ -4021,77 +4117,72 @@ function showDesktopWelcome() {
 // Swipes left/right anywhere on the page to navigate between tabs.
 // Respects sliders, horizontal-scroll containers, and tab rows.
 (function() {
-  var _sx = 0, _sy = 0, _sEl = null;
+  var _sx = 0, _sy = 0, _locked = false;
 
   document.addEventListener('touchstart', function(e) {
-    _sx  = e.touches[0].clientX;
-    _sy  = e.touches[0].clientY;
-    _sEl = e.target;
+    _sx     = e.touches[0].clientX;
+    _sy     = e.touches[0].clientY;
+    _locked = false;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function(e) {
+    // Detect vertical-dominant moves early and lock out swipe
+    if (_locked) return;
+    var dx = e.touches[0].clientX - _sx;
+    var dy = e.touches[0].clientY - _sy;
+    if (Math.abs(dy) > Math.abs(dx) * 0.9 && Math.abs(dy) > 8) _locked = true;
   }, { passive: true });
 
   document.addEventListener('touchend', function(e) {
-    if (!isMobile()) return;
+    if (!isMobile() || _locked) return;
     var dx = e.changedTouches[0].clientX - _sx;
     var dy = e.changedTouches[0].clientY - _sy;
 
-    // Must be a dominant horizontal swipe
-    if (Math.abs(dx) < 55) return;
-    if (Math.abs(dy) > Math.abs(dx) * 0.65) return;
+    // Swipe threshold — 50px horizontal, less than 60% vertical
+    if (Math.abs(dx) < 50) return;
+    if (Math.abs(dy) > Math.abs(dx) * 0.6) return;
 
-    // Don't swipe on interactive elements or scroll containers
-    var el = _sEl;
-    while (el && el !== document.body) {
-      var tag = el.tagName;
-      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+    // Don't fire on form elements
+    var el = e.target;
+    var depth = 0;
+    while (el && el !== document.body && depth++ < 8) {
+      var t = el.tagName;
+      if (t === 'INPUT' || t === 'SELECT' || t === 'TEXTAREA' || t === 'BUTTON') return;
       if (el.type === 'range') return;
-      // Don't swipe on horizontally-scrollable elements (tables, nav bar, etc.)
-      var ow = el.scrollWidth, cw = el.clientWidth;
-      if (ow > cw + 2) {
-        // Allow swipe only if the element can't scroll the direction we swiped
-        var scrollable = (dx < 0 && el.scrollLeft < ow - cw - 2) ||
-                         (dx > 0 && el.scrollLeft > 2);
-        if (scrollable) return;
+      // Only block if THIS element is an actual horizontal scroll container
+      // AND currently has scroll position (not just overflow:auto with no scroll)
+      var isHScroll = el.scrollWidth > el.clientWidth + 10;
+      if (isHScroll) {
+        var canScrollLeft  = el.scrollLeft > 5;
+        var canScrollRight = el.scrollLeft < el.scrollWidth - el.clientWidth - 5;
+        if ((dx > 0 && canScrollLeft) || (dx < 0 && canScrollRight)) return;
       }
       el = el.parentElement;
     }
 
-    // Get ordered list of pages from sidebar nav buttons
+    // Build page list from current sidebar order
     var nav = document.getElementById('sbNav');
     if (!nav) return;
-    var pages = Array.prototype.slice.call(
-      nav.querySelectorAll('.nav-btn[onclick*="showPage"]')
-    ).map(function(b) {
-      var m = (b.getAttribute('onclick')||'').match(/showPage\('([^']+)'\)/);
-      return m ? m[1] : null;
-    }).filter(Boolean);
+    var pages = [];
+    nav.querySelectorAll('.nav-btn').forEach(function(b) {
+      var oc = b.getAttribute('onclick') || '';
+      var m  = oc.match(/showPage\('([^']+)'\)/);
+      if (m) pages.push(m[1]);
+    });
 
-    var activePage = document.querySelector('.page.active');
-    if (!activePage) return;
-    var idx = pages.indexOf(activePage.id);
-    if (idx === -1) return;
+    var active = document.querySelector('.page.active');
+    if (!active) return;
+    var idx = pages.indexOf(active.id);
+    if (idx < 0) return;
 
     if (dx < 0 && idx < pages.length - 1) {
-      // Swipe left → next page
+      // Swipe LEFT → go to NEXT page (forward)
       showPage(pages[idx + 1]);
-      swipeFlash('right');
     } else if (dx > 0 && idx > 0) {
-      // Swipe right → previous page
+      // Swipe RIGHT → go to PREVIOUS page (back)
       showPage(pages[idx - 1]);
-      swipeFlash('left');
     }
   }, { passive: true });
-
-  // Brief visual flash to confirm swipe direction
-  function swipeFlash(dir) {
-    var flash = document.getElementById('swipeFlash');
-    if (!flash) return;
-    flash.style.opacity = '1';
-    flash.style.transform = dir === 'right' ? 'translateX(8px)' : 'translateX(-8px)';
-    setTimeout(function() {
-      flash.style.opacity = '0';
-      flash.style.transform = 'translateX(0)';
-    }, 250);
-  }
 })();
 
 // ── Mobile: pull-to-refresh on dashboard ─────────────────────────────────────
@@ -5553,6 +5644,127 @@ function updatePageDots(activePage) {
   Array.prototype.forEach.call(container.children, function(dot, i) {
     dot.classList.toggle('active', pages[i] === activePage);
   });
+}
+
+
+// ── DASHBOARD ACCOUNT SELECTOR + TRANSACTIONS ────────────────────────────────
+var _selectedAcctId = null;
+var _dashTxnCollapsed = false;
+
+function renderAccountChips() {
+  var chips = document.getElementById('acctChips');
+  if (!chips) return;
+  if (!allAccts.length) { chips.innerHTML = ''; return; }
+
+  var html = allAccts.map(function(a) {
+    var id  = a.account_id || a.name || '';
+    var st  = getAcctStyle(id);
+    if (st.hidden) return '';
+    var name = st.name || a.name || '';
+    var bal  = a.balances ? (a.balances.current != null ? a.balances.current : 0) : 0;
+    var iC   = a.type === 'credit';
+    var balColor = iC ? 'var(--red)' : 'var(--green)';
+    var selected = id === _selectedAcctId;
+    return '<button class="acct-chip' + (selected ? ' selected' : '') + '"'
+      + ' data-acct-chip-id="' + esc(id) + '">'
+      + esc(name.split(' ').slice(0,3).join(' '))
+      + ' <span class="acct-chip-bal" style="color:' + balColor + '">'
+      + (iC ? '-' : '') + fmtK(bal) + '</span>'
+      + '</button>';
+  }).filter(Boolean).join('');
+
+  chips.innerHTML = html;
+
+  // Click handler on chips
+  chips.querySelectorAll('.acct-chip').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var id = this.getAttribute('data-acct-chip-id');
+      if (_selectedAcctId === id) {
+        // Toggle off
+        _selectedAcctId = null;
+        hideDashTxnPanel();
+        chips.querySelectorAll('.acct-chip').forEach(function(b) { b.classList.remove('selected'); });
+      } else {
+        _selectedAcctId = id;
+        chips.querySelectorAll('.acct-chip').forEach(function(b) {
+          b.classList.toggle('selected', b.getAttribute('data-acct-chip-id') === id);
+        });
+        showDashAcctTransactions(id);
+      }
+    });
+  });
+}
+
+function showDashAcctTransactions(acctId) {
+  var panel = document.getElementById('dashAcctTxnPanel');
+  if (!panel) return;
+
+  var acct = allAccts.find(function(a) { return (a.account_id || a.name) === acctId; });
+  var st   = getAcctStyle(acctId);
+  var name = (st && st.name) || (acct && acct.name) || acctId;
+
+  // Filter last 30 days for this account
+  var cutoff = new Date(Date.now() - 30 * 86400000).toISOString().slice(0,10);
+  var txns = allTxns.filter(function(t) {
+    return t.account_id === acctId && t.date >= cutoff;
+  });
+
+  // Update title and meta
+  var titleEl = document.getElementById('dashAcctTxnTitle');
+  if (titleEl) titleEl.textContent = name + ' — Last 30 days';
+  var metaEl = document.getElementById('dashAcctTxnMeta');
+  if (metaEl) {
+    var net = txns.reduce(function(s,t) { return s + t.amount; }, 0);
+    metaEl.textContent = txns.length + ' transactions · ' + (net > 0 ? '-' : '+') + fmt2(Math.abs(net));
+  }
+
+  // Render transaction rows
+  var listEl = document.getElementById('dashAcctTxnList');
+  if (!listEl) return;
+
+  if (!txns.length) {
+    listEl.innerHTML = '<div class="empty" style="padding:20px">No transactions in last 30 days for this account</div>';
+  } else {
+    listEl.innerHTML = txns.slice(0, 50).map(function(t) {
+      var amt  = t.amount;
+      var col  = amt > 0 ? 'var(--red)' : 'var(--green)';
+      var cat  = fmtCat(t.personal_finance_category && t.personal_finance_category.primary || (t.category && t.category[0]) || '');
+      var merch = esc(t.merchant_name || t.name || '');
+      var dt    = new Date(t.date + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'});
+      return '<div class="dash-txn-row">'
+        + '<div><div class="dash-txn-name">' + merch + '</div>'
+        + '<div class="dash-txn-cat">' + esc(cat) + ' · <span class="dash-txn-date">' + dt + '</span></div></div>'
+        + '<div class="dash-txn-amt" style="color:' + col + '">'
+        + (amt > 0 ? '-' : '+') + fmt2(Math.abs(amt))
+        + '</div></div>';
+    }).join('');
+  }
+
+  // Show panel with animation
+  _dashTxnCollapsed = false;
+  panel.style.display = 'block';
+  var toggle = document.getElementById('dashAcctTxnToggle');
+  if (toggle) toggle.textContent = '▲';
+  // Scroll panel into view smoothly
+  setTimeout(function() {
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 100);
+}
+
+function hideDashTxnPanel() {
+  var panel = document.getElementById('dashAcctTxnPanel');
+  if (panel) panel.style.display = 'none';
+}
+
+function toggleDashTxnPanel() {
+  var list = document.getElementById('dashAcctTxnList');
+  var btn  = document.getElementById('dashAcctTxnToggle');
+  var footer = list && list.nextElementSibling;
+  if (!list) return;
+  _dashTxnCollapsed = !_dashTxnCollapsed;
+  list.style.display = _dashTxnCollapsed ? 'none' : '';
+  if (footer) footer.style.display = _dashTxnCollapsed ? 'none' : '';
+  if (btn) btn.textContent = _dashTxnCollapsed ? '▼' : '▲';
 }
 
 const plaidS=document.createElement('script');
