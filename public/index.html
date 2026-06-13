@@ -752,6 +752,50 @@ input[type=range]{width:100%;accent-color:var(--green);}
 .swot-O .swot-dot { background: var(--blue); }
 .swot-T .swot-dot { background: var(--amber); }
 
+/* ── SETTINGS PAGE ── */
+.color-picker-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);}
+.color-picker-row:last-child{border-bottom:none;}
+.color-picker-label{font-size:13px;color:var(--text);}
+.color-picker-sub{font-size:11px;color:var(--hint);margin-top:2px;}
+.color-swatch{display:flex;align-items:center;gap:8px;}
+.color-swatch input[type=color]{width:36px;height:36px;border:1.5px solid var(--border2);border-radius:var(--radius-xs);cursor:pointer;background:none;padding:2px;}
+.color-swatch input[type=color]::-webkit-color-swatch-wrapper{padding:0;border-radius:4px;}
+.color-swatch input[type=color]::-webkit-color-swatch{border:none;border-radius:4px;}
+.color-hex{font-family:var(--mono);font-size:12px;color:var(--muted);min-width:68px;}
+.theme-card{border:2px solid var(--border);border-radius:var(--radius);padding:12px;cursor:pointer;transition:all 0.15s;position:relative;overflow:hidden;}
+.theme-card:hover{border-color:var(--border2);transform:translateY(-2px);}
+.theme-card.active{border-color:var(--green);}
+.theme-card.active::after{content:'✓';position:absolute;top:6px;right:8px;font-size:13px;color:var(--green);font-weight:700;}
+.theme-card-preview{display:flex;gap:3px;height:36px;border-radius:var(--radius-xs);overflow:hidden;margin-bottom:8px;}
+.theme-card-preview span{flex:1;}
+.theme-card-name{font-size:12.5px;font-weight:600;color:var(--text);}
+.theme-card-sub{font-size:10.5px;color:var(--hint);margin-top:2px;}
+.user-profile-card{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 16px;border:2px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:all 0.15s;min-width:100px;position:relative;}
+.user-profile-card:hover{border-color:var(--border2);background:var(--surface2);}
+.user-profile-card.active{border-color:var(--green);background:rgba(61,218,145,0.06);}
+.user-avatar-lg{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;}
+.user-card-name{font-size:13px;font-weight:500;color:var(--text);}
+.user-card-theme{font-size:11px;color:var(--hint);}
+.user-delete{position:absolute;top:5px;right:5px;background:none;border:none;color:var(--hint);cursor:pointer;font-size:13px;opacity:0;transition:opacity 0.13s;}
+.user-profile-card:hover .user-delete{opacity:1;}
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
+.setting-row:last-child{border-bottom:none;}
+.setting-label{font-size:13px;color:var(--text);font-weight:500;}
+.setting-sub{font-size:11px;color:var(--hint);margin-top:2px;}
+.setting-ctrl select,.setting-ctrl input[type=number],.setting-ctrl input[type=range]{height:32px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 9px;background:var(--surface2);color:var(--text);font-family:var(--font);font-size:12.5px;outline:none;}
+.setting-ctrl select{min-width:140px;}
+.chart-type-row{display:flex;flex-direction:column;gap:6px;padding:12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);}
+.chart-type-label{font-size:12px;font-weight:600;color:var(--text);}
+.chart-type-sub{font-size:10.5px;color:var(--hint);}
+.chart-type-sel{height:32px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 9px;background:var(--surface3);color:var(--text);font-family:var(--font);font-size:12.5px;outline:none;width:100%;}
+/* Toggle switch */
+.toggle-sw{position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0;}
+.toggle-sw input{opacity:0;width:0;height:0;}
+.toggle-sl{position:absolute;inset:0;background:var(--surface3);border-radius:22px;cursor:pointer;transition:background 0.2s;}
+.toggle-sl::before{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;left:3px;top:3px;transition:transform 0.2s;}
+.toggle-sw input:checked + .toggle-sl{background:var(--green);}
+.toggle-sw input:checked + .toggle-sl::before{transform:translateX(18px);}
+
 </style>
 </head><body>
 <!-- ── SIDEBAR ── -->
@@ -867,14 +911,21 @@ input[type=range]{width:100%;accent-color:var(--green);}
 
     <div class="sb-section">Reports</div>
 
+    <button class="nav-btn" onclick="showPage('settings')"><span class="kbd-hint">S</span>
+      <span class="nav-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span>Settings &amp; Themes
+    </button>
     <button class="nav-btn" onclick="showPage('firedrill')"><span class="kbd-hint">F</span>
       <span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M12 2c0 6-8 8-8 14a8 8 0 0016 0c0-6-8-8-8-14z"/><path d="M12 12c0 3-2 4-2 6a2 2 0 004 0c0-2-2-3-2-6z"/></svg></span>Fire Drill
     </button>
   </div>
   <div class="sb-footer">
-    <div class="sb-user">
-      <div class="sb-avatar">MD</div>
-      <div><div class="sb-uname">Matt &amp; Dana</div><div class="sb-ulabel">Household</div></div>
+    <div class="sb-user" id="sbUserBlock" style="cursor:pointer" onclick="showPage('settings')" title="Click to switch user or customize">
+      <div class="sb-avatar" id="sbAvatar">MD</div>
+      <div>
+        <div class="sb-uname" id="sbUserName">Matt &amp; Dana</div>
+        <div class="sb-ulabel" id="sbUserLabel">Household</div>
+      </div>
+      <span style="margin-left:auto;font-size:14px;color:var(--hint)">⚙</span>
     </div>
     <button class="sb-connect" onclick="openLinkHandler()">
       <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Connect bank
@@ -1742,6 +1793,104 @@ input[type=range]{width:100%;accent-color:var(--green);}
 
     </div><!-- /firedrill page -->
 
+    <!-- ══ SETTINGS PAGE ══════════════════════════════════════════════════ -->
+    <div id="settings" class="page">
+      <div class="page-hdr">
+        <div><div class="page-title">⚙️ Settings &amp; Customization</div>
+          <div class="page-sub">Themes · Colors · Fonts · Charts · Users — all saved per device</div>
+        </div>
+        <div class="page-hdr-right">
+          <button class="btn" onclick="settingsReset()">↺ Reset to default</button>
+          <button class="btn primary" onclick="settingsSave()">💾 Save &amp; apply</button>
+        </div>
+      </div>
+
+      <!-- USER PROFILES -->
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div class="card-title" style="margin-bottom:0">👤 User profiles — this device</div>
+          <button class="btn green-outline" onclick="settingsAddUser()">+ New profile</button>
+        </div>
+        <div id="settingsUserList" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
+        <div class="insight info" style="margin-bottom:0">Each profile has its own theme, colors, and layout. Profiles are stored on this device only — switch between Matt and Dana's views on different devices.</div>
+      </div>
+
+      <!-- PRESET THEMES -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title" style="margin-bottom:14px">🎨 Preset themes</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px" id="themePresets"></div>
+      </div>
+
+      <!-- COLOR CUSTOMIZATION -->
+      <div class="g2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-title" style="margin-bottom:14px">🖌️ Background &amp; surface colors</div>
+          <div id="bgColorPickers"></div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:14px">✍️ Text colors</div>
+          <div id="textColorPickers"></div>
+        </div>
+      </div>
+
+      <div class="g2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-title" style="margin-bottom:14px">🌈 Accent colors</div>
+          <div id="accentColorPickers"></div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:14px">📐 Layout &amp; shape</div>
+          <div id="layoutSettings"></div>
+        </div>
+      </div>
+
+      <!-- TYPOGRAPHY -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title" style="margin-bottom:14px">🔤 Typography</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px" id="typographySettings"></div>
+      </div>
+
+      <!-- CHART PREFERENCES -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title" style="margin-bottom:14px">📊 Chart preferences</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px" id="chartSettings"></div>
+      </div>
+
+      <!-- LIVE PREVIEW -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title" style="margin-bottom:14px">👁️ Live preview</div>
+        <div id="settingsPreview" style="background:var(--bg);border-radius:var(--radius);padding:20px;border:1px solid var(--border)">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">
+            <div class="widget w-green"><div class="wlabel">Net Balance</div><div class="wvalue green">$84,320</div><div class="wsub">all accounts</div></div>
+            <div class="widget w-red"><div class="wlabel">Monthly Bills</div><div class="wvalue red">$7,472</div><div class="wsub">fixed</div></div>
+            <div class="widget w-cyan"><div class="wlabel">Net Worth</div><div class="wvalue cyan">$142K</div><div class="wsub">assets − liabilities</div></div>
+          </div>
+          <div class="card" style="padding:14px">
+            <div class="card-title" style="margin-bottom:8px">Sample table row</div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13.5px">
+              <span style="font-weight:500">M&amp;T Mortgage</span>
+              <span style="font-family:var(--mono);color:var(--red)">$2,638.46</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13.5px">
+              <span style="color:var(--muted)">Chase Freedom</span>
+              <span style="font-family:var(--mono);color:var(--blue)">0% APR</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EXPORT / IMPORT THEME -->
+      <div class="card">
+        <div class="card-title" style="margin-bottom:12px">💾 Export &amp; import themes</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <button class="btn" onclick="settingsExportTheme()">⬇️ Export current theme</button>
+          <button class="btn" onclick="gg('themeImportFile').click()">⬆️ Import theme file</button>
+          <input type="file" id="themeImportFile" accept=".json" style="display:none" onchange="settingsImportTheme(this)">
+          <span style="font-size:12px;color:var(--hint)">Share themes between devices or users as .json files</span>
+        </div>
+      </div>
+    </div>
+
 </div><!-- /mainContent -->
 
 <!-- ── MODALS ── -->
@@ -1802,7 +1951,20 @@ const fmt2=n=>'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,ma
 const todayStr=()=>new Date().toISOString().slice(0,10).replace(/-/g,'');
 const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const fmtCat=s=>String(s).replace(/_/g,' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
-const PAL=['#2ecc8a','#5b8def','#f05c5c','#a78bfa','#f0a540','#38bdf8','#fb923c','#34d399','#f472b6','#818cf8'];
+const PAL_DEFAULT=['#2ecc8a','#5b8def','#f05c5c','#a78bfa','#f0a540','#38bdf8','#fb923c','#34d399','#f472b6','#818cf8'];
+// PAL is a getter so it always uses the active theme's palette
+const PAL = new Proxy([], {
+  get(t,k) {
+    const src = window._activePalette || PAL_DEFAULT;
+    if (k === 'length') return src.length;
+    if (!isNaN(k)) return src[+k];
+    if (k === 'map') return fn => src.map(fn);
+    if (k === 'slice') return (...a) => src.slice(...a);
+    if (k === 'forEach') return fn => src.forEach(fn);
+    if (k === Symbol.iterator) return src[Symbol.iterator].bind(src);
+    return src[k];
+  }
+});
 Chart.defaults.color='#484c65';Chart.defaults.borderColor='rgba(255,255,255,0.05)';
 Chart.defaults.font.family="'DM Sans', sans-serif";
 
@@ -1918,7 +2080,7 @@ function saveSO(p){const cMap={dashboard:'dashContainer',expenses:'expContainer'
 function loadSO(p){const cMap={dashboard:'dashContainer',expenses:'expContainer',retirement:'retContainer',networth:'nwContainer',transactions:'txnContainer'};try{const sv=JSON.parse(localStorage.getItem('so-'+p));if(!sv)return;const c=gg(cMap[p]);if(!c)return;sv.forEach(id=>{const el=c.querySelector('[data-id="'+id+'"]');if(el)c.appendChild(el);});}catch(e){}}
 
 // ── PAGE NAV ──────────────────────────────────────────────────────────────────
-const PT={dashboard:'Dashboard',transactions:'Transactions',expenses:'Budget & Bills',networth:'Net Worth & Retirement',firedrill:'🔥 Fire Drill'};
+const PT={dashboard:'Dashboard',transactions:'Transactions',expenses:'Budget & Bills',networth:'Net Worth & Retirement',firedrill:'🔥 Fire Drill',settings:'⚙️ Settings'};
 function showPage(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(n=>n.classList.remove('active'));
@@ -1942,6 +2104,7 @@ async function init(){
   });
   ['dashboard','expenses','retirement','networth','transactions'].forEach(loadSO);
   setTimeout(initAllEditableTabs, 100);
+  bootSettings();
   const sel=gg('calMonthSel');
   if(sel){const now=new Date();for(let i=0;i<12;i++){const d=new Date(now.getFullYear(),now.getMonth()+i,1);const o=document.createElement('option');o.value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;o.textContent=d.toLocaleString('default',{month:'long',year:'numeric'});if(i===0)o.selected=true;sel.appendChild(o);}}
   const today=new Date().toISOString().slice(0,10);
@@ -3516,6 +3679,7 @@ document.addEventListener('keydown', function(e) {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   const map = {
     'd': 'dashboard', 'D': 'dashboard',
+    's': 'settings', 'S': 'settings',
     't': 'transactions', 'T': 'transactions',
     'b': 'expenses', 'B': 'expenses',
     'n': 'networth', 'N': 'networth',
@@ -3975,6 +4139,609 @@ function renderSWOT() {
   renderQuadrant('swot-W', '⚠️ Weaknesses',    W, 4);
   renderQuadrant('swot-O', '🎯 Opportunities', O, 4);
   renderQuadrant('swot-T', '⚡ Threats',        T, 4);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SETTINGS ENGINE — themes, users, colors, fonts, charts
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── BUILT-IN THEMES ──────────────────────────────────────────────────────────
+const BUILT_IN_THEMES = {
+  dark: {
+    name: 'Dark (Default)', icon: '🌑',
+    vars: {
+      '--bg':'#0f1117','--sidebar':'#15181f','--surface':'#1c1f28',
+      '--surface2':'#232735','--surface3':'#2b2f42',
+      '--border':'rgba(255,255,255,0.09)','--border2':'rgba(255,255,255,0.15)',
+      '--text':'#f0f2fa','--muted':'#a0a4bc','--hint':'#606480',
+      '--green':'#3dda91','--red':'#f46a6a','--amber':'#f5b042',
+      '--blue':'#6b9ef5','--purple':'#b09afa','--cyan':'#45c8fc',
+      '--radius':'12px','--radius-sm':'8px',
+    },
+    font: 'DM Sans', mono: 'DM Mono', fontSize: '15',
+    chartPalette: ['#3dda91','#6b9ef5','#f46a6a','#b09afa','#f5b042','#45c8fc','#fb923c','#34d399'],
+  },
+  light: {
+    name: 'Light', icon: '☀️',
+    vars: {
+      '--bg':'#f5f6fa','--sidebar':'#ffffff','--surface':'#ffffff',
+      '--surface2':'#f0f1f5','--surface3':'#e4e6ed',
+      '--border':'rgba(0,0,0,0.08)','--border2':'rgba(0,0,0,0.14)',
+      '--text':'#111827','--muted':'#4b5563','--hint':'#9ca3af',
+      '--green':'#059669','--red':'#dc2626','--amber':'#d97706',
+      '--blue':'#2563eb','--purple':'#7c3aed','--cyan':'#0891b2',
+      '--radius':'12px','--radius-sm':'8px',
+    },
+    font: 'DM Sans', mono: 'DM Mono', fontSize: '15',
+    chartPalette: ['#059669','#2563eb','#dc2626','#7c3aed','#d97706','#0891b2','#ea580c','#16a34a'],
+  },
+  midnight: {
+    name: 'Midnight Blue', icon: '🌊',
+    vars: {
+      '--bg':'#0a0e1a','--sidebar':'#0d1224','--surface':'#111a2e',
+      '--surface2':'#172038','--surface3':'#1e2a44',
+      '--border':'rgba(99,179,237,0.1)','--border2':'rgba(99,179,237,0.18)',
+      '--text':'#e2eaf8','--muted':'#8ba3c7','--hint':'#4a6080',
+      '--green':'#38f5a0','--red':'#f87171','--amber':'#fbbf24',
+      '--blue':'#60a5fa','--purple':'#a78bfa','--cyan':'#67e8f9',
+      '--radius':'12px','--radius-sm':'8px',
+    },
+    font: 'Inter', mono: 'JetBrains Mono', fontSize: '15',
+    chartPalette: ['#38f5a0','#60a5fa','#f87171','#a78bfa','#fbbf24','#67e8f9','#fb923c','#34d399'],
+  },
+  forest: {
+    name: 'Forest', icon: '🌲',
+    vars: {
+      '--bg':'#0d1410','--sidebar':'#111a13','--surface':'#162019',
+      '--surface2':'#1c2920','--surface3':'#243328',
+      '--border':'rgba(74,222,128,0.1)','--border2':'rgba(74,222,128,0.18)',
+      '--text':'#ecfdf5','--muted':'#86efac','--hint':'#4ade80',
+      '--green':'#4ade80','--red':'#f87171','--amber':'#fcd34d',
+      '--blue':'#6ee7b7','--purple':'#c4b5fd','--cyan':'#a7f3d0',
+      '--radius':'14px','--radius-sm':'9px',
+    },
+    font: 'DM Sans', mono: 'DM Mono', fontSize: '15',
+    chartPalette: ['#4ade80','#6ee7b7','#fcd34d','#f87171','#c4b5fd','#a7f3d0','#fb923c','#34d399'],
+  },
+  rose: {
+    name: 'Rose Gold', icon: '🌸',
+    vars: {
+      '--bg':'#1a0d0f','--sidebar':'#200f12','--surface':'#2a1518',
+      '--surface2':'#341a1e','--surface3':'#3f2024',
+      '--border':'rgba(251,113,133,0.1)','--border2':'rgba(251,113,133,0.18)',
+      '--text':'#fff1f2','--muted':'#fda4af','--hint':'#9f4455',
+      '--green':'#34d399','--red':'#fb7185','--amber':'#fbbf24',
+      '--blue':'#93c5fd','--purple':'#e879f9','--cyan':'#67e8f9',
+      '--radius':'16px','--radius-sm':'10px',
+    },
+    font: 'DM Sans', mono: 'DM Mono', fontSize: '15',
+    chartPalette: ['#fb7185','#f9a8d4','#fda4af','#fbbf24','#34d399','#93c5fd','#e879f9','#67e8f9'],
+  },
+  slate: {
+    name: 'Slate Pro', icon: '🔘',
+    vars: {
+      '--bg':'#0f172a','--sidebar':'#1e293b','--surface':'#1e293b',
+      '--surface2':'#273549','--surface3':'#334155',
+      '--border':'rgba(148,163,184,0.12)','--border2':'rgba(148,163,184,0.2)',
+      '--text':'#f1f5f9','--muted':'#94a3b8','--hint':'#475569',
+      '--green':'#22d3ee','--red':'#f472b6','--amber':'#fbbf24',
+      '--blue':'#818cf8','--purple':'#c084fc','--cyan':'#67e8f9',
+      '--radius':'8px','--radius-sm':'5px',
+    },
+    font: 'Inter', mono: 'JetBrains Mono', fontSize: '14',
+    chartPalette: ['#22d3ee','#818cf8','#f472b6','#fbbf24','#c084fc','#67e8f9','#34d399','#fb923c'],
+  },
+  solarized: {
+    name: 'Solarized', icon: '🌅',
+    vars: {
+      '--bg':'#002b36','--sidebar':'#073642','--surface':'#073642',
+      '--surface2':'#083b4a','--surface3':'#094555',
+      '--border':'rgba(131,148,150,0.15)','--border2':'rgba(131,148,150,0.25)',
+      '--text':'#fdf6e3','--muted':'#839496','--hint':'#586e75',
+      '--green':'#859900','--red':'#dc322f','--amber':'#b58900',
+      '--blue':'#268bd2','--purple':'#6c71c4','--cyan':'#2aa198',
+      '--radius':'10px','--radius-sm':'6px',
+    },
+    font: 'DM Sans', mono: 'DM Mono', fontSize: '15',
+    chartPalette: ['#2aa198','#268bd2','#859900','#b58900','#6c71c4','#dc322f','#cb4b16','#d33682'],
+  },
+};
+
+const FONT_OPTIONS = [
+  {val:"'DM Sans',sans-serif", label:'DM Sans (default)'},
+  {val:"'Inter',sans-serif", label:'Inter'},
+  {val:"system-ui,sans-serif", label:'System UI'},
+  {val:"Georgia,serif", label:'Georgia (serif)'},
+  {val:"'Trebuchet MS',sans-serif", label:'Trebuchet MS'},
+];
+const MONO_OPTIONS = [
+  {val:"'DM Mono',monospace", label:'DM Mono (default)'},
+  {val:"'JetBrains Mono',monospace", label:'JetBrains Mono'},
+  {val:"'Fira Code',monospace", label:'Fira Code'},
+  {val:"'Courier New',monospace", label:'Courier New'},
+  {val:"monospace", label:'System Mono'},
+];
+const CHART_OPTIONS = {
+  spending:   {label:'Spending chart (dashboard)', options:['sankey','bar','doughnut','pie','horizontal-bar']},
+  daily:      {label:'Daily spending', options:['bar','line','area']},
+  billCat:    {label:'Bills by category', options:['doughnut','pie','bar','horizontal-bar']},
+  zeroBudget: {label:'Zero budget allocation', options:['doughnut','pie','bar']},
+  income:     {label:'Income breakdown', options:['doughnut','pie','bar']},
+  timeline:   {label:'Payoff timeline', options:['line','area','bar']},
+  cashflow:   {label:'Monthly cash flow', options:['bar','line','area']},
+  nwMain:     {label:'Net worth chart', options:['doughnut','bar','pie']},
+};
+
+// ── USER PROFILE SYSTEM ───────────────────────────────────────────────────────
+const DEFAULT_USERS = [
+  {id:'matt', name:'Matt',  avatar:'👨', color:'#3dda91', theme:'dark'},
+  {id:'dana', name:'Dana',  avatar:'👩', color:'#b09afa', theme:'dark'},
+  {id:'household', name:'Matt & Dana', avatar:'🏠', color:'#6b9ef5', theme:'dark'},
+];
+
+// Storage keys include device fingerprint so each device is independent
+const DEVICE_KEY = (function(){
+  let k = localStorage.getItem('mdf_device_key');
+  if (!k) { k = 'dev_' + Math.random().toString(36).slice(2,10); localStorage.setItem('mdf_device_key', k); }
+  return k;
+})();
+
+function LS(key, val) {
+  const fullKey = 'mdf_' + DEVICE_KEY + '_' + key;
+  if (val === undefined) {
+    try { return JSON.parse(localStorage.getItem(fullKey)); } catch(e) { return null; }
+  }
+  localStorage.setItem(fullKey, JSON.stringify(val));
+}
+
+// Settings state
+let ST = {
+  users:        LS('users') || JSON.parse(JSON.stringify(DEFAULT_USERS)),
+  activeUser:   LS('activeUser') || 'household',
+  themes:       LS('customThemes') || {},  // user-created themes
+  chartTypes:   LS('chartTypes') || {},
+  customVars:   {},  // live editing state
+};
+
+function getCurrentUser() {
+  return ST.users.find(u => u.id === ST.activeUser) || ST.users[0];
+}
+
+function getActiveTheme() {
+  const user = getCurrentUser();
+  const themeId = user.theme || 'dark';
+  return ST.themes[themeId] || BUILT_IN_THEMES[themeId] || BUILT_IN_THEMES.dark;
+}
+
+// ── APPLY THEME ───────────────────────────────────────────────────────────────
+function applyTheme(theme, save) {
+  if (!theme) return;
+  const root = document.documentElement;
+  // Apply CSS vars
+  Object.entries(theme.vars || {}).forEach(([k, v]) => root.style.setProperty(k, v));
+  // Apply font
+  if (theme.font) {
+    const fontMap = {
+      'DM Sans': "'DM Sans',sans-serif",
+      'Inter': "'Inter',sans-serif",
+      'System UI': 'system-ui,sans-serif',
+      'Georgia': 'Georgia,serif',
+      'Trebuchet MS': "'Trebuchet MS',sans-serif",
+    };
+    const fontVal = fontMap[theme.font] || theme.font;
+    root.style.setProperty('--font', fontVal);
+    // Inject Google Fonts if needed
+    if (['Inter','JetBrains Mono','Fira Code'].includes(theme.font) ||
+        ['JetBrains Mono','Fira Code'].includes(theme.mono)) {
+      const fonts = [];
+      if (theme.font === 'Inter') fonts.push('Inter:wght@300;400;500;600');
+      if (theme.mono === 'JetBrains Mono') fonts.push('JetBrains+Mono:wght@400;500');
+      if (theme.mono === 'Fira Code') fonts.push('Fira+Code:wght@400;500');
+      if (fonts.length && !document.querySelector('#extraFonts')) {
+        const link = document.createElement('link');
+        link.id = 'extraFonts';
+        link.rel = 'stylesheet';
+        link.href = 'https://fonts.googleapis.com/css2?family=' + fonts.join('&family=') + '&display=swap';
+        document.head.appendChild(link);
+      }
+    }
+    if (theme.mono) {
+      const monoMap = {
+        'DM Mono': "'DM Mono',monospace",
+        'JetBrains Mono': "'JetBrains Mono',monospace",
+        'Fira Code': "'Fira Code',monospace",
+        'Courier New': "'Courier New',monospace",
+      };
+      root.style.setProperty('--mono', monoMap[theme.mono] || theme.mono);
+    }
+  }
+  // Apply font size
+  if (theme.fontSize) {
+    document.documentElement.style.fontSize = theme.fontSize + 'px';
+  }
+  // Apply chart palette
+  if (theme.chartPalette) {
+    window._activePalette = theme.chartPalette;
+  }
+  // Update chart defaults
+  if (window.Chart) {
+    Chart.defaults.color = theme.vars['--hint'] || '#606480';
+    Chart.defaults.borderColor = theme.vars['--border'] || 'rgba(255,255,255,0.09)';
+  }
+  // Update sidebar avatar color
+  const user = getCurrentUser();
+  const av = gg('sbAvatar');
+  if (av) { av.style.background = user.color || 'var(--green)'; av.textContent = user.avatar || user.name.slice(0,2); }
+  const un = gg('sbUserName'); if (un) un.textContent = user.name;
+  const ul = gg('sbUserLabel'); if (ul) ul.textContent = theme.name || 'Custom theme';
+
+  if (save) {
+    LS('activeUser', ST.activeUser);
+    const user2 = getCurrentUser();
+    user2.theme = Object.keys(BUILT_IN_THEMES).find(k => BUILT_IN_THEMES[k] === theme) || 'custom_' + Date.now();
+    if (typeof user2.theme === 'string' && user2.theme.startsWith('custom_')) {
+      ST.themes[user2.theme] = theme;
+      LS('customThemes', ST.themes);
+    }
+    LS('users', ST.users);
+  }
+  // Redraw all charts with new colors
+  setTimeout(() => {
+    if (allTxns.length) { renderCharts(); }
+    renderBillCatChart();
+    renderZeroChart();
+    renderSWOT();
+  }, 50);
+}
+
+// ── SETTINGS PAGE RENDER ──────────────────────────────────────────────────────
+function renderSettingsPage() {
+  renderUserProfiles();
+  renderThemePresets();
+  renderColorPickers();
+  renderLayoutSettings();
+  renderTypographySettings();
+  renderChartSettings();
+}
+
+function renderUserProfiles() {
+  const el = gg('settingsUserList'); if (!el) return;
+  el.innerHTML = ST.users.map(u => {
+    const isActive = u.id === ST.activeUser;
+    return '<div class="user-profile-card ' + (isActive?'active':'') + '" onclick="settingsSwitchUser(\'' + u.id + '\')">'
+      + '<button class="user-delete" onclick="event.stopPropagation();settingsDeleteUser(\'' + u.id + '\')">✕</button>'
+      + '<div class="user-avatar-lg" style="background:' + u.color + '">' + u.avatar + '</div>'
+      + '<div class="user-card-name">' + esc(u.name) + '</div>'
+      + '<div class="user-card-theme">' + (u.theme || 'dark') + '</div>'
+      + '</div>';
+  }).join('') +
+  '<div class="user-profile-card" onclick="settingsAddUser()" style="border-style:dashed;align-items:center;justify-content:center;">'
+  + '<div style="font-size:24px;color:var(--hint)">+</div>'
+  + '<div class="user-card-theme">New profile</div>'
+  + '</div>';
+}
+
+function renderThemePresets() {
+  const el = gg('themePresets'); if (!el) return;
+  const user = getCurrentUser();
+  const allThemes = { ...BUILT_IN_THEMES, ...ST.themes };
+  el.innerHTML = Object.entries(allThemes).map(([id, t]) => {
+    const v = t.vars || {};
+    const isActive = user.theme === id;
+    return '<div class="theme-card ' + (isActive?'active':'') + '" onclick="settingsApplyPreset(\'' + id + '\')">'
+      + '<div class="theme-card-preview">'
+      + '<span style="background:' + (v['--bg']||'#0f1117') + '"></span>'
+      + '<span style="background:' + (v['--sidebar']||'#15181f') + '"></span>'
+      + '<span style="background:' + (v['--green']||'#3dda91') + '"></span>'
+      + '<span style="background:' + (v['--blue']||'#6b9ef5') + '"></span>'
+      + '<span style="background:' + (v['--text']||'#f0f2fa') + '"></span>'
+      + '</div>'
+      + '<div class="theme-card-name">' + t.icon + ' ' + t.name + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function renderColorPickers() {
+  const t = getActiveTheme();
+  const v = {...(t.vars||{}),...ST.customVars};
+
+  const bgPickers = [
+    {key:'--bg',           label:'Page background',  sub:'Main app background'},
+    {key:'--sidebar',      label:'Sidebar',           sub:'Left nav panel'},
+    {key:'--surface',      label:'Card surface',      sub:'Widget & card background'},
+    {key:'--surface2',     label:'Input surface',     sub:'Input & select fields'},
+    {key:'--surface3',     label:'Deep surface',      sub:'Nested elements'},
+  ];
+  const textPickers = [
+    {key:'--text',   label:'Primary text',  sub:'Headings & values'},
+    {key:'--muted',  label:'Secondary text', sub:'Labels & descriptions'},
+    {key:'--hint',   label:'Hint text',     sub:'Placeholders & subtitles'},
+  ];
+  const accentPickers = [
+    {key:'--green',  label:'Green accent',   sub:'Positive values, active nav'},
+    {key:'--red',    label:'Red accent',     sub:'Negative values, warnings'},
+    {key:'--amber',  label:'Amber accent',   sub:'Caution, due dates'},
+    {key:'--blue',   label:'Blue accent',    sub:'Info, transactions'},
+    {key:'--purple', label:'Purple accent',  sub:'Retirement, special'},
+    {key:'--cyan',   label:'Cyan accent',    sub:'Income, highlights'},
+  ];
+
+  function buildPickers(pickers) {
+    return pickers.map(p => {
+      const val = v[p.key] || '#888888';
+      const hexVal = val.startsWith('#') ? val : '#888888';
+      return '<div class="color-picker-row">'
+        + '<div><div class="color-picker-label">' + p.label + '</div><div class="color-picker-sub">' + p.sub + '</div></div>'
+        + '<div class="color-swatch">'
+        + '<input type="color" value="' + hexVal + '" oninput="settingsLiveColor(\'' + p.key + '\',this.value)">'
+        + '<span class="color-hex" id="chex' + p.key.replace(/-/g,'_') + '">' + hexVal + '</span>'
+        + '</div></div>';
+    }).join('');
+  }
+
+  const bgEl = gg('bgColorPickers'); if (bgEl) bgEl.innerHTML = buildPickers(bgPickers);
+  const txEl = gg('textColorPickers'); if (txEl) txEl.innerHTML = buildPickers(textPickers);
+  const acEl = gg('accentColorPickers'); if (acEl) acEl.innerHTML = buildPickers(accentPickers);
+}
+
+function renderLayoutSettings() {
+  const el = gg('layoutSettings'); if (!el) return;
+  const t = getActiveTheme();
+  const v = {...(t.vars||{}),...ST.customVars};
+  const r  = v['--radius']    || '12px';
+  const rs = v['--radius-sm'] || '8px';
+  const sw = (v['--sidebar-w'] || '228px').replace('px','');
+
+  el.innerHTML = [
+    {key:'--radius',    label:'Card radius',    sub:'Rounding on cards & widgets',    val:r.replace('px',''),  min:0, max:24, unit:'px'},
+    {key:'--radius-sm', label:'Button radius',  sub:'Rounding on buttons & inputs',   val:rs.replace('px',''), min:0, max:20, unit:'px'},
+    {key:'--sidebar-w', label:'Sidebar width',  sub:'Left nav panel width',           val:sw,                  min:180, max:320, unit:'px'},
+  ].map(row =>
+    '<div class="setting-row"><div><div class="setting-label">' + row.label + '</div><div class="setting-sub">' + row.sub + '</div></div>'
+    + '<div class="setting-ctrl" style="display:flex;align-items:center;gap:8px">'
+    + '<input type="range" min="' + row.min + '" max="' + row.max + '" value="' + row.val + '" style="width:90px"'
+    + ' oninput="settingsLiveVar(\'' + row.key + '\',this.value+\'' + row.unit + '\');gg(\'rv_' + row.key.replace(/-/g,'_') + '\').textContent=this.value+\'' + row.unit + '\'">'
+    + '<span id="rv_' + row.key.replace(/-/g,'_') + '" class="color-hex">' + row.val + row.unit + '</span>'
+    + '</div></div>'
+  ).join('');
+}
+
+function renderTypographySettings() {
+  const el = gg('typographySettings'); if (!el) return;
+  const t = getActiveTheme();
+  const curFont = t.font || 'DM Sans';
+  const curMono = t.mono || 'DM Mono';
+  const curSize = t.fontSize || '15';
+  const curWeight = t.fontWeight || '400';
+
+  el.innerHTML = [
+    {id:'font_main', label:'Body font', sub:'Used for all regular text', options:FONT_OPTIONS.map(f=>({val:f.val,label:f.label,selected:f.label.includes(curFont)})), onChange:'settingsLiveFont("main",this.value)'},
+    {id:'font_mono', label:'Monospace font', sub:'Numbers & code', options:MONO_OPTIONS.map(f=>({val:f.val,label:f.label,selected:f.label.includes(curMono)})), onChange:'settingsLiveFont("mono",this.value)'},
+    {id:'font_size', label:'Base font size', sub:'Affects all text proportionally', isNumber:true, val:curSize, min:12, max:20, step:1, onChange:'settingsLiveFontSize(this.value)'},
+  ].map(row => {
+    if (row.isNumber) {
+      return '<div><div style="font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:4px">' + row.label + '</div>'
+        + '<div style="font-size:11px;color:var(--hint);margin-bottom:8px">' + row.sub + '</div>'
+        + '<div style="display:flex;align-items:center;gap:8px">'
+        + '<input type="range" min="' + row.min + '" max="' + row.max + '" step="' + row.step + '" value="' + row.val + '" style="flex:1"'
+        + ' oninput="' + row.onChange + ';gg(\'fsz_val\').textContent=this.value+\'px\'">'
+        + '<span id="fsz_val" class="color-hex">' + row.val + 'px</span></div></div>';
+    }
+    return '<div><div style="font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:4px">' + row.label + '</div>'
+      + '<div style="font-size:11px;color:var(--hint);margin-bottom:8px">' + row.sub + '</div>'
+      + '<select class="chart-type-sel" onchange="' + row.onChange + '">'
+      + row.options.map(o => '<option value="' + esc(o.val) + '"' + (o.selected?' selected':'') + '>' + o.label + '</option>').join('')
+      + '</select></div>';
+  }).join('');
+}
+
+function renderChartSettings() {
+  const el = gg('chartSettings'); if (!el) return;
+  el.innerHTML = Object.entries(CHART_OPTIONS).map(([key, cfg]) => {
+    const cur = (ST.chartTypes[key] || cfg.options[0]);
+    return '<div class="chart-type-row">'
+      + '<div class="chart-type-label">' + cfg.label + '</div>'
+      + '<select class="chart-type-sel" onchange="ST.chartTypes[\'' + key + '\']=this.value;LS(\'chartTypes\',ST.chartTypes)">'
+      + cfg.options.map(o => '<option value="' + o + '"' + (o===cur?' selected':'') + '>' + o.charAt(0).toUpperCase()+o.slice(1) + '</option>').join('')
+      + '</select></div>';
+  }).join('');
+}
+
+// ── LIVE PREVIEW HELPERS ─────────────────────────────────────────────────────
+function settingsLiveColor(cssVar, val) {
+  ST.customVars[cssVar] = val;
+  document.documentElement.style.setProperty(cssVar, val);
+  // Update hex display
+  const hexEl = gg('chex' + cssVar.replace(/-/g,'_'));
+  if (hexEl) hexEl.textContent = val;
+  // Rebuild dim version for standard accent colors
+  const dimMap = {'--green':'--green-dim','--red':'--red-dim','--amber':'--amber-dim','--blue':'--blue-dim','--purple':'--purple-dim','--cyan':'--cyan-dim'};
+  if (dimMap[cssVar]) {
+    const r = parseInt(val.slice(1,3),16), g = parseInt(val.slice(3,5),16), b = parseInt(val.slice(5,7),16);
+    document.documentElement.style.setProperty(dimMap[cssVar], 'rgba('+r+','+g+','+b+',0.12)');
+  }
+}
+
+function settingsLiveVar(cssVar, val) {
+  ST.customVars[cssVar] = val;
+  document.documentElement.style.setProperty(cssVar, val);
+}
+
+function settingsLiveFont(type, val) {
+  if (type === 'main') document.documentElement.style.setProperty('--font', val);
+  if (type === 'mono') document.documentElement.style.setProperty('--mono', val);
+}
+
+function settingsLiveFontSize(val) {
+  document.documentElement.style.fontSize = val + 'px';
+}
+
+function settingsApplyPreset(themeId) {
+  const theme = BUILT_IN_THEMES[themeId] || ST.themes[themeId];
+  if (!theme) return;
+  ST.customVars = {};  // reset overrides
+  const user = getCurrentUser();
+  user.theme = themeId;
+  LS('users', ST.users);
+  applyTheme(theme, false);
+  renderSettingsPage();
+  showToast('Theme "' + theme.name + '" applied ✓', 'success');
+}
+
+function settingsSave() {
+  // Build current theme from customVars on top of active theme
+  const base = getActiveTheme();
+  const merged = {
+    ...base,
+    vars: {...(base.vars||{}),...ST.customVars},
+    font: document.documentElement.style.getPropertyValue('--font').replace(/'/g,'').trim().split(',')[0] || base.font,
+    mono: document.documentElement.style.getPropertyValue('--mono').replace(/'/g,'').trim().split(',')[0] || base.mono,
+    fontSize: document.documentElement.style.fontSize.replace('px','') || base.fontSize,
+    chartPalette: base.chartPalette,
+    name: base.name,
+    icon: base.icon,
+  };
+  const user = getCurrentUser();
+  // Save as user's custom theme
+  const customId = 'custom_' + user.id;
+  merged.name = user.name + "'s theme";
+  merged.icon = user.avatar || '🎨';
+  ST.themes[customId] = merged;
+  user.theme = customId;
+  LS('customThemes', ST.themes);
+  LS('users', ST.users);
+  LS('chartTypes', ST.chartTypes);
+  ST.customVars = {};
+  applyTheme(merged, false);
+  renderSettingsPage();
+  showToast('Settings saved for ' + user.name + ' ✓', 'success');
+}
+
+function settingsReset() {
+  if (!confirm('Reset to default Dark theme?')) return;
+  ST.customVars = {};
+  const user = getCurrentUser();
+  user.theme = 'dark';
+  LS('users', ST.users);
+  applyTheme(BUILT_IN_THEMES.dark, false);
+  // Clear all CSS var overrides
+  const root = document.documentElement;
+  Object.keys(BUILT_IN_THEMES.dark.vars).forEach(k => root.style.removeProperty(k));
+  root.style.fontSize = '15px';
+  renderSettingsPage();
+  showToast('Reset to default ✓', 'success');
+}
+
+function settingsSwitchUser(userId) {
+  ST.activeUser = userId;
+  LS('activeUser', ST.activeUser);
+  const user = ST.users.find(u => u.id === userId);
+  if (user) {
+    const theme = BUILT_IN_THEMES[user.theme] || ST.themes[user.theme] || BUILT_IN_THEMES.dark;
+    ST.customVars = {};
+    applyTheme(theme, false);
+  }
+  renderSettingsPage();
+  showToast('Switched to ' + (user ? user.name : userId) + ' ✓', 'success');
+}
+
+function settingsAddUser() {
+  const name = prompt('New profile name (e.g. Matt, Dana, Guest):');
+  if (!name || !name.trim()) return;
+  const avatars = ['👨','👩','🧑','👦','👧','🏠','⭐','💼'];
+  const colors  = ['#3dda91','#b09afa','#6b9ef5','#f46a6a','#f5b042','#45c8fc'];
+  const id = 'user_' + Date.now();
+  const newUser = {
+    id, name: name.trim(),
+    avatar: avatars[ST.users.length % avatars.length],
+    color:  colors[ST.users.length % colors.length],
+    theme: 'dark',
+  };
+  ST.users.push(newUser);
+  LS('users', ST.users);
+  settingsSwitchUser(id);
+}
+
+function settingsDeleteUser(userId) {
+  if (ST.users.length <= 1) { showToast('Cannot delete last profile', 'error'); return; }
+  if (!confirm('Delete this profile?')) return;
+  ST.users = ST.users.filter(u => u.id !== userId);
+  if (ST.activeUser === userId) ST.activeUser = ST.users[0].id;
+  LS('users', ST.users);
+  LS('activeUser', ST.activeUser);
+  renderSettingsPage();
+  showToast('Profile deleted', 'success');
+}
+
+function settingsExportTheme() {
+  const theme = getActiveTheme();
+  const user  = getCurrentUser();
+  const export_data = {
+    name: theme.name, user: user.name,
+    vars: {...(theme.vars||{}),...ST.customVars},
+    font: theme.font, mono: theme.mono, fontSize: theme.fontSize,
+    chartPalette: theme.chartPalette,
+    chartTypes: ST.chartTypes,
+    exported: new Date().toISOString(),
+  };
+  const blob = new Blob([JSON.stringify(export_data, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'mdf_theme_' + user.name.toLowerCase() + '_' + new Date().toLocaleDateString().replace(/\//g,'-') + '.json';
+  a.click();
+  showToast('Theme exported ✓', 'success');
+}
+
+function settingsImportTheme(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.vars) { showToast('Invalid theme file', 'error'); return; }
+      const id = 'imported_' + Date.now();
+      data.name = data.name || 'Imported theme';
+      data.icon = data.icon || '📥';
+      ST.themes[id] = data;
+      LS('customThemes', ST.themes);
+      settingsApplyPreset(id);
+      if (data.chartTypes) { ST.chartTypes = {...ST.chartTypes,...data.chartTypes}; LS('chartTypes', ST.chartTypes); }
+      showToast('Theme "' + data.name + '" imported ✓', 'success');
+    } catch(err) {
+      showToast('Failed to parse theme file', 'error');
+    }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+// ── BOOT: LOAD SAVED SETTINGS ON STARTUP ─────────────────────────────────────
+function bootSettings() {
+  // Load users
+  const savedUsers = LS('users');
+  if (savedUsers && savedUsers.length) ST.users = savedUsers;
+  const savedActiveUser = LS('activeUser');
+  if (savedActiveUser) ST.activeUser = savedActiveUser;
+  const savedThemes = LS('customThemes');
+  if (savedThemes) ST.themes = savedThemes;
+  const savedChartTypes = LS('chartTypes');
+  if (savedChartTypes) ST.chartTypes = savedChartTypes;
+
+  // Apply saved theme for this device/user
+  const user = getCurrentUser();
+  if (user && user.theme) {
+    const theme = BUILT_IN_THEMES[user.theme] || ST.themes[user.theme];
+    if (theme) applyTheme(theme, false);
+  }
+
+  // Update sidebar user block
+  const av = gg('sbAvatar');
+  const un = gg('sbUserName');
+  const ul = gg('sbUserLabel');
+  const cu = getCurrentUser();
+  if (av && cu) { av.style.background = cu.color; av.textContent = cu.avatar; }
+  if (un && cu) un.textContent = cu.name;
+  if (ul && cu) { const t = getActiveTheme(); ul.textContent = t.name || 'Custom'; }
 }
 
 const plaidS=document.createElement('script');
