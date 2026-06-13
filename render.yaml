@@ -1,19 +1,21 @@
 services:
   - type: web
     name: matt-dana-finance
-    env: node
-    region: oregon
-    plan: free
+    runtime: node
     buildCommand: npm install
-    startCommand: npm start
+    startCommand: node server/index.js
     envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PLAID_ENV
+        value: sandbox
       - key: PLAID_CLIENT_ID
         sync: false
       - key: PLAID_SECRET
         sync: false
-      - key: PLAID_ENV
-        value: sandbox
+      - key: APP_USERNAME
+        sync: false
+      - key: APP_PASSWORD
+        sync: false
       - key: SESSION_SECRET
-        generateValue: true
-      - key: PORT
-        value: 3000
+        sync: false
