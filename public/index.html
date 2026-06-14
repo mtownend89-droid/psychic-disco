@@ -285,13 +285,13 @@ input, select, textarea { font-size: 16px !important; }
 }
 .sb-logo-text{font-size:14.5px;font-weight:600;color:var(--text);}
 .sb-logo-sub{font-size:10.5px;color:var(--hint);margin-top:1px;}
-.sb-nav{flex:1;padding:10px 10px;display:flex;flex-direction:column;gap:1px;overflow-y:auto;}
+.sb-nav{flex:1;padding:8px 8px;display:flex;flex-direction:column;gap:1px;overflow-y:auto;}
 .sb-section{font-size:9.5px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:0.12em;padding:14px 10px 5px;}
 .nav-btn{
-  display:flex;align-items:center;gap:10px;padding:8px 10px;
+  display:flex;align-items:center;gap:10px;padding:8px 12px 8px 10px;
   border-radius:var(--radius-sm);color:var(--muted);cursor:pointer;
-  font-size:13.5px;font-weight:400;border:none;background:none;width:100%;text-align:left;
-  transition:all 0.13s;position:relative;
+  font-size:13px;font-weight:400;border:none;background:none;width:100%;text-align:left;
+  transition:all 0.13s;position:relative;box-sizing:border-box;
 }
 .nav-btn:hover{color:var(--text);background:rgba(255,255,255,0.04);}
 .nav-btn.active{color:var(--text);background:rgba(46,204,138,0.08);font-weight:500;}
@@ -1021,6 +1021,21 @@ input[type=range]{width:100%;accent-color:var(--green);}
 }
 .cat-dropdown:hover { border-color: var(--border2); }
 .cat-dropdown:focus { border-color: var(--green); }
+
+
+.prev-item { cursor: help; transition: outline 0.1s; }
+.prev-item:hover { outline: 1.5px dashed var(--green); outline-offset: 2px; border-radius: 3px; }
+
+
+.zb-step {
+  width: 16px; height: 16px; padding: 0;
+  background: var(--surface3); border: 1px solid var(--border);
+  border-radius: 3px; color: var(--muted); cursor: pointer;
+  font-size: 8px; line-height: 1; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0; font-family: var(--font);
+  transition: all 0.1s;
+}
+.zb-step:hover { background: var(--surface2); color: var(--text); border-color: var(--green); }
 
 </style>
 </head><body>
@@ -2127,24 +2142,41 @@ input[type=range]{width:100%;accent-color:var(--green);}
 
       <!-- LIVE PREVIEW -->
       <div class="card" style="margin-bottom:16px">
-        <div class="card-title" style="margin-bottom:14px">👁️ Live preview</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div class="card-title" style="margin-bottom:0">👁️ Live preview</div>
+          <span style="font-size:11.5px;color:var(--muted)">Hover items to see what they control · click to edit</span>
+        </div>
         <div id="settingsPreview" style="background:var(--bg);border-radius:var(--radius);padding:20px;border:1px solid var(--border)">
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">
-            <div class="widget w-green"><div class="wlabel">Net Balance</div><div class="wvalue green">$84,320</div><div class="wsub">all accounts</div></div>
-            <div class="widget w-red"><div class="wlabel">Monthly Bills</div><div class="wvalue red">$7,472</div><div class="wsub">fixed</div></div>
-            <div class="widget w-cyan"><div class="wlabel">Net Worth</div><div class="wvalue cyan">$142K</div><div class="wsub">assets − liabilities</div></div>
+            <div class="widget w-green prev-item" data-tip="Widget background · --surface · change in Background colors">
+              <div class="wlabel prev-item" data-tip="Widget label · --muted text color">Net Balance</div>
+              <div class="wvalue green prev-item" data-tip="Values · --green accent color · change in Accent colors">$84,320</div>
+              <div class="wsub prev-item" data-tip="Sub-label · --muted text color · change in Text colors">all accounts</div>
+            </div>
+            <div class="widget w-red prev-item" data-tip="Card border-radius · --radius · change in Layout &amp; shape">
+              <div class="wlabel">Monthly Bills</div>
+              <div class="wvalue red prev-item" data-tip="Negative values · --red accent · change in Accent colors">$7,472</div>
+              <div class="wsub">fixed</div>
+            </div>
+            <div class="widget w-cyan prev-item" data-tip="Widget surface · --surface · change in Background colors">
+              <div class="wlabel">Net Worth</div>
+              <div class="wvalue cyan prev-item" data-tip="Cyan accent · --cyan · change in Accent colors">$142K</div>
+              <div class="wsub">assets − liabilities</div>
+            </div>
           </div>
-          <div class="card" style="padding:14px">
-            <div class="card-title" style="margin-bottom:8px">Sample table row</div>
+          <div class="card prev-item" style="padding:14px" data-tip="Card surface color · --surface · change in Background colors">
+            <div class="card-title prev-item" style="margin-bottom:8px" data-tip="Section headers · text-transform uppercase · font set in Typography">Sample table row</div>
             <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13.5px">
-              <span style="font-weight:500">M&amp;T Mortgage</span>
-              <span style="font-family:var(--mono);color:var(--red)">$2,638.46</span>
+              <span class="prev-item" style="font-weight:500;color:var(--text)" data-tip="Primary text · --text color · change in Text colors">M&amp;T Mortgage</span>
+              <span class="prev-item" style="font-family:var(--mono);color:var(--red)" data-tip="Monospace font · --mono · change in Typography">$2,638.46</span>
             </div>
             <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13.5px">
-              <span style="color:var(--muted)">Chase Freedom</span>
-              <span style="font-family:var(--mono);color:var(--blue)">0% APR</span>
+              <span class="prev-item" style="color:var(--muted)" data-tip="Secondary text · --muted · change in Text colors">Chase Freedom</span>
+              <span class="prev-item" style="font-family:var(--mono);color:var(--blue)" data-tip="Blue accent · --blue · change in Accent colors">0% APR</span>
             </div>
           </div>
+          <!-- Tooltip that appears on hover -->
+          <div id="prevTip" style="display:none;margin-top:10px;padding:8px 12px;background:var(--surface3);border-radius:var(--radius-sm);font-size:12px;color:var(--text);border-left:3px solid var(--green)"></div>
         </div>
       </div>
 
@@ -3107,20 +3139,26 @@ function renderZeroBudget(){
       <span class="zb-label">${esc(b.name)}</span>
       <div class="zb-bg"><div class="zb-fill" style="width:${Math.min(100,pct)}%;background:${color}"></div></div>
       <input type="range" min="0" max="${Math.round(Math.max(rem,500))}" value="${b.amt}" step="10"
-        style="width:70px;flex-shrink:0" oninput="zbSlide(${i},+this.value)" id="zs-${i}">
-      <input type="text" class="zb-inp" id="zd-${i}" value="${fmt2(b.amt).replace('$','')}"
-        style="width:68px;text-align:right;font-family:var(--mono);font-size:12px;"
-        onfocus="this.select()"
-        onblur="zbTyped(${i},this.value,'$')"
-        onkeydown="if(event.key==='Enter')zbTyped(${i},this.value,'$')"
-        title="Type $ amount and press Enter">
-      <input type="text" class="zb-inp" id="zp-${i}" value="${pct}"
-        style="width:42px;text-align:center;font-family:var(--mono);font-size:12px;"
-        onfocus="this.select()"
-        onblur="zbTyped(${i},this.value,'%')"
-        onkeydown="if(event.key==='Enter')zbTyped(${i},this.value,'%')"
-        title="Type % and press Enter">
-      <span style="font-size:11px;color:var(--hint);flex-shrink:0">%</span>
+        style="width:60px;flex-shrink:0" oninput="zbSlide(${i},+this.value)" id="zs-${i}">
+      <div style="display:flex;align-items:center;gap:2px;flex-shrink:0">
+        <button class="zb-step" onclick="zbStep(${i},'$',-1)" title="-$1">▼</button>
+        <input type="text" class="zb-inp" id="zd-${i}" value="${b.amt.toFixed(2)}"
+          style="width:62px;text-align:right;font-family:var(--mono);font-size:12px;"
+          onfocus="this.select()"
+          onblur="zbTyped(${i},this.value,'$')"
+          onkeydown="if(event.key==='Enter')zbTyped(${i},this.value,'$')">
+        <button class="zb-step" onclick="zbStep(${i},'$',1)" title="+$1">▲</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:2px;flex-shrink:0">
+        <button class="zb-step" onclick="zbStep(${i},'%',-1)" title="-1%">▼</button>
+        <input type="text" class="zb-inp" id="zp-${i}" value="${pct}"
+          style="width:36px;text-align:center;font-family:var(--mono);font-size:12px;"
+          onfocus="this.select()"
+          onblur="zbTyped(${i},this.value,'%')"
+          onkeydown="if(event.key==='Enter')zbTyped(${i},this.value,'%')">
+        <button class="zb-step" onclick="zbStep(${i},'%',1)" title="+1%">▲</button>
+        <span style="font-size:11px;color:var(--hint)">%</span>
+      </div>
       <button class="btn danger" onclick="delZeroBucket(${i})" style="flex-shrink:0">✕</button>
     </div>`;
   }).join('');
@@ -5131,9 +5169,9 @@ const CHART_OPTIONS = {
 
 // ── USER PROFILE SYSTEM ───────────────────────────────────────────────────────
 const DEFAULT_USERS = [
-  {id:'matt', name:'Matt',  avatar:'👨', color:'#3dda91', theme:'dark'},
-  {id:'dana', name:'Dana',  avatar:'👩', color:'#b09afa', theme:'dark'},
-  {id:'household', name:'Matt & Dana', avatar:'🏠', color:'#6b9ef5', theme:'dark'},
+  {id:'matt', name:'Matt',  avatar:'👨', color:'#059669', theme:'light'},
+  {id:'dana', name:'Dana',  avatar:'👩', color:'#7c3aed', theme:'light'},
+  {id:'household', name:'Matt & Dana', avatar:'🏠', color:'#2563eb', theme:'light'},
 ];
 
 // Storage keys include device fingerprint so each device is independent
@@ -5167,7 +5205,7 @@ function getCurrentUser() {
 function getActiveTheme() {
   const user = getCurrentUser();
   const themeId = user.theme || 'dark';
-  return ST.themes[themeId] || BUILT_IN_THEMES[themeId] || BUILT_IN_THEMES.dark;
+  return ST.themes[themeId] || BUILT_IN_THEMES[themeId] || BUILT_IN_THEMES.light;
 }
 
 // ── APPLY THEME ───────────────────────────────────────────────────────────────
@@ -5476,15 +5514,15 @@ function settingsSave() {
 }
 
 function settingsReset() {
-  if (!confirm('Reset to default Dark theme?')) return;
+  if (!confirm('Reset to default Light theme?')) return;
   ST.customVars = {};
   const user = getCurrentUser();
-  user.theme = 'dark';
+  user.theme = 'light';
   LS('users', ST.users);
-  applyTheme(BUILT_IN_THEMES.dark, false);
+  applyTheme(BUILT_IN_THEMES.light, false);
   // Clear all CSS var overrides
   const root = document.documentElement;
-  Object.keys(BUILT_IN_THEMES.dark.vars).forEach(k => root.style.removeProperty(k));
+  Object.keys(BUILT_IN_THEMES.light.vars).forEach(k => root.style.removeProperty(k));
   root.style.fontSize = '15px';
   renderSettingsPage();
   showToast('Reset to default ✓', 'success');
@@ -5495,7 +5533,7 @@ function settingsSwitchUser(userId) {
   LS('activeUser', ST.activeUser);
   const user = ST.users.find(u => u.id === userId);
   if (user) {
-    const theme = BUILT_IN_THEMES[user.theme] || ST.themes[user.theme] || BUILT_IN_THEMES.dark;
+    const theme = BUILT_IN_THEMES[user.theme] || ST.themes[user.theme] || BUILT_IN_THEMES.light;
     ST.customVars = {};
     applyTheme(theme, false);
   }
@@ -6130,19 +6168,43 @@ function showDashAcctTransactions(acctId) {
   if (!txns.length) {
     listEl.innerHTML = '<div class="empty" style="padding:20px">No transactions in last 30 days for this account</div>';
   } else {
-    listEl.innerHTML = txns.slice(0, 50).map(function(t) {
-      var amt  = t.amount;
-      var col  = amt > 0 ? 'var(--red)' : 'var(--green)';
-      var cat  = fmtCat(t.personal_finance_category && t.personal_finance_category.primary || (t.category && t.category[0]) || '');
-      var merch = esc(t.merchant_name || t.name || '');
+    listEl.innerHTML = '';
+    txns.slice(0, 50).forEach(function(t) {
+      var amt   = t.amount;
+      var col   = amt > 0 ? 'var(--red)' : 'var(--green)';
+      var cat   = getTxnCategory(t);  // respects overrides
+      var merch = t.merchant_name || t.name || '';
       var dt    = new Date(t.date + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'});
-      return '<div class="dash-txn-row">'
-        + '<div><div class="dash-txn-name">' + merch + '</div>'
-        + '<div class="dash-txn-cat">' + esc(cat) + ' · <span class="dash-txn-date">' + dt + '</span></div></div>'
-        + '<div class="dash-txn-amt" style="color:' + col + '">'
-        + (amt > 0 ? '-' : '+') + fmt2(Math.abs(amt))
-        + '</div></div>';
-    }).join('');
+      var row = document.createElement('div');
+      row.className = 'dash-txn-row';
+      var left = document.createElement('div');
+      var nameDiv = document.createElement('div');
+      nameDiv.className = 'dash-txn-name';
+      nameDiv.textContent = merch;
+      var catSpan = document.createElement('span');
+      catSpan.className = 'dash-txn-cat';
+      catSpan.textContent = cat + ' · ';
+      var dateSpan = document.createElement('span');
+      dateSpan.className = 'dash-txn-date';
+      dateSpan.textContent = dt;
+      catSpan.appendChild(dateSpan);
+      // Category dropdown
+      var catSel = buildCatDropdown(t, function(newCat) {
+        catSpan.childNodes[0].textContent = newCat + ' · ';
+        renderCharts();
+      });
+      catSel.style.cssText = 'height:22px;font-size:10px;padding:0 5px;margin-left:4px;';
+      left.appendChild(nameDiv);
+      left.appendChild(catSpan);
+      left.appendChild(catSel);
+      var amtDiv = document.createElement('div');
+      amtDiv.className = 'dash-txn-amt';
+      amtDiv.style.color = col;
+      amtDiv.textContent = (amt > 0 ? '-' : '+') + fmt2(Math.abs(amt));
+      row.appendChild(left);
+      row.appendChild(amtDiv);
+      listEl.appendChild(row);
+    });
   }
 
   // Show panel with animation
@@ -6240,6 +6302,29 @@ function buildCatDropdown(t, onChange) {
   sel.addEventListener('change', function() {
     if (id) saveTxnCatOverride(id, this.value);
     if (onChange) onChange(this.value);
+    // If account modal is open and shows this transaction, refresh it
+    var modal = document.getElementById('acctTxnModal');
+    if (modal && modal.style.display !== 'none') {
+      var tbody = document.getElementById('acctTxnBody');
+      if (tbody) {
+        // Find and update just this row's category cell
+        var rows = tbody.querySelectorAll('tr');
+        rows.forEach(function(row) {
+          var nameCell = row.cells && row.cells[1];
+          if (nameCell && nameCell.getAttribute('data-txn-id') === id) {
+            var catCell = row.cells[2];
+            if (catCell) catCell.textContent = sel.value;
+          }
+        });
+      }
+    }
+    // Also refresh dash account transaction panel if open
+    if (typeof _selectedAcctId !== 'undefined' && _selectedAcctId) {
+      var panel = document.getElementById('dashAcctTxnPanel');
+      if (panel && panel.style.display !== 'none') {
+        showDashAcctTransactions(_selectedAcctId);
+      }
+    }
   });
   return sel;
 }
@@ -6318,6 +6403,79 @@ function settingsCatReset() {
   saveUserCategories([...DEFAULT_CATEGORIES]);
   renderSettingsCats();
   showToast('Categories reset to defaults ✓', 'success');
+}
+
+
+// ── SETTINGS PREVIEW HOVER TIPS ──────────────────────────────────────────────
+document.addEventListener('mouseover', function(e) {
+  var el = e.target.closest('.prev-item[data-tip]');
+  var tip = document.getElementById('prevTip');
+  if (!tip) return;
+  if (el && el.dataset.tip) {
+    tip.textContent = el.dataset.tip;
+    tip.style.display = 'block';
+  }
+});
+document.addEventListener('mouseout', function(e) {
+  if (!e.target.closest('.prev-item')) {
+    var tip = document.getElementById('prevTip');
+    if (tip) tip.style.display = 'none';
+  }
+});
+
+
+// ── CHART LEGEND % TOTALS ────────────────────────────────────────────────────
+// Monkey-patch Chart.js legend label generation to include % of total
+if (window.Chart) {
+  var _origLegendGen = Chart.defaults.plugins.legend.labels.generateLabels;
+  Chart.defaults.plugins.legend.labels.generateLabels = function(chart) {
+    var labels = _origLegendGen ? _origLegendGen.call(this, chart) : [];
+    var type = chart.config.type;
+    if (type === 'doughnut' || type === 'pie') {
+      var ds = chart.data.datasets[0];
+      if (ds) {
+        var total = ds.data.reduce(function(s,v){return s+(+v||0);},0);
+        labels.forEach(function(lbl, i) {
+          var val = ds.data[i] || 0;
+          var pct = total > 0 ? Math.round(val/total*100) : 0;
+          lbl.text = lbl.text + ' ' + pct + '%';
+        });
+      }
+    } else if (type === 'bar') {
+      // For grouped bar charts, show total per dataset as % of grand total
+      var grandTotal = chart.data.datasets.reduce(function(s,ds) {
+        return s + ds.data.reduce(function(ss,v){return ss+(+v||0);},0);
+      }, 0);
+      if (grandTotal > 0) {
+        labels.forEach(function(lbl, i) {
+          var ds = chart.data.datasets[i];
+          if (ds) {
+            var dsTotal = ds.data.reduce(function(s,v){return s+(+v||0);},0);
+            var pct = Math.round(dsTotal/grandTotal*100);
+            if (pct > 0) lbl.text = lbl.text + ' ' + pct + '%';
+          }
+        });
+      }
+    }
+    return labels;
+  };
+}
+
+
+function zbStep(i, mode, dir) {
+  var rem = monthlyIncome() - monthlyBills();
+  var cur = zeroBuckets[i].amt;
+  var newVal;
+  if (mode === '$') {
+    newVal = Math.max(0, Math.round((cur + dir) * 100) / 100);
+  } else {
+    var curPct = rem > 0 ? cur / rem * 100 : 0;
+    var newPct = Math.max(0, Math.min(100, curPct + dir));
+    newVal = Math.round(rem * newPct / 100);
+  }
+  zeroBuckets[i].amt = newVal;
+  saveZeroBkts();
+  renderZeroBudget();
 }
 
 const plaidS=document.createElement('script');
