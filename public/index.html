@@ -652,6 +652,49 @@ canvas.chart-interactive { cursor: crosshair; }
   font-style: italic;
   padding: 4px 0;
 }
+
+/* ── Action Plan panel ───────────────────────────────────────────────────── */
+.ap-step {
+  display: flex;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.ap-step:last-child { border-bottom: none; }
+.ap-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; flex-shrink: 0;
+  margin-top: 1px;
+}
+.ap-step-body { flex: 1; }
+.ap-step-title {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  margin-bottom: 4px;
+}
+.ap-step-desc {
+  font-size: 12px; color: var(--muted); line-height: 1.55;
+}
+.ap-step-amount {
+  display: inline-block; margin-top: 6px;
+  font-family: var(--mono); font-size: 12px; font-weight: 700;
+  padding: 2px 8px; border-radius: 5px;
+}
+.ap-nav-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: var(--radius-sm);
+  border: none; font-size: 12.5px; font-weight: 600;
+  cursor: pointer; font-family: var(--font);
+  transition: all 0.15s; margin-top: 6px;
+}
+/* SWOT action button on items */
+.swot-action-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 9px; border-radius: 5px; border: none;
+  font-size: 10.5px; font-weight: 600; cursor: pointer;
+  font-family: var(--font); transition: all 0.13s;
+  white-space: nowrap; flex-shrink: 0; margin-left: auto;
+}
 </style>
 
 </head>
@@ -868,24 +911,60 @@ canvas.chart-interactive { cursor: crosshair; }
         <!-- ── D3: FINANCIAL SWOT ── -->
         <div class="drag-section" data-id="swot">
           <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Financial SWOT</div></div>
-          <div id="swotGrid" class="swot-grid">
-            <div class="swot-card swot-s">
-              <div class="swot-label">💪 Strengths</div>
-              <ul class="swot-list" id="swotStrengths"></ul>
+          <div class="card" style="padding:0;overflow:hidden">
+            <!-- Header -->
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div class="card-title" style="margin-bottom:0">⚡ Financial SWOT</div>
+                <span id="swotRangeLabel" style="font-size:11px;font-weight:600;color:var(--muted)"></span>
+              </div>
+              <div class="time-toggle" id="swotTimePicker">
+                <button class="tt-btn" data-srange="week"  onclick="setSWOTRange('week')">Week</button>
+                <button class="tt-btn" data-srange="month" onclick="setSWOTRange('month')">Month</button>
+                <button class="tt-btn active" data-srange="30d" onclick="setSWOTRange('30d')">30d</button>
+                <button class="tt-btn" data-srange="90d"  onclick="setSWOTRange('90d')">90d</button>
+                <button class="tt-btn" data-srange="year" onclick="setSWOTRange('year')">Year</button>
+              </div>
             </div>
-            <div class="swot-card swot-w">
-              <div class="swot-label">⚠️ Weaknesses</div>
-              <ul class="swot-list" id="swotWeaknesses"></ul>
-            </div>
-            <div class="swot-card swot-o">
-              <div class="swot-label">🎯 Opportunities</div>
-              <ul class="swot-list" id="swotOpportunities"></ul>
-            </div>
-            <div class="swot-card swot-t">
-              <div class="swot-label">🚨 Threats</div>
-              <ul class="swot-list" id="swotThreats"></ul>
+            <!-- SWOT grid -->
+            <div id="swotGrid" class="swot-grid" style="padding:14px;gap:12px">
+              <div class="swot-card swot-s">
+                <div class="swot-label">💪 Strengths</div>
+                <ul class="swot-list" id="swotStrengths"></ul>
+              </div>
+              <div class="swot-card swot-w">
+                <div class="swot-label">⚠️ Weaknesses</div>
+                <ul class="swot-list" id="swotWeaknesses"></ul>
+              </div>
+              <div class="swot-card swot-o">
+                <div class="swot-label">🎯 Opportunities</div>
+                <ul class="swot-list" id="swotOpportunities"></ul>
+              </div>
+              <div class="swot-card swot-t">
+                <div class="swot-label">🚨 Threats</div>
+                <ul class="swot-list" id="swotThreats"></ul>
+              </div>
             </div>
           </div>
+        </div>
+
+        <!-- ── ACTION PLAN PANEL (slides in when an item is clicked) ── -->
+        <div id="actionPlanOverlay" onclick="closeActionPlan()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:200;backdrop-filter:blur(2px)"></div>
+        <div id="actionPlanPanel" style="
+          display:none;position:fixed;right:0;top:0;bottom:0;width:min(480px,100vw);
+          background:var(--sidebar);border-left:1px solid var(--border2);
+          z-index:201;overflow-y:auto;padding:0;
+          box-shadow:-8px 0 32px rgba(0,0,0,0.3);
+          transition:transform 0.25s ease;transform:translateX(100%);
+        ">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 22px 16px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--sidebar);z-index:10">
+            <div>
+              <div id="apTitle" style="font-size:15px;font-weight:700;color:var(--text)"></div>
+              <div id="apSubtitle" style="font-size:11.5px;color:var(--muted);margin-top:2px"></div>
+            </div>
+            <button onclick="closeActionPlan()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;padding:4px 8px;border-radius:6px;line-height:1">×</button>
+          </div>
+          <div id="apContent" style="padding:20px 22px"></div>
         </div>
 
         <div class="drag-section" data-id="accts-banks">
@@ -2066,147 +2145,487 @@ function renderPLChart() {
 // Auto-generated from live household data. Each item shows the metric that
 // triggered it so you can see exactly why it appeared.
 // ══════════════════════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════════════════════
+// D3 — SWOT TIME RANGE
+// ══════════════════════════════════════════════════════════════════════════════
+var _swotRange = '30d';
+
+function setSWOTRange(range) {
+  _swotRange = range;
+  document.querySelectorAll('#swotTimePicker .tt-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.srange === range);
+  });
+  var lbl = document.getElementById('swotRangeLabel');
+  if (lbl) lbl.textContent = getChartRangeLabel(range);
+  renderSWOT();
+}
+
 function renderSWOT() {
-  var inc      = monthlyIncome();
-  var bil      = monthlyBills();
-  var rem      = inc - bil;
-  var disc     = zeroBuckets.reduce(function(s,b){return s+b.amt;},0);
-  var unalloc  = rem - disc;
-  var totalDebt= bills.reduce(function(s,b){return s+Math.abs(b.bal||0);},0);
+  // Label
+  var lbl = document.getElementById('swotRangeLabel');
+  if (lbl) lbl.textContent = getChartRangeLabel(_swotRange);
+
+  var cut    = getChartCutDate(_swotRange);
+  var days   = Math.max(1, Math.round((Date.now()-new Date(cut+'T00:00:00').getTime())/86400000));
+
+  var inc    = monthlyIncome();
+  var bil    = monthlyBills();
+  var rem    = inc - bil;
+  var disc   = zeroBuckets.reduce(function(s,b){return s+b.amt;},0);
+  var unalloc = rem - disc;
+
+  // Transactions in range
+  var txnRec   = allTxns.filter(function(t){return t.date>=cut;});
+  var spend    = txnRec.filter(function(t){return t.amount>0;}).reduce(function(s,t){return s+t.amount;},0);
+  var incActual= txnRec.filter(function(t){return t.amount<0;}).reduce(function(s,t){return s+Math.abs(t.amount);},0);
+
+  // Scale monthly income to the range
+  var incScaled = inc * (days/30.44);
+  var surplus   = incScaled - spend;
+
+  var totalDebt   = bills.reduce(function(s,b){return s+Math.abs(b.bal||0);},0);
   var totalAssets = nwAssets.reduce(function(s,a){return s+a.value;},0);
   var totalLiab   = nwLiab.reduce(function(s,l){return s+l.value;},0);
   var netWorth    = totalAssets - totalLiab;
-  var dti         = inc > 0 ? bil / inc : 0;           // debt-to-income ratio
-  var savingsRate = inc > 0 ? Math.max(0, rem) / inc : 0;
-  var debtToAsset = totalAssets > 0 ? totalLiab / totalAssets : 0;
-  var highAprDebt = bills.filter(function(b){ return (b.apr||0) > 15 && Math.abs(b.bal||0) > 0; });
+  var dti         = inc>0 ? bil/inc : 0;
+  var savingsRate = inc>0 ? Math.max(0,rem)/inc : 0;
+  var debtToAsset = totalAssets>0 ? totalLiab/totalAssets : 0;
+  var highAprDebt = bills.filter(function(b){return (b.apr||0)>15 && Math.abs(b.bal||0)>0;});
   var highAprTotal= highAprDebt.reduce(function(s,b){return s+Math.abs(b.bal||0);},0);
   var ccDebt      = bills.filter(function(b){return b.cat==='CC';}).reduce(function(s,b){return s+Math.abs(b.bal||0);},0);
-  var promoDebt   = bills.filter(function(b){return b.promo && b.promo.includes('0%') && Math.abs(b.bal||0)>0;});
+  var promoDebt   = bills.filter(function(b){return b.promo&&b.promo.includes('0%')&&Math.abs(b.bal||0)>0;});
   var emergFund   = zeroBuckets.find(function(b){return b.name.toLowerCase().includes('emer');});
-  var emergAmt    = emergFund ? emergFund.amt : 0;
-  var emergMonths = bil > 0 ? (emergAmt / bil) : 0;
-  var txn30       = allTxns.filter(function(t){
-    return t.date >= new Date(Date.now()-30*86400000).toISOString().slice(0,10);
-  });
-  var spend30     = txn30.filter(function(t){return t.amount>0;}).reduce(function(s,t){return s+t.amount;},0);
-  var surplus     = inc - bil - spend30;
+  var emergAmt    = emergFund ? emergFund.amt*days/30.44 : 0;
+  var emergMonths = bil>0 ? emergAmt/bil : 0;
+  var overdueBills= bills.filter(function(b){return !b.paid&&b.due&&b.due<new Date().getDate()&&b.pay>0;});
 
   var S=[], W=[], O=[], T=[];
 
   // ── STRENGTHS ──────────────────────────────────────────────────────────────
-  if (savingsRate >= 0.20)
-    S.push({text:'Strong savings rate — putting away a solid share of income each month', metric: Math.round(savingsRate*100)+'%'});
-  else if (savingsRate >= 0.10)
-    S.push({text:'Positive savings rate — money going toward savings each month', metric: Math.round(savingsRate*100)+'%'});
-
-  if (netWorth > 0)
-    S.push({text:'Positive net worth — assets exceed liabilities', metric: fmtM(netWorth)});
-
-  if (dti < 0.28)
-    S.push({text:'Healthy debt-to-income ratio — well within recommended range (under 28%)', metric: Math.round(dti*100)+'%'});
-  else if (dti < 0.36)
-    S.push({text:'Manageable debt-to-income ratio — within acceptable range', metric: Math.round(dti*100)+'%'});
-
-  if (incomeSources.length > 1)
-    S.push({text:'Multiple income streams — reduces reliance on any single source', metric: incomeSources.length+' sources'});
-
-  if (rem > 0)
-    S.push({text:'Monthly cash flow positive — income covers all fixed bills', metric: '+'+fmtM(rem)+'/mo'});
-
-  if (promoDebt.length > 0)
-    S.push({text:'0% promo rates active — paying down debt interest-free', metric: promoDebt.length+' accounts'});
-
-  if (!S.length) S.push({text:'Connect accounts and add income sources to see strengths', metric:''});
+  if (savingsRate>=0.20) S.push({text:'Strong savings rate — putting away a solid share each month',metric:Math.round(savingsRate*100)+'%'});
+  else if (savingsRate>=0.10) S.push({text:'Positive savings rate — money going toward savings',metric:Math.round(savingsRate*100)+'%'});
+  if (netWorth>0) S.push({text:'Positive net worth — assets exceed liabilities',metric:fmtM(netWorth)});
+  if (dti<0.28) S.push({text:'Healthy debt-to-income ratio — well within recommended range (<28%)',metric:Math.round(dti*100)+'%'});
+  else if (dti<0.36) S.push({text:'Manageable debt-to-income ratio — within acceptable range',metric:Math.round(dti*100)+'%'});
+  if (incomeSources.length>1) S.push({text:'Multiple income streams — reduces reliance on any single source',metric:incomeSources.length+' sources'});
+  if (rem>0) S.push({text:'Monthly cash flow positive — income covers all fixed bills',metric:'+'+fmtM(rem)+'/mo'});
+  if (promoDebt.length>0) S.push({text:'0% promo rates active — paying down debt interest-free',metric:promoDebt.length+' accounts'});
+  if (!S.length) S.push({text:'Connect accounts and add income sources to see strengths',metric:''});
 
   // ── WEAKNESSES ─────────────────────────────────────────────────────────────
-  if (savingsRate < 0.10 && inc > 0)
-    W.push({text:'Low savings rate — aim for at least 10–20% of monthly income', metric: Math.round(savingsRate*100)+'%'});
-
-  if (dti > 0.43)
-    W.push({text:'High debt-to-income ratio — lenders consider above 43% a risk signal', metric: Math.round(dti*100)+'%'});
-  else if (dti > 0.36)
-    W.push({text:'Elevated debt-to-income — aim to bring below 36%', metric: Math.round(dti*100)+'%'});
-
-  if (highAprTotal > 0)
-    W.push({text:'High-interest debt outstanding (APR > 15%) — costing the most each month', metric: fmtM(highAprTotal)});
-
-  if (emergMonths < 1 && inc > 0)
-    W.push({text:'Emergency fund below 1 month of bills — prioritize building this buffer', metric: Math.round(emergMonths*10)/10+' mo'});
-  else if (emergMonths < 3 && inc > 0)
-    W.push({text:'Emergency fund covers less than 3 months of bills — recommended minimum is 3–6 months', metric: Math.round(emergMonths*10)/10+' mo'});
-
-  if (ccDebt > 5000)
-    W.push({text:'Significant credit card balance — interest compounds daily', metric: fmtM(ccDebt)});
-
-  if (unalloc > inc * 0.15 && inc > 0)
-    W.push({text:'Large unallocated income — money without a purpose tends to get spent', metric: fmtM(unalloc)+'/mo'});
-
-  if (!W.length) W.push({text:'No significant weaknesses detected — keep it up!', metric:''});
+  if (savingsRate<0.10&&inc>0) W.push({text:'Low savings rate — aim for at least 10–20% of monthly income',metric:Math.round(savingsRate*100)+'%',action:'boost-savings'});
+  if (dti>0.43) W.push({text:'High debt-to-income ratio — lenders consider above 43% a risk signal',metric:Math.round(dti*100)+'%',action:'reduce-dti'});
+  else if (dti>0.36) W.push({text:'Elevated DTI — aim to bring below 36%',metric:Math.round(dti*100)+'%',action:'reduce-dti'});
+  if (highAprTotal>0) W.push({text:'High-interest debt outstanding (APR >15%) — costing the most each month',metric:fmtM(highAprTotal),action:'high-apr'});
+  if (emergMonths<1&&inc>0) W.push({text:'Emergency fund below 1 month of bills — build this buffer first',metric:Math.round(emergMonths*10)/10+' mo',action:'emergency-fund'});
+  else if (emergMonths<3&&inc>0) W.push({text:'Emergency fund <3 months of bills — recommended minimum is 3–6 months',metric:Math.round(emergMonths*10)/10+' mo',action:'emergency-fund'});
+  if (ccDebt>5000) W.push({text:'Significant credit card balance — interest compounds daily',metric:fmtM(ccDebt),action:'cc-payoff'});
+  if (unalloc>inc*0.15&&inc>0) W.push({text:'Large unallocated income — money without a purpose tends to get spent',metric:fmtM(unalloc)+'/mo',action:'allocate-surplus'});
+  if (!W.length) W.push({text:'No significant weaknesses detected — keep it up!',metric:''});
 
   // ── OPPORTUNITIES ──────────────────────────────────────────────────────────
-  if (highAprTotal > 0 && rem > 0)
-    O.push({text:'Apply surplus to highest-APR debt first (avalanche method) to cut interest costs', metric: 'Save on APR'});
-
-  if (emergMonths < 3 && rem > 200)
-    O.push({text:'Route '+fmtM(Math.min(rem*0.5, 500))+'/mo surplus toward emergency fund to hit 3-month target', metric: fmtM(Math.min(rem*0.5,500))+'/mo'});
-
-  if (promoDebt.length > 0) {
-    var earliest = promoDebt.sort(function(a,b){ return (a.promo||'').localeCompare(b.promo||''); })[0];
-    O.push({text:'Promo 0% rates expiring — pay off before expiry to avoid back-interest hit', metric: earliest.name});
-  }
-
-  if (savingsRate < 0.20 && rem > 500)
-    O.push({text:'Redirect '+fmtM(Math.min(rem*0.3,800))+'/mo of surplus to retirement accounts (401k/IRA)', metric: fmtM(Math.min(rem*0.3,800))+'/mo'});
-
-  if (incomeSources.length === 1)
-    O.push({text:'Single income stream — explore side income or passive revenue to reduce risk', metric: '1 source'});
-
-  if (debtToAsset > 0.5 && totalAssets > 0)
-    O.push({text:'Liabilities are '+ Math.round(debtToAsset*100)+'% of assets — paying down debt improves net worth faster than most investments', metric: Math.round(debtToAsset*100)+'%'});
-
-  if (!O.length) O.push({text:'Finances look well-managed — consider increasing retirement contributions', metric:''});
+  if (highAprTotal>0&&rem>0) O.push({text:'Avalanche method: apply surplus to highest-APR debt to cut interest costs',metric:'Save on APR',action:'avalanche'});
+  if (emergMonths<3&&rem>200) O.push({text:'Route surplus toward emergency fund to hit 3-month target',metric:fmtM(Math.min(rem*0.5,500))+'/mo',action:'emergency-fund'});
+  if (promoDebt.length>0) O.push({text:'0% promos expiring — pay off before expiry to avoid back-interest',metric:promoDebt[0].name,action:'promo-payoff'});
+  if (savingsRate<0.20&&rem>500) O.push({text:'Redirect surplus to retirement accounts (401k/IRA)',metric:fmtM(Math.min(rem*0.3,800))+'/mo',action:'boost-retirement'});
+  if (incomeSources.length===1) O.push({text:'Single income stream — explore side income or passive revenue',metric:'1 source',action:'income-diversify'});
+  if (debtToAsset>0.5&&totalAssets>0) O.push({text:'Liabilities are '+Math.round(debtToAsset*100)+'% of assets — paying down debt improves net worth faster',metric:Math.round(debtToAsset*100)+'%',action:'reduce-dti'});
+  if (ccDebt>0&&rem>300) O.push({text:'Snowball method: pay off smallest CC balance first for quick wins',metric:fmtM(ccDebt),action:'snowball'});
+  if (!O.length) O.push({text:'Finances look well-managed — consider increasing retirement contributions',metric:'',action:'boost-retirement'});
 
   // ── THREATS ────────────────────────────────────────────────────────────────
-  if (emergMonths < 1 && inc > 0)
-    T.push({text:'No emergency cushion — a single unexpected expense could require taking on debt', metric:'<1 month'});
-
-  if (totalDebt > inc * 18)
-    T.push({text:'Total debt is more than 18 months of income — vulnerability to income disruption', metric: fmtM(totalDebt)});
-
-  var overdueBills = bills.filter(function(b){return !b.paid && b.due && b.due < new Date().getDate() && b.pay>0;});
-  if (overdueBills.length > 0)
-    T.push({text:'Bills past due this month — late fees and credit score impact', metric: overdueBills.length+' bills'});
-
-  var expiredPromo = bills.filter(function(b){ return b.promo && b.promo.match(/thru \d+\/\d+/) && Math.abs(b.bal||0)>0; });
-  if (expiredPromo.length > 0)
-    T.push({text:'0% promo rates have expiration dates — missing them means deferred interest hits all at once', metric: expiredPromo.length+' accounts'});
-
-  if (highAprTotal > 0 && rem < 0)
-    T.push({text:'Negative cash flow with high-APR debt — balance growing each month', metric: fmtM(rem)+'/mo'});
-
-  if (dti > 0.50)
-    T.push({text:'Debt-to-income above 50% — severely limits ability to qualify for new credit or refinancing', metric: Math.round(dti*100)+'%'});
-
-  if (!T.length) T.push({text:'No immediate threats detected — maintain current discipline', metric:''});
+  if (emergMonths<1&&inc>0) T.push({text:'No emergency cushion — one unexpected expense could require taking on debt',metric:'<1 month',action:'emergency-fund'});
+  if (totalDebt>inc*18) T.push({text:'Total debt >18 months of income — vulnerability to income disruption',metric:fmtM(totalDebt),action:'reduce-dti'});
+  if (overdueBills.length>0) T.push({text:'Bills past due this month — late fees and credit score impact',metric:overdueBills.length+' bills',action:'overdue-bills'});
+  if (promoDebt.length>0) T.push({text:'0% promo expirations — missing them means deferred interest hits all at once',metric:promoDebt.length+' accounts',action:'promo-payoff'});
+  if (highAprTotal>0&&rem<0) T.push({text:'Negative cash flow with high-APR debt — balance growing each month',metric:fmtM(rem)+'/mo',action:'high-apr'});
+  if (dti>0.50) T.push({text:'DTI above 50% — limits ability to qualify for new credit or refinancing',metric:Math.round(dti*100)+'%',action:'reduce-dti'});
+  if (!T.length) T.push({text:'No immediate threats detected — maintain current discipline',metric:''});
 
   // ── RENDER ─────────────────────────────────────────────────────────────────
-  function fillList(id, items) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    el.innerHTML = items.map(function(item) {
+  // Store context for action plans
+  window._swotCtx = {inc,bil,rem,disc,unalloc,totalDebt,netWorth,dti,savingsRate,
+    highAprTotal,highAprDebt,ccDebt,promoDebt,emergMonths,emergAmt,debtToAsset,days};
+
+  function fillList(id, items, quadrant) {
+    var el = document.getElementById(id); if(!el) return;
+    var colorMap = {s:'var(--green)',w:'var(--red)',o:'var(--blue)',t:'var(--amber)'};
+    var col = colorMap[quadrant];
+    el.innerHTML = items.map(function(item,i) {
+      var btn = item.action
+        ? '<button class="swot-action-btn" onclick="openActionPlan(this.dataset.plan)" '
+          +'data-plan="'+item.action+'" '
+          +'style="background:'+col+'22;color:'+col+';border:1px solid '+col+'44" '
+          +'title="See suggested action plan">&#9654; Plan</button>'
+        : '';
       return '<li class="swot-item">'
-        + '<div class="swot-dot"></div>'
-        + '<span>' + item.text
-        + (item.metric ? ' <span class="swot-metric">'+item.metric+'</span>' : '')
-        + '</span></li>';
+        +'<div class="swot-dot"></div>'
+        +'<span style="flex:1">'+item.text
+        +(item.metric?' <span class="swot-metric">'+item.metric+'</span>':'')
+        +'</span>'
+        +btn+'</li>';
     }).join('');
   }
+  fillList('swotStrengths',    S, 's');
+  fillList('swotWeaknesses',   W, 'w');
+  fillList('swotOpportunities',O, 'o');
+  fillList('swotThreats',      T, 't');
+}
 
-  fillList('swotStrengths',    S);
-  fillList('swotWeaknesses',   W);
-  fillList('swotOpportunities',O);
-  fillList('swotThreats',      T);
+// ══════════════════════════════════════════════════════════════════════════════
+// ACTION PLAN ENGINE
+// Each plan is generated with real numbers from window._swotCtx
+// ══════════════════════════════════════════════════════════════════════════════
+var _actionPlans = {
+
+  'avalanche': function(ctx) {
+    var sorted = bills.filter(function(b){return (b.apr||0)>0&&Math.abs(b.bal||0)>0;})
+                      .sort(function(a,b){return (b.apr||0)-(a.apr||0);});
+    var extra = Math.max(0, Math.round(ctx.rem*0.3));
+    return {
+      title:'⚡ Debt Avalanche Plan',
+      subtitle:'Pay highest-APR debt first — saves the most interest',
+      color:'var(--blue)',
+      steps: [
+        {title:'Make all minimum payments on time',
+         desc:'Pay every bill&#39;s minimum to stay current and protect your credit score.',
+         amount:fmtM(ctx.bil)+'/mo'},
+        {title:'Find your extra payment amount',
+         desc:'Based on your current surplus, we suggest putting this toward extra debt payments each month.',
+         amount:fmtM(extra)+'/mo extra'},
+        {title:'Target: '+( sorted[0]?sorted[0].name:'highest-APR debt' ),
+         desc:'Put all extra toward this balance first. It&#39;s charging '+(sorted[0]?sorted[0].apr:'the highest')+'% APR — the most expensive debt you have.',
+         amount:sorted[0]?fmtM(Math.abs(sorted[0].bal||0))+' balance':''},
+        {title:'Cascade to next highest APR when paid off',
+         desc:'Once the top balance is cleared, add that payment to the next highest. Each payoff accelerates the next.',
+         amount:''},
+        {title:'Track in the Debt Payoff Planner',
+         desc:'Go to Fire Drill → Debt Payoff tab to see your exact payoff date and total interest saved with this method.',
+         amount:'See Fire Drill page'}
+      ]
+    };
+  },
+
+  'snowball': function(ctx) {
+    var sorted = bills.filter(function(b){return Math.abs(b.bal||0)>0;})
+                      .sort(function(a,b){return Math.abs(a.bal||0)-Math.abs(b.bal||0);});
+    var extra = Math.max(0, Math.round(ctx.rem*0.3));
+    return {
+      title:'🏔 Debt Snowball Plan',
+      subtitle:'Pay smallest balance first — builds momentum with quick wins',
+      color:'var(--cyan)',
+      steps:[
+        {title:'List all debts smallest to largest balance',
+         desc:'Focus only on the balance amount — ignore interest rates for now.',
+         amount:''},
+        {title:'Pay minimums on everything except the smallest',
+         desc:'Keep all accounts current.',
+         amount:fmtM(ctx.bil)+'/mo'},
+        {title:'Attack the smallest balance: '+(sorted[0]?sorted[0].name:'your smallest debt'),
+         desc:'Throw every extra dollar at this one until it&#39;s gone.',
+         amount:sorted[0]?fmtM(Math.abs(sorted[0].bal||0))+' to clear':''},
+        {title:'Roll that payment into the next smallest',
+         desc:'When the first is paid off, add its minimum + your extra to the next debt. The snowball grows.',
+         amount:fmtM(extra)+'/mo extra'},
+        {title:'Celebrate each payoff',
+         desc:'Each cleared account is a real win. Use the momentum to stay motivated.',
+         amount:''}
+      ]
+    };
+  },
+
+  'emergency-fund': function(ctx) {
+    var target   = ctx.bil * 3;
+    var current  = ctx.emergAmt * (30.44/ctx.days);
+    var gap      = Math.max(0, target-current);
+    var monthly  = Math.min(Math.max(ctx.rem*0.3,100), gap);
+    var months   = monthly>0 ? Math.ceil(gap/monthly) : '?';
+    return {
+      title:'🛡 Emergency Fund Plan',
+      subtitle:'Build 3–6 months of bills as a safety buffer',
+      color:'var(--green)',
+      steps:[
+        {title:'Set your 3-month target',
+         desc:'Three months of fixed bills is the minimum recommended emergency fund.',
+         amount:fmtM(target)+' target'},
+        {title:'Current fund estimate',
+         desc:'Based on your zero budget emergency category.',
+         amount:fmtM(current)+' current'},
+        {title:'Gap to fill',
+         desc:'The difference between where you are and your 3-month target.',
+         amount:fmtM(gap)+' needed'},
+        {title:'Suggested monthly contribution',
+         desc:'Set aside this amount each month in a high-yield savings account. Keep it separate from checking.',
+         amount:fmtM(monthly)+'/mo'},
+        {title:'Timeline to reach goal',
+         desc:'At the suggested rate, you&#39;ll hit your 3-month target in approximately:',
+         amount:months+' months'}
+      ]
+    };
+  },
+
+  'high-apr': function(ctx) {
+    var sorted = ctx.highAprDebt.sort(function(a,b){return (b.apr||0)-(a.apr||0);});
+    var monthlyInterest = sorted.reduce(function(s,b){return s+Math.abs(b.bal||0)*(b.apr||0)/100/12;},0);
+    return {
+      title:'🔥 High-APR Debt Plan',
+      subtitle:'Cut the interest bleed from high-rate balances',
+      color:'var(--red)',
+      steps:[
+        {title:'Understand the monthly cost',
+         desc:'Your high-APR debts are costing you approximately this much in interest every month.',
+         amount:fmtM(Math.round(monthlyInterest))+'/mo in interest'},
+        {title:'Call and request rate reductions',
+         desc:'Call each credit card issuer and ask for a lower APR. Long-time customers often get reductions just by asking.',
+         amount:'Worth 15 min per card'},
+        {title:'Consider a balance transfer',
+         desc:'If you have good credit, look for 0% balance transfer offers (12–21 months). Factor in the transfer fee (usually 3–5%).',
+         amount:'Check creditkarma.com'},
+        {title:'Stop adding to high-APR balances',
+         desc:'Freeze or cut the cards if needed. Every dollar added at high APR compounds against you.',
+         amount:''},
+        {title:'Apply any extra to the highest rate first',
+         desc:'Even $100/mo extra on a 29% APR card saves significantly over time.',
+         amount:sorted[0]?sorted[0].apr+'% APR target':''}
+      ]
+    };
+  },
+
+  'promo-payoff': function(ctx) {
+    return {
+      title:'⏰ Promo Rate Payoff Plan',
+      subtitle:'Pay off 0% balances before expiry — avoid deferred interest',
+      color:'var(--amber)',
+      steps: ctx.promoDebt.map(function(b,i){
+        var bal     = Math.abs(b.bal||0);
+        var expiry  = b.promo||'';
+        var months  = 6; // rough estimate
+        var payment = bal>0 ? Math.ceil(bal/months) : 0;
+        return {title:(i+1)+'. '+b.name,
+          desc:'Balance: '+fmtM(bal)+' · Promo: '+expiry+'. Pay this off before the promo expires or deferred interest (often from day one) will be added back.',
+          amount:payment>0?fmtM(payment)+'/mo to clear in ~'+months+' mo':''};
+      }).concat([{title:'Set calendar reminders',
+        desc:'Mark every promo expiry date in your calendar with a 60-day warning.',
+        amount:''}])
+    };
+  },
+
+  'boost-savings': function(ctx) {
+    var target = Math.round(ctx.inc*0.20);
+    var current= Math.round(ctx.inc*ctx.savingsRate);
+    var gap    = target-current;
+    return {
+      title:'💰 Boost Savings Rate Plan',
+      subtitle:'Work toward saving 20% of monthly income',
+      color:'var(--green)',
+      steps:[
+        {title:'Current savings rate',
+         desc:'Based on income minus fixed bills.',
+         amount:Math.round(ctx.savingsRate*100)+'%'},
+        {title:'Target: 20% savings rate',
+         desc:'This is the generally recommended benchmark for financial security.',
+         amount:fmtM(target)+'/mo'},
+        {title:'Gap to close',
+         desc:'The additional monthly savings needed to hit 20%.',
+         amount:fmtM(gap)+'/mo'},
+        {title:'Audit your discretionary spending',
+         desc:'Review your zero budget categories. Even a 10–15% reduction in dining out, subscriptions, or shopping can close this gap.',
+         amount:'See Zero Budget page'},
+        {title:'Automate the difference',
+         desc:'Set up an automatic transfer on payday before you can spend it. Automate savings before discretionary spending.',
+         amount:''}
+      ]
+    };
+  },
+
+  'reduce-dti': function(ctx) {
+    var targetDTI= 0.36;
+    var targetBil= ctx.inc * targetDTI;
+    var reduction= ctx.bil - targetBil;
+    return {
+      title:'📉 Reduce DTI Plan',
+      subtitle:'Lower debt-to-income ratio below 36%',
+      color:'var(--blue)',
+      steps:[
+        {title:'Current DTI',
+         desc:'Your fixed bills are this percentage of monthly income.',
+         amount:Math.round(ctx.dti*100)+'%'},
+        {title:'Target: 36% DTI',
+         desc:'This is the threshold most lenders use to evaluate financial health.',
+         amount:fmtM(targetBil)+'/mo in bills'},
+        {title:'Required bill reduction',
+         desc:'You need to eliminate or reduce this much in monthly obligations.',
+         amount:fmtM(reduction)+'/mo'},
+        {title:'Option A: Pay down debt principal',
+         desc:'Paying off debt eliminates the monthly obligation entirely. Use the Debt Payoff Planner in Fire Drill.',
+         amount:''},
+        {title:'Option B: Increase income',
+         desc:'Growing income moves the ratio in your favor without cutting spending. Even '+fmtM(reduction*3)+'/mo in extra income would hit the target.',
+         amount:fmtM(reduction*3)+'/mo needed'}
+      ]
+    };
+  },
+
+  'overdue-bills': function(ctx) {
+    var overdue = bills.filter(function(b){return !b.paid&&b.due&&b.due<new Date().getDate()&&b.pay>0;});
+    return {
+      title:'🚨 Overdue Bills Plan',
+      subtitle:'Resolve past-due accounts to protect credit',
+      color:'var(--red)',
+      steps: overdue.map(function(b,i){
+        return {title:(i+1)+'. '+b.name,
+          desc:'Due day '+b.due+' · '+fmtM(b.pay)+'/mo. Mark as paid in your Bills table once handled.',
+          amount:fmtM(b.pay)+' owed'};
+      }).concat([
+        {title:'Contact any lenders you cannot pay immediately',
+         desc:'Most lenders have hardship programs. A call before missing payment is always better than after.',
+         amount:''},
+        {title:'Set up autopay going forward',
+         desc:'Autopay prevents missed payments from damaging your credit score.',
+         amount:''}
+      ])
+    };
+  },
+
+  'boost-retirement': function(ctx) {
+    var suggested = Math.min(Math.max(ctx.rem*0.3,200),800);
+    return {
+      title:'📈 Retirement Boost Plan',
+      subtitle:'Increase contributions to build long-term wealth',
+      color:'var(--purple)',
+      steps:[
+        {title:'Maximize employer 401k match first',
+         desc:'If your employer matches contributions, contribute at least enough to get the full match — it&#39;s free money.',
+         amount:'Free money'},
+        {title:'Suggested monthly contribution increase',
+         desc:'Based on your current surplus, this is what you could redirect to retirement without impacting your bills.',
+         amount:fmtM(suggested)+'/mo'},
+        {title:'Open or max a Roth IRA',
+         desc:'2024 limit: $7,000/yr ($583/mo). Roth grows tax-free — best if you expect to be in a higher tax bracket later.',
+         amount:'$583/mo max'},
+        {title:'Review in the Retirement page',
+         desc:'Use the retirement calculator to see how increasing contributions changes your target date and nest egg.',
+         amount:'See Retirement page'}
+      ]
+    };
+  },
+
+  'income-diversify': function(ctx) {
+    return {
+      title:'💼 Income Diversification Plan',
+      subtitle:'Reduce reliance on a single income stream',
+      color:'var(--cyan)',
+      steps:[
+        {title:'Assess your skills and time availability',
+         desc:'What skills could generate income in 5–10 hours/week? Consulting, tutoring, freelance work, or a side business.',
+         amount:''},
+        {title:'Target a modest side income goal',
+         desc:'Even $500–1,000/mo side income dramatically improves your financial resilience.',
+         amount:'$500–1,000/mo target'},
+        {title:'Consider passive income vehicles',
+         desc:'Dividend stocks, REITs, high-yield savings, or rental income can generate income with less ongoing time.',
+         amount:''},
+        {title:'Add new income sources to the app',
+         desc:'Once you have a new stream, add it in Budget & Bills → Income Sources so it shows up in your Sankey and SWOT.',
+         amount:'Add to Income Sources'}
+      ]
+    };
+  },
+
+  'allocate-surplus': function(ctx) {
+    return {
+      title:'🎯 Allocate Your Surplus Plan',
+      subtitle:'Give every dollar a job in your zero budget',
+      color:'var(--amber)',
+      steps:[
+        {title:'Unallocated monthly surplus',
+         desc:'This money has no category assigned and tends to disappear into small purchases.',
+         amount:fmtM(ctx.unalloc)+'/mo'},
+        {title:'Priority order for surplus',
+         desc:'1. Emergency fund (if under 3 months) · 2. High-APR debt · 3. Retirement · 4. Medium-term goals.',
+         amount:''},
+        {title:'Add categories in Zero Budget',
+         desc:'Go to Budget & Bills → Zero Budget and add categories until Remaining = $0.',
+         amount:'See Zero Budget page'},
+        {title:'Review monthly',
+         desc:'Your surplus changes as income and expenses change. Revisit this each month.',
+         amount:''}
+      ]
+    };
+  },
+
+  'cc-payoff': function(ctx) {
+    var ccs = bills.filter(function(b){return b.cat==='CC'&&Math.abs(b.bal||0)>0;})
+                   .sort(function(a,b){return (b.apr||0)-(a.apr||0);});
+    var totalMin = ccs.reduce(function(s,b){return s+(b.min||0);},0);
+    var extra    = Math.max(0,Math.round(ctx.rem*0.3));
+    return {
+      title:'💳 Credit Card Payoff Plan',
+      subtitle:'Clear credit card debt systematically',
+      color:'var(--red)',
+      steps:[
+        {title:'Total CC balance',
+         desc:'Combined outstanding balance across all credit cards.',
+         amount:fmtM(ctx.ccDebt)},
+        {title:'Total minimum payments',
+         desc:'The bare minimum to keep all accounts current.',
+         amount:fmtM(totalMin)+'/mo'},
+        {title:'Extra payment capacity',
+         desc:'Based on your current surplus after bills.',
+         amount:fmtM(extra)+'/mo extra'},
+        {title:'Target card: '+(ccs[0]?ccs[0].name:'highest APR card'),
+         desc:'Focus extra payments here first. '+(ccs[0]?'APR: '+ccs[0].apr+'%':'Start with the highest rate.'),
+         amount:ccs[0]?fmtM(Math.abs(ccs[0].bal||0))+' balance':''},
+        {title:'See full payoff schedule',
+         desc:'Open the Debt Payoff Planner in Fire Drill to see exact dates and compare Snowball vs Avalanche vs Hybrid methods.',
+         amount:'See Fire Drill page'}
+      ]
+    };
+  }
+};
+
+function openActionPlan(key) {
+  var ctx  = window._swotCtx || {};
+  var plan = _actionPlans[key];
+  if (!plan) return;
+  var data = plan(ctx);
+
+  var col = data.color || 'var(--green)';
+  document.getElementById('apTitle').textContent    = data.title;
+  document.getElementById('apSubtitle').textContent = data.subtitle;
+  document.getElementById('apSubtitle').style.color = col;
+
+  var content = data.steps.map(function(step, i) {
+    return '<div class="ap-step">'
+      +'<div class="ap-num" style="background:'+col+'22;color:'+col+'">'+(i+1)+'</div>'
+      +'<div class="ap-step-body">'
+      +'<div class="ap-step-title">'+step.title+'</div>'
+      +'<div class="ap-step-desc">'+step.desc+'</div>'
+      +(step.amount ? '<div class="ap-step-amount" style="background:'+col+'18;color:'+col+'">'+step.amount+'</div>' : '')
+      +'</div></div>';
+  }).join('');
+
+  document.getElementById('apContent').innerHTML = content
+    + '<div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);font-size:11.5px;color:var(--muted)">'
+    + 'Numbers are based on your current household data and update automatically as your finances change.'
+    + '</div>';
+
+  var overlay = document.getElementById('actionPlanOverlay');
+  var panel   = document.getElementById('actionPlanPanel');
+  overlay.style.display = 'block';
+  panel.style.display   = 'block';
+  requestAnimationFrame(function(){panel.style.transform='translateX(0)';});
+}
+
+function closeActionPlan() {
+  var panel   = document.getElementById('actionPlanPanel');
+  var overlay = document.getElementById('actionPlanOverlay');
+  panel.style.transform = 'translateX(100%)';
+  setTimeout(function(){
+    panel.style.display   = 'none';
+    overlay.style.display = 'none';
+  }, 260);
 }
 
 // ── BILLS DATA ────────────────────────────────────────────────────────────────
