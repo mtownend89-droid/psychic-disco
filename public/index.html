@@ -810,6 +810,22 @@ canvas.chart-interactive { cursor: crosshair; }
   transition: opacity 0.1s;
 }
 .cat-pill:hover::after { opacity: 1; }
+
+/* ── B1: Bills by category grid ─────────────────────────────────────────── */
+.bill-cat-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: 260px;
+}
+@media (max-width: 700px) {
+  .bill-cat-grid {
+    grid-template-columns: 1fr;
+  }
+  .bill-cat-grid > div:first-child {
+    border-right: none !important;
+    border-bottom: 1px solid var(--border);
+  }
+}
 </style>
 
 </head>
@@ -1219,11 +1235,24 @@ canvas.chart-interactive { cursor: crosshair; }
               </div>
             </div>
           </div>
+          <!-- ── B1: Bills by Category — combined chart widget ── -->
           <div class="drag-section" data-id="bills-charts">
-            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Bill charts</div></div>
-            <div class="g2">
-              <div class="card card-sm"><div class="card-title">by category</div><div class="chart-wrap" style="height:210px"><canvas id="billCatChart"></canvas></div></div>
-              <div class="card card-sm"><div class="card-title">breakdown</div><div id="billBreakdown"></div></div>
+            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Bills by category</div></div>
+            <div class="card" style="padding:0;overflow:hidden">
+              <!-- Header -->
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
+                <div class="card-title" style="margin-bottom:0">💳 Bills by Category</div>
+                <span id="billCatTotal" style="font-size:13px;font-weight:700;font-family:var(--mono);color:var(--red)"></span>
+              </div>
+              <!-- Body: doughnut left, breakdown right -->
+              <div class="bill-cat-grid">
+                <div style="position:relative;height:260px;border-right:1px solid var(--border)">
+                  <canvas id="billCatChart"></canvas>
+                </div>
+                <div id="billBreakdown" style="padding:14px 18px;overflow-y:auto;max-height:260px"></div>
+              </div>
+              <!-- Bottom legend with % -->
+              <div class="chart-widget-legend" id="billCatLegend" style="border-top:1px solid var(--border);padding:10px 18px 14px"></div>
             </div>
           </div>
         </div>
@@ -3559,20 +3588,121 @@ function saveNewBill(){
   bills.push(b);saveBills();closeAddBillModal();renderBillsTab();showToast(b.name+' added!','success');
 }
 function renderBillCatChart(){
-  const byCat={};bills.forEach(b=>{byCat[b.cat]=(byCat[b.cat]||0)+b.pay;});
-  const cc={HM:'#2ecc8a',LOAN:'#f0a540',CC:'#5b8def',CAR:'#a78bfa',PH:'#484c65',TV:'#484c65',FAM:'#f05c5c',SAVE:'#38bdf8',OTHER:'#484c65'};
-  const es=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
-  const el=gg('billCatChart');if(!el)return;
-  if(BC.billCat)BC.billCat.destroy();
-  BC.billCat=new Chart(el,{type:'doughnut',data:{labels:es.map(([k])=>k),datasets:[{data:es.map(([,v])=>Math.round(v)),backgroundColor:es.map(([k])=>cc[k]||'#484c65'),borderWidth:2,borderColor:'#161920'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10.5},boxWidth:9,padding:7}},tooltip:{callbacks:{label:c=>` $${c.parsed.toLocaleString()}`}}}}});
+  // Category colours — richer palette using master system where possible
+  const CAT_COLORS = {
+    HM:'#3dda91', LOAN:'#f5a623', CC:'#6b9ef5', CAR:'#b09afa',
+    PH:'#38bdf8', TV:'#818cf8', FAM:'#f46a6a', SAVE:'#34d399', OTHER:'#94a3b8'
+  };
+  const CAT_LABELS = {
+    HM:'🏠 Housing', LOAN:'🏦 Loans', CC:'💳 Credit Cards', CAR:'🚗 Auto',
+    PH:'📱 Phone', TV:'📺 Cable/Internet', FAM:'👨‍👩‍👧 Family', SAVE:'💰 Savings', OTHER:'Other'
+  };
+
+  // Build totals
+  const byCat = {};
+  bills.forEach(function(b){ byCat[b.cat] = (byCat[b.cat]||0) + b.pay; });
+  const entries = Object.entries(byCat).sort(function(a,b){return b[1]-a[1];});
+  const tot = entries.reduce(function(s,[,v]){return s+v;},0);
+
+  // Header total
+  const ht = gg('billCatTotal');
+  if (ht) ht.textContent = fmt2(tot) + '/mo';
+
+  // ── Doughnut ──────────────────────────────────────────────────────────────
+  const el = gg('billCatChart');
+  if (!el) return;
+  const surfC  = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()||'#fff';
+  const textC  = getComputedStyle(document.documentElement).getPropertyValue('--text').trim()||'#111';
+  if (BC.billCat) BC.billCat.destroy();
+  BC.billCat = new Chart(el, {
+    type: 'doughnut',
+    data: {
+      labels: entries.map(([k])=> CAT_LABELS[k]||k),
+      datasets:[{
+        data: entries.map(([,v])=>Math.round(v)),
+        backgroundColor: entries.map(([k])=> CAT_COLORS[k]||'#94a3b8'),
+        borderWidth: 2,
+        borderColor: surfC,
+        hoverOffset: 12
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'58%',
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{ label:function(c){
+          const pct = tot>0 ? Math.round(c.parsed/tot*100) : 0;
+          return ' '+(CAT_LABELS[entries[c.dataIndex]?.[0]]||c.label)+': '+fmt2(c.parsed)+' ('+pct+'%)';
+        }}}
+      }
+    }
+  });
+
+  // ── Bottom legend with % ──────────────────────────────────────────────────
+  const legendEl = gg('billCatLegend');
+  if (legendEl) {
+    legendEl.innerHTML = entries.map(function([cat,amt]){
+      const col = CAT_COLORS[cat]||'#94a3b8';
+      const pct = tot>0 ? Math.round(amt/tot*100) : 0;
+      const lbl = CAT_LABELS[cat]||cat;
+      return '<div class="cwl-item">'
+        +'<div class="cwl-dot" style="background:'+col+'"></div>'
+        +'<span class="cwl-label">'+lbl+'</span>'
+        +'<span class="cwl-pct">'+pct+'%</span>'
+        +'</div>';
+    }).join('');
+  }
+
+  // ── Breakdown list (right panel) ──────────────────────────────────────────
+  renderBillBreakdown(entries, tot, CAT_LABELS, CAT_COLORS);
 }
-function renderBillBreakdown(){
-  const byCat={};bills.forEach(b=>{byCat[b.cat]=(byCat[b.cat]||0)+b.pay;});
-  const lbl={HM:'🏠 Housing',LOAN:'🏦 Loans',CC:'💳 Credit Cards',CAR:'🚗 Auto',PH:'📱 Phone',TV:'📺 Cable',FAM:'👨‍👩‍👧 Family',SAVE:'💰 Savings',OTHER:'Other'};
-  const tot=Object.values(byCat).reduce((s,v)=>s+v,0);
-  const el=gg('billBreakdown');if(!el)return;
-  el.innerHTML=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12.5px"><span style="color:var(--muted)">${lbl[cat]||cat}</span><div style="text-align:right"><div class="mono" style="font-weight:600">${fmt2(amt)}</div><div style="font-size:10.5px;color:var(--hint)">${Math.round(amt/tot*100)}%</div></div></div>`).join('')
-    +`<div style="display:flex;justify-content:space-between;padding:10px 0 0;font-weight:600;font-size:13px"><span>Total</span><span class="mono" style="color:var(--red)">${fmt2(tot)}</span></div>`;
+
+function renderBillBreakdown(entries, tot, CAT_LABELS, CAT_COLORS) {
+  // Allow calling standalone (re-use data if not passed)
+  if (!entries) {
+    const byCat={};
+    bills.forEach(function(b){byCat[b.cat]=(byCat[b.cat]||0)+b.pay;});
+    entries = Object.entries(byCat).sort(function(a,b){return b[1]-a[1];});
+    tot = entries.reduce(function(s,[,v]){return s+v;},0);
+    CAT_LABELS = {HM:'🏠 Housing',LOAN:'🏦 Loans',CC:'💳 Credit Cards',CAR:'🚗 Auto',PH:'📱 Phone',TV:'📺 Cable/Internet',FAM:'👨‍👩‍👧 Family',SAVE:'💰 Savings',OTHER:'Other'};
+    CAT_COLORS = {HM:'#3dda91',LOAN:'#f5a623',CC:'#6b9ef5',CAR:'#b09afa',PH:'#38bdf8',TV:'#818cf8',FAM:'#f46a6a',SAVE:'#34d399',OTHER:'#94a3b8'};
+  }
+  const el = gg('billBreakdown');
+  if (!el) return;
+
+  el.innerHTML = entries.map(function([cat,amt]){
+    const col = CAT_COLORS[cat]||'#94a3b8';
+    const lbl = CAT_LABELS[cat]||cat;
+    const pct = tot>0 ? Math.round(amt/tot*100) : 0;
+    // Individual bills in this category
+    const catBills = bills.filter(function(b){return b.cat===cat;});
+    const billRows = catBills.map(function(b){
+      return '<div style="display:flex;justify-content:space-between;padding:3px 0 3px 12px;font-size:11.5px;color:var(--muted)">'
+        +'<span>'+esc(b.name)+'</span>'
+        +'<span class="mono">'+fmt2(b.pay)+'</span>'
+        +'</div>';
+    }).join('');
+
+    return '<div style="margin-bottom:10px">'
+      // Category header row
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+        +'<div style="width:8px;height:8px;border-radius:2px;background:'+col+';flex-shrink:0"></div>'
+        +'<span style="font-size:12.5px;font-weight:600;color:var(--text);flex:1">'+lbl+'</span>'
+        +'<span class="mono" style="font-size:12.5px;font-weight:700;color:'+col+'">'+fmt2(amt)+'</span>'
+        +'<span style="font-size:11px;color:var(--muted);min-width:30px;text-align:right">'+pct+'%</span>'
+      +'</div>'
+      // Progress bar
+      +'<div style="height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;margin-bottom:2px">'
+        +'<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:2px"></div>'
+      +'</div>'
+      // Individual bills (collapsible feel — always shown)
+      +billRows
+      +'</div>';
+  }).join('')
+    +'<div style="display:flex;justify-content:space-between;padding:10px 0 0;border-top:1px solid var(--border);font-weight:700;font-size:13px">'
+      +'<span style="color:var(--text)">Total</span>'
+      +'<span class="mono" style="color:var(--red)">'+fmt2(tot)+'</span>'
+    +'</div>';
 }
 
 // ── BUDGET METRICS ────────────────────────────────────────────────────────────
