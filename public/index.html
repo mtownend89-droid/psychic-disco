@@ -947,627 +947,20 @@ input[type=range]{width:100%;accent-color:var(--green);}
   /* Fire drill results */
   .drag-section[data-id="fd-results"] .g2 { grid-template-columns: 1fr !important; }
   /* Bills chart section */
-  .drag-section[data-id="bills-charts"] .g2 { grid-template-columns: 1fr !important; }
-  /* Cashflow charts */
-  .drag-section[data-id="cf-charts"] .g2 { grid-template-columns: 1fr !important; }
-  /* SWOT 2-col → single col */
-  #swotGrid { grid-template-columns: 1fr !important; }
-  /* Scenario cards wrap properly */
-  #scenarioCards { grid-template-columns: repeat(2, 1fr) !important; }
-  #dpStrategyCards { grid-template-columns: repeat(2, 1fr) !important; }
-  /* Taller canvases for better readability on phone */
-  .chart-wrap { height: 220px !important; }
-  canvas[id$="Chart"] { min-height: 200px; }
-  #sankeyChart { height: 280px !important; }
-  /* Accounts section stacks too */
-  .drag-section[data-id="accts-banks"] .g2 { grid-template-columns: 1fr !important; }
-  /* Typography settings in Settings page */
-  #typographySettings { grid-template-columns: 1fr !important; }
-  /* Chart settings */
-  #chartSettings { grid-template-columns: 1fr !important; }
-  /* Retirement comparison grid */
-  .g3 { grid-template-columns: 1fr !important; }
-}
-
-
-.dash-chart-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; }
-@media (max-width: 767px) { .dash-chart-grid { grid-template-columns: 1fr !important; gap: 12px !important; } }
-
-
-/* Account chips */
-.acct-chip {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 12px; border-radius: 20px;
-  border: 1.5px solid var(--border);
-  background: var(--surface2); color: var(--text);
-  font-size: 12.5px; cursor: pointer; transition: all 0.13s;
-  white-space: nowrap; font-family: var(--font);
-}
-.acct-chip:hover { border-color: var(--border2); background: var(--surface3); }
-.acct-chip.selected {
-  border-color: var(--green);
-  background: rgba(61,218,145,0.1);
-  color: var(--green); font-weight: 600;
-}
-.acct-chip-bal {
-  font-family: var(--mono); font-size: 11.5px;
-  color: var(--muted); font-weight: 400;
-}
-.acct-chip.selected .acct-chip-bal { color: var(--green); }
-/* Dash transaction rows */
-.dash-txn-row {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 9px 0; border-bottom: 1px solid var(--border);
-  font-size: 13px;
-}
-.dash-txn-row:last-child { border-bottom: none; }
-.dash-txn-name { font-weight: 500; color: var(--text); }
-.dash-txn-cat  { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
-.dash-txn-date { font-size: 11px; color: var(--muted); margin-top: 1px; }
-.dash-txn-amt  { font-family: var(--mono); font-weight: 600; flex-shrink: 0; margin-left: 10px; }
-
-
-.zb-inp {
-  height: 28px; background: var(--surface2); border: 1px solid var(--border);
-  border-radius: var(--radius-xs); color: var(--text); padding: 0 6px;
-  outline: none; transition: border-color 0.15s; flex-shrink: 0;
-}
-.zb-inp:focus { border-color: var(--green); }
-.cat-dropdown {
-  height: 26px; background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 20px; color: var(--text); font-size: 11px; font-weight: 600;
-  padding: 0 8px; outline: none; cursor: pointer;
-  font-family: var(--font); max-width: 160px; transition: border-color 0.13s;
-}
-.cat-dropdown:hover { border-color: var(--border2); }
-.cat-dropdown:focus { border-color: var(--green); }
-
-
-.prev-item { cursor: help; transition: outline 0.1s; }
-.prev-item:hover { outline: 1.5px dashed var(--green); outline-offset: 2px; border-radius: 3px; }
-
-
-.zb-step {
-  width: 16px; height: 16px; padding: 0;
-  background: var(--surface3); border: 1px solid var(--border);
-  border-radius: 3px; color: var(--muted); cursor: pointer;
-  font-size: 8px; line-height: 1; display: flex; align-items: center;
-  justify-content: center; flex-shrink: 0; font-family: var(--font);
-  transition: all 0.1s;
-}
-.zb-step:hover { background: var(--surface2); color: var(--text); border-color: var(--green); }
-
-
-.cat-pill {
-  display: inline-block; padding: 2px 8px; border-radius: 20px;
-  background: var(--blue-dim); color: var(--blue);
-  font-size: 11px; font-weight: 700; cursor: pointer;
-  transition: all 0.13s; white-space: nowrap;
-  border: 1px solid transparent;
-}
-.cat-pill:hover { border-color: var(--blue); background: rgba(107,158,245,0.2); }
-
-
-/* ── UNIVERSAL CHART WIDGET ────────────────────────────────────────────────── */
-.chart-widget {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-  display: flex;
-  flex-direction: column;
-}
-.chart-widget-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px 0;
-  flex-shrink: 0;
-}
-.chart-widget-title {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-.chart-widget-body {
-  padding: 12px 16px;
-  position: relative;
-  height: 220px;
-  flex-shrink: 0;
-}
-.chart-widget-body canvas {
-  width: 100% !important;
-  height: 100% !important;
-}
-/* Bottom legend — horizontal pill row */
-.chart-widget-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 16px;
-  padding: 10px 16px 14px;
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.cwl-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text);
-  cursor: default;
-  transition: opacity 0.15s;
-}
-.cwl-item:hover { opacity: 0.75; }
-.cwl-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  flex-shrink: 0;
-}
-.cwl-label { font-weight: 500; }
-.cwl-pct {
-  color: var(--muted);
-  font-size: 11px;
-  font-family: var(--mono);
-}
-.cwl-val {
-  color: var(--muted);
-  font-size: 11px;
-  font-family: var(--mono);
-}
-/* Inline summary stats below chart */
-.chart-widget-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(80px,1fr));
-  gap: 0;
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.cwl-stat {
-  padding: 10px 14px;
-  border-right: 1px solid var(--border);
-  text-align: center;
-}
-.cwl-stat:last-child { border-right: none; }
-.cwl-stat-label { font-size: 9.5px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 3px; }
-.cwl-stat-value { font-size: 14px; font-weight: 700; font-family: var(--mono); }
-
-</style>
-</head><body>
-<!-- ── SIDEBAR ── -->
-
-<!-- ── LOGIN SCREEN ── -->
-<div id="loginScreen" style="position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;align-items:stretch;">
-  <!-- Left branding panel -->
-  <div style="flex:1;background:linear-gradient(160deg,#0f1117 0%,#141820 60%,#0d1a12 100%);
-    display:none;flex-direction:column;align-items:center;justify-content:center;padding:60px;
-    border-right:1px solid var(--border);" class="login-brand-panel">
-    <div style="font-size:52px;margin-bottom:24px;">💰</div>
-    <div style="font-size:28px;font-weight:700;color:var(--text);margin-bottom:10px;">Matt &amp; Dana</div>
-    <div style="font-size:16px;color:var(--muted);margin-bottom:48px;">Personal Finance Dashboard</div>
-    <div style="display:flex;flex-direction:column;gap:16px;width:100%;max-width:280px;">
-      <div style="display:flex;align-items:center;gap:12px;color:var(--muted);font-size:13.5px;">
-        <span style="color:var(--green);font-size:18px;">📊</span>Live Plaid bank connections
-      </div>
-      <div style="display:flex;align-items:center;gap:12px;color:var(--muted);font-size:13.5px;">
-        <span style="color:var(--green);font-size:18px;">🔥</span>Fire drill scenarios
-      </div>
-      <div style="display:flex;align-items:center;gap:12px;color:var(--muted);font-size:13.5px;">
-        <span style="color:var(--green);font-size:18px;">💳</span>Debt payoff planner
-      </div>
-      <div style="display:flex;align-items:center;gap:12px;color:var(--muted);font-size:13.5px;">
-        <span style="color:var(--green);font-size:18px;">🎯</span>Retirement calculators
-      </div>
-    </div>
-  </div>
-  <!-- Right login form — perfectly centered -->
-  <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:24px;">
-    <div style="width:100%;max-width:380px;">
-      <!-- Logo centered above form -->
-      <div style="text-align:center;margin-bottom:36px;">
-        <div style="width:64px;height:64px;border-radius:18px;
-          background:linear-gradient(135deg,var(--green) 0%,#1fa870 100%);
-          display:flex;align-items:center;justify-content:center;
-          font-size:28px;margin:0 auto 16px;
-          box-shadow:0 4px 24px rgba(61,218,145,0.3);">💰</div>
-        <div style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:6px;">Welcome back</div>
-        <div style="font-size:14px;color:var(--muted);">Sign in to Matt &amp; Dana Finance</div>
-      </div>
-
-      <div id="loginError" style="display:none;background:var(--red-dim);color:var(--red);
-        border-radius:var(--radius-sm);padding:11px 14px;font-size:13.5px;
-        margin-bottom:16px;text-align:center;border:1px solid rgba(244,106,106,0.2);"></div>
-
-      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
-        <div>
-          <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">Username</label>
-          <input type="text" id="loginUser" placeholder="Enter your username" autocomplete="username"
-            style="height:46px;border:1.5px solid var(--border);border-radius:var(--radius-sm);
-              padding:0 14px;background:var(--surface2);color:var(--text);
-              font-family:var(--font);font-size:15px;outline:none;width:100%;
-              transition:border-color 0.15s;box-sizing:border-box;"
-            onfocus="this.style.borderColor='var(--green)'"
-            onblur="this.style.borderColor='var(--border)'"
-            onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
-        </div>
-        <div>
-          <label style="font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">Password</label>
-          <div style="position:relative;">
-            <input type="password" id="loginPass" placeholder="Enter your password" autocomplete="current-password"
-              style="height:46px;border:1.5px solid var(--border);border-radius:var(--radius-sm);
-                padding:0 44px 0 14px;background:var(--surface2);color:var(--text);
-                font-family:var(--font);font-size:15px;outline:none;width:100%;
-                transition:border-color 0.15s;box-sizing:border-box;"
-              onfocus="this.style.borderColor='var(--green)'"
-              onblur="this.style.borderColor='var(--border)'"
-              onkeydown="if(event.key==='Enter')doLogin()">
-            <button onclick="togglePassVis()" id="passVisBtn"
-              style="position:absolute;right:12px;top:50%;transform:translateY(-50%);
-                background:none;border:none;color:var(--hint);cursor:pointer;font-size:17px;padding:4px;">👁</button>
-          </div>
-        </div>
-      </div>
-
-      <button onclick="doLogin()" id="loginBtn"
-        style="width:100%;height:48px;background:var(--green);color:#fff;
-          border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:700;
-          cursor:pointer;font-family:var(--font);transition:all 0.15s;
-          letter-spacing:0.02em;box-shadow:0 4px 16px rgba(61,218,145,0.25);"
-        onmouseover="this.style.background='#2fc47a';this.style.boxShadow='0 6px 20px rgba(61,218,145,0.35)'"
-        onmouseout="this.style.background='var(--green)';this.style.boxShadow='0 4px 16px rgba(61,218,145,0.25)'">
-        Sign in
-      </button>
-
-      <div style="text-align:center;font-size:11.5px;color:var(--hint);margin-top:20px;">
-        🔒 Encrypted · Read-only bank access · Your data stays on your server
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="mainContent" style="display:none">
-<nav id="sidebar">
-  <div class="sb-logo">
-    <div class="sb-logo-mark">💰</div>
-    <div><div class="sb-logo-text">Matt &amp; Dana</div><div class="sb-logo-sub">Personal Finance</div></div>
-  </div>
-  <div class="sb-nav" id="sbNav">
-    <button class="nav-btn active" onclick="showPage('dashboard')">
-      <span class="nav-ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>Dashboard
-    </button>
-    <button class="nav-btn" onclick="showPage('transactions')"><span class="kbd-hint">T</span>
-      <span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span>Transactions
-    </button>
-    <button class="nav-btn" onclick="showPage('expenses')"><span class="kbd-hint">B</span>
-      <span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span>Budget &amp; Bills
-    </button>
-    <button class="nav-btn" onclick="showPage('networth')"><span class="kbd-hint">N</span>
-      <span class="nav-ic"><svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></span>Net Worth &amp; Retirement
-    </button>
-
-
-    <button class="nav-btn" onclick="showPage('firedrill')"><span class="kbd-hint">F</span>
-      <span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M12 2c0 6-8 8-8 14a8 8 0 0016 0c0-6-8-8-8-14z"/><path d="M12 12c0 3-2 4-2 6a2 2 0 004 0c0-2-2-3-2-6z"/></svg></span>Fire Drill
-    </button>
-  </div>
-  <div class="sb-footer">
-    <button class="nav-btn" onclick="showPage('settings')" style="margin-bottom:4px;width:100%">
-      <span class="nav-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span>Settings &amp; Themes
-    </button>
-    <div class="sb-user" id="sbUserBlock" style="cursor:pointer" onclick="showPage('settings')" title="Click to switch user or customize">
-      <div class="sb-avatar" id="sbAvatar">MD</div>
-      <div>
-        <div class="sb-uname" id="sbUserName">Matt &amp; Dana</div>
-        <div class="sb-ulabel" id="sbUserLabel">Household</div>
-      </div>
-      <span style="margin-left:auto;font-size:14px;color:var(--hint)">⚙</span>
-    </div>
-    <button class="sb-connect" onclick="openLinkHandler()">
-      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Connect bank
-    </button>
-    <button onclick="doLogout()" style="
-      display:flex;align-items:center;gap:9px;padding:8px 10px;margin-top:6px;
-      background:transparent;border:1px solid var(--border);
-      border-radius:var(--radius-sm);color:var(--hint);font-size:12px;font-weight:500;
-      cursor:pointer;width:100%;font-family:var(--font);transition:all 0.13s;
-    " onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(240,92,92,0.3)'"
-       onmouseout="this.style.color='var(--hint)';this.style.borderColor='var(--border)'">
-      <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      Sign out
-    </button>
-  </div>
-</nav>
-<div id="sidebarOverlay" onclick="toggleSidebar()"></div>
-
-<!-- ── MAIN ── -->
-<div id="main">
-  <!-- Mobile page indicator dots — only shows on phone -->
-  <div id="mobilePageDots" style="
-    display:none; justify-content:center; gap:5px;
-    padding:6px 0 2px; position:relative; z-index:5;
-    height:16px;
-  "></div>
-  <div id="desktopQuickStats">
-  <div class="qs-item" onclick="showPage('dashboard')">
-    <span class="qs-icon">💰</span>
-    <div>
-      <div class="qs-label">Net Balance</div>
-      <div class="qs-value" id="qs-net-bal">—</div>
-    </div>
-  </div>
-  <div class="qs-item" onclick="showPage('expenses')">
-    <span class="qs-icon">📊</span>
-    <div>
-      <div class="qs-label">Monthly Bills</div>
-      <div class="qs-value" id="qs-bills">—</div>
-    </div>
-  </div>
-  <div class="qs-item" onclick="showPage('networth')">
-    <span class="qs-icon">📈</span>
-    <div>
-      <div class="qs-label">Net Worth</div>
-      <div class="qs-value" id="qs-nw">—</div>
-    </div>
-  </div>
-  <div class="qs-item" onclick="showPage('expenses')">
-    <span class="qs-icon">💳</span>
-    <div>
-      <div class="qs-label">Total Debt</div>
-      <div class="qs-value" id="qs-debt">—</div>
-    </div>
-  </div>
-  <div class="qs-item" onclick="showPage('retirement')">
-    <span class="qs-icon">🎯</span>
-    <div>
-      <div class="qs-label">Retirement Savings</div>
-      <div class="qs-value" id="qs-ret">—</div>
-    </div>
-  </div>
-</div>
-<div id="topbar">
-    <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Open navigation">
-      <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
-    <div id="swipeFlash" style="position:fixed;inset:0;pointer-events:none;z-index:200;opacity:0;transition:opacity 0.25s,transform 0.25s;background:transparent;"></div>
-    <div class="topbar-title" id="topbarTitle">Dashboard</div>
-    <div class="topbar-right">
-      <span class="edit-mode-badge" id="editModeBadge">✏️ Editing</span>
-      <span id="connBadge" style="font-size:11px;color:var(--hint);margin-right:6px" title="Connected banks"></span><span class="env-badge env-sandbox" id="envBadge">Sandbox</span>
-      <button class="btn" onclick="exportCSV()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
-      <button class="btn primary" onclick="openLinkHandler()">+ Connect</button>
-    </div>
-  </div>
-  <div id="page-content">
-
-    <!-- CONNECT SCREEN -->
-    <div id="connectScreen">
-      <div class="cn-icon">🏦</div>
-      <h1>Connect your accounts</h1>
-      <p>Link your bank accounts and credit cards through Plaid to see live balances, transactions, net worth, and spending insights.</p>
-      <button class="cn-btn" onclick="openLinkHandler()">Connect with Plaid</button>
-      <div class="cn-note">Bank-level 256-bit encryption · Read-only · Plaid never sees your credentials</div>
-    </div>
-
-    <!-- ── DASHBOARD ── -->
-    <div id="dashboard" class="page">
-      <div class="error-banner" id="errorBanner"></div>
-      <div class="page-hdr">
-        <div><div class="page-title">Dashboard</div><div class="page-sub" id="dashSub">Your financial overview</div></div>
-        <div class="page-hdr-right">
-          <button class="btn" onclick="toggleEditMode('dashboard')" id="dashEditBtn">⠿ Arrange</button>
-          <button class="btn" onclick="toggleGlobalEdit('dashboard')" id="dashGlobalEditBtn">✏️ Edit</button>
-          <button class="btn" onclick="exportCSV()">CSV</button>
-          <button class="btn primary" onclick="openExportModal()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button>
-        </div>
-      </div>
-      <div class="edit-bar" id="dashEditBar"><span>Drag handles to reorder widgets</span><button class="btn" onclick="toggleEditMode('dashboard')">Done</button></div>
-      <div class="drag-container" id="dashContainer">
-        <div class="drag-section" data-id="overview">
-          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Overview</div></div>
-          <div class="wgrid">
-            <div class="widget w-green"><div class="wlabel">Net Balance</div><div class="wvalue green" id="mNetBal">—</div><div class="wsub">all accounts</div></div>
-            <div class="widget w-red"><div class="wlabel">Spent (30d)</div><div class="wvalue red" id="mSpent">—</div><div class="wsub">credit &amp; debit</div></div>
-            <div class="widget w-cyan"><div class="wlabel">Income (30d)</div><div class="wvalue cyan" id="mIncome">—</div><div class="wsub">deposits</div></div>
-            <div class="widget w-blue"><div class="wlabel">Transactions</div><div class="wvalue blue" id="mTxnCount">—</div><div class="wsub">last 30 days</div></div>
-            <div class="widget w-purple"><div class="wlabel">Accounts</div><div class="wvalue purple" id="mAcctCount">—</div><div class="wsub">linked</div></div>
-          </div>
-        </div>
-        <div class="drag-section" data-id="charts">
-          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Spending charts</div></div>
-          <div id="dashChartDateBar"></div>
-          <div class="dash-chart-grid" style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:0">
-            <div class="card card-sm">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-                <div class="card-title" style="margin-bottom:0">💸 Money flow</div>
-                <span style="font-size:10.5px;color:var(--muted)" id="spendChartLabel">Sankey diagram</span>
-              </div>
-              <div id="sankeyWrap" style="width:100%"><canvas id="sankeyChart" style="width:100%;height:240px;display:block"></canvas></div>
-              <div id="catChartWrap" style="display:none;height:240px"><canvas id="catChart"></canvas></div>
-            </div>
+          <div class="drag-section" data-id="bills-charts">
+            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Bills by category</div></div>
             <div class="chart-widget">
               <div class="chart-widget-header">
-                <div class="chart-widget-title">📊 Income vs Spending</div>
-                <div style="display:flex;gap:4px">
-                  <button class="drp-btn active" id="plBtn-daily"   onclick="setPLPeriod('daily')">Daily</button>
-                  <button class="drp-btn"         id="plBtn-weekly"  onclick="setPLPeriod('weekly')">Weekly</button>
-                  <button class="drp-btn"         id="plBtn-monthly" onclick="setPLPeriod('monthly')">Monthly</button>
+                <div class="chart-widget-title">Bills by category</div>
+                <span id="billCatTotal" style="font-size:13px;font-weight:700;font-family:var(--mono);color:var(--red)"></span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;min-height:240px">
+                <div class="chart-widget-body" style="height:240px;border-right:1px solid var(--border)">
+                  <canvas id="billCatChart"></canvas>
                 </div>
+                <div style="padding:14px 16px;overflow-y:auto;max-height:240px" id="billBreakdown"></div>
               </div>
-              <div class="chart-widget-body" style="height:220px"><canvas id="dailyChart"></canvas></div>
-              <div class="chart-widget-stats">
-                <div class="cwl-stat"><div class="cwl-stat-label">Income</div><div class="cwl-stat-value" style="color:var(--green)"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--green);margin-right:4px"></span>—</div></div>
-                <div class="cwl-stat"><div class="cwl-stat-label">Spending</div><div class="cwl-stat-value" style="color:var(--red)"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--red);margin-right:4px"></span>—</div></div>
-                <div class="cwl-stat"><div class="cwl-stat-label">Net</div><div class="cwl-stat-value" id="plNetLabel">—</div></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="drag-section" data-id="swot">
-          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Financial SWOT analysis</div></div>
-          <div class="card">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-              <div class="card-title" style="margin-bottom:0">⚡ Financial SWOT Analysis</div>
-              <button class="btn green-outline" onclick="renderSWOT()">↻ Refresh</button>
-            </div>
-            <div id="swotGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-              <div id="swot-S" class="swot-quadrant swot-S"></div>
-              <div id="swot-W" class="swot-quadrant swot-W"></div>
-              <div id="swot-O" class="swot-quadrant swot-O"></div>
-              <div id="swot-T" class="swot-quadrant swot-T"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="drag-section" data-id="accts-banks">
-          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Accounts &amp; balances</div></div>
-          <div class="card" style="margin-bottom:0">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-              <div class="card-title" style="margin-bottom:0">Accounts &amp; balances</div>
-              <span style="font-size:11px;color:var(--muted)">Tap account to see transactions</span>
-            </div>
-            <!-- Account selector chips -->
-            <div id="acctChips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px"></div>
-            <!-- Account list -->
-            <div id="accountsList"><div class="empty"><span class="spinner"></span></div></div>
-            <!-- Collapsible transactions panel -->
-            <div id="dashAcctTxnPanel" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-                <div style="font-size:13px;font-weight:600" id="dashAcctTxnTitle">Transactions</div>
-                <div style="display:flex;align-items:center;gap:8px">
-                  <span style="font-size:11.5px;color:var(--muted)" id="dashAcctTxnMeta"></span>
-                  <button onclick="toggleDashTxnPanel()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0;line-height:1" id="dashAcctTxnToggle">▲</button>
-                </div>
-              </div>
-              <div id="dashAcctTxnList" style="max-height:320px;overflow-y:auto"></div>
-              <div style="text-align:center;padding:8px 0 0">
-                <button class="btn" onclick="showPage('transactions')">View all transactions →</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── TRANSACTIONS ── -->
-    <div id="transactions" class="page">
-      <div class="page-hdr">
-        <div><div class="page-title">Transactions</div></div>
-        <div class="page-hdr-right"><button class="btn" onclick="refreshAll()">↻ Refresh</button><button class="btn primary" onclick="exportCSV()">Export CSV</button></div>
-      </div>
-      <div class="drag-container" id="txnContainer">
-        <div class="drag-section" data-id="txn-table">
-          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Transactions</div></div>
-      <div class="card">
-        <div class="filter-row">
-          <input class="search-inp" id="txnSearch" placeholder="Search transactions…" oninput="filterTransactions()">
-          <select class="sel" id="catFilter" onchange="filterTransactions()"><option value="">All categories</option></select>
-          <select class="sel" id="bankFilter" onchange="filterTransactions()"><option value="">All banks</option></select>
-          <select class="sel" id="timeFilter" onchange="filterTransactions()">
-            <option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option>
-            <option value="60">Last 60 days</option><option value="90">Last 90 days</option>
-            <option value="180">Last 6 months</option><option value="365">Last year</option>
-            <option value="ytd">Year to date</option><option value="all">All time</option>
-            <option value="custom">Custom…</option>
-          </select>
-          <span style="font-size:12px;color:var(--hint);" id="txnCountBadge"></span>
-        </div>
-        <div class="custom-dates" id="customDateRow">
-          <label>From</label><input type="date" id="txnDateFrom" onchange="filterTransactions()">
-          <label>To</label><input type="date" id="txnDateTo" onchange="filterTransactions()">
-        </div>
-        <div style="overflow-x:auto">
-          <table class="tbl">
-            <thead><tr><th>Merchant</th><th>Category</th><th>Bank</th><th>Date</th><th style="text-align:right">Amount</th></tr></thead>
-            <tbody id="txnBody"><tr><td colspan="5" class="empty"><span class="spinner"></span></td></tr></tbody>
-          </table>
-        </div>
-      </div>
-          </div><!-- /drag-section -->
-        </div><!-- /drag-container -->
-    </div>
-
-    <!-- ── BUDGET & BILLS ── -->
-    <div id="expenses" class="page">
-      <div class="page-hdr">
-        <div><div class="page-title">Budget &amp; Bills</div></div>
-        <div class="page-hdr-right">
-          <button class="btn" onclick="toggleEditMode('expenses')" id="expEditBtn">⠿ Arrange</button>
-          <button class="btn" onclick="toggleGlobalEdit('expenses')" id="expGlobalEditBtn">✏️ Edit</button>
-          <button class="btn primary" onclick="exportBillsExcel()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
-        </div>
-      </div>
-      <div class="edit-bar" id="expEditBar"><span>Drag handles to reorder sections</span><button class="btn" onclick="toggleEditMode('expenses')">Done</button></div>
-      <div class="wgrid" style="margin-bottom:18px">
-        <div class="widget w-cyan"><div class="wlabel">Monthly Income</div><div class="wvalue cyan" id="bIncome">—</div><div class="wsub">est. avg/month</div></div>
-        <div class="widget w-red"><div class="wlabel">Monthly Bills</div><div class="wvalue red" id="bBills">—</div><div class="wsub">fixed obligations</div></div>
-        <div class="widget"><div class="wlabel">Remaining</div><div class="wvalue" id="bRemaining">—</div><div class="wsub">after bills</div></div>
-        <div class="widget w-red"><div class="wlabel">Total Debt</div><div class="wvalue red" id="bDebt">—</div><div class="wsub">all balances</div></div>
-        <div class="widget w-amber"><div class="wlabel">Zero-Budget Gap</div><div class="wvalue amber" id="bUnalloc">—</div><div class="wsub">unallocated</div></div>
-      </div>
-      <div class="tab-row" id="expTabRow">
-        <button class="tab-btn active" onclick="switchExpTab('bills')" id="exp-tab-bills">Bills &amp; Expenses</button>
-        <button class="tab-btn" onclick="switchExpTab('calendar')" id="exp-tab-calendar">P&amp;L Calendar</button>
-        <button class="tab-btn" onclick="switchExpTab('cashflow')" id="exp-tab-cashflow">Cash Flow</button>
-        <button class="tab-btn" onclick="switchExpTab('zero')" id="exp-tab-zero">Zero Budget</button>
-        <button class="tab-btn" onclick="switchExpTab('income')" id="exp-tab-income">Income Sources</button>
-      </div>
-
-      <!-- BILLS PANEL -->
-      <div class="tab-panel active" id="ep-bills">
-        <div class="drag-container" id="expContainer">
-          <div class="drag-section" data-id="bills-tbl">
-            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Bills table</div></div>
-            <div class="card">
-              <div class="filter-row" style="margin-bottom:12px">
-                <span style="font-size:13.5px;font-weight:600;">Monthly bills &amp; fixed expenses</span>
-                <div style="flex:1"></div>
-                <select class="sel" id="billCatFilter" onchange="renderBillsTab()" style="height:29px;font-size:11px">
-                  <option value="">All categories</option>
-                  <option value="HM">🏠 Housing</option><option value="LOAN">🏦 Loans</option>
-                  <option value="CC">💳 Credit Cards</option><option value="CAR">🚗 Auto</option>
-                  <option value="PH">📱 Phone</option><option value="TV">📺 Cable</option>
-                  <option value="FAM">👨‍👩‍👧 Family</option><option value="SAVE">💰 Savings</option>
-                </select>
-                <button class="btn green-outline" onclick="syncBillsFromPlaid()">⟳ Sync Plaid</button>
-                <button class="btn" onclick="openAddBillModal()">+ Add bill</button>
-              </div>
-              <div id="plaidSyncNote" class="insight good" style="display:none;margin-bottom:10px">✓ Bills synced from Plaid — live balances and due dates updated.</div>
-              <div style="overflow-x:auto">
-                <table class="tbl" id="billTable">
-                  <thead><tr>
-                    <th onclick="sortBills('cat')">Cat<span class="sa">↕</span></th>
-                    <th onclick="sortBills('name')">Name<span class="sa">↕</span></th>
-                    <th onclick="sortBills('note')">Lender<span class="sa">↕</span></th>
-                    <th onclick="sortBills('apr')">APR<span class="sa">↕</span></th>
-                    <th onclick="sortBills('due')">Due<span class="sa">↕</span></th>
-                    <th onclick="sortBills('bal')">Balance<span class="sa">↕</span></th>
-                    <th onclick="sortBills('min')">Min pay<span class="sa">↕</span></th>
-                    <th onclick="sortBills('pay')">Your pay<span class="sa">↕</span></th>
-                    <th>Promo</th>
-                    <th onclick="sortBills('payoff')">Payoff<span class="sa">↕</span></th>
-                    <th onclick="sortBills('status')">Status<span class="sa">↕</span></th>
-                    <th style="text-align:center">Paid</th><th></th>
-                  </tr></thead>
-                  <tbody id="billBody"></tbody>
-                  <tfoot><tr class="tbl-total">
-                    <td colspan="5">Totals</td>
-                    <td id="totalBalance" class="mono" style="color:var(--red)"></td>
-                    <td id="totalMinPay" class="mono" style="color:var(--red)"></td>
-                    <td id="totalYourPay" class="mono" style="color:var(--red)"></td>
-                    <td colspan="5"></td>
-                  </tr></tfoot>
-                </table>
-              </div>
-            </div>
-          </div>
-          <div class="drag-section" data-id="bills-charts">
-            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Bill charts</div></div>
-            <div class="g2">
-              <div class="card card-sm"><div class="card-title">by category</div><div class="chart-wrap" style="height:210px"><canvas id="billCatChart"></canvas></div></div>
-              <div class="card card-sm"><div class="card-title">breakdown</div><div id="billBreakdown"></div></div>
+              <div class="chart-widget-legend" id="billCatLegend"></div>
             </div>
           </div>
         </div>
@@ -1611,7 +1004,16 @@ input[type=range]{width:100%;accent-color:var(--green);}
               <button class="btn primary" onclick="autoBalanceZero()">⚖ Auto-balance to $0</button>
             </div>
           </div>
-          <div class="card card-sm"><div class="card-title">budget allocation</div><div class="chart-wrap" style="height:250px"><canvas id="zeroChart"></canvas></div></div>
+          <div class="chart-widget">
+              <div class="chart-widget-header">
+                <div class="chart-widget-title">Budget allocation</div>
+                <span id="zeroBudgetTotal" style="font-size:12px;color:var(--muted)"></span>
+              </div>
+              <div class="chart-widget-body" style="height:240px">
+                <canvas id="zeroChart"></canvas>
+              </div>
+              <div class="chart-widget-legend" id="zeroBudgetLegend"></div>
+            </div>
         </div>
       </div>
 
@@ -3091,20 +2493,40 @@ function saveNewBill(){
 }
 function renderBillCatChart(){
   const byCat={};bills.forEach(b=>{byCat[b.cat]=(byCat[b.cat]||0)+b.pay;});
-  const cc={HM:'#2ecc8a',LOAN:'#f0a540',CC:'#5b8def',CAR:'#a78bfa',PH:'#484c65',TV:'#484c65',FAM:'#f05c5c',SAVE:'#38bdf8',OTHER:'#484c65'};
+  const cc={HM:'#2ecc8a',LOAN:'#f0a540',CC:'#5b8def',CAR:'#a78bfa',PH:'#38bdf8',TV:'#818cf8',FAM:'#f05c5c',SAVE:'#34d399',OTHER:'#94a3b8'};
   const es=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  const tot=es.reduce((s,[,v])=>s+v,0);
+  // Update header total
+  const ht=gg('billCatTotal');if(ht)ht.textContent=fmt2(tot)+'/mo';
   const el=gg('billCatChart');if(!el)return;
+  const textC=getComputedStyle(document.documentElement).getPropertyValue('--text').trim()||'#111';
+  const surfC=getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()||'#fff';
   if(BC.billCat)BC.billCat.destroy();
-  BC.billCat=new Chart(el,{type:'doughnut',data:{labels:es.map(([k])=>k),datasets:[{data:es.map(([,v])=>Math.round(v)),backgroundColor:es.map(([k])=>cc[k]||'#484c65'),borderWidth:2,borderColor:'#1c1f28'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10.5},boxWidth:9,padding:7}},tooltip:{callbacks:{label:c=>` $${c.parsed.toLocaleString()}`}}}}});
+  BC.billCat=new Chart(el,{type:'doughnut',data:{labels:es.map(([k])=>k),datasets:[{data:es.map(([,v])=>Math.round(v)),backgroundColor:es.map(([k])=>cc[k]||'#94a3b8'),borderWidth:2,borderColor:surfC}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const t=c.dataset.data.reduce((a,b)=>a+b,0);return ` ${c.label}: ${fmt2(c.parsed)} (${t>0?Math.round(c.parsed/t*100):0}%)`;}}}}}}); 
   attachLegend(BC.billCat,'billCatLegend');
+  renderBillBreakdown();
 }
 function renderBillBreakdown(){
   const byCat={};bills.forEach(b=>{byCat[b.cat]=(byCat[b.cat]||0)+b.pay;});
   const lbl={HM:'🏠 Housing',LOAN:'🏦 Loans',CC:'💳 Credit Cards',CAR:'🚗 Auto',PH:'📱 Phone',TV:'📺 Cable',FAM:'👨‍👩‍👧 Family',SAVE:'💰 Savings',OTHER:'Other'};
+  const cc={HM:'#2ecc8a',LOAN:'#f0a540',CC:'#5b8def',CAR:'#a78bfa',PH:'#38bdf8',TV:'#818cf8',FAM:'#f05c5c',SAVE:'#34d399',OTHER:'#94a3b8'};
   const tot=Object.values(byCat).reduce((s,v)=>s+v,0);
   const el=gg('billBreakdown');if(!el)return;
-  el.innerHTML=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12.5px"><span style="color:var(--muted)">${lbl[cat]||cat}</span><div style="text-align:right"><div class="mono" style="font-weight:600">${fmt2(amt)}</div><div style="font-size:10.5px;color:var(--hint)">${Math.round(amt/tot*100)}%</div></div></div>`).join('')
-    +`<div style="display:flex;justify-content:space-between;padding:10px 0 0;font-weight:600;font-size:13px"><span>Total</span><span class="mono" style="color:var(--red)">${fmt2(tot)}</span></div>`;
+  const entries=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  el.innerHTML=entries.map(([cat,amt])=>{
+    const pct=tot>0?Math.round(amt/tot*100):0;
+    const col=cc[cat]||'#94a3b8';
+    return `<div style="padding:7px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-size:12.5px;color:var(--text);font-weight:500">${lbl[cat]||cat}</span>
+        <span class="mono" style="font-size:12.5px;font-weight:700;color:${col}">${fmt2(amt)}</span>
+      </div>
+      <div style="height:4px;background:var(--surface3);border-radius:2px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${col};border-radius:2px"></div>
+      </div>
+      <div style="font-size:10.5px;color:var(--muted);margin-top:2px">${pct}% of total</div>
+    </div>`;
+  }).join('')+`<div style="display:flex;justify-content:space-between;padding:10px 0 0;font-weight:700;font-size:13px;border-top:1px solid var(--border);margin-top:4px"><span style="color:var(--text)">Total</span><span class="mono" style="color:var(--red)">${fmt2(tot)}</span></div>`;
 }
 
 // ── BUDGET METRICS ────────────────────────────────────────────────────────────
@@ -3153,7 +2575,7 @@ function renderCalendar(){
   }).join('');
   const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const mos=Array.from({length:6},(_,i)=>{const d=new Date(yr,mo-1+i,1);return{l:mn[d.getMonth()],inc:monthlyIncome(),bil:monthlyBills()};});
-  const pc=gg('plChart');if(pc){if(BC.pl)BC.pl.destroy();BC.pl=new Chart(pc,{type:'bar',data:{labels:mos.map(m=>m.l),datasets:[{label:'Income',data:mos.map(m=>Math.round(m.inc)),backgroundColor:'#2ecc8a',borderRadius:3},{label:'Bills',data:mos.map(m=>Math.round(m.bil)),backgroundColor:'#f05c5c',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11},boxWidth:9}}},scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>fmtM(v)},grid:{color:'rgba(255,255,255,0.03)'}}}}})}
+  const pc=gg('plChart');if(pc){if(BC.pl)BC.pl.destroy();BC.pl=new Chart(pc,{type:'bar',data:{labels:mos.map(m=>m.l),datasets:[{label:'Income',data:mos.map(m=>Math.round(m.inc)),backgroundColor:'rgba(46,204,138,0.85)',borderRadius:4},{label:'Bills',data:mos.map(m=>Math.round(m.bil)),backgroundColor:'rgba(244,106,106,0.8)',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fmt2(c.parsed.y)}`}}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{ticks:{callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.08)'}}}}}); attachLegend(BC.pl,'plChartLegend');}
   const ub=gg('upcomingBills');if(ub){const td=new Date();ub.innerHTML=bills.filter(b=>b.due&&b.pay>0).sort((a,b)=>a.due-b.due).map(b=>{const dd=b.next_due_date?new Date(b.next_due_date):new Date(td.getFullYear(),td.getMonth(),b.due);const du=Math.ceil((dd-td)/86400000);const sc=du<0?'st-ov':du<=5?'st-due':'st-ok';return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:12.5px;${b.paid?'opacity:0.35;':''}"><div><div style="font-weight:500">${esc(b.name)}</div><div style="font-size:11px;color:var(--muted)">Due ${b.next_due_date?new Date(b.next_due_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'day '+b.due}</div></div><div style="text-align:right"><div class="mono" style="color:var(--red)">${fmt2(b.pay)}</div><div class="${sc}">${du<0?'Overdue':du===0?'Today':du===1?'Tomorrow':'In '+du+'d'}</div></div></div>`;}).join('');}
 }
 
@@ -3164,6 +2586,7 @@ function renderZeroBudget(){
   const unalloc=rem-alloc;
   const sv=(id,v)=>{const el=gg(id);if(el)el.textContent=v;};
   sv('zIncome',fmt2(inc));sv('zBills',fmt2(bil));sv('zAllocated',fmt2(alloc));
+  const zbt=gg('zeroBudgetTotal');if(zbt)zbt.textContent=fmt2(alloc)+' allocated of '+fmt2(inc);
   const zr=gg('zRemaining');if(zr){zr.textContent=fmt2(Math.abs(unalloc));zr.style.color=Math.abs(unalloc)<1?'var(--green)':unalloc>0?'var(--amber)':'var(--red)';}
   const el=gg('zeroBudgetSliders');if(!el)return;
   el.innerHTML=zeroBuckets.map((b,i)=>{
