@@ -1680,35 +1680,119 @@ Chart.defaults.font.family="'DM Sans', sans-serif";
 // Doughnut/pie: dims other slices, pops hovered one out.
 // Bar/line: highlights bar/point, dims others.
 // ══════════════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════════════
+// DOUGHNUT CLICK-SELECT SYSTEM
+// Click a slice to select it — pops out and shows detail card below chart.
+// Click same slice again or click outside to deselect.
+// Bar/line charts: no visual changes (tooltip only via Chart.js defaults).
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Track selected slice per chart instance (chart.id → slice index)
+var _doughnutSelected = {};
+
+function _doughnutClickHandler(chart, e) {
+  var type = chart.config.type;
+  if (type !== 'doughnut' && type !== 'pie') return;
+
+  var pts = chart.getElementsAtEventForMode(e, 'nearest', {intersect:true}, false);
+  var meta = chart.getDatasetMeta(0);
+  if (!meta) return;
+
+  if (!pts.length) {
+    // Click on empty area — deselect
+    _doughnutSelected[chart.id] = -1;
+    meta.data.forEach(function(el) { el.options.offset = 0; });
+    chart.update('none');
+    _hideDoughnutDetail(chart);
+    return;
+  }
+
+  var idx = pts[0].index;
+  var prev = _doughnutSelected[chart.id];
+
+  if (prev === idx) {
+    // Click same slice — deselect
+    _doughnutSelected[chart.id] = -1;
+    meta.data.forEach(function(el) { el.options.offset = 0; });
+    chart.update('none');
+    _hideDoughnutDetail(chart);
+  } else {
+    // Select new slice
+    _doughnutSelected[chart.id] = idx;
+    meta.data.forEach(function(el, i) {
+      el.options.offset = (i === idx) ? 16 : 0;
+    });
+    chart.update('none');
+    _showDoughnutDetail(chart, idx);
+  }
+}
+
+function _showDoughnutDetail(chart, idx) {
+  var ds      = chart.data.datasets[0];
+  var label   = chart.data.labels[idx] || '';
+  var value   = ds.data[idx] || 0;
+  var total   = ds.data.reduce(function(s,v){return s+(+v||0);},0);
+  var pct     = total > 0 ? Math.round(value/total*100) : 0;
+  var color   = Array.isArray(ds.backgroundColor) ? ds.backgroundColor[idx] : ds.backgroundColor;
+
+  // Find or create detail card beneath the chart canvas
+  var canvas  = chart.canvas;
+  var wrapper = canvas.parentElement;
+  if (!wrapper) return;
+
+  var detailId = 'dd-'+chart.id;
+  var detail   = document.getElementById(detailId);
+  if (!detail) {
+    detail = document.createElement('div');
+    detail.id = detailId;
+    detail.style.cssText = 'margin-top:10px;padding:10px 14px;border-radius:8px;'
+      +'display:flex;align-items:center;gap:12px;font-size:13px;transition:all 0.2s;';
+    wrapper.appendChild(detail);
+  }
+
+  // Format value — dollar or percent depending on chart
+  var valStr = typeof value === 'number'
+    ? (value < 1 && value > 0 ? value+'%' : '$'+Math.round(value).toLocaleString())
+    : value;
+
+  detail.style.background = color + '18';
+  detail.style.border     = '1.5px solid ' + color + '44';
+  detail.innerHTML =
+    '<div style="width:12px;height:12px;border-radius:3px;background:'+color+';flex-shrink:0"></div>'
+    +'<div style="flex:1">'
+      +'<div style="font-weight:700;color:var(--text)">'+esc(String(label))+'</div>'
+    +'</div>'
+    +'<div style="text-align:right;flex-shrink:0">'
+      +'<div style="font-family:var(--mono);font-weight:700;font-size:15px;color:'+color+'">'+valStr+'</div>'
+      +'<div style="font-size:11px;color:var(--muted)">'+pct+'% of total</div>'
+    +'</div>';
+}
+
+function _hideDoughnutDetail(chart) {
+  var detailId = 'dd-'+chart.id;
+  var detail   = document.getElementById(detailId);
+  if (detail) detail.remove();
+}
+
+// Register click listeners on all doughnut canvases after each chart is created
+function _attachDoughnutClick(chart) {
+  if (!chart || !chart.canvas) return;
+  if (chart._doughnutClickBound) return; // already attached
+  chart.canvas.style.cursor = 'pointer';
+  chart.canvas.addEventListener('click', function(e) {
+    _doughnutClickHandler(chart, e);
+  });
+  chart._doughnutClickBound = true;
+}
+
 if (window.Chart) {
   Chart.register({
     id: 'universalHover',
-    afterEvent: function(chart, args) {
-      if (!args.inChartArea) return;
-      const e = args.event;
-      if (e.type !== 'mousemove' && e.type !== 'mouseout') return;
-      const type = chart.config.type;
-
-      // DOUGHNUT / PIE only — pop hovered slice out, reset on mouseout
-      // Bar and line charts: no visual changes, tooltip only
-      if (type !== 'doughnut' && type !== 'pie') return;
-
-      const meta = chart.getDatasetMeta(0);
-      if (!meta) return;
-
-      if (e.type === 'mouseout') {
-        meta.data.forEach(function(el) { el.options.offset = 0; });
-        chart.update('none');
-        return;
+    afterInit: function(chart) {
+      // Auto-attach click on doughnut/pie charts after init
+      if (chart.config.type === 'doughnut' || chart.config.type === 'pie') {
+        setTimeout(function(){ _attachDoughnutClick(chart); }, 0);
       }
-
-      const pts = chart.getElementsAtEventForMode(e.native, 'nearest', {intersect:true}, false);
-      if (!pts.length) return;
-      const idx = pts[0].index;
-      meta.data.forEach(function(el, i) {
-        el.options.offset = (i === idx) ? 12 : 0;
-      });
-      chart.update('none');
     }
   });
 }
@@ -3468,11 +3552,8 @@ function renderCharts(){
       data:{labels:sorted.map(([k])=>k),datasets:[{data:sorted.map(([,v])=>Math.round(v)),
         backgroundColor:colors,borderWidth:2,borderColor:surfC}]},
       options:{responsive:true,maintainAspectRatio:false,cutout:'55%',
-        plugins:{legend:{display:false},
-          tooltip:{callbacks:{label:c=>{
-            const pct=total>0?Math.round(c.parsed/total*100):0;
-            return ' '+c.label+': $'+c.parsed.toLocaleString()+' ('+pct+'%)';
-          }}}}}});
+        events:['click'],
+        plugins:{legend:{display:false},tooltip:{enabled:false}}}});
   }
 
   // Category legend with %
@@ -3623,17 +3704,14 @@ function renderBillCatChart(){
         backgroundColor: entries.map(([k])=> CAT_COLORS[k]||'#94a3b8'),
         borderWidth: 2,
         borderColor: surfC,
-        hoverOffset: 12
       }]
     },
     options:{
       responsive:true, maintainAspectRatio:false, cutout:'58%',
+      events:['click'],
       plugins:{
         legend:{ display:false },
-        tooltip:{ callbacks:{ label:function(c){
-          const pct = tot>0 ? Math.round(c.parsed/tot*100) : 0;
-          return ' '+(CAT_LABELS[entries[c.dataIndex]?.[0]]||c.label)+': '+fmt2(c.parsed)+' ('+pct+'%)';
-        }}}
+        tooltip:{enabled:false}
       }
     }
   });
