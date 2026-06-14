@@ -1812,15 +1812,30 @@ function renderPLChart() {
   var el = document.getElementById('plChart');
   if (!el) return;
   if (_plChartI) _plChartI.destroy();
+  // ── Axis ranges ──────────────────────────────────────────────────────────
+  // Left axis (bars): starts at $0, min max of $5,000 — grows if data exceeds it
+  var barMax  = Math.max(5000, Math.max.apply(null, incData.concat(spData).concat([0])));
+  // Right axis (net line): auto-scales around net values with padding
+  var netMin  = Math.min.apply(null, netData.concat([0]));
+  var netMax  = Math.max.apply(null, netData.concat([0]));
+  var netPad  = Math.max(200, Math.round((netMax - netMin) * 0.15));
+  var netAxisMin = netMin < 0 ? netMin - netPad : -(netPad);
+  var netAxisMax = netMax + netPad;
+
   _plChartI = new Chart(el, {
     type: 'bar',
     data: {
       labels: axisLabels,
       datasets: [
-        { label:'Income',   data:incData,  backgroundColor:'rgba(61,218,145,0.82)', borderRadius:3, order:1 },
-        { label:'Spending', data:spData,   backgroundColor:'rgba(244,106,106,0.78)', borderRadius:3, order:2 },
-        { label:'Net',      data:netData,  type:'line', borderColor:'#f5b042', backgroundColor:'transparent',
-          borderWidth:2.5, pointRadius:3, pointBackgroundColor:'#f5b042', tension:0.35, order:0 }
+        { label:'Income',   data:incData, yAxisID:'bars',
+          backgroundColor:'rgba(61,218,145,0.82)', borderRadius:4, order:2 },
+        { label:'Spending', data:spData,  yAxisID:'bars',
+          backgroundColor:'rgba(244,106,106,0.78)', borderRadius:4, order:3 },
+        { label:'Net',      data:netData, yAxisID:'net',
+          type:'line', borderColor:'#f5b042',
+          backgroundColor:'rgba(245,176,66,0.08)',
+          borderWidth:2.5, pointRadius:3, pointBackgroundColor:'#f5b042',
+          pointHoverRadius:5, tension:0.35, fill:true, order:1 }
       ]
     },
     options: {
@@ -1828,10 +1843,8 @@ function renderPLChart() {
       interaction: { mode:'index', intersect:false },
       plugins: {
         legend: {
-          position:'top', labels:{
-            color:mutC, font:{size:11}, boxWidth:10, padding:14,
-            usePointStyle:true
-          }
+          position:'top',
+          labels:{ color:mutC, font:{size:11}, boxWidth:10, padding:14, usePointStyle:true }
         },
         tooltip: {
           callbacks: {
@@ -1844,8 +1857,34 @@ function renderPLChart() {
         }
       },
       scales: {
-        x: { grid:{display:false}, ticks:{color:mutC, font:{size:10}, maxRotation:45, autoSkip:true, maxTicksLimit:14} },
-        y: { grid:{color:'rgba(128,128,128,0.08)'}, ticks:{color:mutC, callback:function(v){return '$'+Math.abs(v/1000).toFixed(0)+'K';}} }
+        x: {
+          grid:{display:false},
+          ticks:{color:mutC, font:{size:10}, maxRotation:45, autoSkip:true, maxTicksLimit:14}
+        },
+        // LEFT axis — bars only, $0 floor, $5K minimum ceiling
+        bars: {
+          type:'linear', position:'left',
+          min: 0, max: barMax,
+          grid:{ color:'rgba(128,128,128,0.07)' },
+          ticks:{
+            color:mutC,
+            callback:function(v){ return v>=1000 ? '$'+(v/1000).toFixed(0)+'K' : '$'+v; }
+          },
+          title:{ display:true, text:'Income / Spending', color:mutC, font:{size:9.5} }
+        },
+        // RIGHT axis — net line only, auto-scales to show swings clearly
+        net: {
+          type:'linear', position:'right',
+          min: netAxisMin, max: netAxisMax,
+          grid:{ drawOnChartArea:false },   // no right-axis grid lines (keeps it clean)
+          ticks:{
+            color:'#f5b042',
+            callback:function(v){
+              return (v>=0?'+':'')+( Math.abs(v)>=1000 ? '$'+(v/1000).toFixed(1)+'K' : '$'+v );
+            }
+          },
+          title:{ display:true, text:'Net', color:'#f5b042', font:{size:9.5} }
+        }
       }
     }
   });
