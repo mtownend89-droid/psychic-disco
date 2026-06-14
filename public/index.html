@@ -317,8 +317,7 @@ input[type=range]{width:100%;accent-color:var(--green);}
 
 /* ── Full-width desktop layout ─────────────────────────────────────────────── */
 @media (min-width: 1200px) {
-  /* Sankey gets more vertical room on large screens */
-  #sankeyChart { min-height: 320px; }
+  /* Sankey height is set dynamically in renderSankey() */
   /* 5-widget row on large screens */
   .wgrid { grid-template-columns: repeat(5, 1fr) !important; }
   /* Wider sankey in the chart grid */
@@ -327,16 +326,43 @@ input[type=range]{width:100%;accent-color:var(--green);}
   #page-content { padding: 28px 32px; }
 }
 @media (min-width: 1600px) {
-  #sankeyChart { min-height: 380px; }
+  /* Sankey height dynamic */
   .dash-chart-grid { grid-template-columns: 1.7fr 1fr; gap: 20px; }
   #page-content { padding: 30px 40px; }
 }
 
 /* ── Long Widget: always full width, no side-by-side ────────────────────── */
-.widget-long { width: 100% !important; }
-.widget-long-card { width: 100%; box-sizing: border-box; }
-/* Sankey canvas fills full card width */
-.widget-long-card canvas { width: 100% !important; }
+/* Long Widget: bleeds to full #main width, ignoring page-content padding */
+.widget-long {
+  width: calc(100% + 52px) !important;   /* 26px padding each side */
+  margin-left: -26px !important;
+  margin-right: -26px !important;
+  box-sizing: border-box;
+}
+.widget-long-card {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 0 !important;           /* flush edge-to-edge */
+  border-left: none !important;
+  border-right: none !important;
+}
+.widget-long-card canvas { width: 100% !important; display: block; }
+
+/* Wider padding variant for 1200px+ screens */
+@media (min-width: 1200px) {
+  .widget-long {
+    width: calc(100% + 64px) !important;  /* 32px padding each side */
+    margin-left: -32px !important;
+    margin-right: -32px !important;
+  }
+}
+@media (min-width: 1600px) {
+  .widget-long {
+    width: calc(100% + 80px) !important;  /* 40px padding each side */
+    margin-left: -40px !important;
+    margin-right: -40px !important;
+  }
+}
 
 /* Category chart: stacks on mobile, side-by-side on desktop */
 @media (max-width: 700px) {
@@ -409,6 +435,11 @@ canvas.chart-interactive { cursor: crosshair; }
   color: #fff;
   box-shadow: 0 1px 4px rgba(61,218,145,0.35);
 }
+
+/* Drag handle inside Long Widget — add back the padding offset */
+.widget-long .dh-row { padding-left: 26px; padding-right: 26px; }
+@media (min-width: 1200px) { .widget-long .dh-row { padding-left: 32px; padding-right: 32px; } }
+@media (min-width: 1600px) { .widget-long .dh-row { padding-left: 40px; padding-right: 40px; } }
 </style>
 
 </head>
@@ -1234,9 +1265,13 @@ function renderSankey() {
   const W   = parent.clientWidth - 2;
   const isLS = window.innerWidth > window.innerHeight;
   const isDesktop = window.innerWidth >= 1200;
-  const H = isDesktop ? Math.min(380, window.innerHeight - 200)
+  const isWide    = window.innerWidth >= 1600;
+  // On desktop the Sankey is a Long Widget taking the full width —
+  // give it generous height so the flows are clear and readable
+  const H = isWide    ? Math.min(480, window.innerHeight - 180)
+          : isDesktop ? Math.min(400, window.innerHeight - 200)
           : isLS      ? Math.min(300, window.innerHeight - 140)
-          : 220;
+          : 240;
 
   canvas.width  = W*dpr; canvas.height = H*dpr;
   canvas.style.width=W+'px'; canvas.style.height=H+'px';
@@ -1268,7 +1303,7 @@ function renderSankey() {
   }
 
   const PAD=14, GAP=5, NW=12;
-  const LW=Math.min(88,W*0.2);
+  const LW=Math.min(120,W*0.15);  // More label room on wide screens
   const LX=LW, RX=W-LW-NW;
   const avail=H-PAD*2;
 
@@ -1322,7 +1357,7 @@ function renderSankey() {
       const midY=n.y+n.h/2;
       ctx.textAlign=isLeft?'right':'left';
       ctx.font='bold 10px Arial,sans-serif'; ctx.fillStyle=textC;
-      const lbl=n.label.length>13?n.label.slice(0,12)+'…':n.label;
+      const maxL=isDesktop?18:13; const lbl=n.label.length>maxL?n.label.slice(0,maxL-1)+'…':n.label;
       ctx.fillText(lbl,lx,midY-2);
       const val=n.value>=1000?'$'+(n.value/1000).toFixed(1)+'K':'$'+n.value;
       const pct=Math.round(n.value/total*100)+'%';
