@@ -1302,48 +1302,27 @@ if (window.Chart) {
       const e = args.event;
       if (e.type !== 'mousemove' && e.type !== 'mouseout') return;
       const type = chart.config.type;
+
+      // DOUGHNUT / PIE only — pop hovered slice out, reset on mouseout
+      // Bar and line charts: no visual changes, tooltip only
+      if (type !== 'doughnut' && type !== 'pie') return;
+
       const meta = chart.getDatasetMeta(0);
       if (!meta) return;
 
       if (e.type === 'mouseout') {
-        // Reset all elements
-        meta.data.forEach(function(el) {
-          if (type === 'doughnut' || type === 'pie') {
-            el.outerRadius = el.$context.chart.outerRadius;
-          }
-          el.options.offset = 0;
-        });
+        meta.data.forEach(function(el) { el.options.offset = 0; });
         chart.update('none');
         return;
       }
 
-      // Find hovered element
       const pts = chart.getElementsAtEventForMode(e.native, 'nearest', {intersect:true}, false);
       if (!pts.length) return;
       const idx = pts[0].index;
-
-      if (type === 'doughnut' || type === 'pie') {
-        // Pop hovered slice out, dim others
-        meta.data.forEach(function(el, i) {
-          el.options.offset = (i === idx) ? 12 : 0;
-        });
-        chart.update('none');
-      } else if (type === 'bar') {
-        // Highlight hovered bar, dim others in all datasets
-        chart.data.datasets.forEach(function(ds, di) {
-          const m = chart.getDatasetMeta(di);
-          if (!m) return;
-          m.data.forEach(function(el, i) {
-            el.options.backgroundColor = (i === idx)
-              ? ds.backgroundColor instanceof Array ? ds.backgroundColor[i] : ds.backgroundColor
-              : 'rgba(128,128,128,0.25)';
-          });
-        });
-        chart.update('none');
-      }
-    },
-    afterDatasetsDraw: function(chart) {
-      // Nothing extra — Chart.js handles the draw
+      meta.data.forEach(function(el, i) {
+        el.options.offset = (i === idx) ? 12 : 0;
+      });
+      chart.update('none');
     }
   });
 }
@@ -1841,9 +1820,9 @@ function renderPLChart() {
       labels: axisLabels,
       datasets: [
         { label:'Income',   data:incData, yAxisID:'bars',
-          backgroundColor:'rgba(61,218,145,0.82)', borderRadius:4, order:2 },
+          backgroundColor:'rgba(61,218,145,0.82)', hoverBackgroundColor:'rgba(61,218,145,0.82)', borderRadius:4, order:2 },
         { label:'Spending', data:spData,  yAxisID:'bars',
-          backgroundColor:'rgba(244,106,106,0.78)', borderRadius:4, order:3 },
+          backgroundColor:'rgba(244,106,106,0.78)', hoverBackgroundColor:'rgba(244,106,106,0.78)', borderRadius:4, order:3 },
         { label:'Net',      data:netData, yAxisID:'net',
           type:'line', borderColor:'#f5b042',
           backgroundColor:'rgba(245,176,66,0.08)',
@@ -1853,18 +1832,48 @@ function renderPLChart() {
     },
     options: {
       responsive:true, maintainAspectRatio:false,
+      // Trigger on the date column, not on intersect — no bar needs to be hit
       interaction: { mode:'index', intersect:false },
+      // Disable all built-in hover effects on bars/points
+      hover: { mode:'index', intersect:false },
       plugins: {
         legend: {
           position:'top',
           labels:{ color:mutC, font:{size:11}, boxWidth:10, padding:14, usePointStyle:true }
         },
         tooltip: {
+          // Position at bottom of chart area so it never overlaps bars
+          position: 'nearest',
+          yAlign: 'bottom',
+          xAlign: 'center',
+          backgroundColor: 'rgba(15,17,23,0.92)',
+          titleColor: '#f0f2fa',
+          bodyColor: '#b0b4cc',
+          borderColor: 'rgba(255,255,255,0.12)',
+          borderWidth: 1,
+          padding: 10,
+          titleFont: { size:12, weight:'bold' },
+          bodyFont: { size:12 },
           callbacks: {
+            // Title = the date label (e.g. "06-14" or "Jun")
+            title: function(items) {
+              return items.length ? items[0].label : '';
+            },
             label: function(c) {
               var v = c.parsed.y;
-              var sign = c.dataset.label==='Net' ? (v>=0?'+':'') : '';
-              return ' '+c.dataset.label+': '+sign+'$'+Math.abs(v).toLocaleString();
+              if (v === null || v === undefined) return null;
+              var sign = c.dataset.label === 'Net' ? (v >= 0 ? '+' : '') : '';
+              return '  ' + c.dataset.label + ':  ' + sign + '$' + Math.abs(v).toLocaleString();
+            },
+            // Footer shows net for the period at a glance
+            footer: function(items) {
+              var inc = 0, sp = 0;
+              items.forEach(function(i) {
+                if (i.dataset.label === 'Income')   inc = i.parsed.y;
+                if (i.dataset.label === 'Spending') sp  = i.parsed.y;
+              });
+              var net = inc - sp;
+              return 'Net:  ' + (net >= 0 ? '+' : '') + '$' + Math.abs(Math.round(net)).toLocaleString();
             }
           }
         }
