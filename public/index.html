@@ -1241,6 +1241,7 @@ canvas.chart-interactive { cursor: crosshair; }
         <button class="tab-btn" onclick="switchExpTab('calendar')">P&amp;L Calendar</button>
         <button class="tab-btn" onclick="switchExpTab('zero')">Zero Budget</button>
         <button class="tab-btn" onclick="switchExpTab('income')">Income Sources</button>
+        <button class="tab-btn" onclick="switchExpTab('cashflow')">Cash Flow</button>
       </div>
 
       <!-- BILLS PANEL -->
@@ -1443,7 +1444,71 @@ canvas.chart-interactive { cursor: crosshair; }
         </div>
 
       </div>
-    </div>
+    
+      <!-- ── C1-C5: CASH FLOW TAB ── -->
+      <div class="tab-panel" id="ep-cashflow">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+          <div style="font-size:13px;font-weight:600;color:var(--text)">Cash Flow Analysis</div>
+          <div class="time-toggle" id="cfTimePicker">
+            <button class="tt-btn" data-cfrange="3" onclick="setCFRange(3)">3mo</button>
+            <button class="tt-btn active" data-cfrange="6" onclick="setCFRange(6)">6mo</button>
+            <button class="tt-btn" data-cfrange="12" onclick="setCFRange(12)">12mo</button>
+            <button class="tt-btn" data-cfrange="24" onclick="setCFRange(24)">24mo</button>
+            <button class="tt-btn" data-cfrange="0" onclick="setCFRange(0)">All</button>
+          </div>
+        </div>
+        <!-- C1: Stat row -->
+        <div class="wgrid" id="cfStatRow" style="margin-bottom:16px"></div>
+        <!-- C2: Monthly chart — Long Widget -->
+        <div class="drag-section widget-long" data-id="cf-monthly" style="margin-bottom:14px">
+          <div class="card widget-long-card" style="padding:0;overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
+              <div class="card-title" style="margin-bottom:0">📊 Monthly Income vs Spending</div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <span id="cfNetBadge" style="font-size:12px;font-weight:700;font-family:var(--mono)"></span>
+                <div style="display:flex;gap:4px">
+                  <button class="tt-btn active" id="cfGrpMonth" onclick="setCFGroup('month')">Monthly</button>
+                  <button class="tt-btn" id="cfGrpWeek" onclick="setCFGroup('week')">Weekly</button>
+                </div>
+              </div>
+            </div>
+            <div style="padding:16px 18px">
+              <div style="position:relative;height:260px"><canvas id="cfMonthlyChart"></canvas></div>
+              <div class="chart-widget-legend" id="cfMonthlyLegend" style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)"></div>
+            </div>
+          </div>
+        </div>
+        <!-- C3 + C4 -->
+        <div class="g2" style="margin-bottom:14px">
+          <div class="card" style="padding:0;overflow:hidden">
+            <div style="padding:14px 18px 12px;border-bottom:1px solid var(--border)">
+              <div class="card-title" style="margin-bottom:0">📋 Top Spending Categories</div>
+            </div>
+            <div style="padding:14px 18px;position:relative;height:280px"><canvas id="cfCatChart"></canvas></div>
+            <div class="chart-widget-legend" id="cfCatLegend" style="border-top:1px solid var(--border);padding:8px 18px 12px"></div>
+          </div>
+          <div class="card" style="padding:0;overflow:hidden">
+            <div style="padding:14px 18px 12px;border-bottom:1px solid var(--border)">
+              <div class="card-title" style="margin-bottom:0">📅 Month-by-Month Summary</div>
+            </div>
+            <div style="overflow-y:auto;max-height:360px">
+              <table class="tbl" style="border:none">
+                <thead><tr>
+                  <th>Month</th>
+                  <th style="text-align:right">Income</th>
+                  <th style="text-align:right">Spending</th>
+                  <th style="text-align:right">Net</th>
+                  <th style="text-align:right">Txns</th>
+                </tr></thead>
+                <tbody id="cfBody"><tr><td colspan="5" class="empty">Connect accounts to see data.</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <!-- C5: Date label -->
+        <div style="text-align:center;padding:8px 0;font-size:11px;color:var(--muted)" id="cfDateLabel"></div>
+      </div>
+</div>
 
     <!-- ── NET WORTH ── -->
     <div id="networth" class="page">
@@ -4688,12 +4753,18 @@ function saveNewIncome(){
   incomeSources.push(s);saveIncomeSrc();closeAddIncomeModal();renderIncomeTab();showToast(s.name+' added!','success');updateBudgetMetrics();
 }
 function switchExpTab(tab){
-  document.querySelectorAll('#expTabRow .tab-btn').forEach((b,i)=>b.classList.toggle('active',['bills','calendar','zero','income'][i]===tab));
-  ['ep-bills','ep-calendar','ep-zero','ep-income'].forEach(id=>{const el=gg(id);if(el)el.style.display='none';});
-  const p=gg('ep-'+tab);if(p)p.style.display='block';
-  if(tab==='calendar')renderCalendar();
-  if(tab==='zero')renderZeroBudget();
+  var tabs=['bills','calendar','zero','income','cashflow'];
+  document.querySelectorAll('#expTabRow .tab-btn').forEach(function(b,i){
+    b.classList.toggle('active', tabs[i]===tab);
+  });
+  ['ep-bills','ep-calendar','ep-zero','ep-income','ep-cashflow'].forEach(function(id){
+    var el=gg(id); if(el) el.style.display='none';
+  });
+  var p=gg('ep-'+tab); if(p) p.style.display='block';
+  if(tab==='calendar'){renderCalendar();initBillMonthSelectors();renderBillsByMonth();}
+  if(tab==='zero'){syncZeroBucketsFromCategories();renderZeroBudget();}
   if(tab==='income')renderIncomeTab();
+  if(tab==='cashflow')renderCashFlow();
 }
 
 // ── NET WORTH ─────────────────────────────────────────────────────────────────
