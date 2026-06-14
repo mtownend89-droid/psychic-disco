@@ -947,6 +947,232 @@ input[type=range]{width:100%;accent-color:var(--green);}
   /* Fire drill results */
   .drag-section[data-id="fd-results"] .g2 { grid-template-columns: 1fr !important; }
   /* Bills chart section */
+  .drag-section[data-id="bills-charts"] .g2 { grid-template-columns: 1fr !important; }
+  .drag-section[data-id="cf-charts"] .g2 { grid-template-columns: 1fr !important; }
+  #swotGrid { grid-template-columns: 1fr !important; }
+  #scenarioCards { grid-template-columns: repeat(2, 1fr) !important; }
+  #dpStrategyCards { grid-template-columns: repeat(2, 1fr) !important; }
+  .chart-wrap { height: 220px !important; }
+  #sankeyChart { height: 280px !important; }
+  #typographySettings { grid-template-columns: 1fr !important; }
+  #chartSettings { grid-template-columns: 1fr !important; }
+  .g3 { grid-template-columns: 1fr !important; }
+}
+@media (max-width: 390px) {
+  .nav-btn { min-width: 46px !important; max-width: 56px !important; font-size: 8px !important; }
+  .wgrid { grid-template-columns: 1fr 1fr !important; }
+  .widget { padding: 10px 12px !important; }
+  .wvalue { font-size: 16px !important; }
+  #page-content { padding: 10px 10px calc(76px + max(var(--safe-bottom),0px)) !important; }
+  .card { padding: 11px !important; }
+}
+</style>
+</head>
+<body>
+<!-- ── SIDEBAR ── -->
+<nav id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-mark">💰</div>
+    <div><div class="sb-logo-text">Matt &amp; Dana</div><div class="sb-logo-sub">Personal Finance</div></div>
+  </div>
+  <div class="sb-nav">
+    <button class="nav-btn active" onclick="showPage('dashboard')">
+      <span class="nav-ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>Dashboard
+    </button>
+    <button class="nav-btn" onclick="showPage('transactions')">
+      <span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span>Transactions
+    </button>
+    <button class="nav-btn" onclick="showPage('expenses')">
+      <span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span>Budget &amp; Bills
+    </button>
+    <button class="nav-btn" onclick="showPage('networth')">
+      <span class="nav-ic"><svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></span>Net Worth
+    </button>
+    <button class="nav-btn" onclick="showPage('retirement')">
+      <span class="nav-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>Retirement
+    </button>
+    <div class="sb-section">Reports</div>
+    <button class="nav-btn" onclick="showPage('cashflow')">
+      <span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M2 20h20M5 20V10l7-7 7 7v10"/></svg></span>Cash Flow
+    </button>
+  </div>
+  <div class="sb-footer">
+    <div class="sb-user">
+      <div class="sb-avatar">MD</div>
+      <div><div class="sb-uname">Matt &amp; Dana</div><div class="sb-ulabel">Household</div></div>
+    </div>
+    <button class="sb-connect" onclick="openLinkHandler()">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Connect bank
+    </button>
+  </div>
+</nav>
+
+<!-- ── MAIN ── -->
+<div id="main">
+  <div id="topbar">
+    <div class="topbar-title" id="topbarTitle">Dashboard</div>
+    <div class="topbar-right">
+      <span class="env-badge env-sandbox" id="envBadge">Sandbox</span>
+      <button class="btn" onclick="exportCSV()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
+      <button class="btn primary" onclick="openLinkHandler()">+ Connect</button>
+    </div>
+  </div>
+  <div id="page-content">
+
+    <!-- CONNECT SCREEN -->
+    <div id="connectScreen">
+      <div class="cn-icon">🏦</div>
+      <h1>Connect your accounts</h1>
+      <p>Link your bank accounts and credit cards through Plaid to see live balances, transactions, net worth, and spending insights.</p>
+      <button class="cn-btn" onclick="openLinkHandler()">Connect with Plaid</button>
+      <div class="cn-note">Bank-level 256-bit encryption · Read-only · Plaid never sees your credentials</div>
+    </div>
+
+    <!-- ── DASHBOARD ── -->
+    <div id="dashboard" class="page">
+      <div class="error-banner" id="errorBanner"></div>
+      <div class="page-hdr">
+        <div><div class="page-title">Dashboard</div><div class="page-sub" id="dashSub">Your financial overview</div></div>
+        <div class="page-hdr-right">
+          <button class="btn" onclick="toggleEditMode('dashboard')" id="dashEditBtn">⠿ Arrange</button>
+          <button class="btn" onclick="exportCSV()">CSV</button>
+          <button class="btn primary" onclick="openExportModal()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Excel</button>
+        </div>
+      </div>
+      <div class="edit-bar" id="dashEditBar"><span>Drag handles to reorder widgets</span><button class="btn" onclick="toggleEditMode('dashboard')">Done</button></div>
+      <div class="drag-container" id="dashContainer">
+        <div class="drag-section" data-id="overview">
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Overview</div></div>
+          <div class="wgrid">
+            <div class="widget w-green"><div class="wlabel">Net Balance</div><div class="wvalue green" id="mNetBal">—</div><div class="wsub">all accounts</div></div>
+            <div class="widget w-red"><div class="wlabel">Spent (30d)</div><div class="wvalue red" id="mSpent">—</div><div class="wsub">credit &amp; debit</div></div>
+            <div class="widget w-cyan"><div class="wlabel">Income (30d)</div><div class="wvalue cyan" id="mIncome">—</div><div class="wsub">deposits</div></div>
+            <div class="widget w-blue"><div class="wlabel">Transactions</div><div class="wvalue blue" id="mTxnCount">—</div><div class="wsub">last 30 days</div></div>
+            <div class="widget w-purple"><div class="wlabel">Accounts</div><div class="wvalue purple" id="mAcctCount">—</div><div class="wsub">linked</div></div>
+          </div>
+        </div>
+        <div class="drag-section" data-id="charts">
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Spending charts</div></div>
+          <div class="g2">
+            <div class="card card-sm"><div class="card-title">spending by category (30d)</div><div class="chart-wrap" style="height:200px"><canvas id="catChart"></canvas></div></div>
+            <div class="card card-sm"><div class="card-title">daily spending (30d)</div><div class="chart-wrap" style="height:200px"><canvas id="dailyChart"></canvas></div></div>
+          </div>
+        </div>
+        <div class="drag-section" data-id="accts-banks">
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Accounts &amp; institutions</div></div>
+          <div class="g2">
+            <div class="card card-sm"><div class="card-title">accounts &amp; balances</div><div id="accountsList"><div class="empty"><span class="spinner"></span></div></div></div>
+            <div class="card card-sm"><div class="card-title">linked institutions</div><div id="banksList"><div class="empty">No banks linked</div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TRANSACTIONS ── -->
+    <div id="transactions" class="page">
+      <div class="page-hdr">
+        <div><div class="page-title">Transactions</div></div>
+        <div class="page-hdr-right"><button class="btn" onclick="refreshAll()">↻ Refresh</button><button class="btn primary" onclick="exportCSV()">Export CSV</button></div>
+      </div>
+      <div class="card">
+        <div class="filter-row">
+          <input class="search-inp" id="txnSearch" placeholder="Search transactions…" oninput="filterTransactions()">
+          <select class="sel" id="catFilter" onchange="filterTransactions()"><option value="">All categories</option></select>
+          <select class="sel" id="bankFilter" onchange="filterTransactions()"><option value="">All banks</option></select>
+          <select class="sel" id="timeFilter" onchange="filterTransactions()">
+            <option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option>
+            <option value="60">Last 60 days</option><option value="90">Last 90 days</option>
+            <option value="180">Last 6 months</option><option value="365">Last year</option>
+            <option value="ytd">Year to date</option><option value="all">All time</option>
+            <option value="custom">Custom…</option>
+          </select>
+          <span style="font-size:12px;color:var(--hint);" id="txnCountBadge"></span>
+        </div>
+        <div class="custom-dates" id="customDateRow">
+          <label>From</label><input type="date" id="txnDateFrom" onchange="filterTransactions()">
+          <label>To</label><input type="date" id="txnDateTo" onchange="filterTransactions()">
+        </div>
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead><tr><th>Merchant</th><th>Category</th><th>Bank</th><th>Date</th><th style="text-align:right">Amount</th></tr></thead>
+            <tbody id="txnBody"><tr><td colspan="5" class="empty"><span class="spinner"></span></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── BUDGET & BILLS ── -->
+    <div id="expenses" class="page">
+      <div class="page-hdr">
+        <div><div class="page-title">Budget &amp; Bills</div></div>
+        <div class="page-hdr-right">
+          <button class="btn" onclick="toggleEditMode('expenses')" id="expEditBtn">⠿ Arrange</button>
+          <button class="btn primary" onclick="exportBillsExcel()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
+        </div>
+      </div>
+      <div class="edit-bar" id="expEditBar"><span>Drag handles to reorder sections</span><button class="btn" onclick="toggleEditMode('expenses')">Done</button></div>
+      <div class="wgrid" style="margin-bottom:18px">
+        <div class="widget w-cyan"><div class="wlabel">Monthly Income</div><div class="wvalue cyan" id="bIncome">—</div><div class="wsub">est. avg/month</div></div>
+        <div class="widget w-red"><div class="wlabel">Monthly Bills</div><div class="wvalue red" id="bBills">—</div><div class="wsub">fixed obligations</div></div>
+        <div class="widget"><div class="wlabel">Remaining</div><div class="wvalue" id="bRemaining">—</div><div class="wsub">after bills</div></div>
+        <div class="widget w-red"><div class="wlabel">Total Debt</div><div class="wvalue red" id="bDebt">—</div><div class="wsub">all balances</div></div>
+        <div class="widget w-amber"><div class="wlabel">Zero-Budget Gap</div><div class="wvalue amber" id="bUnalloc">—</div><div class="wsub">unallocated</div></div>
+      </div>
+      <div class="tab-row" id="expTabRow">
+        <button class="tab-btn active" onclick="switchExpTab('bills')">Bills &amp; Expenses</button>
+        <button class="tab-btn" onclick="switchExpTab('calendar')">P&amp;L Calendar</button>
+        <button class="tab-btn" onclick="switchExpTab('zero')">Zero Budget</button>
+        <button class="tab-btn" onclick="switchExpTab('income')">Income Sources</button>
+      </div>
+
+      <!-- BILLS PANEL -->
+      <div class="tab-panel active" id="ep-bills">
+        <div class="drag-container" id="expContainer">
+          <div class="drag-section" data-id="bills-tbl">
+            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Bills table</div></div>
+            <div class="card">
+              <div class="filter-row" style="margin-bottom:12px">
+                <span style="font-size:13.5px;font-weight:600;">Monthly bills &amp; fixed expenses</span>
+                <div style="flex:1"></div>
+                <select class="sel" id="billCatFilter" onchange="renderBillsTab()" style="height:29px;font-size:11px">
+                  <option value="">All categories</option>
+                  <option value="HM">🏠 Housing</option><option value="LOAN">🏦 Loans</option>
+                  <option value="CC">💳 Credit Cards</option><option value="CAR">🚗 Auto</option>
+                  <option value="PH">📱 Phone</option><option value="TV">📺 Cable</option>
+                  <option value="FAM">👨‍👩‍👧 Family</option><option value="SAVE">💰 Savings</option>
+                </select>
+                <button class="btn green-outline" onclick="syncBillsFromPlaid()">⟳ Sync Plaid</button>
+                <button class="btn" onclick="openAddBillModal()">+ Add bill</button>
+              </div>
+              <div id="plaidSyncNote" class="insight good" style="display:none;margin-bottom:10px">✓ Bills synced from Plaid — live balances and due dates updated.</div>
+              <div style="overflow-x:auto">
+                <table class="tbl" id="billTable">
+                  <thead><tr>
+                    <th onclick="sortBills('cat')">Cat<span class="sa">↕</span></th>
+                    <th onclick="sortBills('name')">Name<span class="sa">↕</span></th>
+                    <th onclick="sortBills('note')">Lender<span class="sa">↕</span></th>
+                    <th onclick="sortBills('apr')">APR<span class="sa">↕</span></th>
+                    <th onclick="sortBills('due')">Due<span class="sa">↕</span></th>
+                    <th onclick="sortBills('bal')">Balance<span class="sa">↕</span></th>
+                    <th onclick="sortBills('min')">Min pay<span class="sa">↕</span></th>
+                    <th onclick="sortBills('pay')">Your pay<span class="sa">↕</span></th>
+                    <th>Promo</th>
+                    <th onclick="sortBills('payoff')">Payoff<span class="sa">↕</span></th>
+                    <th onclick="sortBills('status')">Status<span class="sa">↕</span></th>
+                    <th style="text-align:center">Paid</th><th></th>
+                  </tr></thead>
+                  <tbody id="billBody"></tbody>
+                  <tfoot><tr class="tbl-total">
+                    <td colspan="5">Totals</td>
+                    <td id="totalBalance" class="mono" style="color:var(--red)"></td>
+                    <td id="totalMinPay" class="mono" style="color:var(--red)"></td>
+                    <td id="totalYourPay" class="mono" style="color:var(--red)"></td>
+                    <td colspan="5"></td>
+                  </tr></tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
           <div class="drag-section" data-id="bills-charts">
             <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Bills by category</div></div>
             <div class="chart-widget">
