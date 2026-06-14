@@ -782,6 +782,34 @@ canvas.chart-interactive { cursor: crosshair; }
   color: var(--muted);
   margin-top: 2px;
 }
+
+/* ── T1: Category pills + popover ───────────────────────────────────────────── */
+.cat-pill {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.13s;
+  border: 1.5px solid transparent;
+  white-space: nowrap;
+  user-select: none;
+}
+.cat-pill:hover {
+  filter: brightness(1.15);
+  border-color: currentColor;
+  transform: scale(1.04);
+}
+.cat-pill:active { transform: scale(0.97); }
+/* Tooltip hint on hover */
+.cat-pill::after {
+  content: ' ✏️';
+  opacity: 0;
+  font-size: 9px;
+  transition: opacity 0.1s;
+}
+.cat-pill:hover::after { opacity: 1; }
 </style>
 
 </head>
@@ -1485,6 +1513,25 @@ canvas.chart-interactive { cursor: crosshair; }
   </div>
 </div>
 <div id="toast"></div>
+
+
+<!-- ── T1: Category Recategorize Popover ── -->
+<div id="catPopover" style="display:none;position:fixed;z-index:300;
+  background:var(--sidebar);border:1.5px solid var(--border2);
+  border-radius:var(--radius);padding:14px 16px;min-width:220px;
+  box-shadow:0 8px 28px rgba(0,0,0,0.28);">
+  <div style="font-size:10px;font-weight:700;text-transform:uppercase;
+    letter-spacing:0.1em;color:var(--muted);margin-bottom:10px">Recategorize</div>
+  <select id="catPopoverSel" style="width:100%;height:34px;
+    background:var(--surface2);border:1px solid var(--border);
+    border-radius:var(--radius-sm);color:var(--text);
+    font-family:var(--font);font-size:13px;padding:0 8px;
+    outline:none;margin-bottom:10px;cursor:pointer"></select>
+  <div style="display:flex;gap:6px">
+    <button class="btn" style="flex:1" onclick="closeCatPopover()">Cancel</button>
+    <button class="btn primary" style="flex:1" onclick="applyCatPopover()">Apply</button>
+  </div>
+</div>
 
 </div><!-- /mainContent -->
 
@@ -2776,6 +2823,115 @@ function clearAcctName(accountId) {
   setAcctName(accountId, '');
 }
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// T1 — CATEGORY POPOVER
+// Clicking a .cat-pill anywhere in the app opens this popover.
+// On Apply: saves override, refreshes every chart/list that shows categories.
+// ══════════════════════════════════════════════════════════════════════════════
+var _catPopoverTxn  = null;
+var _catPopoverPill = null;
+
+
+// openCatPopoverById removed — recategorize only in Transactions page
+
+function openCatPopover(txn, pillEl, event) {
+  if (event) { event.stopPropagation(); event.preventDefault(); }
+  _catPopoverTxn  = txn;
+  _catPopoverPill = pillEl;
+
+  var pop  = document.getElementById('catPopover');
+  var sel  = document.getElementById('catPopoverSel');
+  if (!pop || !sel) return;
+
+  // Populate dropdown with master categories
+  var cats = getUserCategories();
+  var cur  = getTxnCategory(txn);
+  sel.innerHTML = cats.map(function(c) {
+    return '<option value="'+esc(c.label)+'"'+(c.label===cur?' selected':'')+'>'+esc(c.label)+'</option>';
+  }).join('');
+
+  // Position near the pill
+  var rect = pillEl.getBoundingClientRect();
+  var popW = 220;
+  var left = Math.min(rect.left + window.scrollX, window.innerWidth - popW - 12);
+  var top  = rect.bottom + window.scrollY + 6;
+  // Flip above if too close to bottom
+  if (rect.bottom + 160 > window.innerHeight) {
+    top = rect.top + window.scrollY - 160;
+  }
+  pop.style.left    = Math.max(8, left) + 'px';
+  pop.style.top     = top + 'px';
+  pop.style.display = 'block';
+
+  // Focus select
+  setTimeout(function(){ sel.focus(); }, 50);
+}
+
+function applyCatPopover() {
+  var sel = document.getElementById('catPopoverSel');
+  if (!sel || !_catPopoverTxn) return;
+  var newCat = sel.value;
+  var txnId  = _catPopoverTxn.transaction_id || _catPopoverTxn.id || '';
+
+  // Save override
+  if (txnId) saveCatOverride(txnId, newCat);
+
+  // Update pill color + label immediately — no full re-render needed
+  if (_catPopoverPill) {
+    var col = getCatColor(newCat);
+    _catPopoverPill.textContent = newCat;
+    _catPopoverPill.style.background = col + '22';
+    _catPopoverPill.style.color      = col;
+  }
+
+  closeCatPopover();
+
+  // Refresh transaction table pills in place
+  // (find the pill row and update it without full re-render)
+  var allPills = document.querySelectorAll('#txnBody .cat-pill, #acctTxnList .cat-pill');
+  allPills.forEach(function(p) {
+    if (p !== _catPopoverPill) return; // only update the one we just changed
+  });
+  // Full refresh of category views
+  _refreshCategoryViews();
+}
+
+function _refreshCategoryViews() {
+  // Sankey + doughnut + legend
+  if (typeof renderCharts === 'function')  renderCharts();
+  // SWOT (spending-based insights update)
+  if (typeof renderSWOT  === 'function')   renderSWOT();
+  // Account chip panel if open
+  if (typeof expandAcctChip === 'function' && _openChipIdx >= 0) {
+    expandAcctChip(_openChipIdx);
+  }
+  // Re-render transactions table so pill color updates in place
+  if (typeof filterTransactions === 'function') filterTransactions();
+}
+
+function closeCatPopover() {
+  var pop = document.getElementById('catPopover');
+  if (pop) pop.style.display = 'none';
+  _catPopoverTxn  = null;
+  _catPopoverPill = null;
+}
+
+// Close on click outside
+document.addEventListener('click', function(e) {
+  var pop = document.getElementById('catPopover');
+  if (pop && pop.style.display !== 'none') {
+    if (!pop.contains(e.target) && !e.target.classList.contains('cat-pill')) {
+      closeCatPopover();
+    }
+  }
+});
+
+// Close on Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeCatPopover();
+});
+
 // ── BILLS DATA ────────────────────────────────────────────────────────────────
 let bills=[
   {cat:'HM',name:"M&T Mortgage",note:'Mortgage',apr:2.625,due:5,bal:-292452.38,min:2638.46,pay:2638.46,promo:'',paid:false},
@@ -3129,12 +3285,17 @@ function expandAcctChip(idx) {
         var col  = pos ? 'var(--red)' : 'var(--green)';
         var amt  = (pos?'-':'+') + fmt2(Math.abs(t.amount));
         var cat  = getTxnCategory(t);
+        var catCol = getCatColor(cat);
         var name = t.merchant_name || t.name || '';
         var dt   = new Date(t.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
         return '<div class="acct-txn-row">'
           +'<div style="flex:1;overflow:hidden">'
             +'<div class="acct-txn-name">'+esc(name)+'</div>'
-            +'<div class="acct-txn-cat">'+esc(cat)+'</div>'
+            +'<div class="acct-txn-cat">'
+              +'<span style="font-size:10px;padding:1px 7px;border-radius:20px;font-weight:700;'
+              +'background:'+catCol+'22;color:'+catCol+'">'
+              +esc(cat)+'</span>'
+            +'</div>'
           +'</div>'
           +'<div class="acct-txn-right">'
             +'<div class="acct-txn-amt" style="color:'+col+'">'+amt+'</div>'
@@ -3170,12 +3331,64 @@ async function removeBank(id){
 }
 function renderTransactions(txns){
   const tb=gg('txnBody');if(!tb)return;
-  if(!txns.length){tb.innerHTML='<tr><td colspan="5" class="empty">No transactions found</td></tr>';return;}
-  tb.innerHTML=txns.slice(0,500).map(t=>{
-    const cat=fmtCat(t.personal_finance_category?.primary||t.category?.[0]||'Other');
-    const pos=t.amount>0;
-    return `<tr><td style="font-weight:500">${esc(t.merchant_name||t.name)}</td><td><span style="display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;background:var(--blue-dim);color:var(--blue);font-weight:700">${esc(cat)}</span></td><td style="color:var(--hint);font-size:11.5px">${esc(t.institution||'')}</td><td class="mono" style="color:var(--hint);font-size:12px">${t.date}</td><td style="text-align:right" class="mono"><span style="font-weight:600;color:${pos?'var(--red)':'var(--green)'}">${pos?'':'+'}${fmtK(Math.abs(t.amount))}</span></td></tr>`;
-  }).join('');
+  if(!txns.length){
+    tb.innerHTML='<tr><td colspan="5" class="empty">No transactions found</td></tr>';
+    return;
+  }
+  tb.innerHTML='';
+  txns.slice(0,500).forEach(function(t){
+    const cat = getTxnCategory(t);           // uses master category + overrides
+    const col = getCatColor(cat);
+    const pos = t.amount > 0;
+
+    const tr = document.createElement('tr');
+
+    // Merchant
+    const tdName = document.createElement('td');
+    tdName.style.fontWeight = '500';
+    tdName.textContent = t.merchant_name || t.name || '';
+
+    // Category pill — clickable, colored by category
+    const tdCat = document.createElement('td');
+    const pill  = document.createElement('span');
+    pill.className = 'cat-pill';
+    pill.textContent = cat;
+    pill.style.background = col + '22';
+    pill.style.color      = col;
+    pill.title = 'Click to recategorize';
+    (function(txn, p){ // closure to capture txn per row
+      p.addEventListener('click', function(e){ openCatPopover(txn, p, e); });
+      p.title = 'Click to recategorize (Transactions page only)';
+    })(t, pill);
+    tdCat.appendChild(pill);
+
+    // Bank
+    const tdBank = document.createElement('td');
+    tdBank.style.cssText = 'color:var(--hint);font-size:11.5px';
+    tdBank.textContent = t.institution || '';
+
+    // Date
+    const tdDate = document.createElement('td');
+    tdDate.className = 'mono';
+    tdDate.style.cssText = 'color:var(--hint);font-size:12px';
+    tdDate.textContent = t.date;
+
+    // Amount
+    const tdAmt = document.createElement('td');
+    tdAmt.style.textAlign = 'right';
+    tdAmt.className = 'mono';
+    const span = document.createElement('span');
+    span.style.cssText = 'font-weight:600;color:'+(pos?'var(--red)':'var(--green)');
+    span.textContent = (pos?'':'+') + fmtK(Math.abs(t.amount));
+    tdAmt.appendChild(span);
+
+    tr.appendChild(tdName);
+    tr.appendChild(tdCat);
+    tr.appendChild(tdBank);
+    tr.appendChild(tdDate);
+    tr.appendChild(tdAmt);
+    tb.appendChild(tr);
+  });
 }
 function filterTransactions(){
   const q=gg('txnSearch')?.value.toLowerCase()||'';
