@@ -331,6 +331,53 @@ input[type=range]{width:100%;accent-color:var(--green);}
   .dash-chart-grid { grid-template-columns: 1.7fr 1fr; gap: 20px; }
   #page-content { padding: 30px 40px; }
 }
+
+/* ── Long Widget: always full width, no side-by-side ────────────────────── */
+.widget-long { width: 100% !important; }
+.widget-long-card { width: 100%; box-sizing: border-box; }
+/* Sankey canvas fills full card width */
+.widget-long-card canvas { width: 100% !important; }
+
+/* Category chart: stacks on mobile, side-by-side on desktop */
+@media (max-width: 700px) {
+  #catChartGrid { grid-template-columns: 1fr !important; }
+  #catChartGrid > div:first-child { height: 200px !important; }
+}
+
+/* ── Universal chart hover highlight ────────────────────────────────────── */
+/* Chart.js canvases get a pointer cursor when interactive */
+canvas.chart-interactive { cursor: crosshair; }
+
+/* Category legend hover — pops row out */
+.cat-legend-row {
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 6px 8px !important;
+  margin: 0 -8px;
+  transition: background 0.13s, transform 0.13s, box-shadow 0.13s;
+}
+.cat-legend-row:hover {
+  background: rgba(255,255,255,0.06) !important;
+  transform: translateX(4px) scale(1.01);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  z-index: 2;
+  position: relative;
+}
+/* Active / highlighted state (mirrors chart hover) */
+.cat-legend-row.highlighted {
+  background: rgba(255,255,255,0.1) !important;
+  transform: translateX(6px) scale(1.02);
+  box-shadow: 0 3px 12px rgba(0,0,0,0.2);
+}
+.cat-legend-row.dimmed {
+  opacity: 0.35;
+  transform: none;
+}
+
+/* Sankey tooltip */
+#sankeyTooltip strong { display: block; font-size: 13px; margin-bottom: 4px; }
+#sankeyTooltip .st-val { color: var(--text,#f0f2fa); font-family: monospace; }
+#sankeyTooltip .st-pct { color: var(--muted,#aaa); font-size: 11px; }
 </style>
 
 </head>
@@ -452,32 +499,43 @@ input[type=range]{width:100%;accent-color:var(--green);}
             <div class="widget w-purple"><div class="wlabel">Accounts</div><div class="wvalue purple" id="mAcctCount">—</div><div class="wsub">linked</div></div>
           </div>
         </div>
-        <div class="drag-section" data-id="charts">
-          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Spending charts</div></div>
-          <!-- Portrait: stacked. Landscape: side by side via .dash-chart-grid -->
-          <div class="dash-chart-grid">
-
-            <!-- SANKEY -->
-            <div class="card card-sm" style="overflow:hidden">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-                <div class="card-title" style="margin-bottom:0">💸 Money Flow (30d)</div>
+        <!-- ── SANKEY: Long Widget — always full width ── -->
+        <div class="drag-section widget-long" data-id="sankey">
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Money Flow · Long Widget</div></div>
+          <div class="card widget-long-card" style="overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div class="card-title" style="margin-bottom:0">💸 Money Flow (30d)</div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <span id="sankeyHint" style="font-size:10px;color:var(--muted)">Hover nodes to highlight · shows % of total</span>
                 <span style="font-size:10px;color:var(--muted)">Sankey</span>
               </div>
+            </div>
+            <div style="position:relative">
               <canvas id="sankeyChart" style="display:block;width:100%"></canvas>
+              <!-- Hover tooltip -->
+              <div id="sankeyTooltip" style="
+                display:none;position:absolute;pointer-events:none;z-index:50;
+                background:var(--sidebar,#15181f);border:1.5px solid var(--border2,rgba(255,255,255,0.15));
+                border-radius:10px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,0.3);
+                font-size:12.5px;min-width:160px;
+              "></div>
             </div>
+          </div>
+        </div>
 
-            <!-- SPENDING BY CATEGORY -->
-            <div class="card card-sm">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
-                <div class="card-title" style="margin-bottom:0">📊 Spending by category</div>
-                <span id="spendDateLabel" style="font-size:10px;color:var(--muted)">Last 30 days</span>
-              </div>
-              <!-- Canvas -->
-              <div style="height:180px;position:relative"><canvas id="catChart"></canvas></div>
-              <!-- Category legend with % — scrollable -->
-              <div id="catLegend" style="margin-top:10px;max-height:140px;overflow-y:auto;font-size:12px"></div>
+        <!-- ── SPENDING BY CATEGORY: own full-width section ── -->
+        <div class="drag-section" data-id="cat-chart">
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Spending by category</div></div>
+          <div class="card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+              <div class="card-title" style="margin-bottom:0">📊 Spending by category</div>
+              <span id="spendDateLabel" style="font-size:10px;color:var(--muted)">Last 30 days</span>
             </div>
-
+            <!-- Side-by-side on desktop: doughnut left, legend right -->
+            <div style="display:grid;grid-template-columns:220px 1fr;gap:20px;align-items:start" id="catChartGrid">
+              <div style="height:220px;position:relative"><canvas id="catChart"></canvas></div>
+              <div id="catLegend" style="font-size:12.5px"></div>
+            </div>
           </div>
         </div>
         <div class="drag-section" data-id="accts-banks">
@@ -1002,6 +1060,67 @@ const PAL=['#2ecc8a','#5b8def','#f05c5c','#a78bfa','#f0a540','#38bdf8','#fb923c'
 Chart.defaults.color='#484c65';Chart.defaults.borderColor='rgba(255,255,255,0.05)';
 Chart.defaults.font.family="'DM Sans', sans-serif";
 
+// ══════════════════════════════════════════════════════════════════════════════
+// UNIVERSAL CHART HOVER PLUGIN
+// Registered globally — every Chart.js chart gets pop-out highlight on hover.
+// Doughnut/pie: dims other slices, pops hovered one out.
+// Bar/line: highlights bar/point, dims others.
+// ══════════════════════════════════════════════════════════════════════════════
+if (window.Chart) {
+  Chart.register({
+    id: 'universalHover',
+    afterEvent: function(chart, args) {
+      if (!args.inChartArea) return;
+      const e = args.event;
+      if (e.type !== 'mousemove' && e.type !== 'mouseout') return;
+      const type = chart.config.type;
+      const meta = chart.getDatasetMeta(0);
+      if (!meta) return;
+
+      if (e.type === 'mouseout') {
+        // Reset all elements
+        meta.data.forEach(function(el) {
+          if (type === 'doughnut' || type === 'pie') {
+            el.outerRadius = el.$context.chart.outerRadius;
+          }
+          el.options.offset = 0;
+        });
+        chart.update('none');
+        return;
+      }
+
+      // Find hovered element
+      const pts = chart.getElementsAtEventForMode(e.native, 'nearest', {intersect:true}, false);
+      if (!pts.length) return;
+      const idx = pts[0].index;
+
+      if (type === 'doughnut' || type === 'pie') {
+        // Pop hovered slice out, dim others
+        meta.data.forEach(function(el, i) {
+          el.options.offset = (i === idx) ? 12 : 0;
+        });
+        chart.update('none');
+      } else if (type === 'bar') {
+        // Highlight hovered bar, dim others in all datasets
+        chart.data.datasets.forEach(function(ds, di) {
+          const m = chart.getDatasetMeta(di);
+          if (!m) return;
+          m.data.forEach(function(el, i) {
+            el.options.backgroundColor = (i === idx)
+              ? ds.backgroundColor instanceof Array ? ds.backgroundColor[i] : ds.backgroundColor
+              : 'rgba(128,128,128,0.25)';
+          });
+        });
+        chart.update('none');
+      }
+    },
+    afterDatasetsDraw: function(chart) {
+      // Nothing extra — Chart.js handles the draw
+    }
+  });
+}
+
+
 
 // ══════════════════════════════════════════════════════════════════════════════
 // D1 — MASTER CATEGORY SYSTEM
@@ -1137,9 +1256,21 @@ function renderSankey() {
   const textC=getComputedStyle(document.documentElement).getPropertyValue('--text').trim()||'#111';
   const mutC =getComputedStyle(document.documentElement).getPropertyValue('--muted').trim()||'#666';
 
+  // Reset stored hit areas each render
+  window._sankeyNodes = { inc:[], sp:[] };
+
   function drawNodes(nodes,total,isLeft){
+    const side = isLeft ? 'inc' : 'sp';
     nodes.forEach(n=>{
       const nx=isLeft?LX:RX;
+      // Hit area: extend into label region so hover is easy
+      const hitX = isLeft ? 0 : RX;
+      const hitW = isLeft ? LX+NW : W-RX;
+      window._sankeyNodes[side].push({
+        x:hitX, y:n.y, w:hitW, h:Math.max(n.h,18),
+        label:n.label, value:n.value, color:n.color||'#3dda91',
+        pct:Math.round(n.value/total*100), side
+      });
       ctx.fillStyle=n.color||'#3dda91';
       ctx.beginPath();
       if(ctx.roundRect)ctx.roundRect(nx,n.y,NW,n.h,2);else ctx.rect(nx,n.y,NW,n.h);
@@ -1167,6 +1298,85 @@ function renderSankey() {
 window.addEventListener('orientationchange',function(){setTimeout(renderSankey,350);});
 window.addEventListener('resize',function(){clearTimeout(window._skt);window._skt=setTimeout(renderSankey,250);});
 
+// ── Sankey hover interaction ──────────────────────────────────────────────
+(function initSankeyHover(){
+  // Node hit areas are populated by drawNodes() inside renderSankey each frame.
+  // We just need to listen for mousemove on the canvas.
+
+  const canvas = document.getElementById('sankeyChart');
+  const tooltip = document.getElementById('sankeyTooltip');
+  if (!canvas || !tooltip) return;
+
+  canvas.classList.add('chart-interactive');
+
+  canvas.addEventListener('mousemove', function(e) {
+    const rect = canvas.getBoundingClientRect();
+    const dpr  = window.devicePixelRatio || 1;
+    const mx   = (e.clientX - rect.left);
+    const my   = (e.clientY - rect.top);
+
+    // Check against stored node rects
+    const nodes = (window._sankeyNodes.inc || []).concat(window._sankeyNodes.sp || []);
+    let hit = null;
+    for (const n of nodes) {
+      if (mx >= n.x && mx <= n.x + n.w && my >= n.y && my <= n.y + n.h) {
+        hit = n; break;
+      }
+    }
+
+    if (hit) {
+      tooltip.style.display = 'block';
+      const tx = Math.min(mx + 12, canvas.clientWidth - 180);
+      const ty = Math.max(my - 20, 5);
+      tooltip.style.left = tx + 'px';
+      tooltip.style.top  = ty + 'px';
+      const val = hit.value >= 1000 ? '$'+(hit.value/1000).toFixed(1)+'K' : '$'+hit.value;
+      tooltip.innerHTML =
+        '<strong style="color:'+(hit.color||'var(--green)')+'">'+hit.label+'</strong>'
+        +'<span class="st-val">'+val+'</span> '
+        +'<span class="st-pct"> · '+hit.pct+'% of '+(hit.side==='inc'?'income':'spending')+'</span>';
+    } else {
+      tooltip.style.display = 'none';
+    }
+  });
+
+  canvas.addEventListener('mouseleave', function() {
+    if (tooltip) tooltip.style.display = 'none';
+  });
+})();
+
+// ── Category legend ↔ chart cross-highlight ───────────────────────────────
+function bindCatLegendHover() {
+  const legendEl = document.getElementById('catLegend');
+  if (!legendEl || !window.catChartI) return;
+  const rows = legendEl.querySelectorAll('.cat-legend-row');
+  rows.forEach(function(row, idx) {
+    row.addEventListener('mouseenter', function() {
+      // Highlight this segment in the doughnut
+      rows.forEach(function(r, i) {
+        r.classList.toggle('highlighted', i === idx);
+        r.classList.toggle('dimmed', i !== idx);
+      });
+      // Set active element on Chart.js chart
+      if (window.catChartI) {
+        window.catChartI.setDatasetVisibility(0, true);
+        window.catChartI.tooltip.setActiveElements([{datasetIndex:0,index:idx}],{x:0,y:0});
+        window.catChartI.update('none');
+      }
+    });
+    row.addEventListener('mouseleave', function() {
+      rows.forEach(function(r) {
+        r.classList.remove('highlighted','dimmed');
+      });
+      if (window.catChartI) {
+        window.catChartI.tooltip.setActiveElements([],{x:0,y:0});
+        window.catChartI.update('none');
+      }
+    });
+  });
+}
+
+
 
 // ══════════════════════════════════════════════════════════════════════════════
 // WIDGET LIBRARY SYSTEM
@@ -1182,7 +1392,7 @@ const WIDGET_REGISTRY = {
   'income-30d':     { label:'Income (30d)',        page:'dashboard', size:'sm', icon:'📈' },
   'txn-count':      { label:'Transaction Count',  page:'dashboard', size:'sm', icon:'🔢' },
   'accounts-count': { label:'Accounts Linked',    page:'dashboard', size:'sm', icon:'🏦' },
-  'sankey':         { label:'Money Flow (Sankey)', page:'dashboard', size:'wide', icon:'💸' },
+  'sankey':         { label:'Money Flow (Sankey)', page:'dashboard', size:'long', icon:'💸' },
   'cat-chart':      { label:'Spending by Category',page:'dashboard', size:'lg',  icon:'📊' },
   'swot':           { label:'Financial SWOT',      page:'dashboard', size:'wide', icon:'⚡' },
   'account-chips':  { label:'Account Balances',   page:'dashboard', size:'wide', icon:'🏧' },
@@ -1202,6 +1412,12 @@ const WIDGET_REGISTRY = {
   'cf-categories':  { label:'Top Spending Cats',  page:'cashflow', size:'lg',   icon:'📋' },
   'cf-table':       { label:'Month-by-Month',     page:'cashflow', size:'wide', icon:'📅' },
 };
+
+// Widget size guide (enforced by library UI in Settings):
+// 'sm'   — stat card, single column
+// 'lg'   — chart card, double column
+// 'wide' — fills full row
+// 'long' — Long Widget: always full width, own row, NEVER side-by-side
 
 // Page widget layout storage
 function getPageWidgets(page) {
@@ -1562,8 +1778,10 @@ function renderCharts(){
         }).join('');
   }
 
+  // Legend hover bindings (after DOM updates)
+  setTimeout(bindCatLegendHover, 90);
   // Sankey
-  setTimeout(renderSankey,80);
+  setTimeout(renderSankey, 80);
 }
 
 // ── BILLS ─────────────────────────────────────────────────────────────────────
