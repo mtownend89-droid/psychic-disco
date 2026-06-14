@@ -94,7 +94,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .cn-note{font-size:11.5px;color:var(--hint);}
 
 /* ── WIDGET GRID ── */
-.wgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:20px;}
+.wgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px;}
 .widget{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;position:relative;overflow:hidden;transition:border-color 0.18s,transform 0.18s;}
 .widget:hover{border-color:var(--border2);transform:translateY(-1px);}
 .widget::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;opacity:0;transition:opacity 0.2s;}
@@ -314,6 +314,23 @@ input[type=range]{width:100%;accent-color:var(--green);}
 .cat-legend-name{flex:1;font-size:12px;color:var(--text,#111);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cat-legend-pct{font-size:11px;font-family:monospace;color:var(--muted,#666);min-width:32px;text-align:right;}
 .cat-legend-amt{font-size:11.5px;font-family:monospace;font-weight:600;min-width:60px;text-align:right;color:var(--text,#111);}
+
+/* ── Full-width desktop layout ─────────────────────────────────────────────── */
+@media (min-width: 1200px) {
+  /* Sankey gets more vertical room on large screens */
+  #sankeyChart { min-height: 320px; }
+  /* 5-widget row on large screens */
+  .wgrid { grid-template-columns: repeat(5, 1fr) !important; }
+  /* Wider sankey in the chart grid */
+  .dash-chart-grid { grid-template-columns: 1.5fr 1fr; gap: 18px; }
+  /* More padding breathing room */
+  #page-content { padding: 28px 32px; }
+}
+@media (min-width: 1600px) {
+  #sankeyChart { min-height: 380px; }
+  .dash-chart-grid { grid-template-columns: 1.7fr 1fr; gap: 20px; }
+  #page-content { padding: 30px 40px; }
+}
 </style>
 
 </head>
@@ -1054,7 +1071,10 @@ function renderSankey() {
   const dpr = window.devicePixelRatio||1;
   const W   = parent.clientWidth - 2;
   const isLS = window.innerWidth > window.innerHeight;
-  const H   = isLS ? Math.min(300, window.innerHeight-140) : 220;
+  const isDesktop = window.innerWidth >= 1200;
+  const H = isDesktop ? Math.min(380, window.innerHeight - 200)
+          : isLS      ? Math.min(300, window.innerHeight - 140)
+          : 220;
 
   canvas.width  = W*dpr; canvas.height = H*dpr;
   canvas.style.width=W+'px'; canvas.style.height=H+'px';
@@ -1146,6 +1166,56 @@ function renderSankey() {
 
 window.addEventListener('orientationchange',function(){setTimeout(renderSankey,350);});
 window.addEventListener('resize',function(){clearTimeout(window._skt);window._skt=setTimeout(renderSankey,250);});
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WIDGET LIBRARY SYSTEM
+// All available widgets are registered here.
+// Users drag them onto pages from the Settings → Widget Library panel.
+// Each page has a widget grid that reads from localStorage.
+// ══════════════════════════════════════════════════════════════════════════════
+
+const WIDGET_REGISTRY = {
+  // ── Dashboard widgets ──
+  'net-balance':    { label:'Net Balance',        page:'dashboard', size:'sm', icon:'💰' },
+  'spent-30d':      { label:'Spent (30d)',         page:'dashboard', size:'sm', icon:'💳' },
+  'income-30d':     { label:'Income (30d)',        page:'dashboard', size:'sm', icon:'📈' },
+  'txn-count':      { label:'Transaction Count',  page:'dashboard', size:'sm', icon:'🔢' },
+  'accounts-count': { label:'Accounts Linked',    page:'dashboard', size:'sm', icon:'🏦' },
+  'sankey':         { label:'Money Flow (Sankey)', page:'dashboard', size:'wide', icon:'💸' },
+  'cat-chart':      { label:'Spending by Category',page:'dashboard', size:'lg',  icon:'📊' },
+  'swot':           { label:'Financial SWOT',      page:'dashboard', size:'wide', icon:'⚡' },
+  'account-chips':  { label:'Account Balances',   page:'dashboard', size:'wide', icon:'🏧' },
+  // ── Budget widgets ──
+  'bills-table':    { label:'Bills Table',         page:'budget', size:'wide', icon:'📋' },
+  'bill-cat-chart': { label:'Bills by Category',  page:'budget', size:'lg',   icon:'🥧' },
+  'pl-calendar':    { label:'P&L Calendar',        page:'budget', size:'wide', icon:'📅' },
+  'zero-budget':    { label:'Zero Budget Sliders', page:'budget', size:'wide', icon:'🎛️' },
+  'budget-alloc':   { label:'Budget Allocation',  page:'budget', size:'lg',   icon:'🍩' },
+  // ── Income widgets ──
+  'income-table':   { label:'Income Sources',     page:'income', size:'wide', icon:'💼' },
+  'income-chart':   { label:'Income Breakdown',   page:'income', size:'lg',   icon:'🥧' },
+  'income-pl':      { label:'Income vs Bills',    page:'income', size:'wide', icon:'📊' },
+  'income-5030':    { label:'50/30/20 Analysis',  page:'income', size:'wide', icon:'🎯' },
+  // ── Cash flow widgets ──
+  'cf-monthly':     { label:'Monthly Cash Flow',  page:'cashflow', size:'wide', icon:'📊' },
+  'cf-categories':  { label:'Top Spending Cats',  page:'cashflow', size:'lg',   icon:'📋' },
+  'cf-table':       { label:'Month-by-Month',     page:'cashflow', size:'wide', icon:'📅' },
+};
+
+// Page widget layout storage
+function getPageWidgets(page) {
+  try {
+    const saved = JSON.parse(localStorage.getItem('mdf_widgets_'+page));
+    return saved || null; // null = use default layout
+  } catch(e) { return null; }
+}
+function setPageWidgets(page, widgetIds) {
+  localStorage.setItem('mdf_widgets_'+page, JSON.stringify(widgetIds));
+}
+
+// Future: renderWidgetLibrary() will populate the settings page
+// with draggable widget cards that can be dropped onto pages
 
 // ── BILLS DATA ────────────────────────────────────────────────────────────────
 let bills=[
