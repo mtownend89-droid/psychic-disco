@@ -1037,6 +1037,16 @@ input[type=range]{width:100%;accent-color:var(--green);}
 }
 .zb-step:hover { background: var(--surface2); color: var(--text); border-color: var(--green); }
 
+
+.cat-pill {
+  display: inline-block; padding: 2px 8px; border-radius: 20px;
+  background: var(--blue-dim); color: var(--blue);
+  font-size: 11px; font-weight: 700; cursor: pointer;
+  transition: all 0.13s; white-space: nowrap;
+  border: 1px solid transparent;
+}
+.cat-pill:hover { border-color: var(--blue); background: rgba(107,158,245,0.2); }
+
 </style>
 </head><body>
 <!-- ── SIDEBAR ── -->
@@ -1519,165 +1529,80 @@ input[type=range]{width:100%;accent-color:var(--green);}
 
       <!-- INCOME PANEL -->
       <div class="tab-panel" id="ep-income">
-        <div class="g2">
-          <div class="card card-sm">
-            <div class="card-title">income sources</div>
-            <table class="tbl">
-              <thead><tr><th>Source</th><th>Frequency</th><th>Amount</th><th>Monthly</th><th>Annual</th><th></th></tr></thead>
-              <tbody id="incomeBody"></tbody>
-              <tfoot><tr class="tbl-total"><td colspan="3">Total</td><td id="incTotalMonthly" class="mono" style="color:var(--cyan)"></td><td id="incTotalAnnual" class="mono" style="color:var(--cyan)"></td><td></td></tr></tfoot>
-            </table>
-            <button class="btn" style="margin-top:13px" onclick="openAddIncomeModal()">+ Add income</button>
-          </div>
-          <div class="card card-sm"><div class="card-title">income breakdown</div><div class="chart-wrap" style="height:230px"><canvas id="incomeChart"></canvas></div></div>
-        </div>
-      </div>
-    </div>
+        <div class="drag-container" id="incContainer">
 
-    <!-- ── NET WORTH ── -->
-    <div id="networth" class="page">
-      <div class="page-hdr">
-        <div><div class="page-title">Net Worth</div><div class="page-sub">Assets − Liabilities · click any value to edit</div></div>
-        <div class="page-hdr-right">
-          <button class="btn" onclick="toggleGlobalEdit('networth')" id="nwGlobalEditBtn">✏️ Edit</button>
-          <button class="btn green-outline" onclick="syncNWFromPlaid()">⟳ Sync Plaid</button>
-          <button class="btn primary" onclick="exportNWExcel()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
-        </div>
-      </div>
-      <div id="nw-panel-networth" class="tab-panel active">
-      <div id="nw-panel-networth" class="tab-panel active">
-      <div class="wgrid" style="margin-bottom:18px">
-        <div class="widget w-cyan"><div class="wlabel">Total Assets</div><div class="wvalue cyan" id="nwTotalAssets">—</div><div class="wsub">everything you own</div></div>
-        <div class="widget w-red"><div class="wlabel">Total Liabilities</div><div class="wvalue red" id="nwTotalLiab">—</div><div class="wsub">everything you owe</div></div>
-        <div class="widget"><div class="wlabel">Net Worth</div><div class="wvalue" id="nwTotal">—</div><div class="wsub">assets − liabilities</div></div>
-        <div class="widget w-blue"><div class="wlabel">Debt-to-Asset</div><div class="wvalue blue" id="nwDTA">—</div><div class="wsub">lower is better</div></div>
-        <div class="widget w-purple"><div class="wlabel">Last Updated</div><div class="wvalue purple" id="nwDate" style="font-size:13px">—</div><div class="wsub">snapshot date</div></div>
-      </div>
-      <div class="drag-container" id="nwContainer">
-        <div class="drag-section" data-id="nw-assets">
-          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Assets</div></div>
-          <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px">
-              <div class="card-title" style="margin-bottom:0">Assets</div>
-              <button class="btn" onclick="addNWRow('asset')">+ Add asset</button>
+          <!-- WIDGETS -->
+          <div class="drag-section" data-id="inc-widgets">
+            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Overview</div></div>
+            <div class="wgrid">
+              <div class="widget w-cyan"><div class="wlabel">Monthly Income</div><div class="wvalue cyan" id="incTotalMonthly">—</div><div class="wsub">all sources</div></div>
+              <div class="widget w-green"><div class="wlabel">Annual Income</div><div class="wvalue green" id="incTotalAnnual">—</div><div class="wsub">projected</div></div>
+              <div class="widget w-amber"><div class="wlabel">Fixed Bills</div><div class="wvalue amber" id="incWidgetBills">—</div><div class="wsub">monthly</div></div>
+              <div class="widget w-red"><div class="wlabel">Available</div><div class="wvalue red" id="incWidgetAvail">—</div><div class="wsub">after bills</div></div>
+              <div class="widget w-purple"><div class="wlabel">Savings Rate</div><div class="wvalue purple" id="incWidgetSavRate">—</div><div class="wsub">of gross income</div></div>
             </div>
-            <table class="tbl"><thead><tr><th style="width:40%">Item</th><th>Value</th><th>Notes</th><th></th></tr></thead><tbody id="nwAssetsBody"></tbody></table>
           </div>
-        </div>
-        <div class="drag-section" data-id="nw-liab">
-          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Liabilities</div></div>
-          <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px">
-              <div class="card-title" style="margin-bottom:0">Liabilities</div>
-              <button class="btn" onclick="addNWRow('liab')">+ Add liability</button>
-            </div>
-            <table class="tbl"><thead><tr><th style="width:40%">Item</th><th>Balance</th><th>Notes</th><th></th></tr></thead><tbody id="nwLiabBody"></tbody></table>
-          </div>
-        </div>
-        <div class="drag-section" data-id="nw-charts">
-          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Charts &amp; health</div></div>
-          <div class="g2">
-            <div>
-              <div class="card" style="padding:16px;margin-bottom:12px"><div class="card-title">asset vs liability</div><div class="chart-wrap" style="height:210px"><canvas id="nwChart"></canvas></div></div>
-              <div class="card" style="padding:16px"><div class="card-title">financial health</div><div id="nwHealthPanel"></div></div>
-            </div>
-            <div class="card" style="padding:16px"><div class="card-title">asset allocation</div><div class="chart-wrap" style="height:320px"><canvas id="nwAllocChart"></canvas></div></div>
-          </div>
-        </div>
-      </div>
-      </div><!-- /nw-panel-networth -->
 
-      <!-- RETIREMENT TAB -->
-      <div id="nw-panel-retirement" class="tab-panel" style="display:none">
-<div class="page-hdr">
-        <div><div class="page-title">Retirement Planner</div></div>
-        <div style="display:flex;gap:8px">
-          <button class="btn" onclick="toggleGlobalEdit('retirement')" id="retGlobalEditBtn">✏️ Edit</button>
-          <button class="btn" onclick="toggleEditMode('retirement')" id="retEditBtn">⠿ Arrange</button>
-        </div>
-      </div>
-      <div class="edit-bar" id="retEditBar"><span>Drag handles to reorder</span><button class="btn" onclick="toggleEditMode('retirement')">Done</button></div>
-      <div class="drag-container" id="retContainer">
-        <div class="drag-section" data-id="ret-accts">
-          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Live accounts</div></div>
-          <div class="card card-sm">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-              <div class="card-title" style="margin-bottom:0">Linked retirement accounts</div>
-              <button class="icon-btn" onclick="refreshRetAccounts()"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></button>
-            </div>
-            <div id="retAccountsList"><div class="empty">Connect your 401k, IRA, or brokerage via "Connect bank".</div></div>
-            <div id="retProgressWrap" style="display:none;margin-top:13px">
-              <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:5px"><span>Progress toward goal</span><span id="retProgressPct">—</span></div>
-              <div style="height:6px;border-radius:3px;background:var(--surface3);overflow:hidden"><div id="retProgressBar" style="height:100%;border-radius:3px;background:var(--green);transition:width 0.4s;width:0%"></div></div>
-              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--hint);margin-top:4px"><span id="retProgressCurrent">—</span><span id="retProgressGoal">—</span></div>
-            </div>
-          </div>
-        </div>
-        <div class="drag-section" data-id="ret-inputs">
-          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Inputs</div></div>
-          <div class="card">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-              <div><div style="font-size:14px;font-weight:600">Retirement inputs</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Shared across all calculators below</div></div>
-              <span id="plaidBadge" style="font-size:10.5px;padding:3px 9px;border-radius:20px;background:var(--surface3);color:var(--muted)">Adjust sliders</span>
-            </div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:0 28px">
-              <div>
-                <div style="font-size:9.5px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:0.1em;padding:10px 0 8px;border-top:1px solid var(--border);margin-top:2px">Personal</div>
-                <div class="slider-block"><div class="slider-hdr"><span>Current age</span><strong id="u-age-val">42</strong></div><input type="range" id="u-age" min="20" max="70" value="42" step="1" oninput="uSync()"></div>
-                <div class="slider-block"><div class="slider-hdr"><span>Retirement age</span><strong id="u-ret-val">65</strong></div><input type="range" id="u-ret" min="50" max="80" value="65" step="1" oninput="uSync()"></div>
-                <div class="slider-block"><div class="slider-hdr"><span>Life expectancy</span><strong id="u-life-val">85</strong></div><input type="range" id="u-life" min="70" max="100" value="85" step="1" oninput="uSync()"></div>
-                <div style="font-size:9.5px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:0.1em;padding:10px 0 8px;border-top:1px solid var(--border)">Tax &amp; risk</div>
-                <div class="slider-block"><div class="slider-hdr"><span>Current tax rate</span><strong id="u-taxnow-val">22%</strong></div><input type="range" id="u-taxnow" min="10" max="50" value="22" step="1" oninput="uSync()"></div>
-                <div class="slider-block"><div class="slider-hdr"><span>Retirement tax rate</span><strong id="u-taxret-val">18%</strong></div><input type="range" id="u-taxret" min="0" max="50" value="18" step="1" oninput="uSync()"></div>
-                <div class="slider-block"><div class="slider-hdr"><span>Risk tolerance</span><strong id="u-risk-val">Moderate</strong></div><select id="u-risk" onchange="gg('u-risk-val').textContent=this.options[this.selectedIndex].text;uSync()" class="sel" style="width:100%"><option value="conservative">Conservative</option><option value="moderate" selected>Moderate</option><option value="aggressive">Aggressive</option></select></div>
+          <!-- INCOME SOURCES TABLE + CHART -->
+          <div class="drag-section" data-id="inc-table">
+            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Income sources</div></div>
+            <div class="card">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+                <div class="card-title" style="margin-bottom:0">Income sources</div>
+                <button class="btn primary" onclick="openAddIncomeModal()">+ Add income source</button>
               </div>
-              <div>
-                <div style="font-size:9.5px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:0.1em;padding:10px 0 8px;border-top:1px solid var(--border);margin-top:2px">Savings</div>
-                <div class="slider-block"><div class="slider-hdr"><span>Current retirement savings</span><strong id="u-saved-val">$45,000</strong></div><div class="plaid-note" id="u-saved-note" style="display:none">↑ synced from Plaid</div><input type="range" id="u-saved" min="0" max="2000000" value="45000" step="1000" oninput="uSync()"></div>
-                <div class="slider-block"><div class="slider-hdr"><span>Monthly contribution</span><strong id="u-contrib-val">$1,200</strong></div><input type="range" id="u-contrib" min="0" max="5000" value="1200" step="50" oninput="uSync()"></div>
-                <div class="slider-block"><div class="slider-hdr"><span>Annual IRA contribution</span><strong id="u-ira-val">$7,000</strong></div><input type="range" id="u-ira" min="0" max="15000" value="7000" step="500" oninput="uSync()"></div>
-                <div class="slider-block"><div class="slider-hdr"><span>Safe withdrawal rate</span><strong id="u-swr-val">4.0%</strong></div><input type="range" id="u-swr" min="2" max="6" value="4" step="0.25" oninput="uSync()"></div>
-                <div style="font-size:9.5px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:0.1em;padding:10px 0 8px;border-top:1px solid var(--border)">Income in retirement</div>
-                <div class="slider-block"><div class="slider-hdr"><span>Monthly Social Security</span><strong id="u-ss-val">$2,400</strong></div><input type="range" id="u-ss" min="0" max="5000" value="2400" step="50" oninput="uSync()"></div>
-                <div class="slider-block"><div class="slider-hdr"><span>Monthly pension / other</span><strong id="u-pen-val">$0</strong></div><input type="range" id="u-pen" min="0" max="5000" value="0" step="50" oninput="uSync()"></div>
-              </div>
-              <div>
-                <div style="font-size:9.5px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:0.1em;padding:10px 0 8px;border-top:1px solid var(--border);margin-top:2px">Rates &amp; expenses</div>
-                <div class="slider-block"><div class="slider-hdr"><span>Expected return (pre-ret)</span><strong id="u-rate-val">7.0%</strong></div><input type="range" id="u-rate" min="1" max="15" value="7" step="0.5" oninput="uSync()"></div>
-                <div class="slider-block"><div class="slider-hdr"><span>Expected return (in ret)</span><strong id="u-retrate-val">5.0%</strong></div><input type="range" id="u-retrate" min="0" max="12" value="5" step="0.5" oninput="uSync()"></div>
-                <div class="slider-block"><div class="slider-hdr"><span>Inflation rate</span><strong id="u-inf-val">3.0%</strong></div><input type="range" id="u-inf" min="0" max="8" value="3" step="0.5" oninput="uSync()"></div>
-                <div class="slider-block"><div class="slider-hdr"><span>Monthly retirement expenses</span><strong id="u-exp-val">$4,500</strong></div><input type="range" id="u-exp" min="1000" max="20000" value="4500" step="100" oninput="uSync()"></div>
-                <div style="font-size:9.5px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:0.1em;padding:10px 0 8px;border-top:1px solid var(--border)">Social Security</div>
-                <div class="slider-block"><div class="slider-hdr"><span>Claim SS at age</span><strong id="u-ssclaim-val">67</strong></div><input type="range" id="u-ssclaim" min="62" max="70" value="67" step="1" oninput="uSync()"></div>
-                <div class="slider-block"><div class="slider-hdr"><span>Time horizon</span><strong id="u-horizon-val">10–20 yrs</strong></div><select id="u-horizon" onchange="gg('u-horizon-val').textContent=this.options[this.selectedIndex].text;uSync()" class="sel" style="width:100%"><option value="short">Under 10 years</option><option value="medium" selected>10–20 years</option><option value="long">20+ years</option></select></div>
+              <div class="g2">
+                <div style="overflow-x:auto">
+                  <table class="tbl">
+                    <thead><tr>
+                      <th>Source</th><th>Frequency</th><th>Per paycheck</th>
+                      <th>Monthly</th><th>Annual</th><th>% of Total</th><th></th>
+                    </tr></thead>
+                    <tbody id="incomeBody"></tbody>
+                    <tfoot><tr class="tbl-total">
+                      <td colspan="3">Total</td>
+                      <td id="incFootMonthly" class="mono" style="color:var(--cyan)"></td>
+                      <td id="incFootAnnual"  class="mono" style="color:var(--cyan)"></td>
+                      <td></td><td></td>
+                    </tr></tfoot>
+                  </table>
+                </div>
+                <!-- Inline doughnut chart -->
+                <div>
+                  <div class="card-title" style="margin-bottom:8px">Breakdown</div>
+                  <div style="height:220px;position:relative"><canvas id="incomeChart"></canvas></div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <div class="drag-section" data-id="ret-results">
-          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Results</div></div>
-          <div class="g5" style="margin-bottom:14px">
-            <div class="widget w-green"><div class="wlabel">Nest Egg</div><div class="wvalue green" id="sum-nest">—</div><div class="wsub">at retirement</div></div>
-            <div class="widget w-cyan"><div class="wlabel">Monthly Income</div><div class="wvalue cyan" id="sum-income">—</div><div class="wsub">4% + SS</div></div>
-            <div class="widget"><div class="wlabel">Funds Last Until</div><div class="wvalue" id="sum-last">—</div><div class="wsub">longevity</div></div>
-            <div class="widget w-purple"><div class="wlabel">Roth Advantage</div><div class="wvalue purple" id="sum-roth">—</div><div class="wsub">vs traditional</div></div>
-            <div class="widget w-amber"><div class="wlabel">FIRE Age</div><div class="wvalue amber" id="sum-fire">—</div><div class="wsub">projected</div></div>
-          </div>
-          <div class="tab-row" id="retTabRow">
-            <button class="tab-btn active" onclick="switchRetTab('growth')">Growth</button>
-            <button class="tab-btn" onclick="switchRetTab('longevity')">Longevity</button>
-            <button class="tab-btn" onclick="switchRetTab('roth')">Roth vs Traditional</button>
-            <button class="tab-btn" onclick="switchRetTab('ss')">Social Security</button>
-            <button class="tab-btn" onclick="switchRetTab('alloc')">Investment Mix</button>
-            <button class="tab-btn" onclick="switchRetTab('fire')">FIRE</button>
-          </div>
-          <div class="tab-panel active" id="rpanel-growth">
+
+          <!-- P&L SUMMARY -->
+          <div class="drag-section" data-id="inc-pl">
+            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Monthly P&amp;L</div></div>
             <div class="g2">
-              <div><div class="g3"><div class="widget w-green"><div class="wlabel">At retirement</div><div class="wvalue green" id="g-total">—</div><div class="wsub">nominal</div></div><div class="widget w-cyan"><div class="wlabel">In today's $</div><div class="wvalue cyan" id="g-real">—</div><div class="wsub">inflation-adj</div></div><div class="widget"><div class="wlabel">Monthly (4%)</div><div class="wvalue" id="g-monthly">—</div></div></div><div class="insight info" id="g-insight"></div></div>
-              <div class="card card-sm"><div style="display:flex;gap:12px;margin-bottom:9px;font-size:11.5px;color:var(--muted)"><span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--green);margin-right:4px;vertical-align:middle"></span>Balance</span><span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--blue);margin-right:4px;vertical-align:middle"></span>Contributions</span></div><div class="chart-wrap" style="height:200px"><canvas id="growthChart"></canvas></div></div>
+              <div class="card">
+                <div class="card-title" style="margin-bottom:12px">Monthly cash flow</div>
+                <div id="incPlRows"></div>
+              </div>
+              <div class="card">
+                <div class="card-title" style="margin-bottom:8px">Income vs bills</div>
+                <div style="height:200px;position:relative"><canvas id="incPlChart"></canvas></div>
+              </div>
             </div>
           </div>
-          <div class="tab-panel" id="rpanel-longevity">
+
+          <!-- ALLOCATIONS SUMMARY -->
+          <div class="drag-section" data-id="inc-alloc">
+            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Allocation recommendations</div></div>
+            <div class="card">
+              <div class="card-title" style="margin-bottom:12px">50/30/20 rule analysis</div>
+              <div id="incAllocRows"></div>
+            </div>
+          </div>
+
+        </div><!-- /incContainer -->
+      </div><!-- /ep-income -->
+      <div class="tab-panel" id="rpanel-longevity">
             <div class="g2">
               <div><div class="g3"><div class="widget w-green"><div class="wlabel">Funds last until</div><div class="wvalue green" id="l-until">—</div></div><div class="widget w-cyan"><div class="wlabel">Years in retirement</div><div class="wvalue cyan" id="l-years">—</div></div><div class="widget"><div class="wlabel">Monthly shortfall</div><div class="wvalue" id="l-shortfall">—</div></div></div><div class="insight" id="l-insight"></div></div>
               <div class="card card-sm"><div style="display:flex;gap:12px;margin-bottom:9px;font-size:11.5px;color:var(--muted)"><span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--green);margin-right:4px;vertical-align:middle"></span>Portfolio</span><span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--blue);margin-right:4px;vertical-align:middle"></span>Income</span><span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--red);margin-right:4px;vertical-align:middle"></span>Expenses</span></div><div class="chart-wrap" style="height:200px"><canvas id="longevityChart"></canvas></div></div>
@@ -2291,6 +2216,19 @@ input[type=range]{width:100%;accent-color:var(--green);}
   </div>
 </div>
 
+<!-- Category Popover -->
+<div id="catPopover" style="display:none;position:absolute;z-index:500;background:var(--sidebar);
+  border:1.5px solid var(--border2);border-radius:var(--radius);padding:12px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.2);min-width:200px;">
+  <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Recategorize</div>
+  <select id="catPopoverSel" style="width:100%;height:32px;background:var(--surface2);border:1px solid var(--border);
+    border-radius:var(--radius-sm);color:var(--text);font-family:var(--font);font-size:13px;padding:0 8px;outline:none;margin-bottom:8px"></select>
+  <div style="display:flex;gap:6px">
+    <button class="btn" style="flex:1" onclick="closeCatPopover()">Cancel</button>
+    <button class="btn primary" style="flex:1" onclick="applyCatPopover()">Apply</button>
+  </div>
+</div>
+
 </div><!-- /mainContent -->
 
 <!-- ── MODALS ── -->
@@ -2724,40 +2662,41 @@ async function removeBank(id){
 function renderTransactions(txns){
   const tb=gg('txnBody');if(!tb)return;
   if(!txns.length){tb.innerHTML='<tr><td colspan="5" class="empty">No transactions found</td></tr>';return;}
-  // Build rows using DOM to support dropdowns
-  tb.innerHTML = '';
-  txns.slice(0,500).forEach(function(t) {
-    const cat = getTxnCategory(t);
-    const pos = t.amount > 0;
-    const tr = document.createElement('tr');
+  tb.innerHTML='';
+  txns.slice(0,500).forEach(function(t){
+    const cat=getTxnCategory(t);
+    const pos=t.amount>0;
+    const tr=document.createElement('tr');
     // Merchant
-    const tdName = document.createElement('td');
-    tdName.style.cssText = 'font-weight:500;color:var(--text)';
-    tdName.textContent = t.merchant_name || t.name || '';
-    // Category dropdown
-    const tdCat = document.createElement('td');
-    tdCat.appendChild(buildCatDropdown(t, function(newCat) {
-      // Refresh charts/summary after recategorize
-      renderCharts();
-    }));
+    const tdN=document.createElement('td');
+    tdN.style.cssText='font-weight:500;color:var(--text)';
+    tdN.textContent=t.merchant_name||t.name||'';
+    // Category — clickable pill that opens recategorize popover
+    const tdC=document.createElement('td');
+    const pill=document.createElement('span');
+    pill.className='cat-pill';
+    pill.textContent=cat;
+    pill.title='Click to recategorize';
+    pill.addEventListener('click',function(e){e.stopPropagation();openCatPopover(t,pill);});
+    tdC.appendChild(pill);
     // Institution
-    const tdInst = document.createElement('td');
-    tdInst.style.cssText = 'color:var(--muted);font-size:11.5px';
-    tdInst.textContent = t.institution || '';
+    const tdI=document.createElement('td');
+    tdI.style.cssText='color:var(--muted);font-size:11.5px';
+    tdI.textContent=t.institution||'';
     // Date
-    const tdDate = document.createElement('td');
-    tdDate.className = 'mono';
-    tdDate.style.cssText = 'color:var(--muted);font-size:12px';
-    tdDate.textContent = t.date;
+    const tdD=document.createElement('td');
+    tdD.className='mono';
+    tdD.style.cssText='color:var(--muted);font-size:12px';
+    tdD.textContent=t.date;
     // Amount
-    const tdAmt = document.createElement('td');
-    tdAmt.style.textAlign = 'right';
-    tdAmt.className = 'mono';
-    const span = document.createElement('span');
-    span.style.cssText = 'font-weight:600;color:' + (pos ? 'var(--red)' : 'var(--green)');
-    span.textContent = (pos ? '-' : '+') + fmtK(Math.abs(t.amount));
-    tdAmt.appendChild(span);
-    tr.appendChild(tdName);tr.appendChild(tdCat);tr.appendChild(tdInst);tr.appendChild(tdDate);tr.appendChild(tdAmt);
+    const tdA=document.createElement('td');
+    tdA.style.textAlign='right';
+    tdA.className='mono';
+    const sp=document.createElement('span');
+    sp.style.cssText='font-weight:600;color:'+(pos?'var(--red)':'var(--green)');
+    sp.textContent=(pos?'-':'+')+fmtK(Math.abs(t.amount));
+    tdA.appendChild(sp);
+    tr.appendChild(tdN);tr.appendChild(tdC);tr.appendChild(tdI);tr.appendChild(tdD);tr.appendChild(tdA);
     tb.appendChild(tr);
   });
 }
@@ -3197,7 +3136,26 @@ function renderZeroChart(){
   const unalloc=Math.max(0,rem-alloc);
   const el=gg('zeroChart');if(!el)return;
   if(BC.zero)BC.zero.destroy();
-  BC.zero=new Chart(el,{type:'doughnut',data:{labels:[...zeroBuckets.map(b=>b.name),'Bills','Unallocated'],datasets:[{data:[...zeroBuckets.map(b=>Math.round(b.amt)),Math.round(bil),Math.round(unalloc)],backgroundColor:[...PAL.slice(0,zeroBuckets.length),'#f05c5c','rgba(255,255,255,0.07)'],borderWidth:2,borderColor:'#1c1f28'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10.5},boxWidth:9,padding:7}},tooltip:{callbacks:{label:c=>` $${c.parsed.toLocaleString()}`}}}}});
+  BC.zero=new Chart(el,(function(){
+  var labels=[...zeroBuckets.map(b=>b.name),'Bills','Unallocated'];
+  var vals=[...zeroBuckets.map(b=>Math.round(b.amt)),Math.round(bil),Math.round(unalloc)];
+  var bgs=[...PAL.slice(0,zeroBuckets.length),'#f05c5c','rgba(128,128,128,0.15)'];
+  var totV=vals.reduce(function(a,b){return a+b;},0);
+  var textC=getComputedStyle(document.documentElement).getPropertyValue('--text').trim()||'#111';
+  return {type:'doughnut',data:{labels:labels,datasets:[{data:vals,backgroundColor:bgs,borderWidth:2,
+    borderColor:getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()||'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'50%',
+      plugins:{legend:{position:'right',labels:{color:textC,font:{size:10.5},boxWidth:9,padding:6,
+        generateLabels:function(chart){
+          var ds=chart.data.datasets[0];
+          return chart.data.labels.map(function(lbl,i){
+            var v=ds.data[i]||0,pct=totV>0?Math.round(v/totV*100):0;
+            return {text:lbl+' '+pct+'%',fillStyle:ds.backgroundColor[i],hidden:false,index:i,fontColor:textC,strokeStyle:'transparent'};
+          });
+        }}},
+        tooltip:{callbacks:{label:function(c){var tot=c.dataset.data.reduce(function(a,b){return a+b;},0);
+          return ' '+c.label+': $'+c.parsed.toLocaleString()+' ('+( tot>0?Math.round(c.parsed/tot*100):0)+'%)';}}}}}};
+})())
 }
 function addZeroBucket(){const n=prompt('Category name:');if(!n)return;zeroBuckets.push({name:n,amt:0});saveZeroBkts();renderZeroBudget();}
 function delZeroBucket(i){zeroBuckets.splice(i,1);saveZeroBkts();renderZeroBudget();}
@@ -3206,16 +3164,126 @@ function delZeroBucket(i){zeroBuckets.splice(i,1);saveZeroBkts();renderZeroBudge
 function renderIncomeTab(){
   const FL={weekly:'Weekly',biweekly:'Bi-weekly',monthly:'Monthly',quarterly:'Quarterly',annual:'Annual'};
   let totM=0,totA=0;
-  const el=gg('incomeBody');if(!el)return;
-  el.innerHTML=incomeSources.map((s,i)=>{
-    const mo=s.amt*(FM[s.freq]||1),an=mo*12;totM+=mo;totA+=an;
-    return `<tr><td style="font-weight:500">${esc(s.name)}</td><td style="color:var(--muted);font-size:11.5px">${FL[s.freq]||s.freq}</td><td class="mono" style="color:var(--cyan)">${fmt2(s.amt)}</td><td class="mono" style="color:var(--cyan)">${fmt2(mo)}</td><td class="mono" style="color:var(--cyan)">${fmt2(an)}</td><td><button class="btn" style="margin-right:4px" onclick="openEditIncomeModal(${i})">✏️</button><button class="btn danger" onclick="delIncome(${i})">✕</button></td></tr>`;
-  }).join('');
-  const im=gg('incTotalMonthly');if(im)im.textContent=fmt2(totM);
-  const ia=gg('incTotalAnnual');if(ia)ia.textContent=fmt2(totA);
-  const ic=gg('incomeChart');if(!ic)return;
-  if(BC.income)BC.income.destroy();
-  BC.income=new Chart(ic,{type:'doughnut',data:{labels:incomeSources.map(s=>s.name),datasets:[{data:incomeSources.map(s=>Math.round(s.amt*(FM[s.freq]||1))),backgroundColor:PAL,borderWidth:2,borderColor:'#1c1f28'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10.5},boxWidth:9,padding:7}},tooltip:{callbacks:{label:c=>` $${c.parsed.toLocaleString()}/mo`}}}}});
+  const bills_mo = monthlyBills();
+
+  // Calculate monthly amounts
+  const sources = incomeSources.map(s => {
+    const mo = s.amt*(FM[s.freq]||1);
+    totM += mo; totA += mo*12;
+    return {...s, mo, an: mo*12};
+  });
+
+  // Income table with % column
+  const el=gg('incomeBody');
+  if(el){
+    el.innerHTML=sources.map((s,i)=>{
+      const pct = totM>0 ? Math.round(s.mo/totM*100) : 0;
+      return `<tr>
+        <td style="font-weight:500;color:var(--text)">${esc(s.name)}</td>
+        <td style="color:var(--muted);font-size:11.5px">${FL[s.freq]||s.freq}</td>
+        <td class="mono" style="color:var(--cyan)">${fmt2(s.amt)}</td>
+        <td class="mono" style="color:var(--cyan)">${fmt2(s.mo)}</td>
+        <td class="mono" style="color:var(--cyan)">${fmt2(s.an)}</td>
+        <td><div style="display:flex;align-items:center;gap:6px">
+          <div style="flex:1;height:5px;background:var(--surface3);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:var(--cyan);border-radius:3px"></div>
+          </div>
+          <span class="mono" style="font-size:11px;color:var(--muted);min-width:28px">${pct}%</span>
+        </div></td>
+        <td><button class="btn" style="margin-right:4px" onclick="openEditIncomeModal(${i})">✏️</button>
+            <button class="btn danger" onclick="delIncome(${i})">✕</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Update footer totals
+  const set=(id,v)=>{const e=gg(id);if(e)e.textContent=v;};
+  set('incTotalMonthly',fmt2(totM)); set('incFootMonthly',fmt2(totM));
+  set('incTotalAnnual', fmt2(totA)); set('incFootAnnual', fmt2(totA));
+
+  // Widget row
+  const avail = totM - bills_mo;
+  const savRate = totM > 0 ? Math.round(Math.max(0,avail)/totM*100) : 0;
+  set('incWidgetBills',   fmt2(bills_mo));
+  set('incWidgetAvail',   fmt2(avail));
+  set('incWidgetSavRate', savRate+'%');
+
+  // Doughnut chart
+  const ic=gg('incomeChart');
+  if(ic){
+    if(BC.income)BC.income.destroy();
+    const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text').trim()||'#111';
+    BC.income=new Chart(ic,{type:'doughnut',data:{
+      labels:sources.map(s=>s.name),
+      datasets:[{data:sources.map(s=>Math.round(s.mo)),backgroundColor:PAL,borderWidth:2,
+        borderColor:getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()||'#fff'}]
+    },options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+      plugins:{legend:{position:'right',labels:{color:textColor,font:{size:10.5},boxWidth:9,padding:7}},
+        tooltip:{callbacks:{label:c=>{const tot=c.dataset.data.reduce((a,b)=>a+b,0);
+          return ` ${c.label}: ${fmt2(c.parsed)} (${tot>0?Math.round(c.parsed/tot*100):0}%)`;}}}}}});
+  }
+
+  // P&L chart (income vs bills)
+  const plc = gg('incPlChart');
+  if(plc){
+    if(BC.incPl)BC.incPl.destroy();
+    const textColor2 = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim()||'#666';
+    BC.incPl=new Chart(plc,{type:'bar',data:{
+      labels:sources.map(s=>s.name.split(' ').slice(0,2).join(' ')).concat(['Fixed Bills']),
+      datasets:[{label:'Monthly',data:sources.map(s=>Math.round(s.mo)).concat([Math.round(bills_mo)]),
+        backgroundColor:[...sources.map((_,i)=>PAL[i%PAL.length]),'rgba(244,106,106,0.75)'],borderRadius:4}]
+    },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>` ${fmt2(c.parsed.y)}`}}},
+      scales:{x:{grid:{display:false},ticks:{color:textColor2,font:{size:10}}},
+        y:{ticks:{callback:v=>fmtM(v),color:textColor2},grid:{color:'rgba(128,128,128,0.1)'}}}}});
+  }
+
+  // P&L rows
+  const plRows=gg('incPlRows');
+  if(plRows){
+    const disc = zeroBuckets.reduce((s,b)=>s+b.amt,0);
+    const rows=[
+      {label:'Gross monthly income',  val:totM,     col:'var(--cyan)'},
+      {label:'Fixed bills',           val:-bills_mo, col:'var(--red)'},
+      {label:'Discretionary budget',  val:-disc,     col:'var(--amber)'},
+      {label:'Net / Unallocated',     val:totM-bills_mo-disc, col:totM-bills_mo-disc>=0?'var(--green)':'var(--red)', bold:true},
+    ];
+    plRows.innerHTML=rows.map(r=>`<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:13.5px${r.bold?';font-weight:700':''}">
+      <span style="color:${r.bold?'var(--text)':'var(--muted)'}">${r.label}</span>
+      <span class="mono" style="color:${r.col}">${r.val>=0?'':'-'}${fmt2(Math.abs(r.val))}</span>
+    </div>`).join('');
+  }
+
+  // 50/30/20 analysis
+  const allocRows=gg('incAllocRows');
+  if(allocRows&&totM>0){
+    const needs=bills_mo, wants=totM*0.30, savings=totM*0.20;
+    const actNeeds=bills_mo, actWants=totM-bills_mo-zeroBuckets.filter(b=>b.name.toLowerCase().includes('sav')).reduce((s,b)=>s+b.amt,0), actSav=zeroBuckets.filter(b=>b.name.toLowerCase().includes('sav')||b.name.toLowerCase().includes('emer')).reduce((s,b)=>s+b.amt,0);
+    const row=(label,target,actual,tip)=>{
+      const tPct=Math.round(target/totM*100), aPct=Math.round(actual/totM*100);
+      const ok=aPct<=tPct+2;
+      return `<div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-size:13px;color:var(--text);font-weight:500">${label}</span>
+          <div style="display:flex;gap:12px;font-size:12px">
+            <span style="color:var(--muted)">Target: <span class="mono">${tPct}%</span></span>
+            <span style="color:${ok?'var(--green)':'var(--red)'}">Actual: <span class="mono" style="font-weight:600">${aPct}%</span></span>
+          </div>
+        </div>
+        <div style="height:8px;background:var(--surface3);border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${Math.min(100,aPct)}%;background:${ok?'var(--green)':'var(--red)'};border-radius:4px"></div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px">${tip}</div>
+      </div>`;
+    };
+    allocRows.innerHTML=
+      row('Needs (50%)',totM*0.50,actNeeds,'Housing, bills, utilities, insurance, minimums')+
+      row('Wants (30%)',totM*0.30,actWants,'Dining, entertainment, subscriptions, lifestyle')+
+      row('Savings (20%)',totM*0.20,actSav,'Emergency fund, retirement, investments, debt payoff');
+  }
+
+  // Init drag on incContainer
+  setTimeout(()=>{const c=gg('incContainer');if(c)initDrag(c);},100);
 }
 function delIncome(i){if(!confirm('Remove?'))return;incomeSources.splice(i,1);saveIncomeSrc();renderIncomeTab();updateBudgetMetrics();}
 function openAddIncomeModal(){gg('addIncomeModal').style.display='flex';}
@@ -5143,18 +5211,18 @@ const BUILT_IN_THEMES = {
 };
 
 const FONT_OPTIONS = [
-  {val:"'DM Sans',sans-serif", label:'DM Sans (default)'},
-  {val:"'Inter',sans-serif", label:'Inter'},
-  {val:"system-ui,sans-serif", label:'System UI'},
-  {val:"Georgia,serif", label:'Georgia (serif)'},
-  {val:"'Trebuchet MS',sans-serif", label:'Trebuchet MS'},
+  {val:"'DM Sans',sans-serif",      label:'DM Sans'},
+  {val:"'Inter',sans-serif",         label:'Inter'},
+  {val:"system-ui,sans-serif",       label:'System UI'},
+  {val:"Georgia,serif",              label:'Georgia'},
+  {val:"'Trebuchet MS',sans-serif",  label:'Trebuchet MS'},
 ];
 const MONO_OPTIONS = [
-  {val:"'DM Mono',monospace", label:'DM Mono (default)'},
+  {val:"'DM Mono',monospace",        label:'DM Mono'},
   {val:"'JetBrains Mono',monospace", label:'JetBrains Mono'},
-  {val:"'Fira Code',monospace", label:'Fira Code'},
-  {val:"'Courier New',monospace", label:'Courier New'},
-  {val:"monospace", label:'System Mono'},
+  {val:"'Fira Code',monospace",      label:'Fira Code'},
+  {val:"'Courier New',monospace",    label:'Courier New'},
+  {val:"monospace",                  label:'System Mono'},
 ];
 const CHART_OPTIONS = {
   spending:   {label:'Spending chart (dashboard)', options:['sankey','bar','doughnut','pie','area']},
@@ -5444,6 +5512,14 @@ function renderChartSettings() {
 }
 
 // ── LIVE PREVIEW HELPERS ─────────────────────────────────────────────────────
+function applyChartTypePref(key, val) {
+  if (key === 'spending')   { setTimeout(renderCharts, 50); }
+  if (key === 'daily')      { setTimeout(renderPLChart, 50); }
+  if (key === 'zeroBudget') { setTimeout(renderZeroBudget, 50); }
+  if (key === 'nwMain')     { setTimeout(renderNetWorth, 50); }
+  if (key === 'income')     { setTimeout(renderIncomeTab, 50); }
+}
+
 function settingsLiveColor(cssVar, val) {
   ST.customVars[cssVar] = val;
   document.documentElement.style.setProperty(cssVar, val);
@@ -5820,25 +5896,41 @@ function showAcctTransactions(acctId) {
 
   // Build modal content
   var total = txns.reduce(function(s,t) { return s + t.amount; }, 0);
-  var rows = txns.length
-    ? txns.map(function(t) {
-        var amt = t.amount;
-        var col = amt > 0 ? 'var(--red)' : 'var(--green)';
-        var cat = fmtCat(t.personal_finance_category?.primary || t.category?.[0] || '');
-        return '<tr>'
-          + '<td style="color:var(--muted);white-space:nowrap">' + esc(t.date) + '</td>'
-          + '<td style="font-weight:500">' + esc(t.name || t.merchant_name || '') + '</td>'
-          + '<td><span class="pill pill-CC" style="font-size:9px">' + esc(cat) + '</span></td>'
-          + '<td class="mono" style="color:' + col + ';text-align:right">' + (amt>0?'-':'+')+fmt2(Math.abs(amt)) + '</td>'
-          + '</tr>';
-      }).join('')
-    : '<tr><td colspan="4" class="empty">No transactions in last 30 days</td></tr>';
-
   var modal = gg('acctTxnModal');
   if (!modal) return;
   gg('acctTxnTitle').textContent = displayName + ' — Last 30 days';
   gg('acctTxnCount').textContent = txns.length + ' transactions · net ' + (total>0?'-':'') + fmt2(Math.abs(total));
-  gg('acctTxnBody').innerHTML = rows;
+  var tbody = gg('acctTxnBody');
+  tbody.innerHTML = '';
+  if (!txns.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty">No transactions in last 30 days</td></tr>';
+  } else {
+    txns.forEach(function(t) {
+      var amt = t.amount;
+      var col = amt > 0 ? 'var(--red)' : 'var(--green)';
+      var cat = getTxnCategory(t);
+      var tr  = document.createElement('tr');
+      var tdDate = document.createElement('td');
+      tdDate.style.cssText = 'color:var(--muted);white-space:nowrap;font-size:12px';
+      tdDate.textContent = t.date;
+      var tdName = document.createElement('td');
+      tdName.style.fontWeight = '500';
+      tdName.textContent = t.name || t.merchant_name || '';
+      var tdCat = document.createElement('td');
+      var pill = document.createElement('span');
+      pill.className = 'cat-pill';
+      pill.textContent = cat;
+      pill.title = 'Click to recategorize';
+      pill.addEventListener('click', function(e) { e.stopPropagation(); openCatPopover(t, pill); });
+      tdCat.appendChild(pill);
+      var tdAmt = document.createElement('td');
+      tdAmt.className = 'mono';
+      tdAmt.style.cssText = 'text-align:right;font-weight:600;color:' + col;
+      tdAmt.textContent = (amt>0?'-':'+') + fmt2(Math.abs(amt));
+      tr.appendChild(tdDate); tr.appendChild(tdName); tr.appendChild(tdCat); tr.appendChild(tdAmt);
+      tbody.appendChild(tr);
+    });
+  }
   modal.style.display = 'flex';
 }
 
@@ -6181,22 +6273,23 @@ function showDashAcctTransactions(acctId) {
       var nameDiv = document.createElement('div');
       nameDiv.className = 'dash-txn-name';
       nameDiv.textContent = merch;
-      var catSpan = document.createElement('span');
+      var catSpan = document.createElement('div');
       catSpan.className = 'dash-txn-cat';
-      catSpan.textContent = cat + ' · ';
+      var catPill = document.createElement('span');
+      catPill.className = 'cat-pill';
+      catPill.style.cssText = 'font-size:10px;padding:1px 6px;cursor:pointer;';
+      catPill.textContent = cat;
+      catPill.title = 'Click to recategorize';
+      (function(txn, p) {
+        p.addEventListener('click', function(e) { e.stopPropagation(); openCatPopover(txn, p); });
+      })(t, catPill);
       var dateSpan = document.createElement('span');
       dateSpan.className = 'dash-txn-date';
-      dateSpan.textContent = dt;
+      dateSpan.textContent = ' · ' + dt;
+      catSpan.appendChild(catPill);
       catSpan.appendChild(dateSpan);
-      // Category dropdown
-      var catSel = buildCatDropdown(t, function(newCat) {
-        catSpan.childNodes[0].textContent = newCat + ' · ';
-        renderCharts();
-      });
-      catSel.style.cssText = 'height:22px;font-size:10px;padding:0 5px;margin-left:4px;';
       left.appendChild(nameDiv);
       left.appendChild(catSpan);
-      left.appendChild(catSel);
       var amtDiv = document.createElement('div');
       amtDiv.className = 'dash-txn-amt';
       amtDiv.style.color = col;
@@ -6477,6 +6570,70 @@ function zbStep(i, mode, dir) {
   saveZeroBkts();
   renderZeroBudget();
 }
+
+
+// ── CATEGORY POPOVER (click pill → floating picker) ──────────────────────────
+var _catPopoverTxn = null;
+var _catPopoverPill = null;
+
+function openCatPopover(t, pillEl) {
+  var pop = gg('catPopover');
+  if (!pop) return;
+  _catPopoverTxn  = t;
+  _catPopoverPill = pillEl;
+  var cats = getUserCategories();
+  var cur  = getTxnCategory(t);
+  var sel  = gg('catPopoverSel');
+  if (sel) {
+    sel.innerHTML = cats.map(function(c) {
+      return '<option value="'+esc(c)+'"'+(c===cur?' selected':'')+'>'+esc(c)+'</option>';
+    }).join('');
+    // Add current if not in list
+    if (!cats.includes(cur)) {
+      sel.insertAdjacentHTML('afterbegin','<option value="'+esc(cur)+'" selected>'+esc(cur)+' (auto)</option>');
+    }
+  }
+  var rect = pillEl.getBoundingClientRect();
+  pop.style.top  = (rect.bottom + window.scrollY + 4) + 'px';
+  pop.style.left = Math.min(rect.left + window.scrollX, window.innerWidth - 220) + 'px';
+  pop.style.display = 'block';
+}
+
+function applyCatPopover() {
+  var sel = gg('catPopoverSel');
+  if (!sel || !_catPopoverTxn) return;
+  var newCat = sel.value;
+  var id = _catPopoverTxn.transaction_id || _catPopoverTxn.id || '';
+  if (id) saveTxnCatOverride(id, newCat);
+  if (_catPopoverPill) _catPopoverPill.textContent = newCat;
+  closeCatPopover();
+  // Refresh charts and any open panels
+  renderCharts();
+  if (typeof _selectedAcctId !== 'undefined' && _selectedAcctId) {
+    var panel = gg('dashAcctTxnPanel');
+    if (panel && panel.style.display !== 'none') showDashAcctTransactions(_selectedAcctId);
+  }
+  // Refresh modal if open
+  var modal = gg('acctTxnModal');
+  if (modal && modal.style.display !== 'none' && _catPopoverTxn) {
+    var id2 = _catPopoverTxn.account_id || _catPopoverTxn.account_id;
+    if (id2) showAcctTransactions(id2);
+  }
+}
+
+function closeCatPopover() {
+  var pop = gg('catPopover');
+  if (pop) pop.style.display = 'none';
+  _catPopoverTxn  = null;
+  _catPopoverPill = null;
+}
+
+document.addEventListener('click', function(e) {
+  var pop = gg('catPopover');
+  if (pop && !pop.contains(e.target) && !e.target.classList.contains('cat-pill')) {
+    closeCatPopover();
+  }
+});
 
 const plaidS=document.createElement('script');
 plaidS.src='https://cdn.plaid.com/link/v2/stable/link-initialize.js';
