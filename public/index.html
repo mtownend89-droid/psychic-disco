@@ -1272,9 +1272,39 @@ canvas.chart-interactive { cursor: crosshair; }
           </div>
           <div id="calendarBody"></div>
         </div>
-        <div class="g2">
-          <div class="card card-sm"><div class="card-title">monthly income vs bills</div><div class="chart-wrap" style="height:190px"><canvas id="plChart"></canvas></div></div>
-          <div class="card card-sm"><div class="card-title">upcoming bills</div><div id="upcomingBills"></div></div>
+        <!-- ── B2: Bills by Month comparison widget ── -->
+        <div class="drag-section" data-id="bills-by-month" style="margin-top:14px">
+          <div class="card" style="padding:0;overflow:hidden">
+            <!-- Header with month navigator -->
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
+              <div class="card-title" style="margin-bottom:0">📅 Bills by Month</div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <button class="btn" onclick="shiftBillMonth(-1)" style="padding:4px 10px;font-size:13px">‹</button>
+                <select class="sel" id="billMonthSel" onchange="renderBillsByMonth()" style="height:30px;font-size:12px;min-width:130px"></select>
+                <button class="btn" onclick="shiftBillMonth(1)" style="padding:4px 10px;font-size:13px">›</button>
+                <button class="tt-btn" id="billMonthCompareBtn" onclick="toggleBillMonthCompare()" style="margin-left:4px">Compare</button>
+              </div>
+            </div>
+            <!-- Compare month selector (hidden until Compare clicked) -->
+            <div id="billMonthCompareRow" style="display:none;padding:8px 18px;border-bottom:1px solid var(--border);background:var(--surface2);align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font-size:11.5px;color:var(--muted)">Compare with:</span>
+              <select class="sel" id="billMonthSel2" onchange="renderBillsByMonth()" style="height:28px;font-size:12px;min-width:130px"></select>
+              <span id="billMonthDiff" style="font-size:12px;font-weight:700;font-family:var(--mono);margin-left:auto"></span>
+            </div>
+            <!-- Chart body -->
+            <div id="billMonthBody" style="padding:16px 18px">
+              <div style="position:relative;height:240px"><canvas id="billMonthChart"></canvas></div>
+              <div class="chart-widget-legend" id="billMonthLegend" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)"></div>
+            </div>
+            <!-- Month stat strip -->
+            <div class="d2-stat-strip" id="billMonthStats" style="padding:10px 18px 14px;border-top:1px solid var(--border)"></div>
+          </div>
+        </div>
+
+        <!-- Upcoming bills (kept) -->
+        <div class="card" style="margin-top:14px">
+          <div class="card-title" style="margin-bottom:10px">⏰ Upcoming Bills</div>
+          <div id="upcomingBills"></div>
         </div>
       </div>
 
@@ -1296,7 +1326,20 @@ canvas.chart-interactive { cursor: crosshair; }
               <button class="btn primary" onclick="autoBalanceZero()">⚖ Auto-balance to $0</button>
             </div>
           </div>
-          <div class="card card-sm"><div class="card-title">budget allocation</div><div class="chart-wrap" style="height:250px"><canvas id="zeroChart"></canvas></div></div>
+          <!-- B3: Budget allocation chart widget -->
+          <div class="card card-sm" style="padding:0;overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px 10px;border-bottom:1px solid var(--border)">
+              <div class="card-title" style="margin-bottom:0">🎯 Budget Allocation</div>
+              <span id="zeroChartTotal" style="font-size:12px;font-weight:700;font-family:var(--mono);color:var(--cyan)"></span>
+            </div>
+            <div style="position:relative;height:240px;padding:12px">
+              <canvas id="zeroChart"></canvas>
+            </div>
+            <!-- Bottom legend with % -->
+            <div class="chart-widget-legend" id="zeroChartLegend" style="border-top:1px solid var(--border);padding:10px 16px 12px"></div>
+            <!-- Stat strip -->
+            <div class="d2-stat-strip" id="zeroChartStats" style="border-top:1px solid var(--border);padding:8px 16px 12px"></div>
+          </div>
         </div>
       </div>
 
@@ -3042,6 +3085,224 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') closeCatPopover();
 });
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// B2 — BILLS BY MONTH
+// Shows actual spending per bill category for any selected month.
+// Uses real Plaid transactions filtered to that month + category system.
+// Falls back to bill amounts if no transaction data.
+// Month selector goes back 24 months. Compare mode overlays two months.
+// ══════════════════════════════════════════════════════════════════════════════
+var _billMonthCompare = false;
+var _BC_month = null;
+
+function initBillMonthSelectors() {
+  var now   = new Date();
+  var opts  = '';
+  for (var i = 0; i < 24; i++) {
+    var d   = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    var val = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    var lbl = d.toLocaleDateString('en-US', {month:'long', year:'numeric'});
+    opts   += '<option value="'+val+'"'+(i===0?' selected':'')+'>'+lbl+'</option>';
+  }
+  var s1 = gg('billMonthSel');  if (s1) s1.innerHTML = opts;
+  var s2 = gg('billMonthSel2'); if (s2) {
+    // Default compare = previous month
+    s2.innerHTML = opts;
+    if (s2.options.length > 1) s2.selectedIndex = 1;
+  }
+}
+
+function shiftBillMonth(dir) {
+  var sel = gg('billMonthSel');
+  if (!sel) return;
+  var newIdx = sel.selectedIndex + dir;
+  if (newIdx < 0 || newIdx >= sel.options.length) return;
+  sel.selectedIndex = newIdx;
+  renderBillsByMonth();
+}
+
+function toggleBillMonthCompare() {
+  _billMonthCompare = !_billMonthCompare;
+  var row = gg('billMonthCompareRow');
+  var btn = gg('billMonthCompareBtn');
+  if (row) row.style.display = _billMonthCompare ? 'flex' : 'none';
+  if (btn) btn.classList.toggle('active', _billMonthCompare);
+  renderBillsByMonth();
+}
+
+function _getBillsForMonth(yr, mo) {
+  // Get actual spending from transactions for this month, by master category
+  var from = yr+'-'+String(mo).padStart(2,'0')+'-01';
+  var lastDay = new Date(yr, mo, 0).getDate();
+  var to   = yr+'-'+String(mo).padStart(2,'0')+'-'+String(lastDay).padStart(2,'0');
+
+  var txnRec = allTxns.filter(function(t){
+    return t.date >= from && t.date <= to && t.amount > 0;
+  });
+
+  if (txnRec.length > 0) {
+    // Use real transactions
+    var byCat = {};
+    txnRec.forEach(function(t){
+      var cat = getTxnCategory(t);
+      byCat[cat] = (byCat[cat]||0) + t.amount;
+    });
+    return byCat;
+  } else {
+    // Fall back to bill amounts by category label
+    var byCat2 = {};
+    var CAT_LABELS = {HM:'🏠 Housing',LOAN:'🏦 Loans',CC:'💳 Credit Cards',
+      CAR:'🚗 Auto',PH:'📱 Phone',TV:'📺 Cable/Internet',
+      FAM:'👨‍👩‍👧 Family',SAVE:'💰 Savings',OTHER:'Other'};
+    bills.forEach(function(b){
+      var lbl = CAT_LABELS[b.cat] || b.cat;
+      byCat2[lbl] = (byCat2[lbl]||0) + b.pay;
+    });
+    return byCat2;
+  }
+}
+
+function renderBillsByMonth() {
+  var sel1 = gg('billMonthSel');
+  if (!sel1 || !sel1.value) return;
+
+  var parts1 = sel1.value.split('-');
+  var yr1 = +parts1[0], mo1 = +parts1[1];
+  var label1 = new Date(yr1, mo1-1, 1).toLocaleDateString('en-US',{month:'short',year:'numeric'});
+
+  var data1  = _getBillsForMonth(yr1, mo1);
+  var cats   = Object.keys(data1);
+
+  var data2  = null, label2 = '', yr2, mo2;
+  if (_billMonthCompare) {
+    var sel2 = gg('billMonthSel2');
+    if (sel2 && sel2.value) {
+      var parts2 = sel2.value.split('-');
+      yr2 = +parts2[0]; mo2 = +parts2[1];
+      label2 = new Date(yr2, mo2-1, 1).toLocaleDateString('en-US',{month:'short',year:'numeric'});
+      data2  = _getBillsForMonth(yr2, mo2);
+      // Merge category keys
+      Object.keys(data2).forEach(function(k){ if (!cats.includes(k)) cats.push(k); });
+    }
+  }
+
+  // Sort by month1 amount desc
+  cats.sort(function(a,b){ return (data1[b]||0)-(data1[a]||0); });
+
+  var colors = cats.map(function(cat){ return getCatColor(cat); });
+  var vals1  = cats.map(function(cat){ return Math.round(data1[cat]||0); });
+  var vals2  = data2 ? cats.map(function(cat){ return Math.round(data2[cat]||0); }) : null;
+  var total1 = vals1.reduce(function(s,v){return s+v;},0);
+  var total2 = vals2 ? vals2.reduce(function(s,v){return s+v;},0) : 0;
+
+  // ── Chart ──────────────────────────────────────────────────────────────────
+  var el = gg('billMonthChart');
+  if (!el) return;
+  if (_BC_month) _BC_month.destroy();
+
+  var mutC = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim()||'#666';
+  var surfC = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()||'#fff';
+
+  var datasets = [{
+    label: label1,
+    data: vals1,
+    backgroundColor: colors.map(function(c){ return c+'CC'; }),
+    borderRadius: 4,
+    borderSkipped: false,
+  }];
+  if (vals2) {
+    datasets.push({
+      label: label2,
+      data: vals2,
+      backgroundColor: colors.map(function(c){ return c+'55'; }),
+      borderColor: colors.map(function(c){ return c; }),
+      borderWidth: 1.5,
+      borderRadius: 4,
+      borderSkipped: false,
+    });
+  }
+
+  _BC_month = new Chart(el, {
+    type: 'bar',
+    data: {
+      labels: cats.map(function(c){ return c.replace(/^[^\s]+\s/,''); }), // strip emoji
+      datasets: datasets
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: { display: !!vals2, labels:{ color:mutC, font:{size:11}, boxWidth:10, usePointStyle:true } },
+        tooltip: {
+          backgroundColor:'rgba(15,17,23,0.92)',
+          titleColor:'#f0f2fa', bodyColor:'#b0b4cc',
+          borderColor:'rgba(255,255,255,0.12)', borderWidth:1, padding:10,
+          callbacks: {
+            label: function(c){ return ' '+c.dataset.label+':  $'+c.parsed.y.toLocaleString(); },
+            footer: function(items) {
+              if (!vals2 || items.length < 2) return '';
+              var diff = items[0].parsed.y - items[1].parsed.y;
+              return (diff>0?'▲ +':'▼ ')+'$'+Math.abs(diff).toLocaleString()+' vs '+label2;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid:{display:false}, ticks:{color:mutC, font:{size:10.5}, maxRotation:35} },
+        y: { grid:{color:'rgba(128,128,128,0.07)'},
+             ticks:{color:mutC, callback:function(v){ return v>=1000?'$'+(v/1000).toFixed(0)+'K':'$'+v; }} }
+      }
+    }
+  });
+
+  // ── Legend ─────────────────────────────────────────────────────────────────
+  var leg = gg('billMonthLegend');
+  if (leg) {
+    leg.innerHTML = cats.map(function(cat, i){
+      var pct = total1>0 ? Math.round(vals1[i]/total1*100) : 0;
+      var col = colors[i];
+      return '<div class="cwl-item">'
+        +'<div class="cwl-dot" style="background:'+col+'"></div>'
+        +'<span class="cwl-label">'+esc(cat.replace(/^[^\s]+\s/,''))+'</span>'
+        +'<span class="cwl-pct">'+pct+'%</span>'
+        +'</div>';
+    }).join('');
+  }
+
+  // ── Stat strip ─────────────────────────────────────────────────────────────
+  var strip = gg('billMonthStats');
+  if (strip) {
+    var diff     = vals2 ? total1 - total2 : null;
+    var diffStr  = diff !== null
+      ? '<span style="color:'+(diff>0?'var(--red)':'var(--green)')+';">'
+        +(diff>0?'▲ +':'▼ ')+'$'+Math.abs(diff).toLocaleString()+'</span> vs '+label2
+      : '';
+    var topCat  = cats[0] || '';
+    var topAmt  = vals1[0] || 0;
+    strip.innerHTML = [
+      {label: label1+' Total',  value:'$'+total1.toLocaleString(),    color:'var(--red)'},
+      {label: 'Top Category',   value: topCat.replace(/^[^\s]+\s/,''), color:'var(--amber)'},
+      {label: 'Top Amount',     value:'$'+topAmt.toLocaleString(),    color:'var(--amber)'},
+      {label: 'Categories',     value: cats.length+' active',         color:'var(--muted)'},
+    ].map(function(s){
+      return '<div class="d2-stat">'
+        +'<div class="d2-stat-label">'+s.label+'</div>'
+        +'<div class="d2-stat-value" style="color:'+s.color+'">'+s.value+'</div>'
+        +'</div>';
+    }).join('') + (diffStr ? '<div class="d2-stat" style="flex:2"><div class="d2-stat-label">Change</div><div class="d2-stat-value" style="font-size:13px">'+diffStr+'</div></div>' : '');
+  }
+
+  // ── Compare diff badge ──────────────────────────────────────────────────────
+  var diffBadge = gg('billMonthDiff');
+  if (diffBadge && vals2) {
+    var d = total1 - total2;
+    diffBadge.textContent = (d>0?'▲ +':'▼ ')+'$'+Math.abs(d).toLocaleString()+' vs '+label2;
+    diffBadge.style.color = d>0 ? 'var(--red)' : 'var(--green)';
+  }
+}
+
 // ── BILLS DATA ────────────────────────────────────────────────────────────────
 let bills=[
   {cat:'HM',name:"M&T Mortgage",note:'Mortgage',apr:2.625,due:5,bal:-292452.38,min:2638.46,pay:2638.46,promo:'',paid:false},
@@ -3162,7 +3423,7 @@ function showPage(page){
   const nb=document.querySelector(`.nav-btn[onclick="showPage('${page}')"]`);if(nb)nb.classList.add('active');
   const tt=gg('topbarTitle');if(tt)tt.textContent=PT[page]||page;
   if(page==='retirement')calcAll();
-  if(page==='expenses'){renderBillsTab();renderCalendar();renderZeroBudget();renderIncomeTab();updateBudgetMetrics();}
+  if(page==='expenses'){renderBillsTab();renderCalendar();renderZeroBudget();renderIncomeTab();updateBudgetMetrics();initBillMonthSelectors();renderBillsByMonth();}
   if(page==='networth')renderNetWorth();
   if(page==='cashflow')renderCashFlow();
 }
@@ -3884,12 +4145,75 @@ function autoBalanceZero(){
   saveZeroBkts();renderZeroBudget();showToast('Budget balanced to $0 ✓','success');
 }
 function renderZeroChart(){
-  const inc=monthlyIncome(),bil=monthlyBills(),rem=inc-bil;
-  const alloc=zeroBuckets.reduce((s,b)=>s+b.amt,0);
-  const unalloc=Math.max(0,rem-alloc);
-  const el=gg('zeroChart');if(!el)return;
-  if(BC.zero)BC.zero.destroy();
-  BC.zero=new Chart(el,{type:'doughnut',data:{labels:[...zeroBuckets.map(b=>b.name),'Bills','Unallocated'],datasets:[{data:[...zeroBuckets.map(b=>Math.round(b.amt)),Math.round(bil),Math.round(unalloc)],backgroundColor:[...PAL.slice(0,zeroBuckets.length),'#f05c5c','rgba(255,255,255,0.07)'],borderWidth:2,borderColor:'#161920'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10.5},boxWidth:9,padding:7}},tooltip:{callbacks:{label:c=>` $${c.parsed.toLocaleString()}`}}}}});
+  const inc     = monthlyIncome();
+  const bil     = monthlyBills();
+  const rem     = inc - bil;
+  const alloc   = zeroBuckets.reduce((s,b)=>s+b.amt, 0);
+  const unalloc = Math.max(0, rem - alloc);
+
+  // Build data — buckets + Bills + Unallocated
+  const labels = [...zeroBuckets.map(b=>b.name), 'Bills', ...(unalloc > 0 ? ['Unallocated'] : [])];
+  const vals   = [...zeroBuckets.map(b=>Math.round(b.amt)), Math.round(bil), ...(unalloc > 0 ? [Math.round(unalloc)] : [])];
+  const colors = [
+    ...PAL.slice(0, zeroBuckets.length),
+    '#f46a6a',                      // Bills — red
+    ...(unalloc > 0 ? ['rgba(148,163,184,0.3)'] : [])  // Unallocated — faint
+  ];
+  const total  = vals.reduce((s,v)=>s+v, 0);
+
+  // ── Header total ───────────────────────────────────────────────────────────
+  const ht = gg('zeroChartTotal');
+  if (ht) ht.textContent = fmt2(inc) + '/mo income';
+
+  // ── Doughnut — click-select, no hover tooltip ──────────────────────────────
+  const el = gg('zeroChart'); if (!el) return;
+  const surfC = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()||'#1a1d27';
+  if (BC.zero) BC.zero.destroy();
+  BC.zero = new Chart(el, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets:[{ data:vals, backgroundColor:colors, borderWidth:2, borderColor:surfC }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'58%',
+      events:['click'],
+      plugins:{ legend:{display:false}, tooltip:{enabled:false} }
+    }
+  });
+
+  // ── Bottom legend with % ───────────────────────────────────────────────────
+  const leg = gg('zeroChartLegend');
+  if (leg) {
+    leg.innerHTML = labels.map(function(lbl, i){
+      const pct = total > 0 ? Math.round(vals[i]/total*100) : 0;
+      const col = colors[i];
+      return '<div class="cwl-item">'
+        +'<div class="cwl-dot" style="background:'+col+'"></div>'
+        +'<span class="cwl-label">'+esc(lbl)+'</span>'
+        +'<span class="cwl-pct">'+pct+'%</span>'
+        +'</div>';
+    }).join('');
+  }
+
+  // ── Stat strip ─────────────────────────────────────────────────────────────
+  const strip = gg('zeroChartStats');
+  if (strip) {
+    const allocPct = inc > 0 ? Math.round(alloc/inc*100) : 0;
+    const bilPct   = inc > 0 ? Math.round(bil/inc*100)   : 0;
+    const unalPct  = inc > 0 ? Math.round(unalloc/inc*100): 0;
+    strip.innerHTML = [
+      { label:'Discretionary', value:fmt2(alloc),   pct:allocPct+'%', color:'var(--cyan)'  },
+      { label:'Fixed Bills',   value:fmt2(bil),     pct:bilPct+'%',   color:'var(--red)'   },
+      { label:'Unallocated',   value:fmt2(unalloc), pct:unalPct+'%',  color:unalloc < 1 ? 'var(--green)' : 'var(--amber)' },
+    ].map(s =>
+      '<div class="d2-stat">'
+      +'<div class="d2-stat-label">'+s.label+'</div>'
+      +'<div class="d2-stat-value" style="color:'+s.color+'">'+s.value
+        +'<span style="font-size:10.5px;font-weight:400;color:var(--muted);margin-left:4px">'+s.pct+'</span>'
+      +'</div></div>'
+    ).join('');
+  }
 }
 function addZeroBucket(){const n=prompt('Category name:');if(!n)return;zeroBuckets.push({name:n,amt:0});saveZeroBkts();renderZeroBudget();}
 function delZeroBucket(i){zeroBuckets.splice(i,1);saveZeroBkts();renderZeroBudget();}
