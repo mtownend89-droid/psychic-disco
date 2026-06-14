@@ -826,6 +826,49 @@ canvas.chart-interactive { cursor: crosshair; }
     border-bottom: 1px solid var(--border);
   }
 }
+
+/* ── B3/B4: Zero budget row — step buttons + number input ─────────────────── */
+.zb-input {
+  width: 68px;
+  height: 28px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: center;
+  padding: 0 4px;
+  flex-shrink: 0;
+  -moz-appearance: textfield;
+}
+.zb-input::-webkit-outer-spin-button,
+.zb-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.zb-input:focus {
+  outline: none;
+  border-color: var(--green);
+}
+.zb-step {
+  width: 22px; height: 22px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--muted);
+  font-size: 9px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s;
+  padding: 0;
+  line-height: 1;
+}
+.zb-step:hover {
+  background: var(--green-dim);
+  border-color: var(--green);
+  color: var(--green);
+}
+.zb-step:active { transform: scale(0.9); }
 </style>
 
 </head>
@@ -1771,51 +1814,94 @@ function _doughnutClickHandler(chart, e) {
 }
 
 function _showDoughnutDetail(chart, idx) {
-  var ds      = chart.data.datasets[0];
-  var label   = chart.data.labels[idx] || '';
-  var value   = ds.data[idx] || 0;
-  var total   = ds.data.reduce(function(s,v){return s+(+v||0);},0);
-  var pct     = total > 0 ? Math.round(value/total*100) : 0;
-  var color   = Array.isArray(ds.backgroundColor) ? ds.backgroundColor[idx] : ds.backgroundColor;
+  var ds    = chart.data.datasets[0];
+  var label = chart.data.labels[idx] || '';
+  var value = ds.data[idx] || 0;
+  var total = ds.data.reduce(function(s,v){return s+(+v||0);},0);
+  var pct   = total > 0 ? Math.round(value/total*100) : 0;
+  var color = Array.isArray(ds.backgroundColor) ? ds.backgroundColor[idx] : ds.backgroundColor;
 
-  // Find or create detail card beneath the chart canvas
-  var canvas  = chart.canvas;
-  var wrapper = canvas.parentElement;
-  if (!wrapper) return;
+  // Format value
+  var valStr = typeof value === 'number'
+    ? (value > 0 && value < 1 ? value+'%' : '$'+Math.round(value).toLocaleString())
+    : String(value);
 
-  var detailId = 'dd-'+chart.id;
+  // ── Calculate position near the clicked slice ─────────────────────────────
+  // Get the arc element to find its midpoint angle
+  var meta    = chart.getDatasetMeta(0);
+  var arc     = meta.data[idx];
+  var midAngle= arc ? (arc.startAngle + arc.endAngle) / 2 : 0;
+
+  // Canvas bounding rect for viewport-relative positioning
+  var rect    = chart.canvas.getBoundingClientRect();
+  var cx      = rect.left + chart.chartArea.left + (chart.chartArea.right  - chart.chartArea.left) / 2;
+  var cy      = rect.top  + chart.chartArea.top  + (chart.chartArea.bottom - chart.chartArea.top)  / 2;
+  var outerR  = arc ? arc.outerRadius : 80;
+  // Place popup just outside the slice, along its midpoint angle
+  var OFFSET  = outerR * 0.45;  // distance beyond slice edge
+  var px      = cx + Math.cos(midAngle) * (outerR + OFFSET);
+  var py      = cy + Math.sin(midAngle) * (outerR + OFFSET);
+
+  // ── Get or create the floating popup ─────────────────────────────────────
+  var POPUP_W = 180;
+  var POPUP_H = 64;
+  var detailId = 'dd-doughnut';  // single shared popup for all doughnut charts
   var detail   = document.getElementById(detailId);
   if (!detail) {
     detail = document.createElement('div');
     detail.id = detailId;
-    detail.style.cssText = 'margin-top:10px;padding:10px 14px;border-radius:8px;'
-      +'display:flex;align-items:center;gap:12px;font-size:13px;transition:all 0.2s;';
-    wrapper.appendChild(detail);
+    detail.style.cssText =
+      'position:fixed;z-index:500;pointer-events:none;'
+      +'min-width:'+POPUP_W+'px;padding:10px 14px;border-radius:10px;'
+      +'box-shadow:0 6px 24px rgba(0,0,0,0.3);'
+      +'transition:opacity 0.15s;'
+      +'font-size:12.5px;';
+    document.body.appendChild(detail);
   }
 
-  // Format value — dollar or percent depending on chart
-  var valStr = typeof value === 'number'
-    ? (value < 1 && value > 0 ? value+'%' : '$'+Math.round(value).toLocaleString())
-    : value;
+  // Clamp to viewport
+  var left = px - POPUP_W / 2;
+  var top  = py - POPUP_H / 2;
+  left = Math.max(8, Math.min(left, window.innerWidth  - POPUP_W - 8));
+  top  = Math.max(8, Math.min(top,  window.innerHeight - POPUP_H - 8));
 
-  detail.style.background = color + '18';
-  detail.style.border     = '1.5px solid ' + color + '44';
+  detail.style.left       = left + 'px';
+  detail.style.top        = top  + 'px';
+  detail.style.opacity    = '1';
+  detail.style.display    = 'block';
+  detail.style.background = 'var(--sidebar, #15181f)';
+  detail.style.border     = '1.5px solid ' + color;
+
   detail.innerHTML =
-    '<div style="width:12px;height:12px;border-radius:3px;background:'+color+';flex-shrink:0"></div>'
-    +'<div style="flex:1">'
-      +'<div style="font-weight:700;color:var(--text)">'+esc(String(label))+'</div>'
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">'
+      +'<div style="width:10px;height:10px;border-radius:2px;background:'+color+';flex-shrink:0"></div>'
+      +'<span style="font-weight:700;color:var(--text,#f0f2fa);font-size:13px">'+esc(String(label))+'</span>'
     +'</div>'
-    +'<div style="text-align:right;flex-shrink:0">'
-      +'<div style="font-family:var(--mono);font-weight:700;font-size:15px;color:'+color+'">'+valStr+'</div>'
-      +'<div style="font-size:11px;color:var(--muted)">'+pct+'% of total</div>'
+    +'<div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px">'
+      +'<span style="font-family:var(--mono);font-weight:700;font-size:15px;color:'+color+'">'+valStr+'</span>'
+      +'<span style="font-size:11px;color:var(--muted,#888)">'+pct+'% of total</span>'
     +'</div>';
+
+  // Store which chart owns this popup
+  detail._chartId = chart.id;
 }
 
 function _hideDoughnutDetail(chart) {
-  var detailId = 'dd-'+chart.id;
-  var detail   = document.getElementById(detailId);
-  if (detail) detail.remove();
+  var detail = document.getElementById('dd-doughnut');
+  if (detail && detail._chartId === chart.id) {
+    detail.style.display = 'none';
+  }
 }
+
+// Close popup on scroll or resize
+document.addEventListener('scroll', function(){ 
+  var d = document.getElementById('dd-doughnut'); 
+  if (d) d.style.display='none'; 
+}, true);
+window.addEventListener('resize', function(){ 
+  var d = document.getElementById('dd-doughnut'); 
+  if (d) d.style.display='none'; 
+});
 
 // Register click listeners on all doughnut canvases after each chart is created
 function _attachDoughnutClick(chart) {
@@ -3335,9 +3421,15 @@ let incomeSources=[
   {name:'Quarterly Bonus',freq:'quarterly',amt:3594.23},
 ];
 let zeroBuckets=[
-  {name:'Groceries',amt:350},{name:'Dining out',amt:200},{name:'Gas',amt:300},
-  {name:'Medical',amt:150},{name:'Clothing',amt:100},{name:'Entertainment',amt:100},
-  {name:'Savings',amt:500},{name:'Emergency fund',amt:200},{name:'Misc',amt:100},
+  {name:'Food & Groceries',  catId:'food',         amt:350},
+  {name:'Dining Out',        catId:'dining',        amt:200},
+  {name:'Gas & Fuel',        catId:'gas',           amt:300},
+  {name:'Health & Medical',  catId:'health',        amt:150},
+  {name:'Shopping',          catId:'shopping',      amt:100},
+  {name:'Entertainment',     catId:'entertainment', amt:100},
+  {name:'Savings & Invest',  catId:'savings',       amt:500},
+  {name:'Emergency Fund',    catId:'other',         amt:200},
+  {name:'Subscriptions',     catId:'subscriptions', amt:100},
 ];
 let nwAssets=[
   {cat:'Cash & Bank',name:'Checking accounts',value:0,note:'From Plaid',plaid:true},
@@ -4095,6 +4187,16 @@ function renderCalendar(){
 }
 
 // ── ZERO BUDGET ───────────────────────────────────────────────────────────────
+function getBucketColor(b) {
+  // Use master category color if catId is set, else PAL fallback
+  if (b.catId) {
+    var cats = getUserCategories();
+    var cat  = cats.find(function(c){ return c.id === b.catId; });
+    if (cat && cat.color) return cat.color;
+  }
+  return PAL[zeroBuckets.indexOf(b) % PAL.length];
+}
+
 function renderZeroBudget(){
   const inc=monthlyIncome(),bil=monthlyBills(),rem=inc-bil;
   const alloc=zeroBuckets.reduce((s,b)=>s+b.amt,0);
@@ -4105,20 +4207,28 @@ function renderZeroBudget(){
   const el=gg('zeroBudgetSliders');if(!el)return;
   el.innerHTML=zeroBuckets.map((b,i)=>{
     const pct=rem>0?Math.round(b.amt/rem*100):0;
-    const color=PAL[i%PAL.length];
-    return `<div class="zb-row">
-      <span class="zb-label">${esc(b.name)}</span>
+    const color=getBucketColor(b);
+    const max=Math.round(Math.max(rem,1000));
+    return `<div class="zb-row" id="zbrow-${i}">
+      <span class="zb-label" style="color:${color}">${esc(b.name)}</span>
       <div class="zb-bg"><div class="zb-fill" style="width:${Math.min(100,pct)}%;background:${color}"></div></div>
-      <input type="range" min="0" max="${Math.round(Math.max(rem,500))}" value="${b.amt}" step="10"
-        style="width:80px;flex-shrink:0" oninput="zbSlide(${i},+this.value)" id="zs-${i}">
-      <span class="zb-val" id="zv-${i}">${fmt2(b.amt)}</span>
+      <button class="zb-step" onclick="zbStep(${i},-10)" title="Decrease $10">▼</button>
+      <input type="number" min="0" max="${max}" value="${b.amt}" step="10"
+        class="zb-input" id="zs-${i}" oninput="zbSlide(${i},+this.value)">
+      <button class="zb-step" onclick="zbStep(${i},10)" title="Increase $10">▲</button>
       <span class="zb-pct" id="zp-${i}">${pct}%</span>
-      <button class="btn danger" onclick="delZeroBucket(${i})" style="flex-shrink:0">✕</button>
+      <button class="btn danger" onclick="delZeroBucket(${i})" style="flex-shrink:0;padding:2px 7px;font-size:11px">✕</button>
     </div>`;
   }).join('');
   renderZeroChart();
 }
+function zbStep(i, delta) {
+  var val = Math.max(0, (zeroBuckets[i].amt || 0) + delta);
+  zbSlide(i, val);
+}
+
 function zbSlide(i,val){
+  val = Math.max(0, Math.round(val/10)*10); // snap to $10
   const rem=monthlyIncome()-monthlyBills();
   const diff=val-zeroBuckets[i].amt;zeroBuckets[i].amt=val;
   const others=zeroBuckets.filter((_,j)=>j!==i&&zeroBuckets[j].amt>0);
@@ -4127,9 +4237,9 @@ function zbSlide(i,val){
   const alloc=zeroBuckets.reduce((s,b)=>s+b.amt,0),unalloc=rem-alloc;
   zeroBuckets.forEach((b,j)=>{
     const sl=gg('zs-'+j);if(sl)sl.value=b.amt;
-    const lv=gg('zv-'+j);if(lv)lv.textContent=fmt2(b.amt);
     const lp=gg('zp-'+j);if(lp)lp.textContent=(rem>0?Math.round(b.amt/rem*100):0)+'%';
-    const bar=gg('zs-'+j)?.parentElement?.querySelector('.zb-fill');if(bar)bar.style.width=Math.min(100,rem>0?b.amt/rem*100:0)+'%';
+    const row=gg('zbrow-'+j);
+    const bar=row?.querySelector('.zb-fill');if(bar)bar.style.width=Math.min(100,rem>0?b.amt/rem*100:0)+'%';
   });
   const za=gg('zAllocated');if(za)za.textContent=fmt2(alloc);
   const zr=gg('zRemaining');if(zr){zr.textContent=fmt2(Math.abs(unalloc));zr.style.color=Math.abs(unalloc)<1?'var(--green)':unalloc>0?'var(--amber)':'var(--red)';}
@@ -4155,9 +4265,9 @@ function renderZeroChart(){
   const labels = [...zeroBuckets.map(b=>b.name), 'Bills', ...(unalloc > 0 ? ['Unallocated'] : [])];
   const vals   = [...zeroBuckets.map(b=>Math.round(b.amt)), Math.round(bil), ...(unalloc > 0 ? [Math.round(unalloc)] : [])];
   const colors = [
-    ...PAL.slice(0, zeroBuckets.length),
-    '#f46a6a',                      // Bills — red
-    ...(unalloc > 0 ? ['rgba(148,163,184,0.3)'] : [])  // Unallocated — faint
+    ...zeroBuckets.map(function(b){ return getBucketColor(b); }),
+    '#f46a6a',                       // Bills — red
+    ...(unalloc > 0 ? ['rgba(148,163,184,0.3)'] : [])   // Unallocated — faint
   ];
   const total  = vals.reduce((s,v)=>s+v, 0);
 
@@ -4215,7 +4325,40 @@ function renderZeroChart(){
     ).join('');
   }
 }
-function addZeroBucket(){const n=prompt('Category name:');if(!n)return;zeroBuckets.push({name:n,amt:0});saveZeroBkts();renderZeroBudget();}
+function addZeroBucket(){
+  var cats = getUserCategories();
+  var used = zeroBuckets.map(function(b){ return b.catId; });
+  var avail= cats.filter(function(c){ return !used.includes(c.id) && c.id !== 'income'; });
+  if (!avail.length) { showToast('All categories already in budget','info'); return; }
+  // Build a quick modal-style select
+  var opts = avail.map(function(c){ return '<option value="'+c.id+'">'+c.label+'</option>'; }).join('');
+  var sel  = document.createElement('select');
+  sel.style.cssText = 'width:220px;height:36px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:13px;padding:0 8px;margin-right:8px';
+  sel.innerHTML = opts;
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;inset:0;z-index:400;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.4);backdrop-filter:blur(2px)';
+  var box  = document.createElement('div');
+  box.style.cssText = 'background:var(--sidebar);border:1px solid var(--border2);border-radius:var(--radius);padding:22px 24px;min-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.3)';
+  box.innerHTML = '<div style="font-size:14px;font-weight:600;margin-bottom:14px;color:var(--text)">Add Budget Category</div>';
+  box.appendChild(sel);
+  var ok = document.createElement('button');
+  ok.className='btn primary'; ok.textContent='Add';
+  ok.onclick = function(){
+    var cat = avail.find(function(c){ return c.id === sel.value; });
+    if (cat) { zeroBuckets.push({name:cat.label, catId:cat.id, amt:0}); saveZeroBkts(); renderZeroBudget(); }
+    document.body.removeChild(wrap);
+  };
+  var cancel = document.createElement('button');
+  cancel.className='btn'; cancel.textContent='Cancel'; cancel.style.marginRight='8px';
+  cancel.onclick = function(){ document.body.removeChild(wrap); };
+  var btns = document.createElement('div');
+  btns.style.cssText = 'display:flex;gap:8px;margin-top:14px;justify-content:flex-end';
+  btns.appendChild(cancel); btns.appendChild(ok);
+  box.appendChild(btns);
+  wrap.appendChild(box);
+  wrap.onclick = function(e){ if(e.target===wrap) document.body.removeChild(wrap); };
+  document.body.appendChild(wrap);
+}
 function delZeroBucket(i){zeroBuckets.splice(i,1);saveZeroBkts();renderZeroBudget();}
 
 // ── INCOME ────────────────────────────────────────────────────────────────────
