@@ -23,8 +23,9 @@
   --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
 html{font-size:14px;scroll-behavior:smooth;}
-body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;-webkit-font-smoothing:antialiased;}
+body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;}
 
 /* ── SIDEBAR ── */
 #sidebar{
@@ -71,8 +72,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .sb-connect svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
 
 /* ── TOPBAR ── */
-#main{margin-left:var(--sidebar-w);flex:1;min-height:100vh;display:flex;flex-direction:column;}
-#topbar{height:54px;background:var(--sidebar);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 26px;position:sticky;top:0;z-index:40;}
+#main{
+  position:fixed;
+  left:var(--sidebar-w);right:0;top:0;bottom:0;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+#topbar{height:54px;background:var(--sidebar);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;flex-shrink:0;z-index:40;width:100%;}
 .topbar-title{font-size:15px;font-weight:600;}
 .topbar-right{display:flex;align-items:center;gap:8px;}
 .env-badge{font-size:10px;padding:3px 8px;border-radius:20px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;}
@@ -80,7 +86,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .env-production{background:var(--green-dim);color:var(--green);}
 
 /* ── PAGES ── */
-#page-content{padding:26px;flex:1;}
+#page-content{
+  padding:22px 28px;
+  flex:1;
+  overflow-y:auto;
+  overflow-x:hidden;
+  width:100%;
+  box-sizing:border-box;
+}
 .page{display:none;}.page.active{display:block;animation:fadeIn 0.2s ease;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
 
@@ -94,7 +107,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .cn-note{font-size:11.5px;color:var(--hint);}
 
 /* ── WIDGET GRID ── */
-.wgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px;}
+.wgrid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+  gap:12px;
+  margin-bottom:20px;
+  width:100%;
+}
 .widget{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;position:relative;overflow:hidden;transition:border-color 0.18s,transform 0.18s;}
 .widget:hover{border-color:var(--border2);transform:translateY(-1px);}
 .widget::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;opacity:0;transition:opacity 0.2s;}
@@ -117,7 +136,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .card-title{font-size:11px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:0.09em;margin-bottom:12px;}
 
 /* ── LAYOUT GRIDS ── */
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;width:100%;}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;}
 .g5{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;}
 .g-main-side{display:grid;grid-template-columns:1fr 320px;gap:14px;margin-bottom:20px;}
@@ -295,11 +314,14 @@ input[type=range]{width:100%;accent-color:var(--green);}
 @media(max-width:900px){
   #sidebar{transform:translateX(-100%);}
   #sidebar.open{transform:translateX(0);}
-  #main{margin-left:0;}
+  #main{
+    position:fixed;
+    left:0;right:0;top:0;bottom:0;
+  }
   .g2,.g3,.g-main-side{grid-template-columns:1fr;}
 }
 @media(max-width:600px){
-  #page-content{padding:14px;}
+  #page-content{padding:12px 14px;}
   .wgrid{grid-template-columns:1fr 1fr;}
   .g5{grid-template-columns:1fr 1fr;}
 }
@@ -334,35 +356,20 @@ input[type=range]{width:100%;accent-color:var(--green);}
 /* ── Long Widget: always full width, no side-by-side ────────────────────── */
 /* Long Widget: bleeds to full #main width, ignoring page-content padding */
 .widget-long {
-  width: calc(100% + 52px) !important;   /* 26px padding each side */
-  margin-left: -26px !important;
-  margin-right: -26px !important;
+  /* Bleed outside page-content padding (28px each side) */
+  width: calc(100% + 56px) !important;
+  margin-left: -28px !important;
+  margin-right: -28px !important;
   box-sizing: border-box;
 }
 .widget-long-card {
   width: 100%;
   box-sizing: border-box;
-  border-radius: 0 !important;           /* flush edge-to-edge */
+  border-radius: 0 !important;
   border-left: none !important;
   border-right: none !important;
 }
 .widget-long-card canvas { width: 100% !important; display: block; }
-
-/* Wider padding variant for 1200px+ screens */
-@media (min-width: 1200px) {
-  .widget-long {
-    width: calc(100% + 64px) !important;  /* 32px padding each side */
-    margin-left: -32px !important;
-    margin-right: -32px !important;
-  }
-}
-@media (min-width: 1600px) {
-  .widget-long {
-    width: calc(100% + 80px) !important;  /* 40px padding each side */
-    margin-left: -40px !important;
-    margin-right: -40px !important;
-  }
-}
 
 /* Category chart: stacks on mobile, side-by-side on desktop */
 @media (max-width: 700px) {
@@ -437,9 +444,29 @@ canvas.chart-interactive { cursor: crosshair; }
 }
 
 /* Drag handle inside Long Widget — add back the padding offset */
-.widget-long .dh-row { padding-left: 26px; padding-right: 26px; }
-@media (min-width: 1200px) { .widget-long .dh-row { padding-left: 32px; padding-right: 32px; } }
-@media (min-width: 1600px) { .widget-long .dh-row { padding-left: 40px; padding-right: 40px; } }
+.widget-long .dh-row { padding-left: 28px; padding-right: 28px; }
+
+/* ── Resizable widgets ────────────────────────────────────────────────────── */
+.card { position: relative; }
+/* Resize grip appears on hover in bottom-right corner */
+.card::after {
+  content: '';
+  position: absolute;
+  bottom: 4px; right: 4px;
+  width: 12px; height: 12px;
+  background: transparent;
+  border-right: 2px solid var(--border2);
+  border-bottom: 2px solid var(--border2);
+  border-radius: 0 0 3px 0;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+  cursor: se-resize;
+}
+.card:hover::after { opacity: 1; }
+
+/* Drag sections snap to full width, height is set by content */
+.drag-section { width: 100%; box-sizing: border-box; }
 </style>
 
 </head>
