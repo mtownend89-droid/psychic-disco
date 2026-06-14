@@ -1608,16 +1608,88 @@ canvas.chart-interactive { cursor: crosshair; }
     </div>
 
     <!-- ── CASH FLOW ── -->
+    <!-- ── CASH FLOW ── -->
     <div id="cashflow" class="page">
-      <div class="page-hdr"><div><div class="page-title">Cash Flow</div><div class="page-sub">Income vs spending over time</div></div></div>
-      <div class="g2">
-        <div class="card card-sm"><div class="card-title">monthly income vs expenses</div><div class="chart-wrap" style="height:230px"><canvas id="cfMonthlyChart"></canvas></div></div>
-        <div class="card card-sm"><div class="card-title">top spending categories</div><div class="chart-wrap" style="height:230px"><canvas id="cfCatChart"></canvas></div></div>
+      <div class="page-hdr">
+        <div>
+          <div class="page-title">Cash Flow</div>
+          <div class="page-sub">Income vs spending over time</div>
+        </div>
+        <div class="page-hdr-right">
+          <div class="time-toggle" id="cfTimePicker">
+            <button class="tt-btn" data-cfrange="3"  onclick="setCFRange(3)">3mo</button>
+            <button class="tt-btn active" data-cfrange="6" onclick="setCFRange(6)">6mo</button>
+            <button class="tt-btn" data-cfrange="12" onclick="setCFRange(12)">12mo</button>
+            <button class="tt-btn" data-cfrange="24" onclick="setCFRange(24)">24mo</button>
+            <button class="tt-btn" data-cfrange="0"  onclick="setCFRange(0)">All</button>
+          </div>
+        </div>
       </div>
-      <div class="card card-sm"><div class="card-title">month-by-month summary</div>
-        <table class="tbl"><thead><tr><th>Month</th><th>Income</th><th>Expenses</th><th>Net</th><th>Transactions</th></tr></thead>
-        <tbody id="cfBody"><tr><td colspan="5" class="empty">Connect accounts and load transactions to see cash flow data.</td></tr></tbody></table>
+
+      <!-- C1: Stat row -->
+      <div class="wgrid" id="cfStatRow" style="margin-bottom:16px"></div>
+
+      <!-- C2: Monthly income vs spending bar chart — Long Widget -->
+      <div class="drag-section widget-long" data-id="cf-monthly" style="margin-bottom:14px">
+        <div class="card widget-long-card" style="padding:0;overflow:hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
+            <div class="card-title" style="margin-bottom:0">📊 Monthly Income vs Spending</div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span id="cfNetBadge" style="font-size:12px;font-weight:700;font-family:var(--mono)"></span>
+              <div style="display:flex;gap:4px">
+                <button class="tt-btn active" id="cfGrpMonth" onclick="setCFGroup('month')">Monthly</button>
+                <button class="tt-btn" id="cfGrpWeek"  onclick="setCFGroup('week')">Weekly</button>
+              </div>
+            </div>
+          </div>
+          <div style="padding:16px 18px">
+            <div style="position:relative;height:260px"><canvas id="cfMonthlyChart"></canvas></div>
+            <div class="chart-widget-legend" id="cfMonthlyLegend" style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)"></div>
+          </div>
+        </div>
       </div>
+
+      <!-- C3 + C4: Top categories + Month table side by side -->
+      <div class="g2" style="margin-bottom:14px">
+
+        <!-- C3: Top spending categories -->
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="padding:14px 18px 12px;border-bottom:1px solid var(--border)">
+            <div class="card-title" style="margin-bottom:0">📋 Top Spending Categories</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">Sorted highest to lowest · current range</div>
+          </div>
+          <div style="padding:14px 18px;position:relative;height:280px">
+            <canvas id="cfCatChart"></canvas>
+          </div>
+          <div class="chart-widget-legend" id="cfCatLegend" style="border-top:1px solid var(--border);padding:8px 18px 12px"></div>
+        </div>
+
+        <!-- C4: Month-by-month summary table -->
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="padding:14px 18px 12px;border-bottom:1px solid var(--border)">
+            <div class="card-title" style="margin-bottom:0">📅 Month-by-Month Summary</div>
+          </div>
+          <div style="overflow-y:auto;max-height:360px">
+            <table class="tbl" style="border:none">
+              <thead><tr>
+                <th>Month</th>
+                <th style="text-align:right">Income</th>
+                <th style="text-align:right">Spending</th>
+                <th style="text-align:right">Net</th>
+                <th style="text-align:right">Txns</th>
+              </tr></thead>
+              <tbody id="cfBody">
+                <tr><td colspan="5" class="empty">Connect accounts to see data.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- C5: Date range bar -->
+      <div style="text-align:center;padding:8px 0;font-size:11px;color:var(--muted)" id="cfDateLabel"></div>
+
     </div>
 
   </div>
@@ -1796,7 +1868,7 @@ const fmtM=n=>'$'+(Math.abs(n)>=1e6?(Math.abs(n)/1e6).toFixed(2)+'M':Math.abs(n)
 const fmtK=n=>'$'+Math.round(Math.abs(n)).toLocaleString();
 const fmt2=n=>'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const todayStr=()=>new Date().toISOString().slice(0,10).replace(/-/g,'');
-const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const esc=s=>String(s||'').split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;').split('"').join('&quot;');
 const fmtCat=s=>String(s).replace(/_/g,' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
 const PAL=['#2ecc8a','#5b8def','#f05c5c','#a78bfa','#f0a540','#38bdf8','#fb923c','#34d399','#f472b6','#818cf8'];
 Chart.defaults.color='#484c65';Chart.defaults.borderColor='rgba(255,255,255,0.05)';
@@ -2697,7 +2769,7 @@ function renderSWOT() {
         ? '<button class="swot-action-btn" onclick="openActionPlan(this.dataset.plan)" '
           +'data-plan="'+item.action+'" '
           +'style="background:'+col+'22;color:'+col+';border:1px solid '+col+'44" '
-          +'title="See suggested action plan">&#9654; Plan</button>'
+          +'title="See suggested action plan">\u25BA Plan</button>'
         : '';
       return '<li class="swot-item">'
         +'<div class="swot-dot"></div>'
@@ -2729,13 +2801,13 @@ var _actionPlans = {
       color:'var(--blue)',
       steps: [
         {title:'Make all minimum payments on time',
-         desc:'Pay every bill&#39;s minimum to stay current and protect your credit score.',
+         desc:'Pay every bill\'s minimum to stay current and protect your credit score.',
          amount:fmtM(ctx.bil)+'/mo'},
         {title:'Find your extra payment amount',
          desc:'Based on your current surplus, we suggest putting this toward extra debt payments each month.',
          amount:fmtM(extra)+'/mo extra'},
         {title:'Target: '+( sorted[0]?sorted[0].name:'highest-APR debt' ),
-         desc:'Put all extra toward this balance first. It&#39;s charging '+(sorted[0]?sorted[0].apr:'the highest')+'% APR — the most expensive debt you have.',
+         desc:'Put all extra toward this balance first. It\'s charging '+(sorted[0]?sorted[0].apr:'the highest')+'% APR — the most expensive debt you have.',
          amount:sorted[0]?fmtM(Math.abs(sorted[0].bal||0))+' balance':''},
         {title:'Cascade to next highest APR when paid off',
          desc:'Once the top balance is cleared, add that payment to the next highest. Each payoff accelerates the next.',
@@ -2763,7 +2835,7 @@ var _actionPlans = {
          desc:'Keep all accounts current.',
          amount:fmtM(ctx.bil)+'/mo'},
         {title:'Attack the smallest balance: '+(sorted[0]?sorted[0].name:'your smallest debt'),
-         desc:'Throw every extra dollar at this one until it&#39;s gone.',
+         desc:'Throw every extra dollar at this one until it\'s gone.',
          amount:sorted[0]?fmtM(Math.abs(sorted[0].bal||0))+' to clear':''},
         {title:'Roll that payment into the next smallest',
          desc:'When the first is paid off, add its minimum + your extra to the next debt. The snowball grows.',
@@ -2799,7 +2871,7 @@ var _actionPlans = {
          desc:'Set aside this amount each month in a high-yield savings account. Keep it separate from checking.',
          amount:fmtM(monthly)+'/mo'},
         {title:'Timeline to reach goal',
-         desc:'At the suggested rate, you&#39;ll hit your 3-month target in approximately:',
+         desc:'At the suggested rate, you\'ll hit your 3-month target in approximately:',
          amount:months+' months'}
       ]
     };
@@ -2936,7 +3008,7 @@ var _actionPlans = {
       color:'var(--purple)',
       steps:[
         {title:'Maximize employer 401k match first',
-         desc:'If your employer matches contributions, contribute at least enough to get the full match — it&#39;s free money.',
+         desc:'If your employer matches contributions, contribute at least enough to get the full match — it\'s free money.',
          amount:'Free money'},
         {title:'Suggested monthly contribution increase',
          desc:'Based on your current surplus, this is what you could redirect to retirement without impacting your bills.',
@@ -2991,6 +3063,85 @@ var _actionPlans = {
         {title:'Review monthly',
          desc:'Your surplus changes as income and expenses change. Revisit this each month.',
          amount:''}
+      ]
+    };
+  },
+
+  // ── 50/30/20 specific plans ────────────────────────────────────────────────
+  'needs-high': function(ctx) {
+    var overage = Math.max(0, ctx.needs - ctx.totM * 0.50);
+    return {
+      title: '🏠 Reduce Needs Below 50%',
+      subtitle: 'Fixed bills are taking too much of your income',
+      color: 'var(--blue)',
+      steps: [
+        { title: 'Understand what\'s driving Needs above 50%',
+          desc: 'Your fixed bills are '+Math.round(ctx.needs/ctx.totM*100)+'% of income. The 50% target means bills should not exceed half your monthly take-home.',
+          amount: fmt2(Math.round(ctx.needs)) + ' current · target ' + fmt2(Math.round(ctx.totM*0.50)) },
+        { title: 'Audit each fixed bill',
+          desc: 'Go to Budget & Bills and review every recurring charge. Ask: is this negotiable? Can I shop around for a better rate?',
+          amount: 'See Budget & Bills' },
+        { title: 'Refinance high-rate debt',
+          desc: 'If mortgage, auto, or personal loan payments are inflated by high interest rates, refinancing could reduce your monthly obligation.',
+          amount: fmt2(Math.round(overage)) + ' to trim' },
+        { title: 'Cancel or downgrade subscriptions',
+          desc: 'Phone, cable, streaming, and insurance are often negotiable. A single call to retention can reduce a bill by 20–30%.',
+          amount: '' },
+        { title: 'Increase income to rebalance the ratio',
+          desc: 'If bills can\'t be cut, growing income moves the % in your favor. Even ' + fmt2(Math.round(overage*3)) + '/mo extra income would hit the 50% target.',
+          amount: fmt2(Math.round(overage*3)) + '/mo needed' }
+      ]
+    };
+  },
+
+  'wants-high': function(ctx) {
+    var overage = Math.max(0, ctx.wants - ctx.totM * 0.30);
+    return {
+      title: '🎉 Trim Wants to 30%',
+      subtitle: 'Discretionary spending is above target',
+      color: 'var(--amber)',
+      steps: [
+        { title: 'Current Wants spending',
+          desc: 'Discretionary categories are at '+Math.round(ctx.wants/ctx.totM*100)+'% of income vs the 30% target.',
+          amount: fmt2(Math.round(ctx.wants)) + ' · trim by ' + fmt2(Math.round(overage)) },
+        { title: 'Review your Zero Budget categories',
+          desc: 'Go to the Zero Budget tab and identify which categories are allocated the most. Use ▼ step buttons to reduce them incrementally.',
+          amount: 'See Zero Budget' },
+        { title: 'Apply the 24-hour rule',
+          desc: 'For any non-essential purchase over $50, wait 24 hours. Most impulse purchases are abandoned with a short delay.',
+          amount: '' },
+        { title: 'Find your biggest Wants category',
+          desc: 'Check Spending by Category on the dashboard — sort by amount to see where Wants dollars actually go vs. what you budgeted.',
+          amount: 'See Dashboard' },
+        { title: 'Redirect the difference to savings',
+          desc: 'Every dollar trimmed from Wants should be explicitly moved to Savings in your Zero Budget so it doesn\'t just evaporate.',
+          amount: fmt2(Math.round(overage)) + '/mo to redirect' }
+      ]
+    };
+  },
+
+  'saves-low': function(ctx) {
+    var gap = Math.max(0, ctx.totM * 0.20 - ctx.saves);
+    return {
+      title: '💰 Boost Savings to 20%',
+      subtitle: 'Savings rate is below the recommended 20%',
+      color: 'var(--green)',
+      steps: [
+        { title: 'Current savings rate',
+          desc: 'After bills and discretionary spending, you\'re saving '+Math.round(ctx.saves/ctx.totM*100)+'% of income. The 20% target builds long-term financial security.',
+          amount: fmt2(Math.round(ctx.saves)) + '/mo · gap: ' + fmt2(Math.round(gap)) },
+        { title: 'Automate savings first',
+          desc: 'Set up an automatic transfer on payday before any discretionary spending. Treat savings as a fixed bill, not what\'s left over.',
+          amount: fmt2(Math.round(gap)) + '/mo to automate' },
+        { title: 'Trim Wants to free up room',
+          desc: 'A 5% reduction in discretionary spending moves directly to savings. Review your Zero Budget and reduce the biggest Wants categories first.',
+          amount: fmt2(Math.round(ctx.totM*0.05)) + '/mo from 5% trim' },
+        { title: 'Prioritize savings order',
+          desc: '1. Emergency fund to 3 months · 2. 401k match (free money) · 3. High-APR debt payoff · 4. Roth IRA · 5. Brokerage or extra debt.',
+          amount: '' },
+        { title: 'Use the Retirement calculator',
+          desc: 'Go to the Retirement page to see how increasing your savings rate by even 2–3% changes your retirement date and nest egg.',
+          amount: 'See Retirement page' }
       ]
     };
   },
@@ -4478,15 +4629,12 @@ function renderIncomeTab(){
     const bil   = monthlyBills();
     const disc  = zeroBuckets.reduce(function(s,b){return s+b.amt;},0);
     const sav   = Math.max(0, totM - bil - disc);
-    const needs = bil;
-    const wants = disc;
-    const saves = sav;
+    const needs = bil, wants = disc, saves = sav;
 
-    const needsPct  = Math.round(needs/totM*100);
-    const wantsPct  = Math.round(wants/totM*100);
-    const savesPct  = Math.round(saves/totM*100);
+    // Share ctx with action plans
+    window._swotCtx = Object.assign(window._swotCtx||{}, {totM,needs,wants,saves,inc:totM,bil});
 
-    function bar(actual, target, color) {
+    function bar5030(actual, target, color) {
       const pct = Math.min(100, Math.round(actual/totM*100));
       const ok  = Math.abs(actual/totM - target) < 0.05;
       return '<div class="pct-bar-wrap"><div class="pct-bar" style="width:'+pct+'%;background:'+color+'"></div></div>'
@@ -4494,24 +4642,43 @@ function renderIncomeTab(){
         +'<span style="margin-left:6px;color:'+(ok?'var(--green)':'var(--amber)')+'">'+( ok?'✓ on track':'↕ adjust' )+'</span></div>';
     }
 
+    const cats5030 = [
+      {label:'🏠 Needs (Bills)',          val:needs, target:0.50, color:'#6b9ef5',
+       desc:'Fixed bills, housing, utilities, insurance',      overPlan:'needs-high', underPlan:null},
+      {label:'🎉 Wants (Discretionary)',  val:wants, target:0.30, color:'#f5a623',
+       desc:'Dining, entertainment, shopping, subscriptions',  overPlan:'wants-high', underPlan:null},
+      {label:'💰 Savings / Surplus',      val:saves, target:0.20, color:'#3dda91',
+       desc:'After bills and discretionary spending',          overPlan:null,         underPlan:'saves-low'},
+    ];
+
     panel5030.innerHTML =
-      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px">'
-      + [
-          {label:'🏠 Needs (Bills)',    val:needs, pct:needsPct, target:0.50, color:'#6b9ef5', desc:'Fixed bills, housing, utilities, insurance'},
-          {label:'🎉 Wants (Discretionary)', val:wants, pct:wantsPct, target:0.30, color:'#f5a623', desc:'Dining, entertainment, shopping, subscriptions'},
-          {label:'💰 Savings / Surplus',val:saves, pct:savesPct, target:0.20, color:'#3dda91', desc:'After bills and discretionary spending'},
-        ].map(function(cat){
-          var ok = Math.abs(cat.val/totM - cat.target) < 0.05;
-          return '<div style="background:var(--surface2);border-radius:var(--radius);padding:14px 16px;border:1px solid var(--border)">'
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px">'
+      + cats5030.map(function(cat){
+          const actualPct = totM > 0 ? cat.val/totM : 0;
+          const ok        = Math.abs(actualPct - cat.target) < 0.05;
+          const over      = actualPct > cat.target + 0.05;
+          const under     = actualPct < cat.target - 0.05;
+          const planKey   = over ? cat.overPlan : (under ? cat.underPlan : null);
+          const planBtn   = planKey
+            ? '<button class="swot-action-btn" onclick="openActionPlan(this.dataset.plan)" '
+              +'data-plan="'+planKey+'" '
+              +'style="background:'+cat.color+'22;color:'+cat.color+';border:1px solid '+cat.color+'44;margin-top:8px;display:inline-flex" '
+              +'title="See action plan">\u25BA Plan</button>'
+            : '';
+          const borderCol = ok ? 'var(--green)' : (over ? 'var(--red)' : 'var(--amber)');
+          return '<div style="background:var(--surface2);border-radius:var(--radius);padding:14px 16px;'
+            +'border:1px solid '+borderCol+'44;border-top:3px solid '+borderCol+'">'
             +'<div style="font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:6px">'+cat.label+'</div>'
             +'<div style="font-family:var(--mono);font-size:18px;font-weight:700;color:'+cat.color+'">'+fmt2(Math.round(cat.val))+'</div>'
             +'<div style="font-size:11px;color:var(--muted);margin-bottom:6px">'+cat.desc+'</div>'
-            +bar(cat.val, cat.target, cat.color)
+            +bar5030(cat.val, cat.target, cat.color)
+            +planBtn
             +'</div>';
         }).join('')
       +'</div>';
   }
 }
+
 function delIncome(i){if(!confirm('Remove?'))return;incomeSources.splice(i,1);saveIncomeSrc();renderIncomeTab();updateBudgetMetrics();}
 function openAddIncomeModal(){gg('addIncomeModal').style.display='flex';}
 function closeAddIncomeModal(){gg('addIncomeModal').style.display='none';}
@@ -4608,17 +4775,221 @@ function exportNWExcel(){
 }
 
 // ── CASH FLOW ─────────────────────────────────────────────────────────────────
+var _cfRange = 6;
+var _cfGroup = 'month';
+
+function setCFRange(n) {
+  _cfRange = n;
+  document.querySelectorAll('#cfTimePicker .tt-btn').forEach(function(b){
+    b.classList.toggle('active', +b.dataset.cfrange === n);
+  });
+  renderCashFlow();
+}
+
+function setCFGroup(g) {
+  _cfGroup = g;
+  var mb=gg('cfGrpMonth'), wb=gg('cfGrpWeek');
+  if(mb) mb.classList.toggle('active', g==='month');
+  if(wb) wb.classList.toggle('active', g==='week');
+  renderCashFlow();
+}
+
 function renderCashFlow(){
-  const byM={};allTxns.forEach(t=>{const m=t.date.slice(0,7);if(!byM[m])byM[m]={inc:0,exp:0,cnt:0};if(t.amount<0)byM[m].inc+=Math.abs(t.amount);else byM[m].exp+=t.amount;byM[m].cnt++;});
-  const months=Object.keys(byM).sort().slice(-12);
-  const tb=gg('cfBody');
-  if(tb){if(!months.length){tb.innerHTML='<tr><td colspan="5" class="empty">No data — connect accounts first.</td></tr>';return;}tb.innerHTML=months.map(m=>{const d=byM[m];const net=d.inc-d.exp;return `<tr><td class="mono">${m}</td><td class="mono" style="color:var(--cyan)">${fmt2(d.inc)}</td><td class="mono" style="color:var(--red)">${fmt2(d.exp)}</td><td class="mono" style="font-weight:700;color:${net>=0?'var(--cyan)':'var(--red)'}">${net>=0?'+':''}${fmt2(net)}</td><td style="color:var(--hint)">${d.cnt}</td></tr>`;}).join('');}
-  const mc=gg('cfMonthlyChart');if(mc){if(CFC.monthly)CFC.monthly.destroy();CFC.monthly=new Chart(mc,{type:'bar',data:{labels:months.map(m=>m.slice(5)),datasets:[{label:'Income',data:months.map(m=>Math.round(byM[m].inc)),backgroundColor:'#2ecc8a',borderRadius:3},{label:'Expenses',data:months.map(m=>Math.round(byM[m].exp)),backgroundColor:'#f05c5c',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11},boxWidth:9}}},scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>fmtM(v)},grid:{color:'rgba(255,255,255,0.03)'}}}}})}
-  const cut=new Date(Date.now()-30*86400000);
-  const rec=allTxns.filter(t=>new Date(t.date)>=cut&&t.amount>0);
-  const byCat={};rec.forEach(t=>{const c=fmtCat(t.personal_finance_category?.primary||t.category?.[0]||'Other');byCat[c]=(byCat[c]||0)+t.amount;});
-  const sorted=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  const cc=gg('cfCatChart');if(cc){if(CFC.cat)CFC.cat.destroy();CFC.cat=new Chart(cc,{type:'bar',indexAxis:'y',data:{labels:sorted.map(([k])=>k),datasets:[{data:sorted.map(([,v])=>Math.round(v)),backgroundColor:PAL,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` $${c.parsed.x.toLocaleString()}`}}},scales:{x:{ticks:{callback:v=>fmtM(v)},grid:{color:'rgba(255,255,255,0.03)'}},y:{grid:{display:false},ticks:{font:{size:10.5}}}}}});}
+  var mutC  = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim()||'#666';
+
+  // Build date range
+  var now    = new Date();
+  var cutDt  = _cfRange > 0
+    ? new Date(now.getFullYear(), now.getMonth() - _cfRange + 1, 1)
+    : new Date('2000-01-01');
+  var cutStr = cutDt.toISOString().slice(0,10);
+  var rec    = allTxns.filter(function(t){ return t.date >= cutStr; });
+
+  // C5: date range label
+  var dl = gg('cfDateLabel');
+  if (dl) {
+    var fromLbl = cutDt.toLocaleDateString('en-US',{month:'short',year:'numeric'});
+    var toLbl   = now.toLocaleDateString('en-US',{month:'short',year:'numeric'});
+    dl.textContent = _cfRange > 0
+      ? 'Showing ' + fromLbl + ' to ' + toLbl + ' (' + _cfRange + ' months)'
+      : 'Showing all available data';
+  }
+
+  // Group into buckets
+  var buckets = {};
+  rec.forEach(function(t) {
+    var key, d = new Date(t.date+'T12:00:00');
+    if (_cfGroup === 'week') {
+      var day = d.getDay();
+      var mon = new Date(d); mon.setDate(d.getDate()-((day+6)%7));
+      key = mon.toISOString().slice(0,10);
+    } else {
+      key = t.date.slice(0,7);
+    }
+    if (!buckets[key]) buckets[key]={inc:0,exp:0,cnt:0};
+    if (t.amount<0) buckets[key].inc+=Math.abs(t.amount);
+    else            buckets[key].exp+=t.amount;
+    buckets[key].cnt++;
+  });
+
+  var keys    = Object.keys(buckets).sort();
+  var incData = keys.map(function(k){return Math.round(buckets[k].inc);});
+  var expData = keys.map(function(k){return Math.round(buckets[k].exp);});
+  var netData = keys.map(function(k){return Math.round(buckets[k].inc-buckets[k].exp);});
+  var labels  = keys.map(function(k){
+    if (_cfGroup==='week') {
+      var d2=new Date(k+'T12:00:00');
+      return (d2.getMonth()+1)+'/'+d2.getDate();
+    }
+    return new Date(k+'-15').toLocaleDateString('en-US',{month:'short',year:'2-digit'});
+  });
+
+  var totalInc = incData.reduce(function(s,v){return s+v;},0);
+  var totalExp = expData.reduce(function(s,v){return s+v;},0);
+  var totalNet = totalInc - totalExp;
+
+  // C1: Stat row
+  var statRow = gg('cfStatRow');
+  if (statRow) {
+    var avgPer = keys.length>0 ? Math.round(totalExp/keys.length) : 0;
+    var srPct  = totalInc>0 ? Math.round(Math.max(0,totalNet)/totalInc*100) : 0;
+    statRow.innerHTML = [
+      {lbl:'Total Income',   val:fmt2(totalInc),   cls:'cyan',                      sub:'in selected range'},
+      {lbl:'Total Spending', val:fmt2(totalExp),   cls:'red',                       sub:'in selected range'},
+      {lbl:'Net Cash Flow',  val:(totalNet>=0?'+':'')+fmt2(totalNet), cls:totalNet>=0?'green':'red', sub:'income minus spending'},
+      {lbl:'Avg per '+(_cfGroup==='week'?'Week':'Month'), val:fmt2(avgPer), cls:'blue', sub:'spending'},
+      {lbl:'Savings Rate',   val:srPct+'%',        cls:'purple',                    sub:'net / income'},
+    ].map(function(w){
+      return '<div class="widget w-'+w.cls+'"><div class="wlabel">'+w.lbl+'</div>'
+        +'<div class="wvalue '+w.cls+'">'+w.val+'</div>'
+        +'<div class="wsub">'+w.sub+'</div></div>';
+    }).join('');
+  }
+
+  // Net badge
+  var nb=gg('cfNetBadge');
+  if(nb){nb.textContent='Net '+(totalNet>=0?'+':'')+fmt2(totalNet);nb.style.color=totalNet>=0?'var(--green)':'var(--red)';}
+
+  // C2: Monthly bar + net line chart
+  var mc=gg('cfMonthlyChart');
+  if(mc){
+    if(CFC.monthly)CFC.monthly.destroy();
+    var barMax=Math.max(5000,Math.max.apply(null,incData.concat(expData).concat([0])));
+    var netMin=Math.min.apply(null,netData.concat([0]));
+    var netMax=Math.max.apply(null,netData.concat([0]));
+    var netPad=Math.max(200,Math.round((netMax-netMin)*0.15));
+    CFC.monthly=new Chart(mc,{type:'bar',data:{labels,
+      datasets:[
+        {label:'Income',  data:incData, yAxisID:'bars',
+         backgroundColor:'rgba(61,218,145,0.82)',hoverBackgroundColor:'rgba(61,218,145,0.82)',borderRadius:4,order:2},
+        {label:'Spending',data:expData, yAxisID:'bars',
+         backgroundColor:'rgba(244,106,106,0.78)',hoverBackgroundColor:'rgba(244,106,106,0.78)',borderRadius:4,order:3},
+        {label:'Net',     data:netData, yAxisID:'net', type:'line',
+         borderColor:'#f5b042',backgroundColor:'rgba(245,176,66,0.07)',
+         borderWidth:2.5,pointRadius:2,pointBackgroundColor:'#f5b042',tension:0.35,fill:true,order:1}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},hover:{mode:'index',intersect:false},
+        plugins:{
+          legend:{position:'top',labels:{color:mutC,font:{size:11},boxWidth:10,usePointStyle:true}},
+          tooltip:{backgroundColor:'rgba(15,17,23,0.92)',titleColor:'#f0f2fa',bodyColor:'#b0b4cc',
+            borderColor:'rgba(255,255,255,0.12)',borderWidth:1,padding:10,
+            callbacks:{
+              label:function(c){var s=c.dataset.label==='Net'?(c.parsed.y>=0?'+':''):'';
+                return ' '+c.dataset.label+':  '+s+'$'+Math.abs(c.parsed.y).toLocaleString();},
+              footer:function(items){var inc=0,sp=0;
+                items.forEach(function(i){if(i.dataset.label==='Income')inc=i.parsed.y;if(i.dataset.label==='Spending')sp=i.parsed.y;});
+                var n=inc-sp;return 'Net:  '+(n>=0?'+':'')+'$'+Math.abs(Math.round(n)).toLocaleString();}
+            }}},
+        scales:{
+          x:{grid:{display:false},ticks:{color:mutC,font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:18}},
+          bars:{type:'linear',position:'left',min:0,max:barMax,
+            grid:{color:'rgba(128,128,128,0.07)'},
+            ticks:{color:mutC,callback:function(v){return v>=1000?'$'+(v/1000).toFixed(0)+'K':'$'+v;}}},
+          net:{type:'linear',position:'right',
+            min:netMin<0?netMin-netPad:-(netPad),max:netMax+netPad,
+            grid:{drawOnChartArea:false},
+            ticks:{color:'#f5b042',callback:function(v){return (v>=0?'+':'')+( Math.abs(v)>=1000?'$'+(v/1000).toFixed(1)+'K':'$'+v);}}}
+        }}});
+  }
+
+  // Monthly legend
+  var cfl=gg('cfMonthlyLegend');
+  if(cfl){
+    cfl.innerHTML=[
+      {color:'rgba(61,218,145,0.82)',label:'Income',  val:fmt2(totalInc)},
+      {color:'rgba(244,106,106,0.78)',label:'Spending',val:fmt2(totalExp)},
+      {color:'#f5b042',              label:'Net',     val:(totalNet>=0?'+':'')+fmt2(totalNet)},
+    ].map(function(it){
+      return '<div class="cwl-item"><div class="cwl-dot" style="background:'+it.color+'"></div>'
+        +'<span class="cwl-label">'+it.label+'</span>'
+        +'<span class="cwl-pct" style="min-width:80px;text-align:right">'+it.val+'</span></div>';
+    }).join('');
+  }
+
+  // C3: Top spending categories (horizontal bar) — uses master category system
+  var byCat={};
+  rec.filter(function(t){return t.amount>0;}).forEach(function(t){
+    var cat=getTxnCategory(t);
+    byCat[cat]=(byCat[cat]||0)+t.amount;
+  });
+  var sorted=Object.entries(byCat).sort(function(a,b){return b[1]-a[1];}).slice(0,10);
+  var catColors=sorted.map(function(e){return getCatColor(e[0]);});
+  var catTotal=sorted.reduce(function(s,e){return s+e[1];},0);
+
+  var cc=gg('cfCatChart');
+  if(cc){
+    if(CFC.cat)CFC.cat.destroy();
+    CFC.cat=new Chart(cc,{type:'bar',data:{
+      labels:sorted.map(function(e){return e[0];}),
+      datasets:[{data:sorted.map(function(e){return Math.round(e[1]);}),
+        backgroundColor:catColors,hoverBackgroundColor:catColors,borderRadius:4}]},
+      options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+        interaction:{mode:'index',intersect:false},hover:{mode:'index',intersect:false},
+        plugins:{legend:{display:false},
+          tooltip:{backgroundColor:'rgba(15,17,23,0.92)',titleColor:'#f0f2fa',bodyColor:'#b0b4cc',
+            borderColor:'rgba(255,255,255,0.12)',borderWidth:1,padding:10,
+            callbacks:{label:function(c){
+              var pct=catTotal>0?Math.round(c.parsed.x/catTotal*100):0;
+              return ' $'+c.parsed.x.toLocaleString()+' ('+pct+'%)';}}}},
+        scales:{
+          x:{grid:{color:'rgba(128,128,128,0.07)'},ticks:{color:mutC,callback:function(v){return v>=1000?'$'+(v/1000).toFixed(0)+'K':'$'+v;}}},
+          y:{grid:{display:false},ticks:{color:mutC,font:{size:11}}}}}});
+  }
+
+  // Category legend
+  var catLeg=gg('cfCatLegend');
+  if(catLeg){
+    catLeg.innerHTML=sorted.map(function(e,i){
+      var pct=catTotal>0?Math.round(e[1]/catTotal*100):0;
+      return '<div class="cwl-item"><div class="cwl-dot" style="background:'+catColors[i]+'"></div>'
+        +'<span class="cwl-label">'+esc(e[0])+'</span>'
+        +'<span class="cwl-pct">'+pct+'%</span></div>';
+    }).join('');
+  }
+
+  // C4: Month-by-month summary table (most recent first)
+  var tb=gg('cfBody');
+  if(tb){
+    if(!keys.length){
+      tb.innerHTML='<tr><td colspan="5" class="empty">No data — connect accounts first.</td></tr>';
+    } else {
+      tb.innerHTML=keys.slice().reverse().map(function(k){
+        var d=buckets[k], net=d.inc-d.exp;
+        var mo=_cfGroup==='week'
+          ?new Date(k+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})
+          :new Date(k+'-15').toLocaleDateString('en-US',{month:'long',year:'numeric'});
+        return '<tr>'
+          +'<td class="mono" style="font-size:12px">'+mo+'</td>'
+          +'<td class="mono" style="text-align:right;color:var(--green)">'+fmt2(d.inc)+'</td>'
+          +'<td class="mono" style="text-align:right;color:var(--red)">'+fmt2(d.exp)+'</td>'
+          +'<td class="mono" style="text-align:right;font-weight:700;color:'+(net>=0?'var(--green)':'var(--red)')+'">'+
+            (net>=0?'+':'')+fmt2(net)+'</td>'
+          +'<td style="text-align:right;color:var(--muted);font-size:11.5px">'+d.cnt+'</td>'
+          +'</tr>';
+      }).join('');
+    }
+  }
 }
 
 // ── RETIREMENT CALCS ──────────────────────────────────────────────────────────
