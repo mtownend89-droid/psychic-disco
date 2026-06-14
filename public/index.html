@@ -2887,27 +2887,24 @@ function applyCatPopover() {
 
   closeCatPopover();
 
-  // Refresh transaction table pills in place
-  // (find the pill row and update it without full re-render)
-  var allPills = document.querySelectorAll('#txnBody .cat-pill, #acctTxnList .cat-pill');
-  allPills.forEach(function(p) {
-    if (p !== _catPopoverPill) return; // only update the one we just changed
-  });
-  // Full refresh of category views
+  // Propagate change everywhere
   _refreshCategoryViews();
 }
 
+// Chip panel state — declared here so _refreshCategoryViews can read it
+var _openChipIdx = -1;
+
 function _refreshCategoryViews() {
-  // Sankey + doughnut + legend
-  if (typeof renderCharts === 'function')  renderCharts();
-  // SWOT (spending-based insights update)
-  if (typeof renderSWOT  === 'function')   renderSWOT();
-  // Account chip panel if open
-  if (typeof expandAcctChip === 'function' && _openChipIdx >= 0) {
-    expandAcctChip(_openChipIdx);
-  }
-  // Re-render transactions table so pill color updates in place
+  // Charts + Sankey redraw immediately
+  if (typeof renderCharts === 'function') renderCharts();
+  // SWOT recalculates
+  if (typeof renderSWOT   === 'function') renderSWOT();
+  // Transaction table re-renders with updated pill colors
   if (typeof filterTransactions === 'function') filterTransactions();
+  // Account chip panel — slight delay so DOM settles first
+  if (typeof expandAcctChip === 'function' && typeof _openChipIdx !== 'undefined' && _openChipIdx >= 0) {
+    setTimeout(function(){ expandAcctChip(_openChipIdx); }, 80);
+  }
 }
 
 function closeCatPopover() {
@@ -3219,8 +3216,6 @@ function renderAccounts(){
   }).join('');
 }
 
-// Track which chip is open
-var _openChipIdx = -1;
 
 function toggleAcctChip(idx) {
   if (_openChipIdx === idx) {
