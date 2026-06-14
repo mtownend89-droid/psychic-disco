@@ -2737,6 +2737,45 @@ function closeActionPlan() {
   }, 260);
 }
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ACCOUNT NAME OVERRIDE SYSTEM
+// Custom names stored in localStorage. Set from Settings page (coming soon).
+// Every place that shows an account name calls getAcctName(account) instead
+// of using a.name directly — so renaming in Settings updates everywhere.
+// ══════════════════════════════════════════════════════════════════════════════
+var _acctNameOverrides = {};
+try {
+  _acctNameOverrides = JSON.parse(localStorage.getItem('mdf_acct_names') || '{}');
+} catch(e) { _acctNameOverrides = {}; }
+
+function getAcctName(acct) {
+  if (!acct) return '';
+  // Check override by account_id first, then mask as fallback key
+  var key = acct.account_id || acct.id || '';
+  if (key && _acctNameOverrides[key]) return _acctNameOverrides[key];
+  // Return Plaid name as default
+  return acct.name || acct.institution || '';
+}
+
+function setAcctName(accountId, name) {
+  if (!accountId) return;
+  if (name && name.trim()) {
+    _acctNameOverrides[accountId] = name.trim();
+  } else {
+    delete _acctNameOverrides[accountId];  // clear override → revert to Plaid name
+  }
+  localStorage.setItem('mdf_acct_names', JSON.stringify(_acctNameOverrides));
+  // Re-render anywhere account names appear
+  renderAccounts();
+  renderBanks();
+  renderSankey();
+}
+
+function clearAcctName(accountId) {
+  setAcctName(accountId, '');
+}
+
 // ── BILLS DATA ────────────────────────────────────────────────────────────────
 let bills=[
   {cat:'HM',name:"M&T Mortgage",note:'Mortgage',apr:2.625,due:5,bal:-292452.38,min:2638.46,pay:2638.46,promo:'',paid:false},
@@ -2968,7 +3007,7 @@ function refreshRetAccounts(){
   const el=gg('retAccountsList');if(!el)return;
   if(!ras.length){el.innerHTML='<div class="empty">No retirement accounts detected.</div>';const pw=gg('retProgressWrap');if(pw)pw.style.display='none';return;}
   const tot=ras.reduce((s,a)=>s+(a.balances.current??0),0);
-  el.innerHTML=ras.map(a=>`<div class="acct-row"><div><div class="acct-name">${esc(a.name)}</div><div class="acct-sub">${esc(a.institution)} · ${esc(a.subtype||a.type)}</div></div><div class="acct-bal" style="color:var(--green)">${fmtK(a.balances.current??0)}</div></div>`).join('')
+  el.innerHTML=ras.map(a=>`<div class="acct-row"><div><div class="acct-name">${esc(getAcctName(a))}</div><div class="acct-sub">${esc(a.institution)} · ${esc(a.subtype||a.type)}</div></div><div class="acct-bal" style="color:var(--green)">${fmtK(a.balances.current??0)}</div></div>`).join('')
     +`<div class="acct-row" style="border-top:1px solid var(--border2);margin-top:4px;padding-top:12px"><div style="font-weight:600">Total retirement</div><div class="mono" style="font-size:16px;font-weight:600;color:var(--green)">${fmtK(tot)}</div></div>`;
   const yrs=Math.max(U.ret-U.age,1);let goal=U.saved;for(let y=0;y<yrs;y++)goal=goal*(1+U.rate/100)+U.contrib*12;
   const pct=Math.min(100,Math.round(tot/goal*100));
@@ -3012,7 +3051,7 @@ function renderAccounts(){
     const iC  = a.type === 'credit';
     const balCol = iC ? 'var(--red)' : 'var(--green)';
     const balStr = (iC?'-':'+') + fmtK(Math.abs(bal));
-    const shortName = a.name.replace(/[Cc]hase|[Ww]ells\s*[Ff]argo|[Aa]mex|[Cc]apital\s*[Oo]ne/g,'').trim() || a.name;
+    const shortName = getAcctName(a);
     return '<div class="acct-chip" id="chip-'+i+'" onclick="toggleAcctChip('+i+')">'
       +'<span class="acct-chip-icon">'+acctIcon(a)+'</span>'
       +'<div>'
@@ -3064,7 +3103,7 @@ function expandAcctChip(idx) {
   if (!panel) return;
 
   // Header
-  if (title) title.textContent = a.name;
+  if (title) title.textContent = getAcctName(a);
 
   // Get transactions for this account (last 30d or selected range)
   var cut  = getChartCutDate(_chartRange);
@@ -3679,7 +3718,7 @@ function exportExcel(){
   const fil=allTxns.filter(t=>(!from||t.date>=from)&&(!to||t.date<=to));
   const wb=XLSX.utils.book_new();
   if(gg('chkTransactions').checked){const d=[['Date','Merchant','Category','Amount','Type','Bank']];fil.forEach(t=>d.push([t.date,t.merchant_name||t.name||'',fmtCat(t.personal_finance_category?.primary||t.category?.[0]||'Other'),parseFloat(t.amount.toFixed(2)),t.amount>0?'Debit':'Credit',t.institution||'']));XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d),'Transactions');}
-  if(gg('chkAccounts').checked){const d=[['Institution','Name','Type','Subtype','Mask','Balance']];allAccts.forEach(a=>d.push([a.institution||'',a.name,a.type,a.subtype||'',a.mask?'****'+a.mask:'',parseFloat((a.balances.current??0).toFixed(2))]));XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d),'Accounts');}
+  if(gg('chkAccounts').checked){const d=[['Institution','Name','Type','Subtype','Mask','Balance']];allAccts.forEach(a=>d.push([a.institution||'',getAcctName(a),a.type,a.subtype||'',a.mask?'****'+a.mask:'',parseFloat((a.balances.current??0).toFixed(2))]));XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d),'Accounts');}
   if(gg('chkSummary').checked){const byCat={};fil.filter(t=>t.amount>0).forEach(t=>{const c=fmtCat(t.personal_finance_category?.primary||t.category?.[0]||'Other');byCat[c]=(byCat[c]||0)+t.amount;});const tot=Object.values(byCat).reduce((s,v)=>s+v,0);const d=[['Category','Total','% of Total']];Object.entries(byCat).sort((a,b)=>b[1]-a[1]).forEach(([c,a])=>d.push([c,parseFloat(a.toFixed(2)),parseFloat((a/tot*100).toFixed(1))]));XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d),'Summary');}
   if(gg('chkMonthly').checked){const bm={};fil.forEach(t=>{const m=t.date.slice(0,7);if(!bm[m])bm[m]={inc:0,exp:0,cnt:0};if(t.amount<0)bm[m].inc+=Math.abs(t.amount);else bm[m].exp+=t.amount;bm[m].cnt++;});const d=[['Month','Income','Expenses','Net']];Object.keys(bm).sort().forEach(m=>{const x=bm[m];d.push([m,parseFloat(x.inc.toFixed(2)),parseFloat(x.exp.toFixed(2)),parseFloat((x.inc-x.exp).toFixed(2))]);});XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d),'Monthly');}
   XLSX.writeFile(wb,'Matt_Dana_Finance_'+todayStr()+'.xlsx');showToast('Excel downloaded!','success');closeExportModal();
