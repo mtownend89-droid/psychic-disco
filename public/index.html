@@ -378,6 +378,37 @@ canvas.chart-interactive { cursor: crosshair; }
 #sankeyTooltip strong { display: block; font-size: 13px; margin-bottom: 4px; }
 #sankeyTooltip .st-val { color: var(--text,#f0f2fa); font-family: monospace; }
 #sankeyTooltip .st-pct { color: var(--muted,#aaa); font-size: 11px; }
+
+/* ── Chart time range toggle ─────────────────────────────────────────────── */
+.time-toggle {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--surface2, rgba(0,0,0,0.08));
+  border: 1px solid var(--border, rgba(0,0,0,0.12));
+  border-radius: 20px;
+  padding: 3px;
+}
+.tt-btn {
+  padding: 3px 11px;
+  border-radius: 16px;
+  border: none;
+  background: transparent;
+  color: var(--muted, #666);
+  font-size: 11.5px;
+  font-weight: 600;
+  font-family: var(--font, sans-serif);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  line-height: 1.6;
+}
+.tt-btn:hover { color: var(--text, #111); background: rgba(0,0,0,0.06); }
+.tt-btn.active {
+  background: var(--green, #3dda91);
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(61,218,145,0.35);
+}
 </style>
 
 </head>
@@ -503,11 +534,21 @@ canvas.chart-interactive { cursor: crosshair; }
         <div class="drag-section widget-long" data-id="sankey">
           <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Money Flow · Long Widget</div></div>
           <div class="card widget-long-card" style="overflow:hidden">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-              <div class="card-title" style="margin-bottom:0">💸 Money Flow (30d)</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
               <div style="display:flex;align-items:center;gap:10px">
-                <span id="sankeyHint" style="font-size:10px;color:var(--muted)">Hover nodes to highlight · shows % of total</span>
-                <span style="font-size:10px;color:var(--muted)">Sankey</span>
+                <div class="card-title" style="margin-bottom:0">💸 Money Flow</div>
+                <span id="chartRangeLabel" style="font-size:11px;font-weight:600;color:var(--muted)"></span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <div class="time-toggle" id="chartTimePicker">
+                  <button class="tt-btn" data-range="week"  onclick="setChartRange('week')">Week</button>
+                  <button class="tt-btn" data-range="month" onclick="setChartRange('month')">Month</button>
+                  <button class="tt-btn active" data-range="30d" onclick="setChartRange('30d')">30d</button>
+                  <button class="tt-btn" data-range="90d"  onclick="setChartRange('90d')">90d</button>
+                  <button class="tt-btn" data-range="year" onclick="setChartRange('year')">Year</button>
+                  <button class="tt-btn" data-range="all"  onclick="setChartRange('all')">All</button>
+                </div>
+                <span style="font-size:10px;color:var(--muted)">Hover to explore</span>
               </div>
             </div>
             <div style="position:relative">
@@ -528,8 +569,10 @@ canvas.chart-interactive { cursor: crosshair; }
           <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Spending by category</div></div>
           <div class="card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-              <div class="card-title" style="margin-bottom:0">📊 Spending by category</div>
-              <span id="spendDateLabel" style="font-size:10px;color:var(--muted)">Last 30 days</span>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div class="card-title" style="margin-bottom:0">📊 Spending by category</div>
+                <span id="spendDateLabel" style="font-size:11px;font-weight:600;color:var(--muted)"></span>
+              </div>
             </div>
             <!-- Side-by-side on desktop: doughnut left, legend right -->
             <div style="display:grid;grid-template-columns:220px 1fr;gap:20px;align-items:start" id="catChartGrid">
@@ -1206,7 +1249,7 @@ function renderSankey() {
   const incNodes = src.map(s=>({label:s.name.split(' ').slice(0,2).join(' '),value:Math.round(s.amt*(FM[s.freq]||1)),color:'#3dda91'})).filter(n=>n.value>0);
   const incTotal = incNodes.reduce((s,n)=>s+n.value,0)||1;
 
-  const cut = new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+  const cut = (typeof getChartCutDate==='function') ? getChartCutDate(_chartRange||'30d') : new Date(Date.now()-30*86400000).toISOString().slice(0,10);
   const byCat={};
   (typeof allTxns!=='undefined'?allTxns:[]).filter(t=>t.date>=cut&&t.amount>0).forEach(t=>{const c=getTxnCategory(t);byCat[c]=(byCat[c]||0)+t.amount;});
   let spNodes = Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,7).map(([lbl,val])=>({label:lbl,value:Math.round(val),color:getCatColor(lbl)}));
@@ -1432,6 +1475,77 @@ function setPageWidgets(page, widgetIds) {
 
 // Future: renderWidgetLibrary() will populate the settings page
 // with draggable widget cards that can be dropped onto pages
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SHARED CHART TIME RANGE
+// One state, shared by Sankey + category chart + any future dashboard charts.
+// ══════════════════════════════════════════════════════════════════════════════
+var _chartRange = '30d'; // default
+
+function setChartRange(range) {
+  _chartRange = range;
+  // Update toggle button active state
+  document.querySelectorAll('#chartTimePicker .tt-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.range === range);
+  });
+  // Update labels on both widgets
+  var label = getChartRangeLabel(range);
+  var rl = document.getElementById('chartRangeLabel');
+  if (rl) rl.textContent = label;
+  var sl = document.getElementById('spendDateLabel');
+  if (sl) sl.textContent = label;
+  // Redraw
+  renderCharts();
+}
+
+function getChartRangeLabel(range) {
+  var now = new Date();
+  if (range === 'week') {
+    // Current week: Mon–Sun
+    var day = now.getDay(); // 0=Sun
+    var mon = new Date(now); mon.setDate(now.getDate() - ((day+6)%7));
+    var sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+    return mon.toLocaleDateString('en-US',{month:'short',day:'numeric'})
+      + ' – ' + sun.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  }
+  if (range === 'month') {
+    return now.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  }
+  if (range === '30d')  return 'Last 30 days';
+  if (range === '90d')  return 'Last 90 days';
+  if (range === 'year') return now.getFullYear().toString();
+  if (range === 'all')  return 'All time';
+  return '';
+}
+
+function getChartCutDate(range) {
+  // Returns ISO date string for start of range, or '' for 'all'
+  var now = new Date();
+  if (range === 'week') {
+    var day = now.getDay();
+    var mon = new Date(now); mon.setDate(now.getDate() - ((day+6)%7));
+    mon.setHours(0,0,0,0);
+    return mon.toISOString().slice(0,10);
+  }
+  if (range === 'month') {
+    return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0,10);
+  }
+  if (range === '30d')  return new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+  if (range === '90d')  return new Date(Date.now()-90*86400000).toISOString().slice(0,10);
+  if (range === 'year') return now.getFullYear()+'-01-01';
+  if (range === 'all')  return '2000-01-01';
+  return new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+}
+
+// Init labels on page load
+(function initRangeLabels(){
+  var label = getChartRangeLabel(_chartRange);
+  var rl = document.getElementById('chartRangeLabel');
+  if (rl) rl.textContent = label;
+  var sl = document.getElementById('spendDateLabel');
+  if (sl) sl.textContent = label;
+})();
 
 // ── BILLS DATA ────────────────────────────────────────────────────────────────
 let bills=[
@@ -1737,7 +1851,7 @@ function updateSpendMetrics(){
   const tc=gg('mTxnCount');if(tc)tc.textContent=rec.length;
 }
 function renderCharts(){
-  const cut = new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+  const cut = getChartCutDate(_chartRange);
   const rec = allTxns.filter(t=>t.date>=cut&&t.amount>0);
   const byCat={};
   rec.forEach(t=>{ const c=getTxnCategory(t); byCat[c]=(byCat[c]||0)+t.amount; });
