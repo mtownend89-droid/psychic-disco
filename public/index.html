@@ -303,6 +303,17 @@ input[type=range]{width:100%;accent-color:var(--green);}
   .wgrid{grid-template-columns:1fr 1fr;}
   .g5{grid-template-columns:1fr 1fr;}
 }
+
+/* ── D1 Dashboard chart grid ── */
+.dash-chart-grid{display:grid;grid-template-columns:1fr;gap:14px;}
+@media(min-width:900px){.dash-chart-grid{grid-template-columns:1.2fr 1fr;}}
+@media(orientation:landscape)and(max-width:899px){.dash-chart-grid{grid-template-columns:1.1fr 1fr;}}
+.cat-legend-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);transition:background 0.1s;}
+.cat-legend-row:last-child{border-bottom:none;}
+.cat-legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+.cat-legend-name{flex:1;font-size:12px;color:var(--text,#111);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cat-legend-pct{font-size:11px;font-family:monospace;color:var(--muted,#666);min-width:32px;text-align:right;}
+.cat-legend-amt{font-size:11.5px;font-family:monospace;font-weight:600;min-width:60px;text-align:right;color:var(--text,#111);}
 </style>
 
 </head>
@@ -426,9 +437,30 @@ input[type=range]{width:100%;accent-color:var(--green);}
         </div>
         <div class="drag-section" data-id="charts">
           <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Spending charts</div></div>
-          <div class="g2">
-            <div class="card card-sm"><div class="card-title">spending by category (30d)</div><div class="chart-wrap" style="height:200px"><canvas id="catChart"></canvas></div></div>
-            <div class="card card-sm"><div class="card-title">daily spending (30d)</div><div class="chart-wrap" style="height:200px"><canvas id="dailyChart"></canvas></div></div>
+          <!-- Portrait: stacked. Landscape: side by side via .dash-chart-grid -->
+          <div class="dash-chart-grid">
+
+            <!-- SANKEY -->
+            <div class="card card-sm" style="overflow:hidden">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <div class="card-title" style="margin-bottom:0">💸 Money Flow (30d)</div>
+                <span style="font-size:10px;color:var(--muted)">Sankey</span>
+              </div>
+              <canvas id="sankeyChart" style="display:block;width:100%"></canvas>
+            </div>
+
+            <!-- SPENDING BY CATEGORY -->
+            <div class="card card-sm">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+                <div class="card-title" style="margin-bottom:0">📊 Spending by category</div>
+                <span id="spendDateLabel" style="font-size:10px;color:var(--muted)">Last 30 days</span>
+              </div>
+              <!-- Canvas -->
+              <div style="height:180px;position:relative"><canvas id="catChart"></canvas></div>
+              <!-- Category legend with % — scrollable -->
+              <div id="catLegend" style="margin-top:10px;max-height:140px;overflow-y:auto;font-size:12px"></div>
+            </div>
+
           </div>
         </div>
         <div class="drag-section" data-id="accts-banks">
@@ -953,6 +985,168 @@ const PAL=['#2ecc8a','#5b8def','#f05c5c','#a78bfa','#f0a540','#38bdf8','#fb923c'
 Chart.defaults.color='#484c65';Chart.defaults.borderColor='rgba(255,255,255,0.05)';
 Chart.defaults.font.family="'DM Sans', sans-serif";
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// D1 — MASTER CATEGORY SYSTEM
+// ══════════════════════════════════════════════════════════════════════════════
+const DEFAULT_CATEGORIES = [
+  { id:'food',         label:'Food & Groceries',   color:'#3dda91', plaid:['FOOD_AND_DRINK','GROCERIES'] },
+  { id:'dining',       label:'Dining Out',          color:'#f5a623', plaid:['FOOD_AND_DRINK'] },
+  { id:'housing',      label:'Housing',             color:'#6b9ef5', plaid:['RENT_AND_UTILITIES','MORTGAGE'] },
+  { id:'utilities',    label:'Utilities',           color:'#45c8fc', plaid:['RENT_AND_UTILITIES','UTILITIES'] },
+  { id:'transport',    label:'Auto & Transport',    color:'#b09afa', plaid:['TRANSPORTATION','AUTO'] },
+  { id:'gas',          label:'Gas & Fuel',          color:'#f46a6a', plaid:['TRANSPORTATION'] },
+  { id:'health',       label:'Health & Medical',    color:'#34d399', plaid:['MEDICAL','HEALTHCARE_SERVICES'] },
+  { id:'shopping',     label:'Shopping',            color:'#fb923c', plaid:['GENERAL_MERCHANDISE','CLOTHING'] },
+  { id:'entertainment',label:'Entertainment',       color:'#f472b6', plaid:['ENTERTAINMENT','RECREATION'] },
+  { id:'travel',       label:'Travel',              color:'#818cf8', plaid:['TRAVEL','AIRLINES'] },
+  { id:'subscriptions',label:'Subscriptions',      color:'#22d3ee', plaid:['SUBSCRIPTION','TELECOM'] },
+  { id:'insurance',    label:'Insurance',           color:'#a3e635', plaid:['INSURANCE'] },
+  { id:'savings',      label:'Savings & Invest',   color:'#4ade80', plaid:['TRANSFER_OUT','INVESTMENT'] },
+  { id:'income',       label:'Income',             color:'#3dda91', plaid:['TRANSFER_IN','INCOME','PAYROLL'] },
+  { id:'loans',        label:'Loan Payments',      color:'#f87171', plaid:['LOAN_PAYMENTS','CREDIT_CARD'] },
+  { id:'other',        label:'Other',              color:'#94a3b8', plaid:[] },
+];
+
+function getUserCategories() {
+  try {
+    const s = JSON.parse(localStorage.getItem('mdf_categories'));
+    return (s && s.length) ? s : DEFAULT_CATEGORIES.map(c=>({...c}));
+  } catch(e) { return DEFAULT_CATEGORIES.map(c=>({...c})); }
+}
+function saveUserCategories(cats) { localStorage.setItem('mdf_categories', JSON.stringify(cats)); }
+
+function mapPlaidCategory(plaidPrimary) {
+  const cats = getUserCategories();
+  const p = (plaidPrimary||'').toUpperCase().replace(/\s+/g,'_');
+  for (const cat of cats) {
+    if (cat.plaid && cat.plaid.some(k => p.includes(k) || k.includes(p))) return cat.label;
+  }
+  return 'Other';
+}
+function getCatColor(label) {
+  const cats = getUserCategories();
+  const found = cats.find(c => c.label === label);
+  return found ? found.color : '#94a3b8';
+}
+
+const _catOverrides = JSON.parse(localStorage.getItem('mdf_cat_overrides')||'{}');
+function getTxnCategory(t) {
+  const id = t.transaction_id || '';
+  if (id && _catOverrides[id]) return _catOverrides[id];
+  const raw = (t.personal_finance_category&&t.personal_finance_category.primary) || (t.category&&t.category[0]) || '';
+  return mapPlaidCategory(raw);
+}
+function saveCatOverride(txnId, cat) {
+  _catOverrides[txnId] = cat;
+  localStorage.setItem('mdf_cat_overrides', JSON.stringify(_catOverrides));
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// D1 — SANKEY DIAGRAM
+// ══════════════════════════════════════════════════════════════════════════════
+function renderSankey() {
+  const canvas = document.getElementById('sankeyChart');
+  if (!canvas) return;
+  const parent = canvas.parentElement;
+  if (!parent || parent.clientWidth < 50) { setTimeout(renderSankey,200); return; }
+
+  const dpr = window.devicePixelRatio||1;
+  const W   = parent.clientWidth - 2;
+  const isLS = window.innerWidth > window.innerHeight;
+  const H   = isLS ? Math.min(300, window.innerHeight-140) : 220;
+
+  canvas.width  = W*dpr; canvas.height = H*dpr;
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr,dpr); ctx.clearRect(0,0,W,H);
+
+  const FM={weekly:52/12,biweekly:26/12,monthly:1,quarterly:1/3,annual:1/12};
+  const src = (typeof incomeSources!=='undefined'?incomeSources:[]);
+  const incNodes = src.map(s=>({label:s.name.split(' ').slice(0,2).join(' '),value:Math.round(s.amt*(FM[s.freq]||1)),color:'#3dda91'})).filter(n=>n.value>0);
+  const incTotal = incNodes.reduce((s,n)=>s+n.value,0)||1;
+
+  const cut = new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+  const byCat={};
+  (typeof allTxns!=='undefined'?allTxns:[]).filter(t=>t.date>=cut&&t.amount>0).forEach(t=>{const c=getTxnCategory(t);byCat[c]=(byCat[c]||0)+t.amount;});
+  let spNodes = Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,7).map(([lbl,val])=>({label:lbl,value:Math.round(val),color:getCatColor(lbl)}));
+
+  if (!spNodes.length) {
+    const bl = typeof bills!=='undefined'?bills:[];
+    const bc={};bl.forEach(b=>{if(b.pay>0)bc[b.cat||'Bills']=(bc[b.cat||'Bills']||0)+b.pay;});
+    spNodes=Object.entries(bc).sort((a,b)=>b[1]-a[1]).slice(0,7).map(([lbl,val])=>({label:lbl,value:Math.round(val),color:getCatColor(lbl)}));
+  }
+
+  const spTotal=spNodes.reduce((s,n)=>s+n.value,0)||1;
+
+  if(!incNodes.length&&!spNodes.length){
+    ctx.fillStyle='#888';ctx.font='12px Arial';ctx.textAlign='center';
+    ctx.fillText('Add income sources to see money flow',W/2,H/2); return;
+  }
+
+  const PAD=14, GAP=5, NW=12;
+  const LW=Math.min(88,W*0.2);
+  const LX=LW, RX=W-LW-NW;
+  const avail=H-PAD*2;
+
+  function layout(nodes,total,scale){
+    let y=PAD;
+    return nodes.map(n=>{const h=Math.max(5,Math.round(n.value/total*scale));const r={...n,y,h};y+=h+GAP;return r;});
+  }
+  const iN=layout(incNodes,incTotal,avail-(Math.max(incNodes.length-1,0))*GAP);
+  const sN=layout(spNodes, spTotal, avail-(Math.max(spNodes.length-1,0))*GAP);
+
+  const iF=iN.map(n=>n.y), sF=sN.map(n=>n.y);
+  iN.forEach((src,si)=>{
+    sN.forEach((dst,di)=>{
+      const sfh=Math.max(1,Math.round(src.h*dst.value/spTotal));
+      const dfh=Math.max(1,Math.round(dst.h*src.value/incTotal));
+      const x0=LX+NW,y0=iF[si],x1=RX,y1=sF[di];
+      iF[si]+=sfh; sF[di]+=dfh;
+      const mx=(x0+x1)/2;
+      const g=ctx.createLinearGradient(x0,0,x1,0);
+      g.addColorStop(0,(src.color||'#3dda91')+'88');
+      g.addColorStop(1,(dst.color||'#94a3b8')+'88');
+      ctx.beginPath();ctx.moveTo(x0,y0);ctx.bezierCurveTo(mx,y0,mx,y1,x1,y1);
+      ctx.lineTo(x1,y1+dfh);ctx.bezierCurveTo(mx,y1+dfh,mx,y0+sfh,x0,y0+sfh);
+      ctx.closePath();ctx.fillStyle=g;ctx.fill();
+    });
+  });
+
+  const textC=getComputedStyle(document.documentElement).getPropertyValue('--text').trim()||'#111';
+  const mutC =getComputedStyle(document.documentElement).getPropertyValue('--muted').trim()||'#666';
+
+  function drawNodes(nodes,total,isLeft){
+    nodes.forEach(n=>{
+      const nx=isLeft?LX:RX;
+      ctx.fillStyle=n.color||'#3dda91';
+      ctx.beginPath();
+      if(ctx.roundRect)ctx.roundRect(nx,n.y,NW,n.h,2);else ctx.rect(nx,n.y,NW,n.h);
+      ctx.fill();
+      const lx=isLeft?LX-4:RX+NW+4;
+      const midY=n.y+n.h/2;
+      ctx.textAlign=isLeft?'right':'left';
+      ctx.font='bold 10px Arial,sans-serif'; ctx.fillStyle=textC;
+      const lbl=n.label.length>13?n.label.slice(0,12)+'…':n.label;
+      ctx.fillText(lbl,lx,midY-2);
+      const val=n.value>=1000?'$'+(n.value/1000).toFixed(1)+'K':'$'+n.value;
+      const pct=Math.round(n.value/total*100)+'%';
+      ctx.font='9px monospace'; ctx.fillStyle=mutC;
+      ctx.fillText(val+' · '+pct,lx,midY+10);
+    });
+  }
+  drawNodes(iN,incTotal,true);
+  drawNodes(sN,spTotal,false);
+
+  ctx.textAlign='left';ctx.font='bold 9px Arial';ctx.fillStyle=mutC;
+  ctx.fillText('INCOME',LX,10);
+  ctx.textAlign='right';ctx.fillText('SPENDING',RX,10);
+}
+
+window.addEventListener('orientationchange',function(){setTimeout(renderSankey,350);});
+window.addEventListener('resize',function(){clearTimeout(window._skt);window._skt=setTimeout(renderSankey,250);});
+
 // ── BILLS DATA ────────────────────────────────────────────────────────────────
 let bills=[
   {cat:'HM',name:"M&T Mortgage",note:'Mortgage',apr:2.625,due:5,bal:-292452.38,min:2638.46,pay:2638.46,promo:'',paid:false},
@@ -1082,6 +1276,7 @@ function showPage(page){
 async function init(){
   ['dashEditBar','expEditBar','retEditBar'].forEach(id=>{const el=gg(id);if(el)el.style.display='none';});
   ['dashContainer','expContainer','retContainer'].forEach(id=>initDrag(gg(id)));
+  setTimeout(renderCharts,200);
   ['dashboard','expenses','retirement'].forEach(loadSO);
   const sel=gg('calMonthSel');
   if(sel){const now=new Date();for(let i=0;i<12;i++){const d=new Date(now.getFullYear(),now.getMonth()+i,1);const o=document.createElement('option');o.value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;o.textContent=d.toLocaleString('default',{month:'long',year:'numeric'});if(i===0)o.selected=true;sel.appendChild(o);}}
@@ -1256,15 +1451,49 @@ function updateSpendMetrics(){
   const tc=gg('mTxnCount');if(tc)tc.textContent=rec.length;
 }
 function renderCharts(){
-  const cut=new Date(Date.now()-30*86400000);
-  const rec=allTxns.filter(t=>new Date(t.date)>=cut&&t.amount>0);
-  const byCat={};rec.forEach(t=>{const c=fmtCat(t.personal_finance_category?.primary||t.category?.[0]||'Other');byCat[c]=(byCat[c]||0)+t.amount;});
+  const cut = new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+  const rec = allTxns.filter(t=>t.date>=cut&&t.amount>0);
+  const byCat={};
+  rec.forEach(t=>{ const c=getTxnCategory(t); byCat[c]=(byCat[c]||0)+t.amount; });
   const sorted=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const total=sorted.reduce((s,[,v])=>s+v,0);
+  const colors=sorted.map(([lbl])=>getCatColor(lbl));
+  const surfC=getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()||'#fff';
+
+  // Doughnut (no built-in legend)
   if(catChartI)catChartI.destroy();
-  catChartI=new Chart(gg('catChart'),{type:'doughnut',data:{labels:sorted.map(([k])=>k),datasets:[{data:sorted.map(([,v])=>Math.round(v)),backgroundColor:PAL,borderWidth:2,borderColor:'#161920'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10.5},boxWidth:9,padding:7}},tooltip:{callbacks:{label:c=>` $${c.parsed.toLocaleString()}`}}}}});
-  const byD={};rec.forEach(t=>{byD[t.date]=(byD[t.date]||0)+t.amount;});const days=Object.keys(byD).sort().slice(-30);
-  if(dailyChartI)dailyChartI.destroy();
-  dailyChartI=new Chart(gg('dailyChart'),{type:'bar',data:{labels:days.map(d=>d.slice(5)),datasets:[{data:days.map(d=>Math.round(byD[d])),backgroundColor:'#5b8def',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9},maxRotation:45,autoSkip:true,maxTicksLimit:10},grid:{display:false}},y:{ticks:{font:{size:9.5},callback:v=>'$'+v},grid:{color:'rgba(255,255,255,0.03)'}}}}});
+  const catEl=document.getElementById('catChart');
+  if(catEl){
+    catChartI=new Chart(catEl,{type:'doughnut',
+      data:{labels:sorted.map(([k])=>k),datasets:[{data:sorted.map(([,v])=>Math.round(v)),
+        backgroundColor:colors,borderWidth:2,borderColor:surfC}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'55%',
+        plugins:{legend:{display:false},
+          tooltip:{callbacks:{label:c=>{
+            const pct=total>0?Math.round(c.parsed/total*100):0;
+            return ' '+c.label+': $'+c.parsed.toLocaleString()+' ('+pct+'%)';
+          }}}}}});
+  }
+
+  // Category legend with %
+  const legendEl=document.getElementById('catLegend');
+  if(legendEl){
+    legendEl.innerHTML=!sorted.length
+      ?'<div style="color:var(--muted);font-size:12px;padding:8px 0">Connect accounts to see spending categories.</div>'
+      :sorted.map(([lbl,amt])=>{
+          const pct=total>0?Math.round(amt/total*100):0;
+          const col=getCatColor(lbl);
+          return '<div class="cat-legend-row">'
+            +'<div class="cat-legend-dot" style="background:'+col+'"></div>'
+            +'<span class="cat-legend-name">'+lbl+'</span>'
+            +'<span class="cat-legend-pct">'+pct+'%</span>'
+            +'<span class="cat-legend-amt">$'+Math.round(amt).toLocaleString()+'</span>'
+            +'</div>';
+        }).join('');
+  }
+
+  // Sankey
+  setTimeout(renderSankey,80);
 }
 
 // ── BILLS ─────────────────────────────────────────────────────────────────────
