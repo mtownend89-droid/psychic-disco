@@ -553,6 +553,105 @@ canvas.chart-interactive { cursor: crosshair; }
   font-weight: 700;
   font-family: var(--mono);
 }
+
+/* ── D3: Financial SWOT ────────────────────────────────────────────────────── */
+.swot-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 12px;
+}
+@media (max-width: 600px) {
+  .swot-grid { grid-template-columns: 1fr; }
+}
+.swot-card {
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  border: 1px solid transparent;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.swot-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+/* Strengths — green tint */
+.swot-s {
+  background: rgba(61,218,145,0.07);
+  border-color: rgba(61,218,145,0.2);
+}
+/* Weaknesses — red tint */
+.swot-w {
+  background: rgba(244,106,106,0.07);
+  border-color: rgba(244,106,106,0.2);
+}
+/* Opportunities — blue tint */
+.swot-o {
+  background: rgba(107,158,245,0.07);
+  border-color: rgba(107,158,245,0.2);
+}
+/* Threats — amber tint */
+.swot-t {
+  background: rgba(245,176,66,0.07);
+  border-color: rgba(245,176,66,0.2);
+}
+.swot-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+.swot-s .swot-label { color: var(--green); }
+.swot-w .swot-label { color: var(--red); }
+.swot-o .swot-label { color: var(--blue); }
+.swot-t .swot-label { color: var(--amber); }
+.swot-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+.swot-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text);
+  line-height: 1.45;
+}
+.swot-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+.swot-s .swot-dot { background: var(--green); }
+.swot-w .swot-dot { background: var(--red); }
+.swot-o .swot-dot { background: var(--blue); }
+.swot-t .swot-dot { background: var(--amber); }
+.swot-metric {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.swot-s .swot-metric { background: rgba(61,218,145,0.15); color: var(--green); }
+.swot-w .swot-metric { background: rgba(244,106,106,0.15); color: var(--red); }
+.swot-o .swot-metric { background: rgba(107,158,245,0.15); color: var(--blue); }
+.swot-t .swot-metric { background: rgba(245,176,66,0.15); color: var(--amber); }
+.swot-empty {
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+  padding: 4px 0;
+}
 </style>
 
 </head>
@@ -766,6 +865,29 @@ canvas.chart-interactive { cursor: crosshair; }
 
           </div>
         </div>
+        <!-- ── D3: FINANCIAL SWOT ── -->
+        <div class="drag-section" data-id="swot">
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Financial SWOT</div></div>
+          <div id="swotGrid" class="swot-grid">
+            <div class="swot-card swot-s">
+              <div class="swot-label">💪 Strengths</div>
+              <ul class="swot-list" id="swotStrengths"></ul>
+            </div>
+            <div class="swot-card swot-w">
+              <div class="swot-label">⚠️ Weaknesses</div>
+              <ul class="swot-list" id="swotWeaknesses"></ul>
+            </div>
+            <div class="swot-card swot-o">
+              <div class="swot-label">🎯 Opportunities</div>
+              <ul class="swot-list" id="swotOpportunities"></ul>
+            </div>
+            <div class="swot-card swot-t">
+              <div class="swot-label">🚨 Threats</div>
+              <ul class="swot-list" id="swotThreats"></ul>
+            </div>
+          </div>
+        </div>
+
         <div class="drag-section" data-id="accts-banks">
           <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Accounts &amp; institutions</div></div>
           <div class="g2">
@@ -1938,6 +2060,155 @@ function renderPLChart() {
   }
 }
 
+
+// ══════════════════════════════════════════════════════════════════════════════
+// D3 — FINANCIAL SWOT ANALYSIS
+// Auto-generated from live household data. Each item shows the metric that
+// triggered it so you can see exactly why it appeared.
+// ══════════════════════════════════════════════════════════════════════════════
+function renderSWOT() {
+  var inc      = monthlyIncome();
+  var bil      = monthlyBills();
+  var rem      = inc - bil;
+  var disc     = zeroBuckets.reduce(function(s,b){return s+b.amt;},0);
+  var unalloc  = rem - disc;
+  var totalDebt= bills.reduce(function(s,b){return s+Math.abs(b.bal||0);},0);
+  var totalAssets = nwAssets.reduce(function(s,a){return s+a.value;},0);
+  var totalLiab   = nwLiab.reduce(function(s,l){return s+l.value;},0);
+  var netWorth    = totalAssets - totalLiab;
+  var dti         = inc > 0 ? bil / inc : 0;           // debt-to-income ratio
+  var savingsRate = inc > 0 ? Math.max(0, rem) / inc : 0;
+  var debtToAsset = totalAssets > 0 ? totalLiab / totalAssets : 0;
+  var highAprDebt = bills.filter(function(b){ return (b.apr||0) > 15 && Math.abs(b.bal||0) > 0; });
+  var highAprTotal= highAprDebt.reduce(function(s,b){return s+Math.abs(b.bal||0);},0);
+  var ccDebt      = bills.filter(function(b){return b.cat==='CC';}).reduce(function(s,b){return s+Math.abs(b.bal||0);},0);
+  var promoDebt   = bills.filter(function(b){return b.promo && b.promo.includes('0%') && Math.abs(b.bal||0)>0;});
+  var emergFund   = zeroBuckets.find(function(b){return b.name.toLowerCase().includes('emer');});
+  var emergAmt    = emergFund ? emergFund.amt : 0;
+  var emergMonths = bil > 0 ? (emergAmt / bil) : 0;
+  var txn30       = allTxns.filter(function(t){
+    return t.date >= new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+  });
+  var spend30     = txn30.filter(function(t){return t.amount>0;}).reduce(function(s,t){return s+t.amount;},0);
+  var surplus     = inc - bil - spend30;
+
+  var S=[], W=[], O=[], T=[];
+
+  // ── STRENGTHS ──────────────────────────────────────────────────────────────
+  if (savingsRate >= 0.20)
+    S.push({text:'Strong savings rate — putting away a solid share of income each month', metric: Math.round(savingsRate*100)+'%'});
+  else if (savingsRate >= 0.10)
+    S.push({text:'Positive savings rate — money going toward savings each month', metric: Math.round(savingsRate*100)+'%'});
+
+  if (netWorth > 0)
+    S.push({text:'Positive net worth — assets exceed liabilities', metric: fmtM(netWorth)});
+
+  if (dti < 0.28)
+    S.push({text:'Healthy debt-to-income ratio — well within recommended range (under 28%)', metric: Math.round(dti*100)+'%'});
+  else if (dti < 0.36)
+    S.push({text:'Manageable debt-to-income ratio — within acceptable range', metric: Math.round(dti*100)+'%'});
+
+  if (incomeSources.length > 1)
+    S.push({text:'Multiple income streams — reduces reliance on any single source', metric: incomeSources.length+' sources'});
+
+  if (rem > 0)
+    S.push({text:'Monthly cash flow positive — income covers all fixed bills', metric: '+'+fmtM(rem)+'/mo'});
+
+  if (promoDebt.length > 0)
+    S.push({text:'0% promo rates active — paying down debt interest-free', metric: promoDebt.length+' accounts'});
+
+  if (!S.length) S.push({text:'Connect accounts and add income sources to see strengths', metric:''});
+
+  // ── WEAKNESSES ─────────────────────────────────────────────────────────────
+  if (savingsRate < 0.10 && inc > 0)
+    W.push({text:'Low savings rate — aim for at least 10–20% of monthly income', metric: Math.round(savingsRate*100)+'%'});
+
+  if (dti > 0.43)
+    W.push({text:'High debt-to-income ratio — lenders consider above 43% a risk signal', metric: Math.round(dti*100)+'%'});
+  else if (dti > 0.36)
+    W.push({text:'Elevated debt-to-income — aim to bring below 36%', metric: Math.round(dti*100)+'%'});
+
+  if (highAprTotal > 0)
+    W.push({text:'High-interest debt outstanding (APR > 15%) — costing the most each month', metric: fmtM(highAprTotal)});
+
+  if (emergMonths < 1 && inc > 0)
+    W.push({text:'Emergency fund below 1 month of bills — prioritize building this buffer', metric: Math.round(emergMonths*10)/10+' mo'});
+  else if (emergMonths < 3 && inc > 0)
+    W.push({text:'Emergency fund covers less than 3 months of bills — recommended minimum is 3–6 months', metric: Math.round(emergMonths*10)/10+' mo'});
+
+  if (ccDebt > 5000)
+    W.push({text:'Significant credit card balance — interest compounds daily', metric: fmtM(ccDebt)});
+
+  if (unalloc > inc * 0.15 && inc > 0)
+    W.push({text:'Large unallocated income — money without a purpose tends to get spent', metric: fmtM(unalloc)+'/mo'});
+
+  if (!W.length) W.push({text:'No significant weaknesses detected — keep it up!', metric:''});
+
+  // ── OPPORTUNITIES ──────────────────────────────────────────────────────────
+  if (highAprTotal > 0 && rem > 0)
+    O.push({text:'Apply surplus to highest-APR debt first (avalanche method) to cut interest costs', metric: 'Save on APR'});
+
+  if (emergMonths < 3 && rem > 200)
+    O.push({text:'Route '+fmtM(Math.min(rem*0.5, 500))+'/mo surplus toward emergency fund to hit 3-month target', metric: fmtM(Math.min(rem*0.5,500))+'/mo'});
+
+  if (promoDebt.length > 0) {
+    var earliest = promoDebt.sort(function(a,b){ return (a.promo||'').localeCompare(b.promo||''); })[0];
+    O.push({text:'Promo 0% rates expiring — pay off before expiry to avoid back-interest hit', metric: earliest.name});
+  }
+
+  if (savingsRate < 0.20 && rem > 500)
+    O.push({text:'Redirect '+fmtM(Math.min(rem*0.3,800))+'/mo of surplus to retirement accounts (401k/IRA)', metric: fmtM(Math.min(rem*0.3,800))+'/mo'});
+
+  if (incomeSources.length === 1)
+    O.push({text:'Single income stream — explore side income or passive revenue to reduce risk', metric: '1 source'});
+
+  if (debtToAsset > 0.5 && totalAssets > 0)
+    O.push({text:'Liabilities are '+ Math.round(debtToAsset*100)+'% of assets — paying down debt improves net worth faster than most investments', metric: Math.round(debtToAsset*100)+'%'});
+
+  if (!O.length) O.push({text:'Finances look well-managed — consider increasing retirement contributions', metric:''});
+
+  // ── THREATS ────────────────────────────────────────────────────────────────
+  if (emergMonths < 1 && inc > 0)
+    T.push({text:'No emergency cushion — a single unexpected expense could require taking on debt', metric:'<1 month'});
+
+  if (totalDebt > inc * 18)
+    T.push({text:'Total debt is more than 18 months of income — vulnerability to income disruption', metric: fmtM(totalDebt)});
+
+  var overdueBills = bills.filter(function(b){return !b.paid && b.due && b.due < new Date().getDate() && b.pay>0;});
+  if (overdueBills.length > 0)
+    T.push({text:'Bills past due this month — late fees and credit score impact', metric: overdueBills.length+' bills'});
+
+  var expiredPromo = bills.filter(function(b){ return b.promo && b.promo.match(/thru \d+\/\d+/) && Math.abs(b.bal||0)>0; });
+  if (expiredPromo.length > 0)
+    T.push({text:'0% promo rates have expiration dates — missing them means deferred interest hits all at once', metric: expiredPromo.length+' accounts'});
+
+  if (highAprTotal > 0 && rem < 0)
+    T.push({text:'Negative cash flow with high-APR debt — balance growing each month', metric: fmtM(rem)+'/mo'});
+
+  if (dti > 0.50)
+    T.push({text:'Debt-to-income above 50% — severely limits ability to qualify for new credit or refinancing', metric: Math.round(dti*100)+'%'});
+
+  if (!T.length) T.push({text:'No immediate threats detected — maintain current discipline', metric:''});
+
+  // ── RENDER ─────────────────────────────────────────────────────────────────
+  function fillList(id, items) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = items.map(function(item) {
+      return '<li class="swot-item">'
+        + '<div class="swot-dot"></div>'
+        + '<span>' + item.text
+        + (item.metric ? ' <span class="swot-metric">'+item.metric+'</span>' : '')
+        + '</span></li>';
+    }).join('');
+  }
+
+  fillList('swotStrengths',    S);
+  fillList('swotWeaknesses',   W);
+  fillList('swotOpportunities',O);
+  fillList('swotThreats',      T);
+}
+
 // ── BILLS DATA ────────────────────────────────────────────────────────────────
 let bills=[
   {cat:'HM',name:"M&T Mortgage",note:'Mortgage',apr:2.625,due:5,bal:-292452.38,min:2638.46,pay:2638.46,promo:'',paid:false},
@@ -2068,6 +2339,7 @@ async function init(){
   ['dashEditBar','expEditBar','retEditBar'].forEach(id=>{const el=gg(id);if(el)el.style.display='none';});
   ['dashContainer','expContainer','retContainer'].forEach(id=>initDrag(gg(id)));
   setTimeout(renderCharts,200);
+  setTimeout(renderSWOT,350);
   ['dashboard','expenses','retirement'].forEach(loadSO);
   const sel=gg('calMonthSel');
   if(sel){const now=new Date();for(let i=0;i<12;i++){const d=new Date(now.getFullYear(),now.getMonth()+i,1);const o=document.createElement('option');o.value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;o.textContent=d.toLocaleString('default',{month:'long',year:'numeric'});if(i===0)o.selected=true;sel.appendChild(o);}}
@@ -2118,7 +2390,7 @@ async function loadAccounts(){
 async function loadTransactions(){
   const d=await fetch('/api/transactions').then(r=>r.json());
   allTxns=d.transactions||[];
-  filterTransactions();renderCharts();updateSpendMetrics();populateFilters();
+  filterTransactions();renderCharts();updateSpendMetrics();populateFilters();renderSWOT();
 }
 function injectPlaidRet(){
   const retT=['investment','brokerage','401k','ira','roth','retirement','hsa'];
