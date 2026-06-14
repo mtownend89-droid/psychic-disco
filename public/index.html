@@ -695,6 +695,93 @@ canvas.chart-interactive { cursor: crosshair; }
   font-family: var(--font); transition: all 0.13s;
   white-space: nowrap; flex-shrink: 0; margin-left: auto;
 }
+
+/* ── D4: Account chips ───────────────────────────────────────────────────── */
+.acct-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 24px;
+  border: 1.5px solid var(--border);
+  background: var(--surface2);
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+  white-space: nowrap;
+}
+.acct-chip:hover {
+  border-color: var(--border2);
+  background: var(--surface3);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+.acct-chip.active {
+  border-color: var(--green);
+  background: var(--green-dim);
+}
+.acct-chip-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+.acct-chip-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+.acct-chip-bal {
+  font-size: 12px;
+  font-family: var(--mono);
+  font-weight: 700;
+}
+.acct-chip-arrow {
+  font-size: 10px;
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+.acct-chip.active .acct-chip-arrow {
+  transform: rotate(180deg);
+  color: var(--green);
+}
+
+/* Transaction list inside chip panel */
+.acct-txn-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 10px;
+}
+.acct-txn-row:last-child { border-bottom: none; }
+.acct-txn-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 280px;
+}
+.acct-txn-cat {
+  font-size: 10.5px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.acct-txn-right {
+  text-align: right;
+  flex-shrink: 0;
+}
+.acct-txn-amt {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--mono);
+}
+.acct-txn-date {
+  font-size: 10.5px;
+  color: var(--muted);
+  margin-top: 2px;
+}
 </style>
 
 </head>
@@ -967,11 +1054,33 @@ canvas.chart-interactive { cursor: crosshair; }
           <div id="apContent" style="padding:20px 22px"></div>
         </div>
 
+        <!-- ── D4: ACCOUNT CHIPS ── -->
         <div class="drag-section" data-id="accts-banks">
-          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Accounts &amp; institutions</div></div>
-          <div class="g2">
-            <div class="card card-sm"><div class="card-title">accounts &amp; balances</div><div id="accountsList"><div class="empty"><span class="spinner"></span></div></div></div>
-            <div class="card card-sm"><div class="card-title">linked institutions</div><div id="banksList"><div class="empty">No banks linked</div></div></div>
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Accounts</div></div>
+          <div class="card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+              <div class="card-title" style="margin-bottom:0">🏦 Linked Accounts</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span id="acctChipSummary" style="font-size:11px;color:var(--muted)"></span>
+                <button class="btn" onclick="openLinkHandler()" style="font-size:11px;padding:4px 10px">+ Connect</button>
+              </div>
+            </div>
+            <!-- Chip row -->
+            <div id="acctChips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px"></div>
+            <!-- Expandable transaction panel -->
+            <div id="acctTxnPanel" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                <div>
+                  <span id="acctTxnTitle" style="font-size:13px;font-weight:600;color:var(--text)"></span>
+                  <span id="acctTxnMeta" style="font-size:11px;color:var(--muted);margin-left:8px"></span>
+                </div>
+                <button onclick="collapseAcctChip()" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:2px 6px;line-height:1">×</button>
+              </div>
+              <div id="acctTxnList"></div>
+              <button id="acctViewAllBtn" onclick="goToTransactions()" style="display:none;margin-top:10px;font-size:12px" class="btn">View all transactions →</button>
+            </div>
+            <!-- Institutions footer -->
+            <div id="banksList" style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px;display:none"></div>
           </div>
         </div>
       </div>
@@ -2872,15 +2981,148 @@ function refreshRetAccounts(){
 
 // ── DASHBOARD RENDERS ─────────────────────────────────────────────────────────
 function renderAccounts(){
-  const el=gg('accountsList');if(!el)return;
-  if(!allAccts.length){el.innerHTML='<div class="empty">No accounts</div>';return;}
-  el.innerHTML=allAccts.map(a=>{const bal=a.balances.current??a.balances.available??0;const iC=a.type==='credit';return `<div class="acct-row"><div><div class="acct-name">${esc(a.name)}</div><div class="acct-sub">${esc(a.institution)} · ****${esc(a.mask||'????')}</div></div><div style="text-align:right"><div class="acct-bal" style="color:${iC?'var(--red)':'var(--green)'}">${iC?'-':''}${fmtK(bal)}</div><div class="acct-type">${a.subtype||a.type}</div></div></div>`;}).join('');
+  const chips = gg('acctChips');
+  if (!chips) return;
+
+  if (!allAccts.length) {
+    chips.innerHTML = '<div class="empty" style="padding:8px 0;color:var(--muted);font-size:13px">No accounts linked — click + Connect to add your banks.</div>';
+    return;
+  }
+
+  // Summary line
+  const sum = gg('acctChipSummary');
+  if (sum) {
+    const tot = allAccts.reduce((s,a)=>a.type==='credit'?s-(a.balances.current??0):s+(a.balances.current??0),0);
+    sum.textContent = allAccts.length+' accounts · Net '+fmt2(tot);
+    sum.style.color = tot >= 0 ? 'var(--green)' : 'var(--red)';
+  }
+
+  // Type icon
+  function acctIcon(a) {
+    if (a.type==='credit')     return '💳';
+    if (a.subtype==='savings') return '🏦';
+    if (a.subtype==='checking')return '🏧';
+    if (a.type==='investment') return '📈';
+    if (a.type==='loan')       return '🏠';
+    return '💰';
+  }
+
+  chips.innerHTML = allAccts.map((a,i)=>{
+    const bal = a.balances.current ?? a.balances.available ?? 0;
+    const iC  = a.type === 'credit';
+    const balCol = iC ? 'var(--red)' : 'var(--green)';
+    const balStr = (iC?'-':'+') + fmtK(Math.abs(bal));
+    const shortName = a.name.replace(/[Cc]hase|[Ww]ells\s*[Ff]argo|[Aa]mex|[Cc]apital\s*[Oo]ne/g,'').trim() || a.name;
+    return '<div class="acct-chip" id="chip-'+i+'" onclick="toggleAcctChip('+i+')">'
+      +'<span class="acct-chip-icon">'+acctIcon(a)+'</span>'
+      +'<div>'
+        +'<div class="acct-chip-name">'+esc(shortName)+'</div>'
+        +'<div class="acct-chip-bal" style="color:'+balCol+'">'+balStr+'</div>'
+      +'</div>'
+      +'<span class="acct-chip-arrow">▼</span>'
+      +'</div>';
+  }).join('');
+}
+
+// Track which chip is open
+var _openChipIdx = -1;
+
+function toggleAcctChip(idx) {
+  if (_openChipIdx === idx) {
+    collapseAcctChip();
+    return;
+  }
+  // Deactivate previous
+  if (_openChipIdx >= 0) {
+    var prev = gg('chip-'+_openChipIdx);
+    if (prev) prev.classList.remove('active');
+  }
+  _openChipIdx = idx;
+  var chip = gg('chip-'+idx);
+  if (chip) chip.classList.add('active');
+  expandAcctChip(idx);
+}
+
+function collapseAcctChip() {
+  if (_openChipIdx >= 0) {
+    var chip = gg('chip-'+_openChipIdx);
+    if (chip) chip.classList.remove('active');
+  }
+  _openChipIdx = -1;
+  var panel = gg('acctTxnPanel');
+  if (panel) panel.style.display = 'none';
+}
+
+function expandAcctChip(idx) {
+  var a     = allAccts[idx];
+  if (!a) return;
+  var panel = gg('acctTxnPanel');
+  var title = gg('acctTxnTitle');
+  var meta  = gg('acctTxnMeta');
+  var list  = gg('acctTxnList');
+  var btn   = gg('acctViewAllBtn');
+  if (!panel) return;
+
+  // Header
+  if (title) title.textContent = a.name;
+
+  // Get transactions for this account (last 30d or selected range)
+  var cut  = getChartCutDate(_chartRange);
+  var txns = allTxns.filter(function(t){
+    return (t.account_id === a.account_id) && t.date >= cut;
+  }).slice(0, 25);
+
+  // Net for period
+  var net = txns.reduce(function(s,t){return s + (t.amount>0?-t.amount:Math.abs(t.amount));},0);
+  var netStr = (net>=0?'+':'') + fmt2(Math.abs(net));
+  if (meta) {
+    meta.textContent = txns.length + ' transactions · ' + getChartRangeLabel(_chartRange) + ' · net ' + netStr;
+    meta.style.color = net >= 0 ? 'var(--green)' : 'var(--red)';
+  }
+
+  // Transaction list
+  if (list) {
+    if (!txns.length) {
+      list.innerHTML = '<div class="empty" style="padding:12px 0;font-size:12.5px">No transactions in this period for this account.</div>';
+    } else {
+      list.innerHTML = txns.map(function(t){
+        var pos  = t.amount > 0;
+        var col  = pos ? 'var(--red)' : 'var(--green)';
+        var amt  = (pos?'-':'+') + fmt2(Math.abs(t.amount));
+        var cat  = getTxnCategory(t);
+        var name = t.merchant_name || t.name || '';
+        var dt   = new Date(t.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+        return '<div class="acct-txn-row">'
+          +'<div style="flex:1;overflow:hidden">'
+            +'<div class="acct-txn-name">'+esc(name)+'</div>'
+            +'<div class="acct-txn-cat">'+esc(cat)+'</div>'
+          +'</div>'
+          +'<div class="acct-txn-right">'
+            +'<div class="acct-txn-amt" style="color:'+col+'">'+amt+'</div>'
+            +'<div class="acct-txn-date">'+dt+'</div>'
+          +'</div>'
+          +'</div>';
+      }).join('');
+    }
+  }
+
+  if (btn) btn.style.display = txns.length ? 'inline-flex' : 'none';
+  panel.style.display = 'block';
+  // Scroll to panel smoothly
+  setTimeout(function(){ panel.scrollIntoView({behavior:'smooth',block:'nearest'}); }, 50);
+}
+
+function goToTransactions() {
+  showPage('transactions');
+  collapseAcctChip();
 }
 function renderBanks(){
   const el=gg('banksList');if(!el)return;
   const items=[...new Map(allAccts.map(a=>[a.itemId,a])).values()];
-  if(!items.length){el.innerHTML='<div class="empty">No banks linked</div>';return;}
-  el.innerHTML=items.map(a=>`<div class="acct-row"><div><div class="acct-name">${esc(a.institution)}</div><div class="acct-sub mono" style="font-size:10px">${esc((a.itemId||'').slice(0,20))}…</div></div><button class="btn danger" onclick="removeBank('${esc(a.itemId)}')">Remove</button></div>`).join('');
+  if(!items.length){el.style.display='none';return;}
+  el.style.display='block';
+  el.innerHTML='<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:8px">Linked institutions</div>'
+    +items.map(a=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;font-size:12.5px"><div style="font-weight:500">${esc(a.institution)}<span style="color:var(--muted);font-size:10.5px;margin-left:6px">${allAccts.filter(x=>x.itemId===a.itemId).length} accounts</span></div><button class="btn danger" style="font-size:10.5px;padding:3px 8px" onclick="removeBank('${esc(a.itemId)}')">Remove</button></div>`).join('');
 }
 async function removeBank(id){
   if(!confirm('Remove this bank?'))return;
