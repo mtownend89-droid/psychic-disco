@@ -1365,9 +1365,9 @@ canvas.chart-interactive { cursor: crosshair; }
               <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:600;padding:10px 0 2px;border-top:1px solid var(--border);margin-top:5px"><span>Remaining (target $0)</span><span id="zRemaining" class="mono">—</span></div>
             </div>
             <div style="display:flex;gap:7px;margin-top:11px">
-              <button class="btn" onclick="addZeroBucket()">+ Category</button>
               <button class="btn primary" onclick="autoBalanceZero()">⚖ Auto-balance to $0</button>
             </div>
+            <div style="font-size:10.5px;color:var(--muted);margin-top:8px">Categories managed in Settings → Categories</div>
           </div>
           <!-- B3: Budget allocation chart widget -->
           <div class="card card-sm" style="padding:0;overflow:hidden">
@@ -3420,17 +3420,30 @@ let incomeSources=[
   {name:'Auto Allowance',freq:'monthly',amt:1650.00},
   {name:'Quarterly Bonus',freq:'quarterly',amt:3594.23},
 ];
-let zeroBuckets=[
-  {name:'Food & Groceries',  catId:'food',         amt:350},
-  {name:'Dining Out',        catId:'dining',        amt:200},
-  {name:'Gas & Fuel',        catId:'gas',           amt:300},
-  {name:'Health & Medical',  catId:'health',        amt:150},
-  {name:'Shopping',          catId:'shopping',      amt:100},
-  {name:'Entertainment',     catId:'entertainment', amt:100},
-  {name:'Savings & Invest',  catId:'savings',       amt:500},
-  {name:'Emergency Fund',    catId:'other',         amt:200},
-  {name:'Subscriptions',     catId:'subscriptions', amt:100},
-];
+// zeroBuckets is always derived from the master category list.
+// Amounts are persisted; the list shape comes from getUserCategories().
+// Non-discretionary cats (income, loans) are excluded.
+const _NON_DISCRETIONARY = ['income','loans'];
+var zeroBuckets = [];
+
+function syncZeroBucketsFromCategories() {
+  var cats    = getUserCategories();
+  var saved   = {};
+  // Preserve existing amounts by catId
+  zeroBuckets.forEach(function(b){ if(b.catId) saved[b.catId] = b.amt; });
+  // Also load from localStorage
+  try {
+    var ls = JSON.parse(localStorage.getItem('zeroBuckets')||'[]');
+    ls.forEach(function(b){ if(b.catId && !(b.catId in saved)) saved[b.catId] = b.amt; });
+  } catch(e){}
+
+  // Rebuild from master list — every cat except non-discretionary
+  zeroBuckets = cats
+    .filter(function(c){ return !_NON_DISCRETIONARY.includes(c.id); })
+    .map(function(c){
+      return { name:c.label, catId:c.id, amt: saved[c.id] || 0 };
+    });
+}
 let nwAssets=[
   {cat:'Cash & Bank',name:'Checking accounts',value:0,note:'From Plaid',plaid:true},
   {cat:'Cash & Bank',name:'Savings accounts',value:0,note:'From Plaid',plaid:true},
@@ -3515,7 +3528,7 @@ function showPage(page){
   const nb=document.querySelector(`.nav-btn[onclick="showPage('${page}')"]`);if(nb)nb.classList.add('active');
   const tt=gg('topbarTitle');if(tt)tt.textContent=PT[page]||page;
   if(page==='retirement')calcAll();
-  if(page==='expenses'){renderBillsTab();renderCalendar();renderZeroBudget();renderIncomeTab();updateBudgetMetrics();initBillMonthSelectors();renderBillsByMonth();}
+  if(page==='expenses'){syncZeroBucketsFromCategories();renderBillsTab();renderCalendar();renderZeroBudget();renderIncomeTab();updateBudgetMetrics();initBillMonthSelectors();renderBillsByMonth();}
   if(page==='networth')renderNetWorth();
   if(page==='cashflow')renderCashFlow();
 }
@@ -3536,7 +3549,7 @@ async function init(){
   if(gg('exportFrom'))gg('exportFrom').value=new Date(Date.now()-90*86400000).toISOString().slice(0,10);
   try{const s=JSON.parse(localStorage.getItem('bills'));if(s?.length)bills=s;}catch(e){}
   try{const s=JSON.parse(localStorage.getItem('incomeSources'));if(s?.length)incomeSources=s;}catch(e){}
-  try{const s=JSON.parse(localStorage.getItem('zeroBuckets'));if(s?.length)zeroBuckets=s;}catch(e){}
+  syncZeroBucketsFromCategories(); // builds from master cats, restores saved amounts
   try{const s=JSON.parse(localStorage.getItem('nwAssets'));if(s?.length)nwAssets=s;}catch(e){}
   try{const s=JSON.parse(localStorage.getItem('nwLiab'));if(s?.length)nwLiab=s;}catch(e){}
   try{
@@ -3548,7 +3561,13 @@ async function init(){
 }
 const saveBills=()=>{try{localStorage.setItem('bills',JSON.stringify(bills));}catch(e){}};
 const saveIncomeSrc=()=>{try{localStorage.setItem('incomeSources',JSON.stringify(incomeSources));}catch(e){}};
-const saveZeroBkts=()=>{try{localStorage.setItem('zeroBuckets',JSON.stringify(zeroBuckets));}catch(e){}};
+const saveZeroBkts=()=>{
+  // Only persist catId→amount map; shape is always rebuilt from master categories
+  try{
+    var amts = zeroBuckets.map(function(b){ return {catId:b.catId, amt:b.amt}; });
+    localStorage.setItem('zeroBuckets', JSON.stringify(amts));
+  }catch(e){}
+};
 const saveNW=()=>{try{localStorage.setItem('nwAssets',JSON.stringify(nwAssets));localStorage.setItem('nwLiab',JSON.stringify(nwLiab));}catch(e){}};
 
 // ── PLAID ─────────────────────────────────────────────────────────────────────
@@ -4217,7 +4236,6 @@ function renderZeroBudget(){
         class="zb-input" id="zs-${i}" oninput="zbSlide(${i},+this.value)">
       <button class="zb-step" onclick="zbStep(${i},10)" title="Increase $10">▲</button>
       <span class="zb-pct" id="zp-${i}">${pct}%</span>
-      <button class="btn danger" onclick="delZeroBucket(${i})" style="flex-shrink:0;padding:2px 7px;font-size:11px">✕</button>
     </div>`;
   }).join('');
   renderZeroChart();
@@ -4325,41 +4343,9 @@ function renderZeroChart(){
     ).join('');
   }
 }
-function addZeroBucket(){
-  var cats = getUserCategories();
-  var used = zeroBuckets.map(function(b){ return b.catId; });
-  var avail= cats.filter(function(c){ return !used.includes(c.id) && c.id !== 'income'; });
-  if (!avail.length) { showToast('All categories already in budget','info'); return; }
-  // Build a quick modal-style select
-  var opts = avail.map(function(c){ return '<option value="'+c.id+'">'+c.label+'</option>'; }).join('');
-  var sel  = document.createElement('select');
-  sel.style.cssText = 'width:220px;height:36px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--font);font-size:13px;padding:0 8px;margin-right:8px';
-  sel.innerHTML = opts;
-  var wrap = document.createElement('div');
-  wrap.style.cssText = 'position:fixed;inset:0;z-index:400;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.4);backdrop-filter:blur(2px)';
-  var box  = document.createElement('div');
-  box.style.cssText = 'background:var(--sidebar);border:1px solid var(--border2);border-radius:var(--radius);padding:22px 24px;min-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.3)';
-  box.innerHTML = '<div style="font-size:14px;font-weight:600;margin-bottom:14px;color:var(--text)">Add Budget Category</div>';
-  box.appendChild(sel);
-  var ok = document.createElement('button');
-  ok.className='btn primary'; ok.textContent='Add';
-  ok.onclick = function(){
-    var cat = avail.find(function(c){ return c.id === sel.value; });
-    if (cat) { zeroBuckets.push({name:cat.label, catId:cat.id, amt:0}); saveZeroBkts(); renderZeroBudget(); }
-    document.body.removeChild(wrap);
-  };
-  var cancel = document.createElement('button');
-  cancel.className='btn'; cancel.textContent='Cancel'; cancel.style.marginRight='8px';
-  cancel.onclick = function(){ document.body.removeChild(wrap); };
-  var btns = document.createElement('div');
-  btns.style.cssText = 'display:flex;gap:8px;margin-top:14px;justify-content:flex-end';
-  btns.appendChild(cancel); btns.appendChild(ok);
-  box.appendChild(btns);
-  wrap.appendChild(box);
-  wrap.onclick = function(e){ if(e.target===wrap) document.body.removeChild(wrap); };
-  document.body.appendChild(wrap);
-}
-function delZeroBucket(i){zeroBuckets.splice(i,1);saveZeroBkts();renderZeroBudget();}
+// addZeroBucket removed — categories managed in Settings
+
+// delZeroBucket removed — categories managed in Settings
 
 // ── INCOME ────────────────────────────────────────────────────────────────────
 function renderIncomeTab(){
