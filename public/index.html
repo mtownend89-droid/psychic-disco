@@ -869,6 +869,19 @@ canvas.chart-interactive { cursor: crosshair; }
   color: var(--green);
 }
 .zb-step:active { transform: scale(0.9); }
+
+/* ── B5: Income tab ─────────────────────────────────────────────────────────── */
+.inc-grid {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+}
+@media (max-width: 700px) {
+  .inc-grid { grid-template-columns: 1fr; }
+  .inc-grid > div:first-child { border-right: none !important; border-bottom: 1px solid var(--border); }
+}
+/* 50/30/20 bars */
+.pct-bar-wrap { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; margin: 6px 0 3px; }
+.pct-bar      { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
 </style>
 
 </head>
@@ -1386,20 +1399,49 @@ canvas.chart-interactive { cursor: crosshair; }
         </div>
       </div>
 
-      <!-- INCOME PANEL -->
+      <!-- ── B5: INCOME SOURCES FULL BREAKDOWN ── -->
       <div class="tab-panel" id="ep-income">
-        <div class="g2">
-          <div class="card card-sm">
-            <div class="card-title">income sources</div>
-            <table class="tbl">
-              <thead><tr><th>Source</th><th>Frequency</th><th>Amount</th><th>Monthly</th><th>Annual</th><th></th></tr></thead>
-              <tbody id="incomeBody"></tbody>
-              <tfoot><tr class="tbl-total"><td colspan="3">Total</td><td id="incTotalMonthly" class="mono" style="color:var(--cyan)"></td><td id="incTotalAnnual" class="mono" style="color:var(--cyan)"></td><td></td></tr></tfoot>
-            </table>
-            <button class="btn" style="margin-top:13px" onclick="openAddIncomeModal()">+ Add income</button>
+
+        <!-- Stat row -->
+        <div class="wgrid" style="margin-bottom:16px" id="incStatRow"></div>
+
+        <!-- Main card: doughnut + sources list side by side -->
+        <div class="card" style="padding:0;overflow:hidden;margin-bottom:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
+            <div class="card-title" style="margin-bottom:0">💼 Income Sources</div>
+            <button class="btn" onclick="openAddIncomeModal()" style="font-size:12px;padding:5px 12px">+ Add Source</button>
           </div>
-          <div class="card card-sm"><div class="card-title">income breakdown</div><div class="chart-wrap" style="height:230px"><canvas id="incomeChart"></canvas></div></div>
+          <div class="inc-grid">
+            <!-- Left: doughnut + legend -->
+            <div style="border-right:1px solid var(--border);padding:16px 18px">
+              <div style="position:relative;height:220px"><canvas id="incomeChart"></canvas></div>
+              <div class="chart-widget-legend" id="incomeLegend" style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)"></div>
+            </div>
+            <!-- Right: sources table -->
+            <div style="padding:0;overflow-y:auto;max-height:340px">
+              <table class="tbl" style="border:none">
+                <thead><tr><th>Source</th><th>Frequency</th><th>Per period</th><th>Monthly</th><th>Annual</th><th></th></tr></thead>
+                <tbody id="incomeBody"></tbody>
+                <tfoot><tr class="tbl-total">
+                  <td colspan="3">Total</td>
+                  <td id="incTotalMonthly" class="mono" style="color:var(--cyan)"></td>
+                  <td id="incTotalAnnual" class="mono" style="color:var(--cyan)"></td>
+                  <td></td>
+                </tr></tfoot>
+              </table>
+            </div>
+          </div>
         </div>
+
+        <!-- 50/30/20 analysis -->
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="padding:14px 18px 12px;border-bottom:1px solid var(--border)">
+            <div class="card-title" style="margin-bottom:2px">🎯 50/30/20 Rule Analysis</div>
+            <div style="font-size:11.5px;color:var(--muted)">50% needs · 30% wants · 20% savings — based on your monthly income</div>
+          </div>
+          <div id="inc5030" style="padding:16px 18px"></div>
+        </div>
+
       </div>
     </div>
 
@@ -4350,17 +4392,125 @@ function renderZeroChart(){
 // ── INCOME ────────────────────────────────────────────────────────────────────
 function renderIncomeTab(){
   const FL={weekly:'Weekly',biweekly:'Bi-weekly',monthly:'Monthly',quarterly:'Quarterly',annual:'Annual'};
-  let totM=0,totA=0;
-  const el=gg('incomeBody');if(!el)return;
-  el.innerHTML=incomeSources.map((s,i)=>{
-    const mo=s.amt*(FM[s.freq]||1),an=mo*12;totM+=mo;totA+=an;
-    return `<tr><td style="font-weight:500">${esc(s.name)}</td><td style="color:var(--muted);font-size:11.5px">${FL[s.freq]||s.freq}</td><td class="mono" style="color:var(--cyan)">${fmt2(s.amt)}</td><td class="mono" style="color:var(--cyan)">${fmt2(mo)}</td><td class="mono" style="color:var(--cyan)">${fmt2(an)}</td><td><button class="btn danger" onclick="delIncome(${i})">✕</button></td></tr>`;
+  const surfC = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()||'#1a1d27';
+
+  // Build monthly/annual totals
+  let totM=0, totA=0;
+  const srcData = incomeSources.map(function(s,i){
+    const mo = s.amt*(FM[s.freq]||1), an = mo*12;
+    totM += mo; totA += an;
+    return {s, mo, an, i, color: PAL[i%PAL.length]};
+  });
+
+  // ── Stat row ──────────────────────────────────────────────────────────────
+  const statRow = gg('incStatRow');
+  if (statRow) {
+    const bil  = monthlyBills();
+    const rem  = totM - bil;
+    const srPct= totM>0 ? Math.round(Math.max(0,rem)/totM*100) : 0;
+    statRow.innerHTML = [
+      {lbl:'Monthly Income',  val:fmt2(totM),      cls:'cyan',   sub:'gross monthly'},
+      {lbl:'Annual Income',   val:fmt2(totA),       cls:'cyan',   sub:'gross annual'},
+      {lbl:'After Bills',     val:fmt2(rem),        cls:rem>=0?'green':'red', sub:'income − fixed bills'},
+      {lbl:'Savings Rate',    val:srPct+'%',        cls:'blue',   sub:'of monthly income'},
+      {lbl:'Income Streams',  val:incomeSources.length, cls:'purple', sub:'active sources'},
+    ].map(function(w){
+      return '<div class="widget w-'+w.cls+'">'
+        +'<div class="wlabel">'+w.lbl+'</div>'
+        +'<div class="wvalue '+w.cls+'">'+w.val+'</div>'
+        +'<div class="wsub">'+w.sub+'</div>'
+        +'</div>';
+    }).join('');
+  }
+
+  // ── Sources table ─────────────────────────────────────────────────────────
+  const el = gg('incomeBody'); if (!el) return;
+  el.innerHTML = srcData.map(function(d){
+    const {s,mo,an,i,color} = d;
+    return '<tr>'
+      +'<td style="font-weight:500;border-left:3px solid '+color+'"><span style="padding-left:6px">'+esc(s.name)+'</span></td>'
+      +'<td style="color:var(--muted);font-size:11.5px">'+( FL[s.freq]||s.freq )+'</td>'
+      +'<td class="mono" style="color:var(--cyan)">'+fmt2(s.amt)+'</td>'
+      +'<td class="mono" style="color:var(--cyan)">'+fmt2(mo)+'</td>'
+      +'<td class="mono" style="color:var(--cyan)">'+fmt2(an)+'</td>'
+      +'<td><button class="btn danger" onclick="delIncome('+i+')" style="padding:2px 7px;font-size:11px">✕</button></td>'
+      +'</tr>';
   }).join('');
   const im=gg('incTotalMonthly');if(im)im.textContent=fmt2(totM);
   const ia=gg('incTotalAnnual');if(ia)ia.textContent=fmt2(totA);
-  const ic=gg('incomeChart');if(!ic)return;
-  if(BC.income)BC.income.destroy();
-  BC.income=new Chart(ic,{type:'doughnut',data:{labels:incomeSources.map(s=>s.name),datasets:[{data:incomeSources.map(s=>Math.round(s.amt*(FM[s.freq]||1))),backgroundColor:PAL,borderWidth:2,borderColor:'#161920'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10.5},boxWidth:9,padding:7}},tooltip:{callbacks:{label:c=>` $${c.parsed.toLocaleString()}/mo`}}}}});
+
+  // ── Doughnut — click-select, no hover ─────────────────────────────────────
+  const ic = gg('incomeChart'); if (!ic) return;
+  if (BC.income) BC.income.destroy();
+  BC.income = new Chart(ic, {
+    type:'doughnut',
+    data:{
+      labels: incomeSources.map(function(s){return s.name;}),
+      datasets:[{
+        data: srcData.map(function(d){return Math.round(d.mo);}),
+        backgroundColor: srcData.map(function(d){return d.color;}),
+        borderWidth:2, borderColor:surfC
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'58%',
+      events:['click'],
+      plugins:{ legend:{display:false}, tooltip:{enabled:false} }
+    }
+  });
+
+  // ── Legend with % ─────────────────────────────────────────────────────────
+  const leg = gg('incomeLegend');
+  if (leg) {
+    leg.innerHTML = srcData.map(function(d){
+      const pct = totM>0 ? Math.round(d.mo/totM*100) : 0;
+      return '<div class="cwl-item">'
+        +'<div class="cwl-dot" style="background:'+d.color+'"></div>'
+        +'<span class="cwl-label">'+esc(d.s.name)+'</span>'
+        +'<span class="cwl-pct">'+pct+'%</span>'
+        +'</div>';
+    }).join('');
+  }
+
+  // ── 50/30/20 analysis ─────────────────────────────────────────────────────
+  const panel5030 = gg('inc5030');
+  if (panel5030 && totM > 0) {
+    const bil   = monthlyBills();
+    const disc  = zeroBuckets.reduce(function(s,b){return s+b.amt;},0);
+    const sav   = Math.max(0, totM - bil - disc);
+    const needs = bil;
+    const wants = disc;
+    const saves = sav;
+
+    const needsPct  = Math.round(needs/totM*100);
+    const wantsPct  = Math.round(wants/totM*100);
+    const savesPct  = Math.round(saves/totM*100);
+
+    function bar(actual, target, color) {
+      const pct = Math.min(100, Math.round(actual/totM*100));
+      const ok  = Math.abs(actual/totM - target) < 0.05;
+      return '<div class="pct-bar-wrap"><div class="pct-bar" style="width:'+pct+'%;background:'+color+'"></div></div>'
+        +'<div style="font-size:10.5px;color:var(--muted)">Target: '+(target*100)+'% · Actual: '+pct+'%'
+        +'<span style="margin-left:6px;color:'+(ok?'var(--green)':'var(--amber)')+'">'+( ok?'✓ on track':'↕ adjust' )+'</span></div>';
+    }
+
+    panel5030.innerHTML =
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px">'
+      + [
+          {label:'🏠 Needs (Bills)',    val:needs, pct:needsPct, target:0.50, color:'#6b9ef5', desc:'Fixed bills, housing, utilities, insurance'},
+          {label:'🎉 Wants (Discretionary)', val:wants, pct:wantsPct, target:0.30, color:'#f5a623', desc:'Dining, entertainment, shopping, subscriptions'},
+          {label:'💰 Savings / Surplus',val:saves, pct:savesPct, target:0.20, color:'#3dda91', desc:'After bills and discretionary spending'},
+        ].map(function(cat){
+          var ok = Math.abs(cat.val/totM - cat.target) < 0.05;
+          return '<div style="background:var(--surface2);border-radius:var(--radius);padding:14px 16px;border:1px solid var(--border)">'
+            +'<div style="font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:6px">'+cat.label+'</div>'
+            +'<div style="font-family:var(--mono);font-size:18px;font-weight:700;color:'+cat.color+'">'+fmt2(Math.round(cat.val))+'</div>'
+            +'<div style="font-size:11px;color:var(--muted);margin-bottom:6px">'+cat.desc+'</div>'
+            +bar(cat.val, cat.target, cat.color)
+            +'</div>';
+        }).join('')
+      +'</div>';
+  }
 }
 function delIncome(i){if(!confirm('Remove?'))return;incomeSources.splice(i,1);saveIncomeSrc();renderIncomeTab();updateBudgetMetrics();}
 function openAddIncomeModal(){gg('addIncomeModal').style.display='flex';}
