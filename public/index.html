@@ -1434,8 +1434,21 @@ function renderSankey() {
   ctx.scale(dpr,dpr); ctx.clearRect(0,0,W,H);
 
   const FM={weekly:52/12,biweekly:26/12,monthly:1,quarterly:1/3,annual:1/12};
+  // ── Scale income to the selected time range ────────────────────────────────
+  // FM gives monthly multiplier; we need to convert to the actual range days
+  var _rangeKey = (typeof _chartRange !== 'undefined') ? _chartRange : '30d';
+  var _cutDate  = (typeof getChartCutDate === 'function') ? getChartCutDate(_rangeKey) : new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+  var _rangeDays = Math.max(1, Math.round((Date.now() - new Date(_cutDate+'T00:00:00').getTime()) / 86400000));
+  // Convert monthly income → amount for the actual date range shown
+  // monthly * 12 / 365 * days = annual / 365 * days
+  var _incScale = _rangeDays / 30.44; // ratio vs one month
+
   const src = (typeof incomeSources!=='undefined'?incomeSources:[]);
-  const incNodes = src.map(s=>({label:s.name.split(' ').slice(0,2).join(' '),value:Math.round(s.amt*(FM[s.freq]||1)),color:'#3dda91'})).filter(n=>n.value>0);
+  const incNodes = src.map(s=>{
+    var monthly = s.amt * (FM[s.freq]||1);
+    var scaled  = Math.round(monthly * _incScale);
+    return {label:s.name.split(' ').slice(0,2).join(' '), value:scaled, color:'#3dda91'};
+  }).filter(n=>n.value>0);
   const incTotal = incNodes.reduce((s,n)=>s+n.value,0)||1;
 
   const cut = (typeof getChartCutDate==='function') ? getChartCutDate(_chartRange||'30d') : new Date(Date.now()-30*86400000).toISOString().slice(0,10);
