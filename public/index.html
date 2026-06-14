@@ -467,6 +467,92 @@ canvas.chart-interactive { cursor: crosshair; }
 
 /* Drag sections snap to full width, height is set by content */
 .drag-section { width: 100%; box-sizing: border-box; }
+
+/* ── D2: Combined Spend + P&L widget ─────────────────────────────────────── */
+.d2-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Tab switcher */
+.d2-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+}
+.d2-tab {
+  padding: 5px 16px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.d2-tab:hover { color: var(--text); }
+.d2-tab.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+/* Panels — only one visible at a time */
+.d2-panel { display: none; }
+.d2-panel.active { display: block; }
+
+/* Category grid: doughnut left, legend right */
+.d2-cat-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 700px) {
+  .d2-cat-grid { grid-template-columns: 1fr; }
+}
+
+/* Stat strip below each chart */
+.d2-stat-strip {
+  display: flex;
+  gap: 0;
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  flex-wrap: wrap;
+}
+.d2-stat {
+  flex: 1;
+  min-width: 100px;
+  padding: 6px 16px 6px 0;
+  border-right: 1px solid var(--border);
+}
+.d2-stat:last-child { border-right: none; }
+.d2-stat-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 3px;
+}
+.d2-stat-value {
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--mono);
+}
 </style>
 
 </head>
@@ -623,20 +709,61 @@ canvas.chart-interactive { cursor: crosshair; }
         </div>
 
         <!-- ── SPENDING BY CATEGORY: own full-width section ── -->
-        <div class="drag-section" data-id="cat-chart">
-          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Spending by category</div></div>
-          <div class="card">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-              <div style="display:flex;align-items:center;gap:10px">
-                <div class="card-title" style="margin-bottom:0">📊 Spending by category</div>
+        <!-- ── D2: COMBINED SPEND + P&L widget — Long Widget ── -->
+        <div class="drag-section widget-long" data-id="cat-chart">
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Spending &amp; Income vs Spending · Long Widget</div></div>
+          <div class="card widget-long-card">
+
+            <!-- Header: title + shared time toggle (mirrors Sankey) -->
+            <div class="d2-header">
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                <!-- Tab switcher -->
+                <div class="d2-tabs">
+                  <button class="d2-tab active" id="d2tab-cat"  onclick="switchD2Tab('cat')">📊 By Category</button>
+                  <button class="d2-tab"        id="d2tab-pl"   onclick="switchD2Tab('pl')">📈 Income vs Spending</button>
+                </div>
                 <span id="spendDateLabel" style="font-size:11px;font-weight:600;color:var(--muted)"></span>
               </div>
+              <!-- Shared time toggle (same _chartRange as Sankey) -->
+              <div class="time-toggle" id="d2TimePicker">
+                <button class="tt-btn" data-range="week"  onclick="setChartRange('week')">Week</button>
+                <button class="tt-btn" data-range="month" onclick="setChartRange('month')">Month</button>
+                <button class="tt-btn active" data-range="30d" onclick="setChartRange('30d')">30d</button>
+                <button class="tt-btn" data-range="90d"  onclick="setChartRange('90d')">90d</button>
+                <button class="tt-btn" data-range="year" onclick="setChartRange('year')">Year</button>
+                <button class="tt-btn" data-range="all"  onclick="setChartRange('all')">All</button>
+              </div>
             </div>
-            <!-- Side-by-side on desktop: doughnut left, legend right -->
-            <div style="display:grid;grid-template-columns:220px 1fr;gap:20px;align-items:start" id="catChartGrid">
-              <div style="height:220px;position:relative"><canvas id="catChart"></canvas></div>
-              <div id="catLegend" style="font-size:12.5px"></div>
+
+            <!-- PANEL A: Spending by category -->
+            <div id="d2-cat-panel" class="d2-panel active">
+              <div class="d2-cat-grid" id="catChartGrid">
+                <!-- Doughnut -->
+                <div style="position:relative;height:260px"><canvas id="catChart"></canvas></div>
+                <!-- Legend -->
+                <div id="catLegend" style="font-size:12.5px;align-self:center"></div>
+              </div>
+              <!-- Summary stat strip -->
+              <div class="d2-stat-strip" id="catStatStrip"></div>
             </div>
+
+            <!-- PANEL B: Income vs Spending P&L -->
+            <div id="d2-pl-panel" class="d2-panel">
+              <!-- Toggle: daily / weekly / monthly grouping (independent of time range) -->
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+                <span style="font-size:11px;color:var(--muted);font-weight:600">Group by</span>
+                <div class="time-toggle">
+                  <button class="tt-btn active" id="plGrp-daily"   onclick="setPLGroup('daily')">Daily</button>
+                  <button class="tt-btn"        id="plGrp-weekly"  onclick="setPLGroup('weekly')">Weekly</button>
+                  <button class="tt-btn"        id="plGrp-monthly" onclick="setPLGroup('monthly')">Monthly</button>
+                </div>
+                <span id="plNetBadge" style="margin-left:auto;font-size:12px;font-weight:700;font-family:var(--mono)"></span>
+              </div>
+              <div style="position:relative;height:260px"><canvas id="plChart"></canvas></div>
+              <!-- P&L stat strip -->
+              <div class="d2-stat-strip" id="plStatStrip"></div>
+            </div>
+
           </div>
         </div>
         <div class="drag-section" data-id="accts-banks">
@@ -1547,9 +1674,9 @@ var _chartRange = '30d'; // default
 
 function setChartRange(range) {
   _chartRange = range;
-  // Update toggle button active state
-  document.querySelectorAll('#chartTimePicker .tt-btn').forEach(function(b) {
-    b.classList.toggle('active', b.dataset.range === range);
+  // Update ALL time toggle buttons (Sankey + D2 share the same range)
+  document.querySelectorAll('.time-toggle .tt-btn').forEach(function(b) {
+    if (b.dataset.range) b.classList.toggle('active', b.dataset.range === range);
   });
   // Update labels on both widgets
   var label = getChartRangeLabel(range);
@@ -1557,8 +1684,11 @@ function setChartRange(range) {
   if (rl) rl.textContent = label;
   var sl = document.getElementById('spendDateLabel');
   if (sl) sl.textContent = label;
-  // Redraw
+  // Redraw both charts
   renderCharts();
+  // Also refresh P&L if that tab is active
+  var plPanel = document.getElementById('d2-pl-panel');
+  if (plPanel && plPanel.classList.contains('active')) renderPLChart();
 }
 
 function getChartRangeLabel(range) {
@@ -1608,6 +1738,144 @@ function getChartCutDate(range) {
   var sl = document.getElementById('spendDateLabel');
   if (sl) sl.textContent = label;
 })();
+
+
+// ── D2: Tab switching ────────────────────────────────────────────────────────
+function switchD2Tab(tab) {
+  document.querySelectorAll('.d2-tab').forEach(function(b) {
+    b.classList.toggle('active', b.id === 'd2tab-'+tab);
+  });
+  document.querySelectorAll('.d2-panel').forEach(function(p) {
+    p.classList.remove('active');
+  });
+  var panel = document.getElementById('d2-'+tab+'-panel');
+  if (panel) panel.classList.add('active');
+  if (tab === 'pl') renderPLChart();
+}
+
+// ── D2: P&L grouping (daily / weekly / monthly) ───────────────────────────
+var _plGroup = 'daily';
+function setPLGroup(g) {
+  _plGroup = g;
+  document.querySelectorAll('[id^="plGrp-"]').forEach(function(b) {
+    b.classList.toggle('active', b.id === 'plGrp-'+g);
+  });
+  renderPLChart();
+}
+
+// ── D2: Render P&L bar chart ──────────────────────────────────────────────
+var _plChartI = null;
+function renderPLChart() {
+  var cut   = getChartCutDate(_chartRange);
+  var rec   = allTxns.filter(function(t){ return t.date >= cut; });
+  var label = getChartRangeLabel(_chartRange);
+
+  // Group transactions into buckets
+  var buckets = {};
+  rec.forEach(function(t) {
+    var key;
+    var d = new Date(t.date + 'T12:00:00');
+    if (_plGroup === 'monthly') {
+      key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    } else if (_plGroup === 'weekly') {
+      var day = d.getDay();
+      var mon = new Date(d); mon.setDate(d.getDate() - ((day+6)%7));
+      key = mon.toISOString().slice(0,10);
+    } else {
+      key = t.date;
+    }
+    if (!buckets[key]) buckets[key] = {inc:0, spend:0};
+    if (t.amount < 0) buckets[key].inc   += Math.abs(t.amount);
+    else               buckets[key].spend += t.amount;
+  });
+
+  var keys    = Object.keys(buckets).sort();
+  var incData = keys.map(function(k){ return Math.round(buckets[k].inc); });
+  var spData  = keys.map(function(k){ return Math.round(buckets[k].spend); });
+  var netData = keys.map(function(k){ return Math.round(buckets[k].inc - buckets[k].spend); });
+
+  // Format axis labels
+  var axisLabels = keys.map(function(k) {
+    if (_plGroup === 'monthly') {
+      var parts = k.split('-');
+      return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+parts[1]-1];
+    }
+    if (_plGroup === 'weekly') {
+      var d2 = new Date(k+'T12:00:00');
+      return (d2.getMonth()+1)+'/'+d2.getDate();
+    }
+    return k.slice(5); // MM-DD
+  });
+
+  var mutC = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim()||'#666';
+
+  var el = document.getElementById('plChart');
+  if (!el) return;
+  if (_plChartI) _plChartI.destroy();
+  _plChartI = new Chart(el, {
+    type: 'bar',
+    data: {
+      labels: axisLabels,
+      datasets: [
+        { label:'Income',   data:incData,  backgroundColor:'rgba(61,218,145,0.82)', borderRadius:3, order:1 },
+        { label:'Spending', data:spData,   backgroundColor:'rgba(244,106,106,0.78)', borderRadius:3, order:2 },
+        { label:'Net',      data:netData,  type:'line', borderColor:'#f5b042', backgroundColor:'transparent',
+          borderWidth:2.5, pointRadius:3, pointBackgroundColor:'#f5b042', tension:0.35, order:0 }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: {
+          position:'top', labels:{
+            color:mutC, font:{size:11}, boxWidth:10, padding:14,
+            usePointStyle:true
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(c) {
+              var v = c.parsed.y;
+              var sign = c.dataset.label==='Net' ? (v>=0?'+':'') : '';
+              return ' '+c.dataset.label+': '+sign+'$'+Math.abs(v).toLocaleString();
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid:{display:false}, ticks:{color:mutC, font:{size:10}, maxRotation:45, autoSkip:true, maxTicksLimit:14} },
+        y: { grid:{color:'rgba(128,128,128,0.08)'}, ticks:{color:mutC, callback:function(v){return '$'+Math.abs(v/1000).toFixed(0)+'K';}} }
+      }
+    }
+  });
+
+  // Stat strip
+  var totalInc   = incData.reduce(function(s,v){return s+v;},0);
+  var totalSpend = spData.reduce(function(s,v){return s+v;},0);
+  var net        = totalInc - totalSpend;
+  var sr         = totalInc > 0 ? Math.round((totalInc-totalSpend)/totalInc*100) : 0;
+
+  var badge = document.getElementById('plNetBadge');
+  if (badge) {
+    badge.textContent = 'Net '+(net>=0?'+':'')+' $'+Math.abs(net).toLocaleString();
+    badge.style.color = net >= 0 ? 'var(--green)' : 'var(--red)';
+  }
+
+  var strip = document.getElementById('plStatStrip');
+  if (strip) {
+    var stats = [
+      {label:'Total Income',  value:'$'+totalInc.toLocaleString(),   color:'var(--green)'},
+      {label:'Total Spending',value:'$'+totalSpend.toLocaleString(),  color:'var(--red)'},
+      {label:'Net',           value:(net>=0?'+':'')+' $'+Math.abs(net).toLocaleString(), color:net>=0?'var(--green)':'var(--red)'},
+      {label:'Savings Rate',  value:sr+'%',                           color:'var(--cyan)'},
+    ];
+    strip.innerHTML = stats.map(function(s){
+      return '<div class="d2-stat"><div class="d2-stat-label">'+s.label+'</div>'
+            +'<div class="d2-stat-value" style="color:'+s.color+'">'+s.value+'</div></div>';
+    }).join('');
+  }
+}
 
 // ── BILLS DATA ────────────────────────────────────────────────────────────────
 let bills=[
@@ -1952,6 +2220,25 @@ function renderCharts(){
             +'<span class="cat-legend-amt">$'+Math.round(amt).toLocaleString()+'</span>'
             +'</div>';
         }).join('');
+  }
+
+  // Category stat strip
+  var strip = document.getElementById('catStatStrip');
+  if (strip && sorted.length) {
+    var topCat   = sorted[0][0];
+    var topAmt   = sorted[0][1];
+    var avgPerDay = total > 0 ? Math.round(total/30) : 0;
+    var cats      = getUserCategories();
+    strip.innerHTML = [
+      {label:'Total Spent',    value:'$'+Math.round(total).toLocaleString(),    color:'var(--red)'},
+      {label:'Top Category',   value:topCat,                                    color:'var(--amber)'},
+      {label:'Top Amount',     value:'$'+Math.round(topAmt).toLocaleString(),   color:'var(--amber)'},
+      {label:'Avg/Day',        value:'$'+avgPerDay,                             color:'var(--muted)'},
+      {label:'Categories',     value:sorted.length+' active',                   color:'var(--muted)'},
+    ].map(function(s){
+      return '<div class="d2-stat"><div class="d2-stat-label">'+s.label+'</div>'
+            +'<div class="d2-stat-value" style="color:'+s.color+'">'+s.value+'</div></div>';
+    }).join('');
   }
 
   // Legend hover bindings (after DOM updates)
