@@ -1006,7 +1006,7 @@ canvas.chart-interactive { cursor: crosshair; }
       </div>
       <div class="card">
         <div class="filter-row">
-          <input class="search-inp" id="txnSearch" placeholder="Search transactions…" oninput="filterTransactions()">
+          <input class="search-inp" id="txnSearch" placeholder="Search transactions…" oninput="clearTimeout(window._ftTimer);window._ftTimer=setTimeout(filterTransactions,200)">
           <select class="sel" id="catFilter" onchange="filterTransactions()"><option value="">All categories</option></select>
           <select class="sel" id="bankFilter" onchange="filterTransactions()"><option value="">All banks</option></select>
           <select class="sel" id="timeFilter" onchange="filterTransactions()">
@@ -3340,11 +3340,7 @@ function refreshRetAccounts(){
 }
 
 // ── DASHBOARD RENDERS ─────────────────────────────────────────────────────────
-function renderAccounts(){
-  const el=gg('accountsList');if(!el)return;
-  if(!allAccts.length){el.innerHTML='<div class="empty">No accounts</div>';return;}
-  el.innerHTML=allAccts.map(a=>{const bal=a.balances.current??a.balances.available??0;const iC=a.type==='credit';return `<div class="acct-row"><div><div class="acct-name">${esc(a.name)}</div><div class="acct-sub">${esc(a.institution)} · ****${esc(a.mask||'????')}</div></div><div style="text-align:right"><div class="acct-bal" style="color:${iC?'var(--red)':'var(--green)'}">${iC?'-':''}${fmtK(bal)}</div><div class="acct-type">${a.subtype||a.type}</div></div></div>`;}).join('');
-}
+// renderAccounts defined above
 // renderBanks defined above
 async function removeBank(id){
   if(!confirm('Remove this bank?'))return;
@@ -3551,6 +3547,7 @@ function saveNewBill(){
   bills.push(b);saveBills();closeAddBillModal();renderBillsTab();showToast(b.name+' added!','success');
 }
 function renderBillCatChart(){
+  if(!gg('billCatChart'))return;
   var CAT_C={HM:'#3dda91',LOAN:'#f5a623',CC:'#6b9ef5',CAR:'#b09afa',PH:'#38bdf8',TV:'#818cf8',FAM:'#f46a6a',SAVE:'#34d399',OTHER:'#94a3b8'};
   var CAT_L={HM:'🏠 Housing',LOAN:'🏦 Loans',CC:'💳 Credit Cards',CAR:'🚗 Auto',PH:'📱 Phone',TV:'📺 Cable',FAM:'👨‍👩‍👧 Family',SAVE:'💰 Savings',OTHER:'Other'};
   var byCat={};bills.forEach(function(b){byCat[b.cat]=(byCat[b.cat]||0)+b.pay;});
@@ -3685,7 +3682,8 @@ function renderZeroBudget(){
       +'<span class="zb-pct" id="zp-'+i+'">'+pct+'%</span>';
     el.appendChild(row);
   });
-  renderZeroChart();
+  clearTimeout(window._zcTimer);
+  window._zcTimer = setTimeout(renderZeroChart, 150);
 }
 function zbStep(i,delta){var val=Math.max(0,(zeroBuckets[i].amt||0)+delta);zbSlide(i,val);}
 function zbSlide(i,val){
@@ -3716,6 +3714,7 @@ function autoBalanceZero(){
 function getBucketColor(b,i){if(b.catId){var cats=getUserCategories();var cat=cats.find(function(c){return c.id===b.catId;});if(cat&&cat.color)return cat.color;}return PAL[i%PAL.length];}
 
 function renderZeroChart(){
+  if(!gg('zeroChart'))return;
   var inc=monthlyIncome(),bil=monthlyBills(),rem=inc-bil;
   var alloc=zeroBuckets.reduce(function(s,b){return s+b.amt;},0);
   var unalloc=Math.max(0,rem-alloc);
@@ -3966,6 +3965,7 @@ function setCFRange(n) {
 
 // ── CASH FLOW ─────────────────────────────────────────────────────────────────
 function renderCashFlow(){
+  if(!gg('cfMonthlyChart')&&!gg('cfBody'))return;
   const byM={};allTxns.forEach(t=>{const m=t.date.slice(0,7);if(!byM[m])byM[m]={inc:0,exp:0,cnt:0};if(t.amount<0)byM[m].inc+=Math.abs(t.amount);else byM[m].exp+=t.amount;byM[m].cnt++;});
   const months=Object.keys(byM).sort().slice(-12);
   const tb=gg('cfBody');
