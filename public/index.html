@@ -2979,6 +2979,7 @@ function initBillMonthSelectors() {
   }
   var s1 = gg('billMonthSel');  if (s1) s1.innerHTML = opts;
   var s2 = gg('billMonthSel2'); if (s2) { s2.innerHTML = opts; if (s2.options.length > 1) s2.selectedIndex = 1; }
+  renderBillsByMonth();
 }
 
 function shiftBillMonth(dir) {
@@ -3228,7 +3229,7 @@ function showPage(page){
   const nb=document.querySelector(`.nav-btn[onclick="showPage('${page}')"]`);if(nb)nb.classList.add('active');
   const tt=gg('topbarTitle');if(tt)tt.textContent=PT[page]||page;
   if(page==='retirement')calcAll();
-  if(page==='expenses'){renderBillsTab();renderCalendar();renderZeroBudget();renderIncomeTab();updateBudgetMetrics();}
+  if(page==='expenses'){syncZeroBucketsFromCategories();renderBillsTab();updateBudgetMetrics();initBillMonthSelectors();}
   if(page==='networth')renderNetWorth();
   if(page==='cashflow')renderCashFlow();
 }
@@ -3940,10 +3941,10 @@ function switchExpTab(tab){
   document.querySelectorAll('#expTabRow .tab-btn').forEach(function(b,i){ b.classList.toggle('active', tabs[i]===tab); });
   ['ep-bills','ep-calendar','ep-zero','ep-income','ep-cashflow'].forEach(function(id){ var el=gg(id); if(el) el.style.display='none'; });
   var p=gg('ep-'+tab); if(p) p.style.display='block';
-  if(tab==='calendar'){setTimeout(function(){renderCalendar();initBillMonthSelectors();renderBillsByMonth();},0);}
-  if(tab==='zero')setTimeout(function(){renderZeroBudget();},0);
-  if(tab==='income')setTimeout(function(){renderIncomeTab();},0);
-  if(tab==='cashflow')setTimeout(function(){renderCashFlow();},0);
+  if(tab==='calendar'){requestAnimationFrame(function(){requestAnimationFrame(function(){renderCalendar();initBillMonthSelectors();});});}
+  if(tab==='zero')requestAnimationFrame(function(){requestAnimationFrame(function(){syncZeroBucketsFromCategories();renderZeroBudget();});});
+  if(tab==='income')requestAnimationFrame(function(){requestAnimationFrame(function(){renderIncomeTab();});});
+  if(tab==='cashflow')requestAnimationFrame(function(){requestAnimationFrame(function(){renderCashFlow();});});
 }
 
 // ── NET WORTH ─────────────────────────────────────────────────────────────────
