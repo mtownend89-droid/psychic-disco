@@ -1124,46 +1124,49 @@ canvas.chart-interactive { cursor: crosshair; }
 
       <!-- CALENDAR PANEL -->
       <div class="tab-panel" id="ep-calendar">
-        <div class="card" style="margin-bottom:14px">
-          <div class="filter-row" style="margin-bottom:12px">
-            <span style="font-size:13.5px;font-weight:600">Weekly cash flow</span>
-            <div style="flex:1"></div>
-            <select class="sel" id="calMonthSel" onchange="renderCalendar()"></select>
-            <button class="icon-btn" onclick="renderCalendar()"><svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></button>
-          </div>
-          <div class="cal-grid" style="border-bottom:1px solid var(--border2)">
-            <div class="cal-hdr">Week of</div><div class="cal-hdr">Income</div><div class="cal-hdr">Bills due</div><div class="cal-hdr">Net</div><div class="cal-hdr">Running bal.</div>
-          </div>
-          <div id="calendarBody"></div>
-        </div>
-        <div class="g2">
-          <div class="card card-sm"><div class="card-title">monthly income vs bills</div><div class="chart-wrap" style="height:190px"><canvas id="plChart"></canvas></div></div>
-          <div class="card card-sm"><div class="card-title">upcoming bills</div><div id="upcomingBills"></div></div>
-        </div>
 
-        <!-- ── B2: Bills by Month ── -->
-        <div class="card" style="padding:0;overflow:hidden;margin-top:14px">
+        <!-- ── Widget 1: Weekly Bill Tracker ── -->
+        <div class="card" style="padding:0;overflow:hidden;margin-bottom:14px">
           <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
-            <div class="card-title" style="margin-bottom:0">📅 Bills by Month</div>
-            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-              <button class="btn" onclick="shiftBillMonth(-1)" style="padding:4px 10px;font-size:13px">‹</button>
-              <select class="sel" id="billMonthSel" onchange="renderBillsByMonth()" style="height:30px;font-size:12px;min-width:130px"></select>
-              <button class="btn" onclick="shiftBillMonth(1)" style="padding:4px 10px;font-size:13px">›</button>
-              <button class="tt-btn" id="billMonthCompareBtn" onclick="toggleBillMonthCompare()" style="margin-left:4px">Compare</button>
+            <div>
+              <div class="card-title" style="margin-bottom:2px">&#128197; Weekly Bill Tracker</div>
+              <div style="font-size:11.5px;color:var(--muted)">Check off bills as paid &middot; balance updates in real time</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <button class="btn" onclick="shiftCalMonth(-1)" style="padding:4px 10px;font-size:13px">&#8249;</button>
+              <select class="sel" id="calMonthSel" onchange="renderCalendar()" style="height:30px;font-size:12px;min-width:140px"></select>
+              <button class="btn" onclick="shiftCalMonth(1)" style="padding:4px 10px;font-size:13px">&#8250;</button>
             </div>
           </div>
-          <div id="billMonthCompareRow" style="display:none;padding:8px 18px;border-bottom:1px solid var(--border);background:var(--surface2);align-items:center;gap:8px;flex-wrap:wrap">
-            <span style="font-size:11.5px;color:var(--muted)">Compare with:</span>
-            <select class="sel" id="billMonthSel2" onchange="renderBillsByMonth()" style="height:28px;font-size:12px;min-width:130px"></select>
-            <span id="billMonthDiff" style="font-size:12px;font-weight:700;font-family:var(--mono);margin-left:auto"></span>
+          <!-- Stat strip -->
+          <div id="calStatStrip" style="display:flex;border-bottom:1px solid var(--border);background:var(--surface2)"></div>
+          <!-- Week rows -->
+          <div id="calendarBody" style="overflow-x:auto"></div>
+        </div>
+
+        <!-- ── Widget 2: Running Balance Chart ── -->
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid var(--border)">
+            <div>
+              <div class="card-title" style="margin-bottom:2px">&#128200; Running Balance</div>
+              <div style="font-size:11.5px;color:var(--muted)">Actual balance vs projected after all bills clear</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span id="calBalBadge" style="font-size:11.5px;font-weight:600"></span>
+              <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)">
+                <span style="display:inline-block;width:10px;height:3px;background:#3dda91;border-radius:2px"></span>Actual
+                <span style="display:inline-block;width:10px;height:3px;background:#6b9ef5;border-radius:2px;margin-left:6px"></span>Projected
+                <span style="display:inline-block;width:10px;height:3px;background:#f05c5c;border-radius:2px;margin-left:6px;border-top:2px dashed #f05c5c;height:0"></span>Deficit line
+              </div>
+            </div>
           </div>
-          <div style="padding:16px 18px">
-            <div style="position:relative;height:240px"><canvas id="billMonthChart"></canvas></div>
-            <div class="chart-widget-legend" id="billMonthLegend" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)"></div>
+          <div style="padding:16px 18px 8px;position:relative;height:280px">
+            <canvas id="calBalChart"></canvas>
           </div>
-          <div class="d2-stat-strip" id="billMonthStats" style="padding:10px 18px 14px;border-top:1px solid var(--border)"></div>
+          <div id="calBalNotes" style="padding:0 18px 14px;font-size:12px;color:var(--muted)"></div>
         </div>
       </div>
+
 
       <!-- ZERO BUDGET PANEL -->
       <div class="tab-panel" id="ep-zero">
@@ -3694,36 +3697,224 @@ function updateBudgetMetrics(){
 }
 
 // ── CALENDAR ─────────────────────────────────────────────────────────────────
+function shiftCalMonth(dir){
+  var sel=gg('calMonthSel');if(!sel)return;
+  var ni=sel.selectedIndex+dir;
+  if(ni>=0&&ni<sel.options.length){sel.selectedIndex=ni;renderCalendar();}
+}
+
 function renderCalendar(){
-  const sel=gg('calMonthSel');if(!sel)return;
-  const[yr,mo]=sel.value.split('-').map(Number);
-  const dim=new Date(yr,mo,0).getDate();
-  const weeks=[];let ws=1;while(ws<=dim){weeks.push({s:ws,e:Math.min(ws+6,dim),inc:[],bil:[]});ws+=7;}
-  incomeSources.forEach(src=>{
-    if(src.freq==='biweekly'||src.freq==='weekly'){const dp=src.freq==='weekly'?7:14;for(let d=1;d<=dim;d+=dp){const w=weeks.find(w=>d>=w.s&&d<=w.e);if(w)w.inc.push({n:src.name,a:src.amt});}}
-    else if(src.freq==='monthly'){const w=weeks.find(w=>15>=w.s&&15<=w.e)||weeks[0];w.inc.push({n:src.name,a:src.amt});}
-    else if(src.freq==='quarterly'&&[1,4,7,10].includes(mo)){weeks[0].inc.push({n:src.name,a:src.amt});}
+  var sel=gg('calMonthSel');if(!sel||!sel.value)return;
+  var parts=sel.value.split('-'),yr=+parts[0],mo=+parts[1];
+  var dim=new Date(yr,mo,0).getDate();
+  var today=new Date(),isCurrentMonth=(today.getFullYear()===yr&&today.getMonth()+1===mo);
+  var todayD=isCurrentMonth?today.getDate():0;
+
+  // Build week buckets
+  var weeks=[],ws=1;
+  while(ws<=dim){weeks.push({s:ws,e:Math.min(ws+6,dim),inc:[],bil:[]});ws+=7;}
+
+  // Assign income to weeks
+  incomeSources.forEach(function(src){
+    if(src.freq==='biweekly'||src.freq==='weekly'){
+      var dp=src.freq==='weekly'?7:14;
+      for(var d=1;d<=dim;d+=dp){var w=weeks.find(function(w){return d>=w.s&&d<=w.e;});if(w)w.inc.push({n:src.name,a:src.amt,d:d});}
+    } else if(src.freq==='monthly'){
+      var w2=weeks.find(function(w){return 15>=w.s&&15<=w.e;})||weeks[0];
+      w2.inc.push({n:src.name,a:src.amt,d:15});
+    } else if(src.freq==='quarterly'&&[1,4,7,10].includes(mo)){
+      weeks[0].inc.push({n:src.name,a:src.amt,d:1});
+    } else if(src.freq==='annual'&&mo===1){
+      weeks[0].inc.push({n:src.name,a:src.amt,d:1});
+    }
   });
-  bills.forEach(b=>{if(b.due&&b.due<=dim&&b.pay>0){const w=weeks.find(w=>b.due>=w.s&&b.due<=w.e);if(w)w.bil.push({n:b.name,a:b.pay,paid:b.paid});}});
-  let running=443;
-  const rows=weeks.map(w=>{const it=w.inc.reduce((s,i)=>s+i.a,0),bt=w.bil.reduce((s,b)=>s+b.a,0),net=it-bt;running+=net;return{...w,it,bt,net,running};});
-  const cb=gg('calendarBody');if(!cb)return;
-  cb.innerHTML=rows.map((w,i)=>{
-    const iH=w.inc.map(x=>`<div style="font-size:11px;color:var(--green)">+${fmt2(x.a)} <span style="color:var(--hint)">${x.n.split(' ')[0]}</span></div>`).join('');
-    const bH=w.bil.map(x=>`<div style="font-size:11px;color:${x.paid?'var(--hint)':'var(--red)'};${x.paid?'text-decoration:line-through':''}">-${fmt2(x.a)} <span style="color:var(--hint)">${x.n.split(' ')[0]}</span></div>`).join('');
-    const bc=w.running<0?'var(--red)':w.running<500?'var(--amber)':'var(--green)';
-    return `<div class="cal-grid" style="${i%2===0?'background:rgba(255,255,255,0.012)':''}">
-      <div class="cal-cell" style="font-weight:500;font-size:12px">${mo}/${w.s}–${w.e}</div>
-      <div class="cal-cell">${iH||'<span style="color:var(--hint)">—</span>'}</div>
-      <div class="cal-cell">${bH||'<span style="color:var(--hint)">—</span>'}</div>
-      <div class="cal-cell mono" style="font-size:12.5px;font-weight:700;color:${w.net>=0?'var(--green)':'var(--red)'}">${w.net>=0?'+':''}${fmt2(w.net)}</div>
-      <div class="cal-cell mono" style="font-size:12.5px;font-weight:700;color:${bc}">${fmt2(Math.abs(w.running))}${w.running<0?' (deficit)':''}</div>
-    </div>`;
+
+  // Assign bills to weeks
+  bills.forEach(function(b){
+    if(b.due&&b.due<=dim&&b.pay>0){
+      var w=weeks.find(function(w){return b.due>=w.s&&b.due<=w.e;});
+      if(w)w.bil.push({n:b.name,a:b.pay,paid:b.paid,due:b.due,id:b.name});
+    }
+  });
+
+  // Starting balance: sum of checking/savings from Plaid, fallback 443
+  var startBal=443;
+  if(allAccts.length){
+    var liquid=allAccts.filter(function(a){return a.type==='depository';});
+    if(liquid.length)startBal=liquid.reduce(function(s,a){return s+(a.balances.current||0);},0);
+  }
+
+  // Build running balance — actual (paid bills already cleared) vs projected (all bills)
+  var actualBal=startBal,projBal=startBal;
+  var chartLabels=[],chartActual=[],chartProj=[],chartDeficit=[];
+  chartLabels.push(mo+'/1 start');
+  chartActual.push(Math.round(actualBal));
+  chartProj.push(Math.round(projBal));
+  chartDeficit.push(0);
+
+  var rows=weeks.map(function(w){
+    var it=w.inc.reduce(function(s,i){return s+i.a;},0);
+    var bt=w.bil.reduce(function(s,b){return s+b.a;},0);
+    var btPaid=w.bil.filter(function(b){return b.paid;}).reduce(function(s,b){return s+b.a;},0);
+    var btUnpaid=bt-btPaid;
+    actualBal+=it-btPaid;   // actual: income in, only paid bills out
+    projBal  +=it-bt;       // projected: income in, ALL bills out
+    chartLabels.push(mo+'/'+w.e);
+    chartActual.push(Math.round(actualBal));
+    chartProj.push(Math.round(projBal));
+    chartDeficit.push(0);
+    return {s:w.s,e:w.e,inc:w.inc,bil:w.bil,it:it,bt:bt,btPaid:btPaid,btUnpaid:btUnpaid,
+            actual:actualBal,proj:projBal,isCurrentWeek:todayD>=w.s&&todayD<=w.e};
+  });
+
+  // Stat strip
+  var strip=gg('calStatStrip');
+  if(strip){
+    var totalInc=rows.reduce(function(s,r){return s+r.it;},0);
+    var totalBills=rows.reduce(function(s,r){return s+r.bt;},0);
+    var totalPaid=rows.reduce(function(s,r){return s+r.btPaid;},0);
+    var totalUnpaid=totalBills-totalPaid;
+    var endProj=rows.length?rows[rows.length-1].proj:startBal;
+    strip.innerHTML=[
+      {lbl:'Start Balance',val:fmt2(Math.round(startBal)),col:'var(--cyan)'},
+      {lbl:'Month Income',val:'+'+fmt2(Math.round(totalInc)),col:'var(--green)'},
+      {lbl:'Total Bills',val:fmt2(Math.round(totalBills)),col:'var(--red)'},
+      {lbl:'Paid',val:fmt2(Math.round(totalPaid)),col:'var(--green)'},
+      {lbl:'Remaining',val:fmt2(Math.round(totalUnpaid)),col:totalUnpaid>0?'var(--amber)':'var(--green)'},
+      {lbl:'Proj End Bal',val:fmt2(Math.round(endProj)),col:endProj>=0?'var(--cyan)':'var(--red)'},
+    ].map(function(s){
+      return '<div style="flex:1;padding:8px 12px;border-right:1px solid var(--border);min-width:80px">'
+        +'<div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:2px">'+s.lbl+'</div>'
+        +'<div style="font-size:13px;font-weight:700;font-family:var(--mono);color:'+s.col+'">'+s.val+'</div></div>';
+    }).join('');
+  }
+
+  // Week rows HTML
+  var cb=gg('calendarBody');if(!cb)return;
+  var hdr='<div style="display:grid;grid-template-columns:90px 1fr 1fr 80px 90px 90px;border-bottom:1px solid var(--border2);background:var(--surface2)">'
+    +'<div style="padding:7px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)">Week</div>'
+    +'<div style="padding:7px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)">Income</div>'
+    +'<div style="padding:7px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)">Bills Due</div>'
+    +'<div style="padding:7px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)">Net</div>'
+    +'<div style="padding:7px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)">Actual Bal</div>'
+    +'<div style="padding:7px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)">Proj Bal</div>'
+    +'</div>';
+
+  var rowsHtml=rows.map(function(r,idx){
+    var isCur=r.isCurrentWeek;
+    var bg=isCur?'background:rgba(61,218,145,0.05);border-left:3px solid var(--green)':'border-left:3px solid transparent';
+    var incHtml=r.inc.map(function(x){
+      return '<div style="display:flex;align-items:center;gap:4px;padding:1px 0">'
+        +'<span style="font-size:10.5px;color:var(--green);font-family:var(--mono);font-weight:600">+'+fmt2(x.a)+'</span>'
+        +'<span style="font-size:10.5px;color:var(--muted)">'+esc(x.n.split(' ')[0])+'</span></div>';
+    }).join('')||'<span style="color:var(--hint);font-size:11px">\u2014</span>';
+
+    var bilHtml=r.bil.map(function(b){
+      var overdue=!b.paid&&b.due<todayD&&todayD>0;
+      return '<div style="display:flex;align-items:center;gap:6px;padding:2px 0">'
+        +'<input type="checkbox"'+(b.paid?' checked':'')
+        +' onchange="toggleBillPaid(\''+esc(b.id)+'\',this.checked)" style="cursor:pointer;accent-color:var(--green);flex-shrink:0">'
+        +'<span style="font-size:10.5px;'+(b.paid?'color:var(--hint);text-decoration:line-through':overdue?'color:var(--red)':'color:var(--text)')+'">'+esc(b.n)+'</span>'
+        +'<span style="font-size:10.5px;font-family:var(--mono);font-weight:600;margin-left:auto;'+(b.paid?'color:var(--hint)':'color:var(--red))')+'">'+fmt2(b.a)+'</span>'
+        +(overdue?'<span style="font-size:9px;color:var(--red);font-weight:700">OVD</span>':'')
+        +'</div>';
+    }).join('')||'<span style="color:var(--hint);font-size:11px">\u2014</span>';
+
+    var net=r.it-r.bt;
+    var netCol=net>=0?'var(--green)':'var(--red)';
+    var actCol=r.actual>=0?(r.actual<500?'var(--amber)':'var(--cyan)'):'var(--red)';
+    var prjCol=r.proj>=0?(r.proj<500?'var(--amber)':'var(--text)'):'var(--red)';
+
+    return '<div style="display:grid;grid-template-columns:90px 1fr 1fr 80px 90px 90px;border-bottom:1px solid var(--border);'+bg+(isCur?';':'')+(idx%2===0&&!isCur?';background:rgba(255,255,255,0.012)':'')+'">'+
+      '<div style="padding:10px 12px;font-size:12px;font-weight:600;color:var(--text);align-self:start">'+mo+'/'+r.s+(r.s!==r.e?'\u2013'+r.e:'')+'</div>'+
+      '<div style="padding:8px 12px;align-self:start">'+incHtml+'</div>'+
+      '<div style="padding:8px 12px;align-self:start">'+bilHtml+'</div>'+
+      '<div style="padding:10px 12px;font-family:var(--mono);font-size:13px;font-weight:700;color:'+netCol+';align-self:start">'+(net>=0?'+':'')+fmt2(net)+'</div>'+
+      '<div style="padding:10px 12px;font-family:var(--mono);font-size:13px;font-weight:700;color:'+actCol+';align-self:start">'+fmt2(Math.round(r.actual))+(r.actual<0?' \u26a0':'')+'</div>'+
+      '<div style="padding:10px 12px;font-family:var(--mono);font-size:13px;font-weight:600;color:'+prjCol+';align-self:start">'+fmt2(Math.round(r.proj))+(r.proj<0?' \u26a0':'')+'</div>'+
+    '</div>';
   }).join('');
-  const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const mos=Array.from({length:6},(_,i)=>{const d=new Date(yr,mo-1+i,1);return{l:mn[d.getMonth()],inc:monthlyIncome(),bil:monthlyBills()};});
-  const pc=gg('plChart');if(pc){if(BC.pl)BC.pl.destroy();BC.pl=new Chart(pc,{type:'bar',data:{labels:mos.map(m=>m.l),datasets:[{label:'Income',data:mos.map(m=>Math.round(m.inc)),backgroundColor:'#2ecc8a',borderRadius:3},{label:'Spending',data:mos.map(m=>Math.round(m.bil)),backgroundColor:'#f05c5c',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11},boxWidth:9}}},scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>fmtM(v)},grid:{color:'rgba(255,255,255,0.03)'}}}}})}
-  const ub=gg('upcomingBills');if(ub){const td=new Date();ub.innerHTML=bills.filter(b=>b.due&&b.pay>0).sort((a,b)=>a.due-b.due).map(b=>{const dd=b.next_due_date?new Date(b.next_due_date):new Date(td.getFullYear(),td.getMonth(),b.due);const du=Math.ceil((dd-td)/86400000);const sc=du<0?'st-ov':du<=5?'st-due':'st-ok';return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:12.5px;${b.paid?'opacity:0.35;':''}"><div><div style="font-weight:500">${esc(b.name)}</div><div style="font-size:11px;color:var(--hint)">Due ${b.next_due_date?new Date(b.next_due_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'day '+b.due}</div></div><div style="text-align:right"><div class="mono" style="color:var(--red)">${fmt2(b.pay)}</div><div class="${sc}">${du<0?'Overdue':du===0?'Today':du===1?'Tomorrow':'In '+du+'d'}</div></div></div>`;}).join('');}
+
+  cb.innerHTML=hdr+rowsHtml;
+
+  // Running balance chart
+  renderCalBalChart(chartLabels,chartActual,chartProj);
+
+  // Deficit badge
+  var lowestProj=Math.min.apply(null,chartProj);
+  var badge=gg('calBalBadge');
+  if(badge){
+    if(lowestProj<0){badge.textContent='Deficit alert: '+fmt2(Math.abs(Math.round(lowestProj)));badge.style.color='var(--red)';}
+    else if(lowestProj<500){badge.textContent='Low balance warning';badge.style.color='var(--amber)';}
+    else{badge.textContent='Balance looks healthy';badge.style.color='var(--green)';}
+  }
+  var notes=gg('calBalNotes');
+  if(notes){
+    var unpaidBills=bills.filter(function(b){return b.due&&b.pay>0&&!b.paid;});
+    if(unpaidBills.length){
+      notes.innerHTML='<span style="color:var(--amber)">&#9888;</span> '+unpaidBills.length+' unpaid bill'+(unpaidBills.length!==1?'s':'')+' this month &middot; check off as you pay them to update actual balance';
+    } else {
+      notes.innerHTML='<span style="color:var(--green)">&#10003;</span> All bills marked paid for '+sel.options[sel.selectedIndex].text;
+    }
+  }
+}
+
+function renderCalBalChart(labels,actual,proj){
+  var el=gg('calBalChart');if(!el)return;
+  if(BC.calBal)BC.calBal.destroy();
+  var mutC=getComputedStyle(document.documentElement).getPropertyValue('--muted').trim()||'#666';
+  // Zero line dataset for deficit visual
+  var zeroLine=labels.map(function(){return 0;});
+  BC.calBal=new Chart(el,{
+    type:'line',
+    data:{
+      labels:labels,
+      datasets:[
+        {label:'Actual Balance',data:actual,borderColor:'#3dda91',backgroundColor:'rgba(61,218,145,0.08)',
+         borderWidth:2.5,fill:true,tension:0.35,pointRadius:4,pointBackgroundColor:'#3dda91',pointBorderColor:'#1a1d27',pointBorderWidth:2},
+        {label:'Projected Balance',data:proj,borderColor:'#6b9ef5',backgroundColor:'rgba(107,158,245,0.06)',
+         borderWidth:2,borderDash:[6,3],fill:true,tension:0.35,pointRadius:4,pointBackgroundColor:'#6b9ef5',pointBorderColor:'#1a1d27',pointBorderWidth:2},
+        {label:'Zero',data:zeroLine,borderColor:'rgba(240,92,92,0.5)',borderWidth:1,
+         borderDash:[3,3],fill:false,pointRadius:0,tension:0}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'rgba(15,17,23,0.95)',titleColor:'#f0f2fa',bodyColor:'#b0b4cc',
+          borderColor:'rgba(255,255,255,0.12)',borderWidth:1,padding:12,
+          filter:function(item){return item.datasetIndex!==2;},
+          callbacks:{
+            label:function(ctx){
+              var prefix=ctx.datasetIndex===0?'Actual: ':'Projected: ';
+              var val=ctx.parsed.y;
+              return prefix+fmt2(Math.round(val))+(val<0?' (DEFICIT)':'');
+            }
+          }
+        }
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{color:mutC,font:{size:10.5}}},
+        y:{
+          grid:{color:'rgba(128,128,128,0.07)'},
+          ticks:{color:mutC,callback:function(v){return v>=1000?'$'+(v/1000).toFixed(0)+'K':'$'+v;}},
+          afterDataLimits:function(scale){
+            var pad=Math.abs(scale.max-scale.min)*0.12||500;
+            scale.max+=pad;scale.min=Math.min(scale.min-pad*0.5,scale.min-200);
+          }
+        }
+      }
+    }
+  });
+}
+
+function toggleBillPaid(billName,checked){
+  var b=bills.find(function(x){return x.name===billName;});
+  if(b){b.paid=checked;saveBills();}
+  renderCalendar();
 }
 
 // ── ZERO BUDGET ───────────────────────────────────────────────────────────────
