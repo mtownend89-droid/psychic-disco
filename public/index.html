@@ -3007,8 +3007,7 @@ function _getBillsForMonth(yr, mo) {
     return byCat;
   }
   var byCat2 = {};
-  var CAT_LABELS = {HM:'Housing',LOAN:'Loans',CC:'Credit Cards',CAR:'Auto',PH:'Phone',TV:'Cable/Internet',FAM:'Family',SAVE:'Savings',OTHER:'Other'};
-  bills.forEach(function(b){ var lbl = CAT_LABELS[b.cat]||b.cat; byCat2[lbl] = (byCat2[lbl]||0) + b.pay; });
+  bills.forEach(function(b){ byCat2[b.cat] = (byCat2[b.cat]||0) + b.pay; });
   return byCat2;
 }
 
@@ -3065,28 +3064,41 @@ function renderBillsByMonth() {
       }
     }
   });
+  var CAT_LBL={HM:'Housing',LOAN:'Loans',CC:'Credit Cards',CAR:'Auto',PH:'Phone',TV:'Cable',FAM:'Family',SAVE:'Savings',OTHER:'Other'};
   var leg = gg('billMonthLegend');
   if (leg) {
     leg.innerHTML = cats.map(function(cat, i){
-      var pct = total1>0 ? Math.round(vals1[i]/total1*100) : 0;
-      return '<div class="cwl-item"><div class="cwl-dot" style="background:'+colors[i]+'"></div>'
-        +'<span class="cwl-label">'+esc(cat)+'</span><span class="cwl-pct">'+pct+'%</span></div>';
+      var pct  = total1>0 ? Math.round(vals1[i]/total1*100) : 0;
+      var lbl  = CAT_LBL[cat] || cat;
+      var isTop = i===0;
+      return '<div class="cwl-item">'
+        +'<div class="cwl-dot" style="background:'+colors[i]+'"></div>'
+        +'<span class="cwl-label">'+lbl+'</span>'
+        +(isTop?'<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:'+colors[i]+'33;color:'+colors[i]+'">TOP</span>':'')
+        +'<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text);margin-right:2px">$'+vals1[i].toLocaleString()+'</span>'
+        +'<span class="cwl-pct">'+pct+'%</span>'
+        +'</div>';
     }).join('');
   }
   var strip = gg('billMonthStats');
   if (strip) {
     var total2 = vals2 ? vals2.reduce(function(s,v){return s+v;},0) : 0;
     var diff = vals2 ? total1 - total2 : null;
-    strip.innerHTML = [
-      {label:label1+' Total', value:'$'+total1.toLocaleString(), color:'var(--red)'},
-      {label:'Top Category',  value:cats[0]||'', color:'var(--amber)'},
-      {label:'Categories',    value:cats.length+' active', color:'var(--muted)'},
-    ].map(function(s){
+    var CAT_LBL2={HM:'Housing',LOAN:'Loans',CC:'Credit Cards',CAR:'Auto',PH:'Phone',TV:'Cable',FAM:'Family',SAVE:'Savings',OTHER:'Other'};
+    var topCatLabel=CAT_LBL2[cats[0]]||cats[0]||'';
+    var topCatAmt='$'+( vals1[0]||0 ).toLocaleString();
+    var avgPerCat=cats.length>0?Math.round(total1/cats.length):0;
+    var stats=[
+      {label:label1+' Total',   value:'$'+total1.toLocaleString(),    color:'var(--red)'},
+      {label:'Highest Category',value:topCatLabel,                    color:'var(--amber)'},
+      {label:'Highest Amount',  value:topCatAmt,                      color:'var(--amber)'},
+      {label:'Avg per Category',value:'$'+avgPerCat.toLocaleString(), color:'var(--muted)'},
+    ];
+    if(diff!==null) stats.push({label:'Change vs '+label2, value:(diff>0?'▲ +':'▼ ')+'$'+Math.abs(diff).toLocaleString(), color:diff>0?'var(--red)':'var(--green)'});
+    strip.innerHTML=stats.map(function(s){
       return '<div class="d2-stat"><div class="d2-stat-label">'+s.label+'</div>'
         +'<div class="d2-stat-value" style="color:'+s.color+'">'+s.value+'</div></div>';
-    }).join('') + (diff!==null ? '<div class="d2-stat"><div class="d2-stat-label">Change vs '+label2+'</div>'
-      +'<div class="d2-stat-value" style="color:'+(diff>0?'var(--red)':'var(--green)')+';">'
-      +(diff>0?'▲ +':'▼ ')+'$'+Math.abs(diff).toLocaleString()+'</div></div>' : '');
+    }).join('');
   }
   var diffBadge = gg('billMonthDiff');
   if (diffBadge && vals2) {
@@ -3928,10 +3940,10 @@ function switchExpTab(tab){
   document.querySelectorAll('#expTabRow .tab-btn').forEach(function(b,i){ b.classList.toggle('active', tabs[i]===tab); });
   ['ep-bills','ep-calendar','ep-zero','ep-income','ep-cashflow'].forEach(function(id){ var el=gg(id); if(el) el.style.display='none'; });
   var p=gg('ep-'+tab); if(p) p.style.display='block';
-  if(tab==='calendar'){renderCalendar();initBillMonthSelectors();renderBillsByMonth();}
-  if(tab==='zero')renderZeroBudget();
-  if(tab==='income')renderIncomeTab();
-  if(tab==='cashflow')renderCashFlow();
+  if(tab==='calendar'){setTimeout(function(){renderCalendar();initBillMonthSelectors();renderBillsByMonth();},0);}
+  if(tab==='zero')setTimeout(function(){renderZeroBudget();},0);
+  if(tab==='income')setTimeout(function(){renderIncomeTab();},0);
+  if(tab==='cashflow')setTimeout(function(){renderCashFlow();},0);
 }
 
 // ── NET WORTH ─────────────────────────────────────────────────────────────────
