@@ -3537,11 +3537,11 @@ function renderBillsTab(){
       <td style="font-size:12px">${b.next_due_date?new Date(b.next_due_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):(b.due?'Day '+b.due:'—')}</td>
       <td>${balH}</td>
       <td style="font-size:12.5px">${b.min?`<span class="mono" style="color:var(--red)">${fmt2(b.min)}</span>`:'—'}${lp}</td>
-      <td><span class="editable mono" style="font-weight:600;color:var(--blue)" contenteditable="true" onblur="updBillPay(${oi},this.textContent)">${fmt2(b.pay)}</span></td>
+      <td><span class="mono" style="font-weight:600;color:var(--blue)">${fmt2(b.pay)}</span></td>
       <td style="font-size:11px;color:var(--muted);max-width:110px">${esc(b.promo||'')}</td>
       <td>${poH}</td>
       <td style="white-space:nowrap">${stH}</td>
-      <td style="text-align:center"><input type="checkbox" ${b.paid?'checked':''} onchange="toggleBillPaid(${oi},this.checked)" style="width:15px;height:15px;accent-color:var(--green);cursor:pointer"></td>
+      <td style="text-align:center;font-size:12px">${b.paid?'<span class="st-paid" style="font-size:11.5px">&#10003; Paid</span>':'<span style="font-size:11px;color:var(--muted)">&#8212;</span>'}</td>
       <td><button class="btn danger" onclick="delBill(${oi})">✕</button></td>
     </tr>`;
   }).join('');
@@ -3551,7 +3551,28 @@ function renderBillsTab(){
   const ty=gg('totalYourPay');if(ty)ty.textContent=fmt2(vis.reduce((s,b)=>s+b.pay,0));
   renderBillCatChart();renderBillBreakdown();updateBudgetMetrics();
 }
-function toggleBillPaid(i,v){bills[i].paid=v;saveBills();const r=gg('br-'+i);if(r)r.className=v?'row-paid':'';updateBudgetMetrics();}
+function toggleBillPaid(nameOrIdx,v){
+  var b=typeof nameOrIdx==='number'?bills[nameOrIdx]:bills.find(function(x){return x.name===nameOrIdx;});
+  if(!b)return;
+  b.paid=v;
+  saveBills();
+  // Update bill row in Bills page if visible
+  var idx=bills.indexOf(b);
+  var r=gg('br-'+idx);if(r)r.className=v?'row-paid':'';
+  updateBudgetMetrics();
+  renderCalendar();
+}
+function updBillAmtCal(billName,v){
+  var n=parseFloat(v.replace(/[^0-9.]/g,''));
+  if(isNaN(n)||n<0)return;
+  var b=bills.find(function(x){return x.name===billName;});
+  if(!b)return;
+  b.pay=n;
+  saveBills();
+  updateBudgetMetrics();
+  renderBillCatChart();
+  renderCalendar();
+}
 function updBillPay(i,v){const n=parseFloat(v.replace(/[^0-9.]/g,''));if(!isNaN(n)){bills[i].pay=n;saveBills();updateBudgetMetrics();renderBillCatChart();}}
 function delBill(i){if(!confirm('Remove?'))return;bills.splice(i,1);saveBills();renderBillsTab();}
 function openAddBillModal(){gg('addBillModal').style.display='flex';}
@@ -3809,16 +3830,25 @@ function renderCalendar(){
         +'<span style="font-size:10.5px;color:var(--muted)">'+esc(x.n.split(' ')[0])+'</span></div>';
     }).join('')||'<span style="color:var(--hint);font-size:11px">\u2014</span>';
 
-    var bilHtml=r.bil.map(function(b){
+    var bilItems=r.bil.map(function(b){
       var overdue=!b.paid&&b.due<todayD&&todayD>0;
-      return '<div style="display:flex;align-items:center;gap:6px;padding:2px 0">'
+      return '<div style="display:flex;align-items:center;gap:5px;padding:2px 0;min-width:0">'
         +'<input type="checkbox"'+(b.paid?' checked':'')
         +' onchange="toggleBillPaid(\''+esc(b.id)+'\',this.checked)" style="cursor:pointer;accent-color:var(--green);flex-shrink:0">'
-        +'<span style="font-size:10.5px;'+(b.paid?'color:var(--hint);text-decoration:line-through':overdue?'color:var(--red)':'color:var(--text)')+'">'+esc(b.n)+'</span>'
-        +'<span style="font-size:10.5px;font-family:var(--mono);font-weight:600;margin-left:auto;'+(b.paid?'color:var(--hint)':'color:var(--red))')+'">'+fmt2(b.a)+'</span>'
-        +(overdue?'<span style="font-size:9px;color:var(--red);font-weight:700">OVD</span>':'')
+        +'<span style="font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;'+(b.paid?'color:var(--hint);text-decoration:line-through':overdue?'color:var(--red)':'color:var(--text)')+'">'+esc(b.n)+'</span>'
+        +'<span contenteditable="true" '+'onblur="updBillAmtCal(\''+esc(b.id)+'\',this.textContent)" '+'style="font-size:10.5px;font-family:var(--mono);font-weight:600;flex-shrink:0;border-bottom:1px dashed rgba(107,158,245,0.5);cursor:text;outline:none;min-width:36px;'+(b.paid?'color:var(--hint)':'color:var(--red)')+'">'+fmt2(b.a)+'</span>'
+        +(overdue?'<span style="font-size:9px;color:var(--red);font-weight:700;flex-shrink:0">OVD</span>':'')
         +'</div>';
-    }).join('')||'<span style="color:var(--hint);font-size:11px">\u2014</span>';
+    });
+    var half=Math.ceil(bilItems.length/2);
+    var col1=bilItems.slice(0,half).join('');
+    var col2=bilItems.slice(half).join('');
+    var bilHtml=r.bil.length
+      ?'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px">'
+        +'<div>'+col1+'</div>'
+        +'<div>'+col2+'</div>'
+        +'</div>'
+      :'<span style="color:var(--hint);font-size:11px">—</span>'
 
     var net=r.it-r.bt;
     var netCol=net>=0?'var(--green)':'var(--red)';
