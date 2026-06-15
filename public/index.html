@@ -2063,9 +2063,8 @@ function setChartRange(range) {
   if (sl) sl.textContent = label;
   // Redraw both charts
   renderCharts();
-  // Also refresh P&L if that tab is active
-  var plPanel = document.getElementById('d2-pl-panel');
-  if (plPanel && plPanel.classList.contains('active')) renderPLChart();
+  // Always refresh P&L so it reflects the new range when user switches to it
+  renderPLChart();
 }
 
 function getChartRangeLabel(range) {
@@ -3653,7 +3652,7 @@ function renderCalendar(){
   }).join('');
   const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const mos=Array.from({length:6},(_,i)=>{const d=new Date(yr,mo-1+i,1);return{l:mn[d.getMonth()],inc:monthlyIncome(),bil:monthlyBills()};});
-  const pc=gg('plChart');if(pc){if(BC.pl)BC.pl.destroy();BC.pl=new Chart(pc,{type:'bar',data:{labels:mos.map(m=>m.l),datasets:[{label:'Income',data:mos.map(m=>Math.round(m.inc)),backgroundColor:'#2ecc8a',borderRadius:3},{label:'Bills',data:mos.map(m=>Math.round(m.bil)),backgroundColor:'#f05c5c',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11},boxWidth:9}}},scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>fmtM(v)},grid:{color:'rgba(255,255,255,0.03)'}}}}})}
+  const pc=gg('plChart');if(pc){if(BC.pl)BC.pl.destroy();BC.pl=new Chart(pc,{type:'bar',data:{labels:mos.map(m=>m.l),datasets:[{label:'Income',data:mos.map(m=>Math.round(m.inc)),backgroundColor:'#2ecc8a',borderRadius:3},{label:'Spending',data:mos.map(m=>Math.round(m.bil)),backgroundColor:'#f05c5c',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11},boxWidth:9}}},scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>fmtM(v)},grid:{color:'rgba(255,255,255,0.03)'}}}}})}
   const ub=gg('upcomingBills');if(ub){const td=new Date();ub.innerHTML=bills.filter(b=>b.due&&b.pay>0).sort((a,b)=>a.due-b.due).map(b=>{const dd=b.next_due_date?new Date(b.next_due_date):new Date(td.getFullYear(),td.getMonth(),b.due);const du=Math.ceil((dd-td)/86400000);const sc=du<0?'st-ov':du<=5?'st-due':'st-ok';return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:12.5px;${b.paid?'opacity:0.35;':''}"><div><div style="font-weight:500">${esc(b.name)}</div><div style="font-size:11px;color:var(--hint)">Due ${b.next_due_date?new Date(b.next_due_date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'day '+b.due}</div></div><div style="text-align:right"><div class="mono" style="color:var(--red)">${fmt2(b.pay)}</div><div class="${sc}">${du<0?'Overdue':du===0?'Today':du===1?'Tomorrow':'In '+du+'d'}</div></div></div>`;}).join('');}
 }
 
