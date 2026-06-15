@@ -1241,41 +1241,94 @@ canvas.chart-interactive { cursor: crosshair; }
 
       <!-- ── CASH FLOW TAB ── -->
       <div class="tab-panel" id="ep-cashflow">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
-          <div style="font-size:13px;font-weight:600;color:var(--text)">Cash Flow Analysis</div>
-          <div class="time-toggle" id="cfTimePicker">
-            <button class="tt-btn" data-cfrange="3" onclick="setCFRange(3)">3mo</button>
-            <button class="tt-btn active" data-cfrange="6" onclick="setCFRange(6)">6mo</button>
-            <button class="tt-btn" data-cfrange="12" onclick="setCFRange(12)">12mo</button>
-            <button class="tt-btn" data-cfrange="24" onclick="setCFRange(24)">24mo</button>
-            <button class="tt-btn" data-cfrange="0" onclick="setCFRange(0)">All</button>
+        <!-- header row -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+          <div>
+            <div style="font-size:16px;font-weight:700;color:var(--text)">Cash Flow Analysis</div>
+            <div style="font-size:11.5px;color:var(--muted)" id="cfDateLabel">Based on connected accounts</div>
+          </div>
+          <!-- C5: date range bar -->
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:6px">
+              <input type="date" class="sel" id="cfFrom" onchange="renderCashFlow()" style="height:28px;font-size:11.5px;width:130px">
+              <span style="color:var(--muted);font-size:12px">to</span>
+              <input type="date" class="sel" id="cfTo" onchange="renderCashFlow()" style="height:28px;font-size:11.5px;width:130px">
+            </div>
+            <div class="time-toggle" id="cfTimePicker">
+              <button class="tt-btn" data-cfrange="1" onclick="setCFRange(1)">1mo</button>
+              <button class="tt-btn" data-cfrange="3" onclick="setCFRange(3)">3mo</button>
+              <button class="tt-btn active" data-cfrange="6" onclick="setCFRange(6)">6mo</button>
+              <button class="tt-btn" data-cfrange="12" onclick="setCFRange(12)">12mo</button>
+              <button class="tt-btn" data-cfrange="0" onclick="setCFRange(0)">All</button>
+            </div>
           </div>
         </div>
+
+        <!-- stat widgets -->
         <div class="wgrid" id="cfStatRow" style="margin-bottom:16px"></div>
-        <div class="card" style="margin-bottom:14px;padding:16px 18px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div class="card-title" style="margin-bottom:0">📊 Monthly Income vs Spending</div>
-            <span id="cfNetBadge" style="font-size:12px;font-weight:700;font-family:var(--mono)"></span>
+
+        <!-- C2: Monthly Income vs Spending bar chart -->
+        <div class="card" style="padding:0;overflow:hidden;margin-bottom:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 18px 11px;border-bottom:1px solid var(--border)">
+            <div class="card-title" style="margin-bottom:0">&#128202; Monthly Income vs Spending</div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)">
+                <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#2ecc8a"></span>Income
+                <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#f05c5c;margin-left:4px"></span>Bills
+                <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#f5a623;margin-left:4px"></span>Discretionary
+              </div>
+              <span id="cfNetBadge" style="font-size:12px;font-weight:700;font-family:var(--mono)"></span>
+            </div>
           </div>
-          <div style="position:relative;height:240px"><canvas id="cfMonthlyChart"></canvas></div>
+          <div style="padding:16px 18px;position:relative;height:260px">
+            <canvas id="cfMonthlyChart"></canvas>
+          </div>
         </div>
+
+        <!-- C3 + C4 side by side -->
         <div class="g2" style="margin-bottom:14px">
+
+          <!-- C3: Top spending categories with toggle -->
           <div class="card" style="padding:0;overflow:hidden">
-            <div style="padding:12px 16px;border-bottom:1px solid var(--border)"><div class="card-title" style="margin-bottom:0">📋 Top Spending Categories</div></div>
-            <div style="padding:14px 16px;position:relative;height:240px"><canvas id="cfCatChart"></canvas></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px 10px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px">
+              <div class="card-title" style="margin-bottom:0">&#127991; Top Spending Categories</div>
+              <div class="time-toggle">
+                <button class="tt-btn" onclick="setCFCatRange('week')">Week</button>
+                <button class="tt-btn active" id="cfCatRangeActive" onclick="setCFCatRange('month')">Month</button>
+                <button class="tt-btn" onclick="setCFCatRange('year')">Year</button>
+              </div>
+            </div>
+            <div style="padding:14px 16px;position:relative;height:280px">
+              <canvas id="cfCatChart"></canvas>
+            </div>
+            <div id="cfCatLegend" class="chart-widget-legend" style="padding:8px 16px 12px;border-top:1px solid var(--border)"></div>
           </div>
+
+          <!-- C4: Month-by-month table with Bills/Discretionary split -->
           <div class="card" style="padding:0;overflow:hidden">
-            <div style="padding:12px 16px;border-bottom:1px solid var(--border)"><div class="card-title" style="margin-bottom:0">📅 Month-by-Month</div></div>
-            <div style="overflow-y:auto;max-height:300px">
+            <div style="padding:12px 16px 10px;border-bottom:1px solid var(--border)">
+              <div class="card-title" style="margin-bottom:0">&#128197; Month-by-Month Summary</div>
+            </div>
+            <div style="overflow-y:auto;max-height:392px">
               <table class="tbl" style="border:none">
-                <thead><tr><th>Month</th><th style="text-align:right">Income</th><th style="text-align:right">Spending</th><th style="text-align:right">Net</th><th style="text-align:right">Txns</th></tr></thead>
-                <tbody id="cfBody"><tr><td colspan="5" class="empty">Connect accounts to see data.</td></tr></tbody>
+                <thead>
+                  <tr>
+                    <th>Month</th>
+                    <th style="text-align:right">Income</th>
+                    <th style="text-align:right">Bills</th>
+                    <th style="text-align:right">Discret.</th>
+                    <th style="text-align:right">Net</th>
+                    <th style="text-align:right">Txns</th>
+                  </tr>
+                </thead>
+                <tbody id="cfBody"><tr><td colspan="6" class="empty">Connect accounts to see data.</td></tr></tbody>
               </table>
             </div>
           </div>
         </div>
-        <div style="text-align:center;padding:6px 0;font-size:11px;color:var(--muted)" id="cfDateLabel"></div>
       </div>
+
+
     </div>
 
     <!-- ── NET WORTH ── -->
@@ -4330,19 +4383,220 @@ function setCFRange(n) {
 }
 
 // ── CASH FLOW ─────────────────────────────────────────────────────────────────
-function renderCashFlow(){
-  if(!gg('cfMonthlyChart')&&!gg('cfBody'))return;
-  const byM={};allTxns.forEach(t=>{const m=t.date.slice(0,7);if(!byM[m])byM[m]={inc:0,exp:0,cnt:0};if(t.amount<0)byM[m].inc+=Math.abs(t.amount);else byM[m].exp+=t.amount;byM[m].cnt++;});
-  const months=Object.keys(byM).sort().slice(-12);
-  const tb=gg('cfBody');
-  if(tb){if(!months.length){tb.innerHTML='<tr><td colspan="5" class="empty">No data — connect accounts first.</td></tr>';return;}tb.innerHTML=months.map(m=>{const d=byM[m];const net=d.inc-d.exp;return `<tr><td class="mono">${m}</td><td class="mono" style="color:var(--cyan)">${fmt2(d.inc)}</td><td class="mono" style="color:var(--red)">${fmt2(d.exp)}</td><td class="mono" style="font-weight:700;color:${net>=0?'var(--cyan)':'var(--red)'}">${net>=0?'+':''}${fmt2(net)}</td><td style="color:var(--hint)">${d.cnt}</td></tr>`;}).join('');}
-  const mc=gg('cfMonthlyChart');if(mc){if(CFC.monthly)CFC.monthly.destroy();CFC.monthly=new Chart(mc,{type:'bar',data:{labels:months.map(m=>m.slice(5)),datasets:[{label:'Income',data:months.map(m=>Math.round(byM[m].inc)),backgroundColor:'#2ecc8a',borderRadius:3},{label:'Expenses',data:months.map(m=>Math.round(byM[m].exp)),backgroundColor:'#f05c5c',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11},boxWidth:9}}},scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>fmtM(v)},grid:{color:'rgba(255,255,255,0.03)'}}}}})}
-  const cut=new Date(Date.now()-30*86400000);
-  const rec=allTxns.filter(t=>new Date(t.date)>=cut&&t.amount>0);
-  const byCat={};rec.forEach(t=>{const c=fmtCat(t.personal_finance_category?.primary||t.category?.[0]||'Other');byCat[c]=(byCat[c]||0)+t.amount;});
-  var sorted=Object.entries(byCat).sort(function(a,b){return b[1]-a[1];}).slice(0,10);
-  var catCols=sorted.map(function(e){return getCatColor(e[0]);});var cc=gg('cfCatChart');if(cc){if(CFC.cat)CFC.cat.destroy();CFC.cat=new Chart(cc,{type:'bar',indexAxis:'y',data:{labels:sorted.map(function(e){return e[0];}),datasets:[{data:sorted.map(function(e){return Math.round(e[1]);}),backgroundColor:catCols,hoverBackgroundColor:catCols,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` $${c.parsed.x.toLocaleString()}`}}},scales:{x:{ticks:{callback:v=>fmtM(v)},grid:{color:'rgba(255,255,255,0.03)'}},y:{grid:{display:false},ticks:{font:{size:10.5}}}}}});}
+// ── CASH FLOW (C1-C5) ────────────────────────────────────────────────────────
+var _cfRange = 6;
+var _cfCatRange = 'month';
+
+function setCFRange(n) {
+  _cfRange = n;
+  // Set date pickers
+  var now = new Date(), fromD = '';
+  if (n > 0) {
+    var f = new Date(now.getFullYear(), now.getMonth() - n + 1, 1);
+    fromD = f.toISOString().slice(0,10);
+  }
+  var toD = now.toISOString().slice(0,10);
+  var fi = gg('cfFrom'), ti = gg('cfTo');
+  if (fi) fi.value = fromD;
+  if (ti) ti.value = toD;
+  // Update toggle buttons
+  var picker = gg('cfTimePicker');
+  if (picker) picker.querySelectorAll('.tt-btn').forEach(function(b) {
+    b.classList.toggle('active', +b.dataset.cfrange === n);
+  });
+  renderCashFlow();
 }
+
+function setCFCatRange(r) {
+  _cfCatRange = r;
+  document.querySelectorAll('#ep-cashflow .g2 .time-toggle .tt-btn').forEach(function(b) {
+    b.classList.toggle('active', b.textContent.toLowerCase().indexOf(r) === 0);
+  });
+  renderCFCatChart();
+}
+
+function _cfFilteredTxns() {
+  var fi = gg('cfFrom'), ti = gg('cfTo');
+  var from = fi && fi.value ? fi.value : null;
+  var to   = ti && ti.value ? ti.value : null;
+  return allTxns.filter(function(t) {
+    return (!from || t.date >= from) && (!to || t.date <= to);
+  });
+}
+
+function renderCashFlow() {
+  if (!gg('cfMonthlyChart') && !gg('cfBody')) return;
+
+  var txns = _cfFilteredTxns();
+
+  // Build monthly buckets with Bills / Discretionary split
+  var billCats = new Set(['LOAN_PAYMENTS','RENT_AND_UTILITIES','HOME','AUTO','INSURANCE']);
+  var byM = {};
+  txns.forEach(function(t) {
+    var m = t.date.slice(0,7);
+    if (!byM[m]) byM[m] = {inc:0, bil:0, disc:0, cnt:0};
+    if (t.amount < 0) {
+      byM[m].inc += Math.abs(t.amount);
+    } else {
+      var pri = (t.personal_finance_category && t.personal_finance_category.primary) || (t.category && t.category[0]) || '';
+      if (billCats.has(pri.toUpperCase())) byM[m].bil += t.amount;
+      else byM[m].disc += t.amount;
+      byM[m].cnt++;
+    }
+  });
+  var months = Object.keys(byM).sort();
+
+  // Stat strip
+  var strip = gg('cfStatRow');
+  if (strip && months.length) {
+    var totInc  = months.reduce(function(s,m){return s+byM[m].inc;}, 0);
+    var totBil  = months.reduce(function(s,m){return s+byM[m].bil;}, 0);
+    var totDisc = months.reduce(function(s,m){return s+byM[m].disc;}, 0);
+    var totNet  = totInc - totBil - totDisc;
+    var avgMoNet = months.length ? totNet / months.length : 0;
+    strip.innerHTML = [
+      {lbl:'Total Income',   val:fmt2(Math.round(totInc)),  cls:'cyan'},
+      {lbl:'Total Bills',    val:fmt2(Math.round(totBil)),   cls:'red'},
+      {lbl:'Discretionary',  val:fmt2(Math.round(totDisc)),  cls:'amber'},
+      {lbl:'Net Cash Flow',  val:(totNet>=0?'+':'')+fmt2(Math.round(totNet)), cls:totNet>=0?'green':'red'},
+      {lbl:'Avg Monthly Net',val:(avgMoNet>=0?'+':'')+fmt2(Math.round(avgMoNet)), cls:avgMoNet>=0?'green':'red'},
+    ].map(function(w){
+      return '<div class="widget w-'+w.cls+'"><div class="wlabel">'+w.lbl+'</div>'
+        +'<div class="wvalue '+w.cls+'">'+w.val+'</div></div>';
+    }).join('');
+  }
+
+  // Date label
+  var lbl = gg('cfDateLabel');
+  if (lbl && months.length) lbl.textContent = months[0]+' \u2013 '+months[months.length-1]+' \u00b7 '+months.length+' months';
+
+  // C2: Monthly bar chart — Income / Bills / Discretionary
+  var mc = gg('cfMonthlyChart');
+  if (mc) {
+    if (CFC.monthly) CFC.monthly.destroy();
+    var mutC = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim() || '#666';
+    CFC.monthly = new Chart(mc, {
+      type: 'bar',
+      data: {
+        labels: months.map(function(m){ return m.slice(5); }),
+        datasets: [
+          {label:'Income',        data:months.map(function(m){return Math.round(byM[m].inc);}),  backgroundColor:'#2ecc8a', borderRadius:3, stack:'a'},
+          {label:'Bills',         data:months.map(function(m){return Math.round(byM[m].bil);}),  backgroundColor:'#f05c5c', borderRadius:3, stack:'b'},
+          {label:'Discretionary', data:months.map(function(m){return Math.round(byM[m].disc);}), backgroundColor:'#f5a623', borderRadius:3, stack:'b'}
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},
+        plugins:{
+          legend:{display:false},
+          tooltip:{
+            backgroundColor:'rgba(15,17,23,0.93)',titleColor:'#f0f2fa',bodyColor:'#b0b4cc',
+            borderColor:'rgba(255,255,255,0.1)',borderWidth:1,padding:10,
+            callbacks:{label:function(ctx){return ' '+ctx.dataset.label+':  $'+ctx.parsed.y.toLocaleString();}}
+          }
+        },
+        scales:{
+          x:{grid:{display:false},ticks:{color:mutC,font:{size:10.5}}},
+          y:{grid:{color:'rgba(128,128,128,0.07)'},ticks:{color:mutC,callback:function(v){return fmtM(v);}}}
+        }
+      }
+    });
+    // Net badge
+    var nb = gg('cfNetBadge');
+    if (nb && months.length) {
+      var last = byM[months[months.length-1]];
+      var net = last.inc - last.bil - last.disc;
+      nb.textContent = (net>=0?'+':'')+fmt2(Math.round(net))+' last mo';
+      nb.style.color = net>=0?'var(--green)':'var(--red)';
+    }
+  }
+
+  // C3: category chart
+  renderCFCatChart();
+
+  // C4: month-by-month table with Bills/Discretionary split
+  var tb = gg('cfBody');
+  if (tb) {
+    if (!months.length) {
+      tb.innerHTML = '<tr><td colspan="6" class="empty">No data \u2014 connect accounts or adjust date range.</td></tr>';
+    } else {
+      tb.innerHTML = months.slice().reverse().map(function(m) {
+        var d = byM[m];
+        var net = d.inc - d.bil - d.disc;
+        return '<tr>'
+          +'<td class="mono" style="font-size:12px">'+m+'</td>'
+          +'<td class="mono" style="color:var(--cyan);text-align:right">'+fmt2(d.inc)+'</td>'
+          +'<td class="mono" style="color:var(--red);text-align:right">'+fmt2(d.bil)+'</td>'
+          +'<td class="mono" style="color:var(--amber);text-align:right">'+fmt2(d.disc)+'</td>'
+          +'<td class="mono" style="font-weight:700;text-align:right;color:'+(net>=0?'var(--cyan)':'var(--red)')+'">'+( net>=0?'+':'')+fmt2(net)+'</td>'
+          +'<td style="color:var(--hint);text-align:right">'+d.cnt+'</td>'
+          +'</tr>';
+      }).join('');
+    }
+  }
+}
+
+function renderCFCatChart() {
+  // C3: category range filter
+  var now = new Date();
+  var cutMs = _cfCatRange === 'week'  ? 7*86400000
+            : _cfCatRange === 'year'  ? 365*86400000
+            : 30*86400000;
+  var cut = new Date(Date.now() - cutMs);
+  var txns = _cfFilteredTxns().filter(function(t){ return new Date(t.date) >= cut && t.amount > 0; });
+  var byCat = {};
+  txns.forEach(function(t){
+    var cat = getTxnCategory(t);
+    byCat[cat] = (byCat[cat]||0) + t.amount;
+  });
+  var sorted = Object.entries(byCat).sort(function(a,b){return b[1]-a[1];}).slice(0,10);
+  var colors = sorted.map(function(e){return getCatColor(e[0]);});
+  var total  = sorted.reduce(function(s,e){return s+e[1];},0);
+
+  var cc = gg('cfCatChart');
+  if (cc) {
+    if (CFC.cat) CFC.cat.destroy();
+    var mutC = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim()||'#666';
+    CFC.cat = new Chart(cc, {
+      type:'bar', indexAxis:'y',
+      data:{
+        labels: sorted.map(function(e){return e[0];}),
+        datasets:[{
+          data: sorted.map(function(e){return Math.round(e[1]);}),
+          backgroundColor: colors,
+          borderRadius: 3
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          tooltip:{callbacks:{label:function(ctx){return ' $'+ctx.parsed.x.toLocaleString();}}}
+        },
+        scales:{
+          x:{grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:mutC,callback:function(v){return fmtM(v);}}},
+          y:{grid:{display:false},ticks:{color:mutC,font:{size:10.5}}}
+        }
+      }
+    });
+  }
+
+  // Legend with % and amount
+  var leg = gg('cfCatLegend');
+  if (leg) {
+    leg.innerHTML = sorted.map(function(e,i){
+      var pct = total > 0 ? Math.round(e[1]/total*100) : 0;
+      return '<div class="cwl-item">'
+        +'<div class="cwl-dot" style="background:'+colors[i]+'"></div>'
+        +'<span class="cwl-label">'+esc(e[0])+'</span>'
+        +'<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text);margin-right:4px">$'+Math.round(e[1]).toLocaleString()+'</span>'
+        +'<span class="cwl-pct">'+pct+'%</span>'
+        +'</div>';
+    }).join('');
+  }
+}
+
 
 // ── RETIREMENT CALCS ──────────────────────────────────────────────────────────
 function switchRetTab(tab){
