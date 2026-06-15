@@ -3548,62 +3548,119 @@ function saveNewBill(){
 function renderBillCatChart(){
   if(!gg('billCatChart'))return;
   var CAT_C={HM:'#3dda91',LOAN:'#f5a623',CC:'#6b9ef5',CAR:'#b09afa',PH:'#38bdf8',TV:'#818cf8',FAM:'#f46a6a',SAVE:'#34d399',OTHER:'#94a3b8'};
-  var CAT_L={HM:'🏠 Housing',LOAN:'🏦 Loans',CC:'💳 Credit Cards',CAR:'🚗 Auto',PH:'📱 Phone',TV:'📺 Cable',FAM:'👨‍👩‍👧 Family',SAVE:'💰 Savings',OTHER:'Other'};
+  var CAT_L={HM:'🏠 Housing',LOAN:'🏦 Loans',CC:'💳 Credit Cards',CAR:'🚗 Auto',PH:'📱 Phone',TV:'📺 Cable/Internet',FAM:'👨‍👩‍👧 Family',SAVE:'💰 Savings',OTHER:'Other'};
   var byCat={};bills.forEach(function(b){byCat[b.cat]=(byCat[b.cat]||0)+b.pay;});
   var entries=Object.entries(byCat).sort(function(a,b){return b[1]-a[1];});
   var tot=entries.reduce(function(s,e){return s+e[1];},0);
   var surfC=getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()||'#1a1d27';
+
+  // Header total
+  var ht=gg('billCatTotal');if(ht)ht.textContent=fmt2(tot)+'/mo';
+
+  // Doughnut
   var el=gg('billCatChart');if(!el)return;
   if(BC.billCat)BC.billCat.destroy();
-  var ht=gg('billCatTotal');if(ht)ht.textContent=fmt2(tot)+'/mo';
-  BC.billCat=new Chart(el,{type:'doughnut',data:{
-    labels:entries.map(function(e){return CAT_L[e[0]]||e[0];}),
-    datasets:[{data:entries.map(function(e){return Math.round(e[1]);}),
-      backgroundColor:entries.map(function(e){return CAT_C[e[0]]||'#94a3b8';}),
-      borderWidth:2,borderColor:surfC}]},
+  BC.billCat=new Chart(el,{
+    type:'doughnut',
+    data:{
+      labels:entries.map(function(e){return CAT_L[e[0]]||e[0];}),
+      datasets:[{
+        data:entries.map(function(e){return Math.round(e[1]);}),
+        backgroundColor:entries.map(function(e){return CAT_C[e[0]]||'#94a3b8';}),
+        borderWidth:2,borderColor:surfC
+      }]
+    },
     options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
-      events:['click'],
-      plugins:{legend:{display:false},tooltip:{enabled:false}}}});
+      events:['click'],plugins:{legend:{display:false},tooltip:{enabled:false}}}
+  });
+
+  // Legend — with highest-spend badge and dollar amounts
   var leg=gg('billCatLegend');
-  if(leg)leg.innerHTML=entries.map(function(e){
-    var col=CAT_C[e[0]]||'#94a3b8';var pct=tot>0?Math.round(e[1]/tot*100):0;
-    return '<div class="cwl-item"><div class="cwl-dot" style="background:'+col+'"></div>'
-      +'<span class="cwl-label">'+(CAT_L[e[0]]||e[0])+'</span><span class="cwl-pct">'+pct+'%</span></div>';
-  }).join('');
+  if(leg){
+    leg.innerHTML=entries.map(function(e,i){
+      var col=CAT_C[e[0]]||'#94a3b8';
+      var lbl=CAT_L[e[0]]||e[0];
+      var pct=tot>0?Math.round(e[1]/tot*100):0;
+      // Find the single highest individual bill in this category
+      var catBills=bills.filter(function(b){return b.cat===e[0];}).sort(function(a,b){return b.pay-a.pay;});
+      var topBill=catBills[0];
+      var topTag=topBill
+        ?'<span style="font-size:10px;font-weight:600;background:'+col+'22;color:'+col+';padding:1px 7px;border-radius:3px;white-space:nowrap;flex-shrink:0">'
+          +esc(topBill.name.split(' ').slice(0,2).join(' '))+': '+fmt2(topBill.pay)
+          +'</span>'
+        :'';
+      return '<div class="cwl-item" style="min-width:160px;gap:6px">'
+        +'<div class="cwl-dot" style="background:'+col+'"></div>'
+        +'<span class="cwl-label">'+lbl+'</span>'
+        +topTag
+        +'<span class="cwl-pct">'+pct+'%</span>'
+        +'</div>';
+    }).join('');
+  }
+
+  // Breakdown panel (right side)
   renderBillBreakdown(entries,tot,CAT_L,CAT_C);
 }
+
 function renderBillBreakdown(entries,tot,CAT_L,CAT_C){
-  var el=gg('billBreakdown');if(!el)return;
+  // Allow standalone call with no args
   if(!entries){
     var byCat2={};bills.forEach(function(b){byCat2[b.cat]=(byCat2[b.cat]||0)+b.pay;});
     entries=Object.entries(byCat2).sort(function(a,b){return b[1]-a[1];});
     tot=entries.reduce(function(s,e){return s+e[1];},0);
-    CAT_L={HM:'🏠 Housing',LOAN:'🏦 Loans',CC:'💳 Credit Cards',CAR:'🚗 Auto',PH:'📱 Phone',TV:'📺 Cable',FAM:'👨‍👩‍👧 Family',SAVE:'💰 Savings',OTHER:'Other'};
+    CAT_L={HM:'🏠 Housing',LOAN:'🏦 Loans',CC:'💳 Credit Cards',CAR:'🚗 Auto',PH:'📱 Phone',TV:'📺 Cable/Internet',FAM:'👨‍👩‍👧 Family',SAVE:'💰 Savings',OTHER:'Other'};
     CAT_C={HM:'#3dda91',LOAN:'#f5a623',CC:'#6b9ef5',CAR:'#b09afa',PH:'#38bdf8',TV:'#818cf8',FAM:'#f46a6a',SAVE:'#34d399',OTHER:'#94a3b8'};
   }
-  el.innerHTML=entries.map(function(e){
-    var col=CAT_C[e[0]]||'#94a3b8';var lbl=CAT_L[e[0]]||e[0];
+  var el=gg('billBreakdown');if(!el)return;
+
+  el.innerHTML=entries.map(function(e,i){
+    var col=CAT_C[e[0]]||'#94a3b8';
+    var lbl=CAT_L[e[0]]||e[0];
     var pct=tot>0?Math.round(e[1]/tot*100):0;
+    var isTop=i===0;
     var catBills=bills.filter(function(b){return b.cat===e[0];});
-    return '<div style="margin-bottom:8px">'
-      +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">'
+
+    // Individual bill rows
+    var billRows=catBills.map(function(b){
+      var payoff='';
+      var ba=Math.abs(b.bal||0);
+      if(ba>0&&b.pay>0){
+        if(b.apr>0){
+          var mr=b.apr/100/12;
+          if(b.pay>ba*mr){var mo=Math.ceil(-Math.log(1-(ba*mr/b.pay))/Math.log(1+mr));payoff='<span style="color:var(--hint);font-size:9.5px;margin-left:4px">~'+mo+'mo</span>';}
+        }else{payoff='<span style="color:var(--green);font-size:9.5px;margin-left:4px">0%</span>';}
+      }
+      var overdue=!b.paid&&b.due&&b.due<new Date().getDate()&&b.pay>0;
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0 3px 12px;font-size:11.5px;">'
+        +'<span style="color:'+(overdue?'var(--red)':'var(--muted)')+'">'+esc(b.name)+(overdue?' ⚠':'')+'</span>'
+        +'<div style="text-align:right;flex-shrink:0">'
+          +'<span style="font-family:var(--mono);font-weight:600;color:var(--text)">'+fmt2(b.pay)+'</span>'
+          +payoff
+        +'</div></div>';
+    }).join('');
+
+    return '<div style="margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border)">'
+      // Category header
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">'
         +'<div style="width:8px;height:8px;border-radius:2px;background:'+col+';flex-shrink:0"></div>'
-        +'<span style="font-size:12.5px;font-weight:600;flex:1;color:var(--text)">'+lbl+'</span>'
-        +'<span style="font-family:var(--mono);font-size:12.5px;font-weight:700;color:'+col+'">'+fmt2(e[1])+'</span>'
-        +'<span style="font-size:11px;color:var(--muted)">'+pct+'%</span></div>'
-      +'<div style="height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;margin-bottom:2px">'
-        +'<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:2px"></div></div>'
-      +catBills.map(function(b){return '<div style="display:flex;justify-content:space-between;padding:2px 0 2px 10px;font-size:11px;color:var(--muted)"><span>'+esc(b.name)+'</span><span>'+fmt2(b.pay)+'</span></div>';}).join('')
+        +'<span style="font-size:13px;font-weight:700;color:var(--text);flex:1">'+lbl+'</span>'
+        +(isTop?'<span style="font-size:9px;font-weight:700;background:'+col+'33;color:'+col+';padding:1px 6px;border-radius:3px">HIGHEST</span>':'')
+        +'<span style="font-family:var(--mono);font-size:13px;font-weight:700;color:'+col+'">'+fmt2(e[1])+'</span>'
+        +'<span style="font-size:11px;color:var(--muted);min-width:28px;text-align:right">'+pct+'%</span>'
+      +'</div>'
+      // Progress bar
+      +'<div style="height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;margin-bottom:5px">'
+        +'<div style="height:100%;width:'+pct+'%;background:'+col+';border-radius:2px;transition:width 0.3s"></div>'
+      +'</div>'
+      // Individual bills
+      +billRows
       +'</div>';
-  }).join('')+'<div style="display:flex;justify-content:space-between;padding:8px 0 0;border-top:1px solid var(--border);font-weight:700;font-size:13px"><span>Total</span><span style="font-family:var(--mono);color:var(--red)">'+fmt2(tot)+'</span></div>';
-}
-function renderBillBreakdown(){
-  const byCat={};bills.forEach(b=>{byCat[b.cat]=(byCat[b.cat]||0)+b.pay;});
-  const lbl={HM:'🏠 Housing',LOAN:'🏦 Loans',CC:'💳 Credit Cards',CAR:'🚗 Auto',PH:'📱 Phone',TV:'📺 Cable',FAM:'👨‍👩‍👧 Family',SAVE:'💰 Savings',OTHER:'Other'};
-  const tot=Object.values(byCat).reduce((s,v)=>s+v,0);
-  const el=gg('billBreakdown');if(!el)return;
-  el.innerHTML=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12.5px"><span style="color:var(--muted)">${lbl[cat]||cat}</span><div style="text-align:right"><div class="mono" style="font-weight:600">${fmt2(amt)}</div><div style="font-size:10.5px;color:var(--hint)">${Math.round(amt/tot*100)}%</div></div></div>`).join('')
-    +`<div style="display:flex;justify-content:space-between;padding:10px 0 0;font-weight:600;font-size:13px"><span>Total</span><span class="mono" style="color:var(--red)">${fmt2(tot)}</span></div>`;
+  }).join('')
+  // Total row
+  +'<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0 2px;font-weight:700;font-size:13px">'
+    +'<span style="color:var(--text)">Total</span>'
+    +'<span style="font-family:var(--mono);color:var(--red)">'+fmt2(tot)+'</span>'
+  +'</div>';
 }
 
 // ── BUDGET METRICS ────────────────────────────────────────────────────────────
