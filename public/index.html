@@ -1610,7 +1610,7 @@ const fmtM=n=>'$'+(Math.abs(n)>=1e6?(Math.abs(n)/1e6).toFixed(2)+'M':Math.abs(n)
 const fmtK=n=>'$'+Math.round(Math.abs(n)).toLocaleString();
 const fmt2=n=>'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const todayStr=()=>new Date().toISOString().slice(0,10).replace(/-/g,'');
-const esc=s=>String(s||'').split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;').split('"').join('&quot;');
+const esc=s=>String(s||'').split('&').join('&').split('<').join('<').split('>').join('>').split('"').join('"');
 const fmtCat=s=>String(s).replace(/_/g,' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
 const PAL=['#2ecc8a','#5b8def','#f05c5c','#a78bfa','#f0a540','#38bdf8','#fb923c','#34d399','#f472b6','#818cf8'];
 Chart.defaults.color='#484c65';Chart.defaults.borderColor='rgba(255,255,255,0.05)';
@@ -2785,7 +2785,83 @@ var _actionPlans = {
          amount:'See Fire Drill page'}
       ]
     };
+  },
+
+  'needs-high': function(ctx) {
+    var inc  = ctx.totM || ctx.inc || 1;
+    var pct  = Math.round((ctx.needs / inc) * 100);
+    var ovg  = Math.round(Math.max(0, ctx.needs - inc * 0.50));
+    return {
+      title: '🏠 Reduce Needs Below 50%',
+      subtitle: 'Fixed bills are taking too much of your income',
+      color: 'var(--blue)',
+      steps: [
+        { title: 'Current needs ratio',
+          desc: 'Your fixed bills represent ' + pct + '% of income vs the 50% target. You need to trim roughly ' + fmtM(ovg) + '/mo.',
+          amount: fmtM(ctx.needs) + '/mo' },
+        { title: 'Audit your fixed bills',
+          desc: 'Open Budget & Bills and look for subscriptions, services, or minimums that can be reduced, negotiated, or cancelled.',
+          amount: 'See Budget & Bills' },
+        { title: 'Refinance or consolidate',
+          desc: 'High mortgage, auto, or loan payments may be reducible through refinancing at a lower rate.',
+          amount: 'Target: save ' + fmtM(ovg) + '/mo' },
+        { title: 'Eliminate low-value bills',
+          desc: 'Streaming services, gym memberships, and recurring subscriptions you rarely use are quick wins.',
+          amount: '' }
+      ]
+    };
+  },
+
+  'wants-high': function(ctx) {
+    var inc  = ctx.totM || ctx.inc || 1;
+    var pct  = Math.round((ctx.wants / inc) * 100);
+    var ovg  = Math.round(Math.max(0, ctx.wants - inc * 0.30));
+    return {
+      title: '🎉 Trim Wants to 30%',
+      subtitle: 'Discretionary spending is above your target',
+      color: 'var(--amber)',
+      steps: [
+        { title: 'Current wants ratio',
+          desc: 'Discretionary at ' + pct + '% of income vs the 30% target. Trimming ' + fmtM(ovg) + '/mo gets you on track.',
+          amount: fmtM(ctx.wants) + '/mo' },
+        { title: 'Review your Zero Budget',
+          desc: 'Go to Budget & Bills → Zero Budget and reduce dining, entertainment, and shopping allocations first.',
+          amount: 'See Zero Budget' },
+        { title: 'Apply the 24-hour rule',
+          desc: 'Wait 24 hours before any non-essential purchase over $50. Most impulse purchases get cancelled.',
+          amount: '' },
+        { title: 'Redirect to savings',
+          desc: 'Move the trimmed amount directly into savings or debt payoff this month.',
+          amount: 'Redirect: ' + fmtM(ovg) + '/mo' }
+      ]
+    };
+  },
+
+  'saves-low': function(ctx) {
+    var inc  = ctx.totM || ctx.inc || 1;
+    var pct  = Math.round(((ctx.saves || 0) / inc) * 100);
+    var gap  = Math.round(Math.max(0, inc * 0.20 - (ctx.saves || 0)));
+    return {
+      title: '💰 Boost Savings to 20%',
+      subtitle: 'Your savings rate is below the recommended 20%',
+      color: 'var(--green)',
+      steps: [
+        { title: 'Current savings rate',
+          desc: 'You are saving ' + pct + '% of income. The 20% target means adding ' + fmtM(gap) + '/mo more.',
+          amount: fmtM(ctx.saves || 0) + '/mo saved' },
+        { title: 'Automate on payday',
+          desc: 'Set up an automatic transfer the day you get paid — before you have a chance to spend it.',
+          amount: fmtM(gap) + '/mo auto-transfer' },
+        { title: 'Priority order',
+          desc: '1. 3-month emergency fund  2. 401k employer match  3. High-APR debt  4. Roth IRA  5. Taxable investing.',
+          amount: '' },
+        { title: 'Check the Retirement page',
+          desc: 'See how saving just ' + fmtM(gap) + ' more per month changes your projected retirement date.',
+          amount: 'See Retirement' }
+      ]
+    };
   }
+
 };
 
 function openActionPlan(key) {
@@ -3541,7 +3617,7 @@ function renderBillsTab(){
       <td style="font-size:11px;color:var(--muted);max-width:110px">${esc(b.promo||'')}</td>
       <td>${poH}</td>
       <td style="white-space:nowrap">${stH}</td>
-      <td style="text-align:center;font-size:12px">${b.paid?'<span class="st-paid" style="font-size:11.5px">&#10003; Paid</span>':'<span style="font-size:11px;color:var(--muted)">&#8212;</span>'}</td>
+      <td style="text-align:center;font-size:12px">${b.paid?'<span class="st-paid" style="font-size:11.5px">✓ Paid</span>':'<span style="font-size:11px;color:var(--muted)">—</span>'}</td>
       <td><button class="btn danger" onclick="delBill(${oi})">✕</button></td>
     </tr>`;
   }).join('');
@@ -3882,9 +3958,9 @@ function renderCalendar(){
   if(notes){
     var unpaidBills=bills.filter(function(b){return b.due&&b.pay>0&&!b.paid;});
     if(unpaidBills.length){
-      notes.innerHTML='<span style="color:var(--amber)">&#9888;</span> '+unpaidBills.length+' unpaid bill'+(unpaidBills.length!==1?'s':'')+' this month &middot; check off as you pay them to update actual balance';
+      notes.innerHTML='<span style="color:var(--amber)">⚠</span> '+unpaidBills.length+' unpaid bill'+(unpaidBills.length!==1?'s':'')+' this month · check off as you pay them to update actual balance';
     } else {
-      notes.innerHTML='<span style="color:var(--green)">&#10003;</span> All bills marked paid for '+sel.options[sel.selectedIndex].text;
+      notes.innerHTML='<span style="color:var(--green)">✓</span> All bills marked paid for '+sel.options[sel.selectedIndex].text;
     }
   }
 }
