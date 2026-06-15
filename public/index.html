@@ -93,7 +93,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
   overflow-x:hidden;
   width:100%;
   box-sizing:border-box;
+  min-width:0;
 }
+.page{min-width:0;max-width:100%;}
 .page{display:none;}.page.active{display:block;animation:fadeIn 0.2s ease;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
 
@@ -1595,7 +1597,7 @@ canvas.chart-interactive { cursor: crosshair; }
         <!-- SCENARIO SELECTOR -->
         <div style="margin-bottom:20px">
           <div class="card-title" style="margin-bottom:10px">Choose a scenario</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px" id="scenarioCards">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px" id="scenarioCards">
             <div class="fd-scenario-card active" onclick="fdSetScenario('job')" data-id="job"><div class="fd-sc-icon">&#128188;</div><div class="fd-sc-name">Job Loss</div><div class="fd-sc-sub">One or both incomes gone</div></div>
             <div class="fd-scenario-card" onclick="fdSetScenario('hurricane')" data-id="hurricane"><div class="fd-sc-icon">&#127744;</div><div class="fd-sc-name">Hurricane</div><div class="fd-sc-sub">Displacement &amp; repairs</div></div>
             <div class="fd-scenario-card" onclick="fdSetScenario('illness')" data-id="illness"><div class="fd-sc-icon">&#127973;</div><div class="fd-sc-name">Illness / Injury</div><div class="fd-sc-sub">Medical costs &amp; lost work</div></div>
@@ -1609,7 +1611,7 @@ canvas.chart-interactive { cursor: crosshair; }
           <strong id="fdBannerTitle">Job Loss</strong> — <span id="fdBannerDesc">Simulating complete loss of one or both paychecks.</span>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;margin-bottom:20px" id="fdMainGrid">
+        <div style="display:grid;grid-template-columns:1fr minmax(0,340px);gap:16px;margin-bottom:20px" id="fdMainGrid">
           <div>
             <div class="card" style="margin-bottom:14px">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
@@ -1652,7 +1654,7 @@ canvas.chart-interactive { cursor: crosshair; }
             </div>
             <div class="card">
               <div class="card-title" style="margin-bottom:14px">Emergency levers — available options</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" id="fdLevers">
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px" id="fdLevers">
                 <div class="fd-lever" id="lev-savings"><div class="fd-lever-top"><div><div class="fd-lever-title">Tap savings / emergency fund</div><div class="fd-lever-sub">Checking + savings balance</div></div><label class="fd-toggle"><input type="checkbox" id="lev-savings-on" onchange="fdCalc()"><span class="fd-toggle-slider"></span></label></div><div class="fd-lever-body"><div class="slider-hdr" style="margin-bottom:4px"><span style="font-size:12px;color:var(--muted)">Monthly draw</span><strong id="lev-savings-val">$500</strong></div><input type="range" id="lev-savings-amt" min="0" max="5000" value="500" step="100" oninput="fdCalc()"><div style="font-size:11px;color:var(--hint);margin-top:4px">Available: <span id="lev-savings-avail" class="mono">—</span></div></div></div>
                 <div class="fd-lever" id="lev-heloc"><div class="fd-lever-top"><div><div class="fd-lever-title">Draw on HELOC</div><div class="fd-lever-sub">Home equity line of credit</div></div><label class="fd-toggle"><input type="checkbox" id="lev-heloc-on" onchange="fdCalc()"><span class="fd-toggle-slider"></span></label></div><div class="fd-lever-body"><div class="slider-hdr" style="margin-bottom:4px"><span style="font-size:12px;color:var(--muted)">Monthly draw</span><strong id="lev-heloc-val">$1,000</strong></div><input type="range" id="lev-heloc-amt" min="0" max="10000" value="1000" step="100" oninput="fdCalc()"><div style="font-size:11px;color:var(--hint);margin-top:4px">Available: <span id="lev-heloc-avail" class="mono">—</span></div></div></div>
                 <div class="fd-lever" id="lev-401k"><div class="fd-lever-top"><div><div class="fd-lever-title">401k hardship withdrawal</div><div class="fd-lever-sub">10% penalty + taxes apply</div></div><label class="fd-toggle"><input type="checkbox" id="lev-401k-on" onchange="fdCalc()"><span class="fd-toggle-slider"></span></label></div><div class="fd-lever-body"><div class="slider-hdr" style="margin-bottom:4px"><span style="font-size:12px;color:var(--muted)">One-time amount</span><strong id="lev-401k-val">$5,000</strong></div><input type="range" id="lev-401k-amt" min="0" max="50000" value="5000" step="500" oninput="fdCalc()"><div style="font-size:11px;color:var(--hint);margin-top:4px">After penalties: <span id="lev-401k-net" class="mono">—</span></div></div></div>
@@ -1732,7 +1734,7 @@ canvas.chart-interactive { cursor: crosshair; }
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;margin-bottom:16px">
           <!-- Debt priority list -->
           <div class="card" style="padding:0;overflow:hidden">
             <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
