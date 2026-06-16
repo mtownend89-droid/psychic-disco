@@ -998,6 +998,35 @@ canvas.chart-interactive { cursor: crosshair; }
   .page.active{animation:fadeIn 0.18s ease !important;}
 }
 
+
+/* ── SWOT iPhone fixes ── */
+@media(max-width:480px){
+  .swot-grid{gap:8px;}
+  .swot-card{padding:11px 12px;}
+  .swot-label{font-size:10px;letter-spacing:.07em;margin-bottom:6px;}
+  .swot-list{gap:10px;}
+  /* Item: stack dot+text on one line, button below */
+  .swot-item{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:4px;
+    font-size:11.5px;
+  }
+  /* Wrap dot + text in their own row */
+  .swot-dot{margin-top:0;flex-shrink:0;}
+  .swot-metric{font-size:10px;padding:1px 5px;}
+  /* Button: full width below the text */
+  .swot-action-btn{
+    white-space:nowrap;
+    margin-left:0 !important;
+    margin-top:2px;
+    align-self:stretch;
+    justify-content:center;
+    font-size:10px;
+    padding:4px 8px;
+  }
+}
+
 </style>
 
   <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
