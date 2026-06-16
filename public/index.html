@@ -921,6 +921,7 @@ canvas.chart-interactive { cursor: crosshair; }
 #sbCanvas.drag-over{border-color:var(--cyan);background:rgba(56,189,248,0.03);}
 </style>
 
+  <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
 </head>
 <body>
 <div id="loginScreen" style="position:fixed;inset:0;z-index:999;background:#0d0f14;display:flex;align-items:center;justify-content:center;padding:20px;">
@@ -2170,6 +2171,10 @@ window.fetch = function(url, opts) {
   opts = opts || {};
   if (typeof url === 'string' && url.startsWith('/api/') && !url.includes('/api/login')) {
     opts.headers = Object.assign({}, opts.headers || {}, { 'Authorization': 'Bearer ' + authToken() });
+    // Ensure Content-Type is preserved if already set
+    if (!opts.headers['Content-Type'] && !opts.headers['content-type'] && opts.body) {
+      opts.headers['Content-Type'] = 'application/json';
+    }
   }
   return _origFetch(url, opts);
 };
@@ -4117,17 +4122,36 @@ const saveNW=()=>{try{localStorage.setItem('nwAssets',JSON.stringify(nwAssets));
 // ── PLAID ─────────────────────────────────────────────────────────────────────
 async function openLinkHandler(){
   try{
-    const {link_token}=await fetch('/api/create_link_token',{method:'POST'}).then(r=>r.json());
-    Plaid.create({token:link_token,
+    const linkRes=await fetch('/api/create_link_token',{method:'POST'});
+    if(!linkRes.ok){const err=await linkRes.json().catch(()=>({}));showToast('Link token failed: '+(err.error||linkRes.status),'error');return;}
+    const {link_token}=await linkRes.json();
+    if(!link_token){showToast('No link token returned from server','error');return;}
+    const handler=Plaid.create({token:link_token,
       onSuccess:async(pub,meta)=>{
         const inst=meta.institution?.name||'Bank';
-        const res=await fetch('/api/exchange_token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({public_token:pub,institution_name:inst})}).then(r=>r.json());
-        if(res.error){showToast('Connection failed: '+res.error,'error');return;}
-        showToast(inst+' connected!','success');showDashboard();await refreshAll();
+        try{
+          const xRes=await fetch('/api/exchange_token',{
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+authToken()},
+            body:JSON.stringify({public_token:pub,institution_name:inst})
+          });
+          const res=await xRes.json();
+          if(res.error){showToast('Exchange failed: '+res.error,'error');return;}
+          showToast(inst+' connected! Loading data...','success');
+          await refreshAll();
+          showPage('dashboard');
+        }catch(ex){showToast('Exchange error: '+ex.message,'error');}
       },
-      onExit:err=>{if(err)showToast('Link exited: '+err.error_message,'error');}
-    }).open();
-  }catch(e){showToast('Failed to open Plaid Link.','error');}
+      onExit:(err,meta)=>{
+        if(err){showToast('Plaid Link: '+err.error_message,'error');}
+        console.log('Plaid exit:',err,meta);
+      }
+    });
+    handler.open();
+  }catch(e){
+    console.error('openLinkHandler error:',e);
+    showToast('Failed to open Plaid Link: '+e.message,'error');
+  }
 }
 function showDashboard(){gg('connectScreen').style.display='none';showPage('dashboard');}
 async function refreshAll(){await Promise.all([loadAccounts(),loadTransactions()]);}
