@@ -858,6 +858,67 @@ canvas.chart-interactive { cursor: crosshair; }
 .cwl-badge{font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;flex-shrink:0;}
 .cwl-amt{font-size:11px;font-family:var(--mono);font-weight:700;color:var(--text);flex-shrink:0;}
 .cwl-pct{font-size:10.5px;color:var(--muted);flex-shrink:0;}
+
+/* ── SANDBOX PAGE BUILDER ── */
+.sb-canvas{min-height:400px;background:repeating-linear-gradient(0deg,transparent,transparent 39px,var(--border) 39px,var(--border) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,var(--border) 39px,var(--border) 40px);border:1.5px dashed var(--border2);border-radius:var(--radius);position:relative;padding:16px;display:flex;flex-wrap:wrap;gap:12px;align-content:flex-start;}
+.sb-canvas.drag-over{border-color:var(--green);background-color:rgba(46,204,138,0.03);}
+.sb-widget-block{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative;min-width:240px;flex:1;}
+.sb-widget-block:hover .sb-widget-toolbar{opacity:1;}
+.sb-widget-block.selected{border-color:var(--green);box-shadow:0 0 0 2px rgba(46,204,138,0.2);}
+.sb-widget-toolbar{position:absolute;top:6px;right:6px;display:flex;gap:4px;opacity:0;transition:opacity 0.15s;z-index:10;}
+.sb-widget-tool-btn{width:24px;height:24px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all 0.12s;}
+.sb-widget-tool-btn:hover{background:var(--surface3);color:var(--text);}
+.sb-widget-resize{width:16px;height:16px;position:absolute;bottom:4px;right:4px;cursor:se-resize;color:var(--hint);font-size:10px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.15s;}
+.sb-widget-block:hover .sb-widget-resize{opacity:1;}
+/* Library panel */
+.sb-library{width:220px;flex-shrink:0;}
+.sb-lib-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;cursor:grab;transition:all 0.12s;margin-bottom:6px;background:var(--surface);}
+.sb-lib-item:hover{border-color:var(--green);background:rgba(46,204,138,0.05);transform:translateX(2px);}
+.sb-lib-item:active{cursor:grabbing;}
+.sb-lib-icon{font-size:18px;flex-shrink:0;}
+.sb-lib-label{font-size:12px;font-weight:500;color:var(--text);}
+.sb-lib-sub{font-size:10.5px;color:var(--muted);}
+/* Inspector panel */
+.sb-inspector{width:220px;flex-shrink:0;}
+.sb-insp-row{display:flex;flex-direction:column;gap:3px;margin-bottom:10px;}
+.sb-insp-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);}
+.sb-insp-val{height:28px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:0 8px;color:var(--text);font-size:12px;}
+.sb-insp-val:focus{outline:none;border-color:var(--green);}
+/* Templates */
+.sb-template-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px 14px;cursor:pointer;transition:all 0.15s;margin-bottom:8px;}
+.sb-template-card:hover{border-color:var(--green);background:rgba(46,204,138,0.04);}
+.sb-template-card.active{border-color:var(--green);}
+
+/* ── SANDBOX PAGE BUILDER ── */
+.sb-library{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;overflow-y:auto;max-height:calc(100vh - 200px);}
+.sb-lib-group{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--hint);padding:10px 0 4px;border-top:1px solid var(--border);margin-top:6px;}
+.sb-lib-group:first-child{border-top:none;margin-top:0;padding-top:0;}
+.sb-lib-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;cursor:grab;transition:all 0.12s;border:1px solid transparent;margin-bottom:2px;}
+.sb-lib-item:hover{background:var(--surface2);border-color:var(--border);}
+.sb-lib-item:active{cursor:grabbing;opacity:0.7;}
+.sb-lib-icon{font-size:16px;flex-shrink:0;width:20px;text-align:center;}
+.sb-lib-label{font-size:11.5px;font-weight:600;color:var(--text);}
+.sb-lib-sub{font-size:10px;color:var(--hint);}
+.sb-widget-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:border-color 0.12s;position:relative;}
+.sb-widget-card:hover{border-color:var(--border2);}
+.sb-widget-card.selected{border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan)20;}
+.sb-widget-card.span-2{grid-column:1/-1;}
+.sb-widget-header{display:flex;align-items:center;justify-content:space-between;padding:9px 12px 8px;border-bottom:1px solid var(--border);background:var(--surface2);}
+.sb-widget-title{font-size:11.5px;font-weight:700;color:var(--text);}
+.sb-widget-actions{display:flex;gap:4px;opacity:0;transition:opacity 0.12s;}
+.sb-widget-card:hover .sb-widget-actions{opacity:1;}
+.sb-widget-actions button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 5px;border-radius:4px;}
+.sb-widget-actions button:hover{background:var(--surface3);color:var(--text);}
+.sb-widget-body{padding:12px;}
+.sb-widget-status{font-size:10px;padding:4px 12px 6px;color:var(--hint);font-family:var(--mono);}
+.sb-inspector-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;overflow-y:auto;max-height:calc(100vh - 200px);}
+.sb-insp-row{margin-bottom:10px;}
+.sb-insp-label{display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;}
+.sb-insp-val{width:100%;height:30px;font-size:12px;}
+.sb-insp-section{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--hint);padding:10px 0 6px;border-top:1px solid var(--border);margin-top:12px;}
+.sb-insp-code{width:100%;min-height:90px;font-family:var(--mono);font-size:10.5px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;color:var(--text);resize:vertical;line-height:1.5;outline:none;}
+.sb-insp-code:focus{border-color:var(--cyan);}
+#sbCanvas.drag-over{border-color:var(--cyan);background:rgba(56,189,248,0.03);}
 </style>
 
 </head>
@@ -919,6 +980,9 @@ canvas.chart-interactive { cursor: crosshair; }
 
     <button class="nav-btn" onclick="showPage('playground')">
       <span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"/><path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/><path d="M9.5 14c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5S8 21.33 8 20.5v-5c0-.83.67-1.5 1.5-1.5z"/><path d="M3.5 14H5v1.5c0 .83-.67 1.5-1.5 1.5S2 16.33 2 15.5 2.67 14 3.5 14z"/><path d="M14 14.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-5c-.83 0-1.5-.67-1.5-1.5z"/><path d="M15.5 9H14V7.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/><path d="M10 9.5C10 8.67 9.33 8 8.5 8h-5C2.67 8 2 8.67 2 9.5S2.67 11 3.5 11h5c.83 0 1.5-.67 1.5-1.5z"/><path d="M8.5 15H10v1.5c0 .83-.67 1.5-1.5 1.5S7 17.33 7 16.5 7.67 15 8.5 15z"/></svg></span>The Playground
+    </button>
+    <button class="nav-btn" onclick="showPage('sandbox')">
+      <span class="nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>Sandbox
     </button>
     <div class="sb-section">Reports</div>
   </div>
@@ -1867,6 +1931,168 @@ canvas.chart-interactive { cursor: crosshair; }
     </div>
 
 
+
+
+    <!-- ── SANDBOX ── -->
+    <div id="sandbox" class="page">
+      <div class="page-hdr">
+        <div>
+          <div class="page-title">&#129514; Sandbox</div>
+          <div class="page-sub">Build custom pages &#183; wire live data &#183; test &amp; save as templates</div>
+        </div>
+        <div class="page-hdr-right" style="gap:8px;flex-wrap:wrap">
+          <button class="btn" onclick="sbToggleDataTester()" id="sbDataTesterBtn">&#128200; Data Tester</button>
+          <button class="btn" onclick="sbClearCanvas()" title="Clear canvas">&#128465; Clear</button>
+          <button class="btn" onclick="sbSaveTemplate()">&#128190; Save Template</button>
+          <button class="btn" onclick="sbExportTemplates()">&#8659; Export</button>
+          <input type="file" id="sbImportFile" accept=".json" style="display:none" onchange="sbImportTemplates(this)">
+          <button class="btn" onclick="gg('sbImportFile').click()">&#8657; Import</button>
+          <button class="btn primary" onclick="sbRunAll()">&#9654; Run All</button>
+        </div>
+      </div>
+
+      <!-- Template bar -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)">
+        <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;flex-shrink:0">Templates:</span>
+        <div id="sbTemplateBar" style="display:flex;gap:6px;flex-wrap:wrap;flex:1"></div>
+        <button class="btn" onclick="sbLoadTemplate('default')" style="font-size:11px;flex-shrink:0">&#128196; Default</button>
+      </div>
+
+      <!-- Data tester panel (collapsible) -->
+      <div id="sbDataTesterPanel" style="display:none;margin-bottom:14px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border)">
+          <div style="font-size:12px;font-weight:700;color:var(--cyan)">&#128200; Live Data Source Tester</div>
+          <button onclick="sbToggleDataTester()" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer">&times;</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+          <div style="padding:14px 16px;border-right:1px solid var(--border)">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:10px">Source / Expression</div>
+            <select class="sel" id="sbDsSelect" onchange="sbRunDataTest()" style="width:100%;margin-bottom:8px;height:32px">
+              <option value="">— pick a source —</option>
+            </select>
+            <textarea id="sbDsCustom" class="sel" placeholder="Custom JS expression&#10;e.g. allTxns.filter(t=>t.amount>500).slice(0,5)" style="width:100%;height:80px;font-family:var(--mono);font-size:11px;resize:vertical;line-height:1.5;margin-bottom:8px"></textarea>
+            <div style="display:flex;gap:6px">
+              <button class="btn primary" onclick="sbRunDataTest()" style="flex:1">&#9654; Run</button>
+              <button class="btn" onclick="sbDsCustom.value=''" style="font-size:11px">Clear</button>
+            </div>
+          </div>
+          <div style="padding:14px 16px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase">Output</div>
+              <span id="sbDsResultMeta" style="font-size:10.5px;color:var(--hint)"></span>
+            </div>
+            <pre id="sbDsResult" style="font-family:var(--mono);font-size:10.5px;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;max-height:160px;overflow:auto;white-space:pre-wrap;word-break:break-all;margin:0">Run a source to see output...</pre>
+            <button class="btn" onclick="sbUseDataInWidget()" style="margin-top:8px;font-size:11px;width:100%">&#8599; Use in selected widget</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status bar -->
+      <div id="sbStatus" style="font-size:11.5px;color:var(--muted);margin-bottom:10px;min-height:18px"></div>
+
+      <!-- 3-panel layout -->
+      <div style="display:grid;grid-template-columns:180px 1fr 220px;gap:12px;align-items:flex-start;min-height:500px">
+
+        <!-- LEFT: Widget Library -->
+        <div class="sb-library" style="position:sticky;top:16px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">Widget Library</div>
+
+          <div class="sb-lib-group">&#128202; Charts</div>
+          <div class="sb-lib-item" draggable="true" data-wtype="chart-bar" ondragstart="sbLibDragStart(event,this)" title="Bar/Line/Area chart with configurable data source">
+            <span class="sb-lib-icon">&#128202;</span>
+            <div><div class="sb-lib-label">Bar Chart</div><div class="sb-lib-sub">Grouped bars</div></div>
+          </div>
+          <div class="sb-lib-item" draggable="true" data-wtype="chart-doughnut" ondragstart="sbLibDragStart(event,this)" title="Doughnut or pie chart">
+            <span class="sb-lib-icon">&#11835;</span>
+            <div><div class="sb-lib-label">Doughnut</div><div class="sb-lib-sub">Category slices</div></div>
+          </div>
+          <div class="sb-lib-item" draggable="true" data-wtype="chart-line" ondragstart="sbLibDragStart(event,this)" title="Line or area trend chart">
+            <span class="sb-lib-icon">&#128200;</span>
+            <div><div class="sb-lib-label">Line / Area</div><div class="sb-lib-sub">Trend over time</div></div>
+          </div>
+          <div class="sb-lib-item" draggable="true" data-wtype="chart-horizontal-bar" ondragstart="sbLibDragStart(event,this)" title="Horizontal bar - good for rankings">
+            <span class="sb-lib-icon">&#127991;</span>
+            <div><div class="sb-lib-label">Horiz. Bar</div><div class="sb-lib-sub">Rankings</div></div>
+          </div>
+
+          <div class="sb-lib-group">&#128208; Metrics</div>
+          <div class="sb-lib-item" draggable="true" data-wtype="metric-single" ondragstart="sbLibDragStart(event,this)">
+            <span class="sb-lib-icon">&#128176;</span>
+            <div><div class="sb-lib-label">KPI Card</div><div class="sb-lib-sub">Single big number</div></div>
+          </div>
+          <div class="sb-lib-item" draggable="true" data-wtype="metric-row" ondragstart="sbLibDragStart(event,this)">
+            <span class="sb-lib-icon">&#128290;</span>
+            <div><div class="sb-lib-label">Metric Row</div><div class="sb-lib-sub">Multi-stat strip</div></div>
+          </div>
+          <div class="sb-lib-item" draggable="true" data-wtype="metric-progress" ondragstart="sbLibDragStart(event,this)">
+            <span class="sb-lib-icon">&#127919;</span>
+            <div><div class="sb-lib-label">Progress Bar</div><div class="sb-lib-sub">Goal tracking</div></div>
+          </div>
+
+          <div class="sb-lib-group">&#128203; Data</div>
+          <div class="sb-lib-item" draggable="true" data-wtype="data-table" ondragstart="sbLibDragStart(event,this)">
+            <span class="sb-lib-icon">&#128203;</span>
+            <div><div class="sb-lib-label">Table</div><div class="sb-lib-sub">Rows of data</div></div>
+          </div>
+          <div class="sb-lib-item" draggable="true" data-wtype="data-list" ondragstart="sbLibDragStart(event,this)">
+            <span class="sb-lib-icon">&#128221;</span>
+            <div><div class="sb-lib-label">List</div><div class="sb-lib-sub">Bullet-style rows</div></div>
+          </div>
+          <div class="sb-lib-item" draggable="true" data-wtype="plaid-accounts" ondragstart="sbLibDragStart(event,this)">
+            <span class="sb-lib-icon">&#127970;</span>
+            <div><div class="sb-lib-label">Accounts</div><div class="sb-lib-sub">Live Plaid data</div></div>
+          </div>
+          <div class="sb-lib-item" draggable="true" data-wtype="plaid-txns" ondragstart="sbLibDragStart(event,this)">
+            <span class="sb-lib-icon">&#128184;</span>
+            <div><div class="sb-lib-label">Transactions</div><div class="sb-lib-sub">Live feed</div></div>
+          </div>
+
+          <div class="sb-lib-group">&#9881; Custom</div>
+          <div class="sb-lib-item" draggable="true" data-wtype="custom-js" ondragstart="sbLibDragStart(event,this)" title="Write custom JS to render anything">
+            <span class="sb-lib-icon">&#128187;</span>
+            <div><div class="sb-lib-label">Custom Widget</div><div class="sb-lib-sub">Write your own JS</div></div>
+          </div>
+
+          <div class="sb-lib-group">&#128195; Layout</div>
+          <div class="sb-lib-item" draggable="true" data-wtype="layout-divider" ondragstart="sbLibDragStart(event,this)">
+            <span class="sb-lib-icon">&#10134;</span>
+            <div><div class="sb-lib-label">Divider</div><div class="sb-lib-sub">Visual separator</div></div>
+          </div>
+          <div class="sb-lib-item" draggable="true" data-wtype="layout-text" ondragstart="sbLibDragStart(event,this)">
+            <span class="sb-lib-icon">&#128196;</span>
+            <div><div class="sb-lib-label">Text / Note</div><div class="sb-lib-sub">Markdown-ish text</div></div>
+          </div>
+          <div class="sb-lib-item" draggable="true" data-wtype="layout-spacer" ondragstart="sbLibDragStart(event,this)">
+            <span class="sb-lib-icon">&#8597;</span>
+            <div><div class="sb-lib-label">Spacer</div><div class="sb-lib-sub">Vertical gap</div></div>
+          </div>
+        </div>
+
+        <!-- CENTER: Canvas -->
+        <div id="sbCanvas"
+          ondragover="sbCanvasDragOver(event)"
+          ondragleave="sbCanvasDragLeave(event)"
+          ondrop="sbCanvasDrop(event)"
+          style="min-height:480px;border:2px dashed var(--border);border-radius:var(--radius);padding:16px;transition:border-color 0.15s;display:grid;grid-template-columns:1fr 1fr;gap:12px;align-content:start">
+          <div id="sbCanvasEmpty" style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--hint)">
+            <div style="font-size:32px;margin-bottom:12px">&#128203;</div>
+            <div style="font-size:14px;font-weight:500;margin-bottom:6px">Canvas is empty</div>
+            <div style="font-size:12px">Drag widgets from the library &#8592; or load a template above</div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Inspector -->
+        <div class="sb-inspector-panel" style="position:sticky;top:16px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">Inspector</div>
+          <div id="sbInspector">
+            <div style="color:var(--hint);font-size:12px;text-align:center;padding:24px 8px">
+              Click a widget on the canvas to inspect and edit it.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
 
     <!-- ── CASH FLOW ── -->
     <div id="cashflow" class="page">
@@ -3842,7 +4068,7 @@ function saveSO(p){const cMap={dashboard:'dashContainer',expenses:'expContainer'
 function loadSO(p){const cMap={dashboard:'dashContainer',expenses:'expContainer',retirement:'retContainer',networth:'nwContainer'};try{const sv=JSON.parse(localStorage.getItem('so-'+p));if(!sv)return;const c=gg(cMap[p]);sv.forEach(id=>{const el=c.querySelector(`[data-id="${id}"]`);if(el)c.appendChild(el);});}catch(e){}}
 
 // ── PAGE NAV ──────────────────────────────────────────────────────────────────
-const PT={dashboard:'Dashboard',transactions:'Transactions',expenses:'Budget & Bills',networth:'Net Worth',retirement:'Retirement',cashflow:'Cash Flow'};
+const PT={dashboard:'Dashboard',transactions:'Transactions',expenses:'Budget & Bills',networth:'Net Worth',retirement:'Retirement',cashflow:'Cash Flow',playground:'The Playground',sandbox:'Sandbox'};
 function showPage(page){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(n=>n.classList.remove('active'));
@@ -3852,6 +4078,7 @@ function showPage(page){
   if(page==='retirement')calcAll();
   if(page==='expenses'){syncZeroBucketsFromCategories();renderBillsTab();updateBudgetMetrics();initBillMonthSelectors();}
   if(page==='playground'){fdRender();}
+  if(page==='sandbox'){sbInitSandbox();}
   if(page==='networth'){renderNetWorth();}
   if(page==='cashflow')renderCashFlow();
 }
@@ -5809,7 +6036,7 @@ function dpCalc(){
   var debts=dpGetDebts();
   if(!debts.length){
     var db=gg('dpScheduleBody');
-    if(db)db.innerHTML='<tr><td colspan="10" class="empty">No debts with balances found. Add bills with balances in Budget &amp; Bills.</td></tr>';
+    if(db)db.innerHTML='<tr><td colspan="10" class="empty">No debts with balances found. Add bills with balances in Budget & Bills.</td></tr>';
     return;
   }
   var extra=parseFloat((gg('dpExtraPayment')||{}).value||0)||0;
@@ -6215,15 +6442,15 @@ function renderCategoryEditor() {
     row.setAttribute('data-id', cat.id);
 
     // Drag handle
-    var handle = '<span style="color:var(--hint);font-size:12px;cursor:grab;user-select:none">&#8942;&#8942;</span>';
+    var handle = '<span style="color:var(--hint);font-size:12px;cursor:grab;user-select:none">⋮⋮</span>';
     var colorPick = '<input type="color" value="'+(cat.color||'#888888')+'" style="width:22px;height:22px;border-radius:50%;border:2px solid var(--border2);cursor:pointer;padding:0;flex-shrink:0" id="ccat-color-'+realIdx+'">';
     var label = '<div style="display:flex;align-items:center;gap:6px">'
       + (item.isGroup ? '<span style="font-size:9px;font-weight:700;background:var(--surface3);color:var(--muted);padding:1px 5px;border-radius:3px;text-transform:uppercase;flex-shrink:0;letter-spacing:.04em">GROUP</span>' : '')
-      + (item.indent ? '<span style="color:var(--hint);font-size:13px;flex-shrink:0">&#8627;</span>' : '')
+      + (item.indent ? '<span style="color:var(--hint);font-size:13px;flex-shrink:0">↳</span>' : '')
       + '<input type="text" value="'+esc(cat.label)+'" class="sel" style="height:27px;font-size:12px;flex:1" id="ccat-label-'+realIdx+'">'
       + '</div>';
     var kw = '<input type="text" value="'+(cat.keywords||[]).join(',')+'" class="sel" style="height:27px;font-size:10.5px" placeholder="keywords" id="ccat-kw-'+realIdx+'">';
-    var del = '<button class="btn danger" onclick="deleteCategoryRow('+realIdx+')" style="padding:2px 7px;font-size:11px">&times;</button>';
+    var del = '<button class="btn danger" onclick="deleteCategoryRow('+realIdx+')" style="padding:2px 7px;font-size:11px">×</button>';
     row.innerHTML = handle + colorPick + label + kw + del;
 
     // ── Drag events ──
@@ -6471,7 +6698,7 @@ function loadSettingsState() {
 function applyThemeChanges() {
   applyTheme(_currentTheme);
   localStorage.setItem('mdf_theme', JSON.stringify({id:_currentTheme}));
-  var s=gg('themeApplyStatus');if(s){s.textContent='&#10003; Applied!';setTimeout(function(){s.textContent='';},2500);}
+  var s=gg('themeApplyStatus');if(s){s.textContent='✓ Applied!';setTimeout(function(){s.textContent='';},2500);}
   showToast('Theme applied — '+THEMES[_currentTheme].name,'success');
 }
 
@@ -6532,48 +6759,569 @@ function resetCustomColors() {
   showToast('Colors reset to theme','success');
 }
 
-// ── EXPORTS ───────────────────────────────────────────────────────────────────
-function exportCSV(){
-  if(!allTxns.length){showToast('No transactions','error');return;}
-  const h=['Date','Merchant','Category','Amount','Type','Bank'];
-  const r=allTxns.map(t=>[t.date,t.merchant_name||t.name||'',fmtCat(t.personal_finance_category?.primary||t.category?.[0]||'Other'),t.amount.toFixed(2),t.amount>0?'Debit':'Credit',t.institution||'']);
-  const csv=[h,...r].map(row=>row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='Matt_Dana_'+todayStr()+'.csv';a.click();showToast('CSV downloaded!','success');
+
+
+// ── SANDBOX PAGE BUILDER ─────────────────────────────────────────────────────
+var _sbWidgets    = [];
+var _sbSelected   = null;
+var _sbDragType   = null;
+var _sbTemplates  = {};
+var _sbChartInsts = {};
+var _sbWCounter   = 0;
+var _sbLastDsData = null;
+
+// ── Data sources ──────────────────────────────────────────────────────────────
+var SB_DATA_SOURCES = {
+  transactions:  { label:'Transactions (all)',     fn:function(){return allTxns;} },
+  accounts:      { label:'Plaid Accounts',         fn:function(){return typeof allAccts!=='undefined'?allAccts:[];} },
+  bills:         { label:'Bills',                  fn:function(){return bills;} },
+  income:        { label:'Income Sources',         fn:function(){return incomeSources;} },
+  assets:        { label:'Net Worth Assets',       fn:function(){return nwAssets;} },
+  liabilities:   { label:'Liabilities',           fn:function(){return nwLiab;} },
+  budget:        { label:'Zero Budget Buckets',    fn:function(){return zeroBuckets;} },
+  categories:    { label:'Categories',             fn:function(){return getUserCategories();} },
+  monthlyIncome: { label:'Monthly Income',         fn:function(){return [{label:'Monthly Income',value:monthlyIncome()}];} },
+  monthlyBills:  { label:'Monthly Bills',          fn:function(){return [{label:'Monthly Bills',value:monthlyBills()}];} },
+  netCashFlow:   { label:'Net Cash Flow',          fn:function(){return [{label:'Net Cash Flow',value:monthlyIncome()-monthlyBills()}];} },
+  byCategory:    { label:'Spending by Category',   fn:function(){var m={};allTxns.filter(function(t){return t.amount>0;}).forEach(function(t){var cat=getTxnCategory(t);m[cat]=(m[cat]||0)+t.amount;});return Object.entries(m).sort(function(a,b){return b[1]-a[1];}).map(function(e){return {label:e[0],value:Math.round(e[1])};});} },
+  byMonth:       { label:'Spending by Month',      fn:function(){var m={};allTxns.forEach(function(t){var mo=t.date.slice(0,7);if(!m[mo])m[mo]={label:mo,income:0,spending:0};if(t.amount<0)m[mo].income+=Math.abs(t.amount);else m[mo].spending+=t.amount;});return Object.values(m).sort(function(a,b){return a.label<b.label?-1:1;});} },
+  netWorthSummary:{ label:'Net Worth Summary',     fn:function(){var ta=nwAssets.reduce(function(s,a){return s+a.value;},0),tl=nwLiab.reduce(function(s,l){return s+l.value;},0);return [{label:'Assets',value:ta},{label:'Liabilities',value:tl},{label:'Net Worth',value:ta-tl}];} },
+};
+
+// ── Widget type registry ──────────────────────────────────────────────────────
+var SB_WIDGET_TYPES = {
+  'chart-bar':         {icon:'📊',label:'Bar Chart',        defaultH:240,defaultSource:'byMonth',   render:sbRenderBarChart},
+  'chart-doughnut':    {icon:'⬤', label:'Doughnut Chart',   defaultH:240,defaultSource:'byCategory',render:sbRenderDoughnutChart},
+  'chart-line':        {icon:'📈',label:'Line / Area',       defaultH:240,defaultSource:'byMonth',   render:sbRenderLineChart},
+  'chart-horizontal-bar':{icon:'🏷',label:'Horiz. Bar',     defaultH:240,defaultSource:'byCategory',render:sbRenderHorizBarChart},
+  'metric-single':     {icon:'💰',label:'KPI Card',          defaultH:90, defaultSource:'monthlyIncome',render:sbRenderMetricSingle},
+  'metric-row':        {icon:'🔢',label:'Metric Row',        defaultH:90, defaultSource:'netWorthSummary',render:sbRenderMetricRow},
+  'metric-progress':   {icon:'🎯',label:'Progress Bar',      defaultH:70, defaultSource:'budget',    render:sbRenderProgress},
+  'data-table':        {icon:'📋',label:'Table',             defaultH:220,defaultSource:'transactions',render:sbRenderTable},
+  'data-list':         {icon:'📝',label:'List',              defaultH:200,defaultSource:'bills',     render:sbRenderList},
+  'plaid-accounts':    {icon:'🏦',label:'Plaid Accounts',    defaultH:180,defaultSource:'accounts',  render:sbRenderAccounts},
+  'plaid-txns':        {icon:'💸',label:'Transactions Feed', defaultH:220,defaultSource:'transactions',render:sbRenderTxnFeed},
+  'custom-js':         {icon:'💻',label:'Custom Widget',     defaultH:200,defaultSource:null,        render:sbRenderCustomJS},
+  'layout-divider':    {icon:'➖',label:'Divider',           defaultH:24, defaultSource:null,         render:sbRenderDivider},
+  'layout-text':       {icon:'📄',label:'Text / Note',       defaultH:80, defaultSource:null,         render:sbRenderText},
+  'layout-spacer':     {icon:'↕', label:'Spacer',            defaultH:40, defaultSource:null,         render:sbRenderSpacer},
+};
+
+var SB_DEFAULT_TEMPLATE = [
+  {type:'metric-row',    config:{title:'Household KPIs',source:'netWorthSummary',width:'2',height:90}},
+  {type:'chart-bar',     config:{title:'Monthly Income vs Spending',source:'byMonth',width:'1',height:240}},
+  {type:'chart-doughnut',config:{title:'Spending by Category',source:'byCategory',width:'1',height:240}},
+  {type:'data-table',    config:{title:'Recent Transactions',source:'transactions',width:'2',height:220,limit:8}},
+];
+
+// ── Drag from library ─────────────────────────────────────────────────────────
+function sbLibDragStart(e, el) {
+  _sbDragType = el.dataset.wtype;
+  e.dataTransfer.effectAllowed = 'copy';
 }
-function openExportModal(){gg('exportModal').style.display='flex';}
-function closeExportModal(){gg('exportModal').style.display='none';}
-function exportExcel(){
-  if(!allTxns.length&&!allAccts.length){showToast('No data','error');return;}
-  const from=gg('exportFrom').value,to=gg('exportTo').value;
-  const fil=allTxns.filter(t=>(!from||t.date>=from)&&(!to||t.date<=to));
-  const wb=XLSX.utils.book_new();
-  if(gg('chkTransactions').checked){const d=[['Date','Merchant','Category','Amount','Type','Bank']];fil.forEach(t=>d.push([t.date,t.merchant_name||t.name||'',fmtCat(t.personal_finance_category?.primary||t.category?.[0]||'Other'),parseFloat(t.amount.toFixed(2)),t.amount>0?'Debit':'Credit',t.institution||'']));XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d),'Transactions');}
-  if(gg('chkAccounts').checked){const d=[['Institution','Name','Type','Subtype','Mask','Balance']];allAccts.forEach(a=>d.push([a.institution||'',a.name,a.type,a.subtype||'',a.mask?'****'+a.mask:'',parseFloat((a.balances.current??0).toFixed(2))]));XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d),'Accounts');}
-  if(gg('chkSummary').checked){const byCat={};fil.filter(t=>t.amount>0).forEach(t=>{const c=fmtCat(t.personal_finance_category?.primary||t.category?.[0]||'Other');byCat[c]=(byCat[c]||0)+t.amount;});const tot=Object.values(byCat).reduce((s,v)=>s+v,0);const d=[['Category','Total','% of Total']];Object.entries(byCat).sort((a,b)=>b[1]-a[1]).forEach(([c,a])=>d.push([c,parseFloat(a.toFixed(2)),parseFloat((a/tot*100).toFixed(1))]));XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d),'Summary');}
-  if(gg('chkMonthly').checked){const bm={};fil.forEach(t=>{const m=t.date.slice(0,7);if(!bm[m])bm[m]={inc:0,exp:0,cnt:0};if(t.amount<0)bm[m].inc+=Math.abs(t.amount);else bm[m].exp+=t.amount;bm[m].cnt++;});const d=[['Month','Income','Expenses','Net']];Object.keys(bm).sort().forEach(m=>{const x=bm[m];d.push([m,parseFloat(x.inc.toFixed(2)),parseFloat(x.exp.toFixed(2)),parseFloat((x.inc-x.exp).toFixed(2))]);});XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d),'Monthly');}
-  XLSX.writeFile(wb,'Matt_Dana_Finance_'+todayStr()+'.xlsx');showToast('Excel downloaded!','success');closeExportModal();
+function sbCanvasDragOver(e) {
+  e.preventDefault(); e.dataTransfer.dropEffect='copy';
+  gg('sbCanvas').classList.add('drag-over');
 }
-function exportBillsExcel(){
-  const wb=XLSX.utils.book_new();
-  const d=[['Category','Name','Lender','APR %','Due Day','Balance','Min Pay','Your Pay','Paid','Promo','Payoff Est']];
-  bills.forEach(b=>{let po='';const ba=Math.abs(b.bal||0);if(ba>0&&b.pay>0){if(b.apr>0){const mr=b.apr/100/12;if(b.pay>ba*mr){const mo=Math.ceil(-Math.log(1-(ba*mr/b.pay))/Math.log(1+mr));po=mo+' months';}}else po=Math.ceil(ba/b.pay)+' months (0%)';}d.push([b.cat,b.name,b.note||'',b.apr,b.due,b.bal,b.min,b.pay,b.paid?'Yes':'No',b.promo||'',po]);});
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(d),'Bills');
-  const id=[['Source','Frequency','Per Payment','Monthly','Annual']];
-  incomeSources.forEach(s=>id.push([s.name,s.freq,s.amt,(s.amt*(FM[s.freq]||1)).toFixed(2),(s.amt*(FM[s.freq]||1)*12).toFixed(2)]));
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(id),'Income');
-  XLSX.writeFile(wb,'Matt_Dana_Budget_'+todayStr()+'.xlsx');showToast('Budget exported!','success');
+function sbCanvasDragLeave(e) {
+  if (!gg('sbCanvas').contains(e.relatedTarget)) gg('sbCanvas').classList.remove('drag-over');
+}
+function sbCanvasDrop(e) {
+  e.preventDefault();
+  gg('sbCanvas').classList.remove('drag-over');
+  if (_sbDragType) { sbAddWidget(_sbDragType); _sbDragType = null; }
 }
 
-// ── UTILS ─────────────────────────────────────────────────────────────────────
-function showError(msg){const el=gg('errorBanner');if(el){el.textContent=msg;el.style.display='block';}}
-function showToast(msg,type='success'){const t=gg('toast');t.textContent=msg;t.className='show '+type;setTimeout(()=>{t.className='';},3500);}
+// ── Add / remove widgets ──────────────────────────────────────────────────────
+function sbAddWidget(type, cfg) {
+  var def = SB_WIDGET_TYPES[type]; if (!def) return;
+  var id = 'sbw_'+(++_sbWCounter);
+  var config = Object.assign({
+    title: def.label,
+    source: def.defaultSource||'',
+    customQuery: '',
+    color: '#38bdf8',
+    limit: 10,
+    width: '1',
+    height: def.defaultH||200,
+    chartType: type.startsWith('chart-') ? type.replace('chart-','') : '',
+    customJS: '// Write JS here. Use: data, container, fmt2, fmtM, PAL\n// data = result of your data source\n// container = the div to render into\nconsole.log(data);',
+    label: '',
+    valueKey: 'value',
+    labelKey: 'label',
+  }, cfg||{});
+  var w = {id:id, type:type, config:config};
+  _sbWidgets.push(w);
+  var empty = gg('sbCanvasEmpty');
+  if (empty) empty.style.display = 'none';
+  var card = document.createElement('div');
+  card.id = id;
+  card.className = 'sb-widget-card'+(config.width==='2'?' span-2':'');
+  card.onclick = function(e){ if(!e.target.closest('.sb-widget-actions')) sbSelectWidget(id); };
+  w.el = card;
+  gg('sbCanvas').appendChild(card);
+  sbRenderWidget(id);
+  sbSelectWidget(id);
+  sbSetStatus('Added: '+def.label);
+}
 
-const plaidS=document.createElement('script');
-plaidS.src='https://cdn.plaid.com/link/v2/stable/link-initialize.js';
-document.head.appendChild(plaidS);
-loadSettingsState();
-loadSettingsState();
-checkAuthAndInit();
+function sbRemoveWidget(id) {
+  if(_sbChartInsts[id]){try{_sbChartInsts[id].destroy();}catch(e){}delete _sbChartInsts[id];}
+  _sbWidgets = _sbWidgets.filter(function(w){return w.id!==id;});
+  var el=gg(id);if(el)el.remove();
+  if(_sbSelected===id){_sbSelected=null;var insp=gg('sbInspector');if(insp)insp.innerHTML='<div style="color:var(--hint);font-size:12px;text-align:center;padding:24px 8px">Click a widget to inspect it.</div>';}
+  if(!_sbWidgets.length){var empty=gg('sbCanvasEmpty');if(empty)empty.style.display='block';}
+}
+
+function sbDuplicateWidget(id) {
+  var w=_sbWidgets.find(function(x){return x.id===id;}); if(!w)return;
+  sbAddWidget(w.type, Object.assign({},w.config));
+}
+
+function sbMoveWidget(id, dir) {
+  var idx=_sbWidgets.findIndex(function(w){return w.id===id;}); if(idx<0)return;
+  var newIdx=idx+dir;
+  if(newIdx<0||newIdx>=_sbWidgets.length)return;
+  var canvas=gg('sbCanvas');
+  var a=_sbWidgets[idx], b=_sbWidgets[newIdx];
+  _sbWidgets[idx]=b; _sbWidgets[newIdx]=a;
+  if(dir>0){ canvas.insertBefore(b.el,a.el); } else { canvas.insertBefore(a.el,b.el); }
+}
+
+// ── Render widget shell + content ─────────────────────────────────────────────
+function sbRenderWidget(id) {
+  var w=_sbWidgets.find(function(x){return x.id===id;}); if(!w||!w.el)return;
+  var def=SB_WIDGET_TYPES[w.type]||{icon:'?',label:w.type};
+  var idx=_sbWidgets.indexOf(w);
+  w.el.className='sb-widget-card'+(w.config.width==='2'?' span-2':'')+(w.id===_sbSelected?' selected':'');
+  w.el.innerHTML=
+    '<div class="sb-widget-header">'
+      +'<div style="display:flex;align-items:center;gap:6px">'
+        +'<span style="font-size:12px">'+def.icon+'</span>'
+        +'<span class="sb-widget-title">'+esc(w.config.title||def.label)+'</span>'
+        +(w.config.source?'<span style="font-size:9.5px;background:var(--surface3);color:var(--hint);padding:1px 6px;border-radius:3px">'+esc(w.config.source)+'</span>':'')
+      +'</div>'
+      +'<div class="sb-widget-actions">'
+        +(idx>0?'<button onclick="event.stopPropagation();sbMoveWidget(\''+id+'\',-1)" title="Move up">&#8593;</button>':'')
+        +(idx<_sbWidgets.length-1?'<button onclick="event.stopPropagation();sbMoveWidget(\''+id+'\',1)" title="Move down">&#8595;</button>':'')
+        +'<button onclick="event.stopPropagation();sbDuplicateWidget(\''+id+'\')" title="Duplicate">&#10697;</button>'
+        +'<button onclick="event.stopPropagation();sbRemoveWidget(\''+id+'\')" title="Remove" style="color:var(--red)">&#10005;</button>'
+      +'</div>'
+    +'</div>'
+    +'<div class="sb-widget-body" id="'+id+'-body" style="min-height:'+w.config.height+'px"></div>'
+    +'<div class="sb-widget-status" id="'+id+'-status"></div>';
+  // Render content
+  if(def.render){ try{def.render(w);}catch(e){sbSetWidgetStatus(id,'Error: '+e.message,'red');} }
+}
+
+function sbSetWidgetStatus(id, msg, color) {
+  var el=gg(id+'-status'); if(el){el.textContent=msg;el.style.color=color||'var(--hint)';}
+}
+
+// ── Select & inspect ──────────────────────────────────────────────────────────
+function sbSelectWidget(id) {
+  _sbSelected=id;
+  _sbWidgets.forEach(function(w){if(w.el)w.el.classList.toggle('selected',w.id===id);});
+  sbRenderInspector(id);
+}
+
+function sbRenderInspector(id) {
+  var w=_sbWidgets.find(function(x){return x.id===id;}); if(!w)return;
+  var def=SB_WIDGET_TYPES[w.type]||{};
+  var el=gg('sbInspector'); if(!el)return;
+  var isChart=w.type.startsWith('chart-');
+  var isCustom=w.type==='custom-js';
+  var hasData=w.type!=='layout-divider'&&w.type!=='layout-spacer'&&!isCustom;
+
+  var srcOpts=Object.keys(SB_DATA_SOURCES).map(function(k){
+    return '<option value="'+k+'"'+(k===w.config.source?' selected':'')+'>'+SB_DATA_SOURCES[k].label+'</option>';
+  }).join('');
+
+  var chartTypes=['bar','doughnut','line','pie','horizontalBar'];
+  var ctOpts=chartTypes.map(function(t){
+    return '<option value="'+t+'"'+(t===(w.config.chartType||'bar')?' selected':'')+'>'+t.charAt(0).toUpperCase()+t.slice(1)+'</option>';
+  }).join('');
+
+  el.innerHTML=
+    '<div style="font-size:11px;font-weight:700;color:var(--cyan);margin-bottom:12px;display:flex;align-items:center;gap:6px">'
+      +'<span>'+def.icon+'</span><span>'+esc(def.label||w.type)+'</span>'
+    +'</div>'
+    // Core fields
+    +'<div class="sb-insp-row"><label class="sb-insp-label">Widget Title</label>'
+    +'<input class="sb-insp-val sel" value="'+esc(w.config.title||'')+'" oninput="sbUpdateWidgetConfig(\''+id+'\',\'title\',this.value,false)"></div>'
+    // Data source
+    +(hasData
+      ?'<div class="sb-insp-row"><label class="sb-insp-label">Data Source</label>'
+       +'<select class="sb-insp-val sel" onchange="sbUpdateWidgetConfig(\''+id+'\',\'source\',this.value)">'+srcOpts+'</select></div>'
+       +'<div class="sb-insp-row"><label class="sb-insp-label">Custom JS Query</label>'
+       +'<textarea class="sb-insp-code" placeholder="allTxns.filter(t=>t.amount>500)" onblur="sbUpdateWidgetConfig(\''+id+'\',\'customQuery\',this.value)">'+esc(w.config.customQuery||'')+'</textarea></div>'
+      :'')
+    // Chart type selector
+    +(isChart
+      ?'<div class="sb-insp-row"><label class="sb-insp-label">Chart Type</label>'
+       +'<select class="sb-insp-val sel" onchange="sbUpdateWidgetConfig(\''+id+'\',\'chartType\',this.value)"><option value="bar">Bar</option><option value="line"'+(w.config.chartType==='line'?' selected':'')+'>Line</option><option value="doughnut"'+(w.config.chartType==='doughnut'?' selected':'')+'>Doughnut</option><option value="pie"'+(w.config.chartType==='pie'?' selected':'')+'>Pie</option></select></div>'
+       +'<div class="sb-insp-row"><label class="sb-insp-label">Label key (JSON field)</label>'
+       +'<input class="sb-insp-val sel" value="'+esc(w.config.labelKey||'label')+'" onblur="sbUpdateWidgetConfig(\''+id+'\',\'labelKey\',this.value)"></div>'
+       +'<div class="sb-insp-row"><label class="sb-insp-label">Value key (JSON field)</label>'
+       +'<input class="sb-insp-val sel" value="'+esc(w.config.valueKey||'value')+'" onblur="sbUpdateWidgetConfig(\''+id+'\',\'valueKey\',this.value)"></div>'
+      :'')
+    // Custom JS widget
+    +(isCustom
+      ?'<div class="sb-insp-row"><label class="sb-insp-label">Custom Render JS</label>'
+       +'<textarea class="sb-insp-code" style="min-height:140px" onblur="sbUpdateWidgetConfig(\''+id+'\',\'customJS\',this.value)">'+esc(w.config.customJS||'')+'</textarea>'
+       +'<div style="font-size:10px;color:var(--hint);margin-top:4px">Variables: <span style="font-family:var(--mono)">container, data, fmt2, fmtM, PAL, esc</span></div></div>'
+      :'')
+    // Layout
+    +'<div class="sb-insp-section">Layout</div>'
+    +'<div class="sb-insp-row"><label class="sb-insp-label">Width</label>'
+    +'<select class="sb-insp-val sel" onchange="sbUpdateWidgetConfig(\''+id+'\',\'width\',this.value)">'
+    +'<option value="1"'+(w.config.width!=='2'?' selected':'')+'>Half (1 col)</option>'
+    +'<option value="2"'+(w.config.width==='2'?' selected':'')+'>Full (2 col)</option>'
+    +'</select></div>'
+    +'<div class="sb-insp-row"><label class="sb-insp-label">Min Height (px)</label>'
+    +'<input type="number" class="sb-insp-val sel" value="'+(w.config.height||200)+'" min="40" max="800" step="20" onblur="sbUpdateWidgetConfig(\''+id+'\',\'height\',+this.value)"></div>'
+    +(hasData
+      ?'<div class="sb-insp-row"><label class="sb-insp-label">Row Limit</label>'
+       +'<input type="number" class="sb-insp-val sel" value="'+(w.config.limit||10)+'" min="1" max="100" onblur="sbUpdateWidgetConfig(\''+id+'\',\'limit\',+this.value)"></div>'
+      :'')
+    +'<div class="sb-insp-row"><label class="sb-insp-label">Accent Color</label>'
+    +'<input type="color" value="'+(w.config.color||'#38bdf8')+'" class="sb-insp-val" style="height:32px;padding:2px;width:100%" onchange="sbUpdateWidgetConfig(\''+id+'\',\'color\',this.value)"></div>'
+    // Actions
+    +'<div style="margin-top:14px;display:flex;gap:6px;flex-wrap:wrap">'
+    +'<button class="btn primary" style="flex:1;font-size:11px" onclick="sbRenderWidget(\''+id+'\')">&#9654; Re-render</button>'
+    +'<button class="btn" style="font-size:11px" onclick="sbDuplicateWidget(\''+id+'\')">&#10697; Dupe</button>'
+    +'<button class="btn danger" style="font-size:11px" onclick="sbRemoveWidget(\''+id+'\')">&#10005; Remove</button>'
+    +'</div>'
+    +'<div style="margin-top:8px">'
+    +'<button class="btn" style="width:100%;font-size:11px" onclick="sbInspectData(\''+id+'\')">&#128200; Inspect data</button>'
+    +'</div>';
+}
+
+function sbUpdateWidgetConfig(id, key, val, rerender) {
+  var w=_sbWidgets.find(function(x){return x.id===id;}); if(!w)return;
+  w.config[key]=val;
+  if(rerender!==false) sbRenderWidget(id);
+}
+
+// ── Get data for a widget ─────────────────────────────────────────────────────
+function sbGetData(cfg) {
+  if(cfg.customQuery&&cfg.customQuery.trim()){
+    try{return (new Function('allTxns','allAccts','bills','incomeSources','nwAssets','nwLiab','zeroBuckets','getUserCategories','monthlyIncome','monthlyBills','fmt2','fmtM',
+      'return ('+cfg.customQuery+')'))(allTxns,typeof allAccts!=='undefined'?allAccts:[],bills,incomeSources,nwAssets,nwLiab,zeroBuckets,getUserCategories,monthlyIncome,monthlyBills,fmt2,fmtM);
+    }catch(e){return null;}
+  }
+  var src=SB_DATA_SOURCES[cfg.source];
+  return src?src.fn():[];
+}
+
+// ── Widget renderers ──────────────────────────────────────────────────────────
+function sbRenderBarChart(w) {
+  var body=gg(w.id+'-body'); if(!body)return;
+  var data=sbGetData(w.config)||[];
+  var lk=w.config.labelKey||'label', vk=w.config.valueKey||'value';
+  var labels=data.map(function(d){return d[lk]||String(d);});
+  var vals=data.map(function(d){return+(d[vk]||d.spending||d.value||0);});
+  var colors=labels.map(function(_,i){return PAL[i%PAL.length];});
+  var canvas=document.createElement('canvas');
+  canvas.style.cssText='width:100%;height:'+(w.config.height||240)+'px';
+  body.innerHTML=''; body.style.padding='12px'; body.appendChild(canvas);
+  if(_sbChartInsts[w.id])_sbChartInsts[w.id].destroy();
+  var ct=w.config.chartType||'bar';
+  var isDoughnut=ct==='doughnut'||ct==='pie';
+  _sbChartInsts[w.id]=new Chart(canvas,{type:isDoughnut?ct:ct==='line'?'line':'bar',
+    data:{labels:labels,datasets:[{data:vals,backgroundColor:colors,borderRadius:isDoughnut?0:3,fill:ct==='area',tension:0.3,borderWidth:isDoughnut?2:0,borderColor:getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()||'#1a1d27'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ' '+fmt2(ctx.parsed.y||ctx.parsed||0);}}}},
+      scales:isDoughnut?undefined:{x:{grid:{display:false}},y:{ticks:{callback:function(v){return fmtM(v);}},grid:{color:'rgba(128,128,128,0.07)'}}}
+    }});
+  sbSetWidgetStatus(w.id,labels.length+' items','');
+}
+function sbRenderDoughnutChart(w){w.config.chartType='doughnut';sbRenderBarChart(w);}
+function sbRenderLineChart(w){w.config.chartType='line';sbRenderBarChart(w);}
+function sbRenderHorizBarChart(w) {
+  var body=gg(w.id+'-body'); if(!body)return;
+  var data=(sbGetData(w.config)||[]).slice(0,w.config.limit||10);
+  var lk=w.config.labelKey||'label', vk=w.config.valueKey||'value';
+  var labels=data.map(function(d){return d[lk]||String(d);});
+  var vals=data.map(function(d){return+(d[vk]||d.value||0);});
+  var colors=labels.map(function(_,i){return PAL[i%PAL.length];});
+  var canvas=document.createElement('canvas');
+  canvas.style.cssText='width:100%;height:'+(w.config.height||240)+'px';
+  body.innerHTML=''; body.style.padding='12px'; body.appendChild(canvas);
+  if(_sbChartInsts[w.id])_sbChartInsts[w.id].destroy();
+  _sbChartInsts[w.id]=new Chart(canvas,{type:'bar',data:{labels:labels,datasets:[{data:vals,backgroundColor:colors,borderRadius:3,indexAxis:'y'}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ' '+fmt2(ctx.parsed.x||0);}}}},
+      scales:{x:{ticks:{callback:function(v){return fmtM(v);}},grid:{color:'rgba(128,128,128,0.07)'}},y:{grid:{display:false},ticks:{font:{size:10.5}}}}}});
+}
+function sbRenderMetricSingle(w) {
+  var body=gg(w.id+'-body'); if(!body)return;
+  var data=sbGetData(w.config)||[];
+  var d=Array.isArray(data)?data[0]:data;
+  var val=d?(+(d.value||d[w.config.valueKey||'value']||0)):0;
+  var lbl=d?(d.label||d[w.config.labelKey||'label']||'Value'):'Value';
+  body.style.padding='16px'; body.innerHTML=
+    '<div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px">'+esc(w.config.label||lbl)+'</div>'
+    +'<div style="font-size:28px;font-weight:700;font-family:var(--mono);color:'+(w.config.color||'var(--cyan)')+'">'+fmt2(Math.round(val))+'</div>';
+}
+function sbRenderMetricRow(w) {
+  var body=gg(w.id+'-body'); if(!body)return;
+  var data=sbGetData(w.config)||[];
+  if(!Array.isArray(data))data=[data];
+  body.style.padding='0'; body.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">'
+    +data.slice(0,6).map(function(d,i){
+      var col=PAL[i%PAL.length];
+      var val=+(d.value||d[w.config.valueKey||'value']||0);
+      var lbl=d.label||d[w.config.labelKey||'label']||('Item '+(i+1));
+      return '<div style="padding:14px 16px;border-right:1px solid var(--border)">'
+        +'<div style="font-size:9.5px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:4px">'+esc(String(lbl))+'</div>'
+        +'<div style="font-size:18px;font-weight:700;font-family:var(--mono);color:'+col+'">'+fmt2(Math.round(val))+'</div>'
+        +'</div>';
+    }).join('')+'</div>';
+}
+function sbRenderProgress(w) {
+  var body=gg(w.id+'-body'); if(!body)return;
+  var data=sbGetData(w.config)||[];
+  var total=0,alloc=0;
+  if(data.length){total=+(data[0].total||monthlyIncome());alloc=data.reduce(function(s,d){return s+(+(d.amt||d.value||0));},0);}
+  var pct=total>0?Math.round(alloc/total*100):0;
+  var col=pct>=100?'var(--red)':pct>=80?'var(--amber)':'var(--green)';
+  body.style.padding='14px 16px'; body.innerHTML=
+    '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:8px">'
+    +'<span style="color:var(--muted)">'+esc(w.config.label||'Allocated')+'</span>'
+    +'<span style="font-family:var(--mono);font-weight:700;color:'+col+'">'+pct+'%</span></div>'
+    +'<div style="height:10px;border-radius:5px;background:var(--surface3);overflow:hidden">'
+    +'<div style="height:100%;width:'+Math.min(100,pct)+'%;background:'+col+';border-radius:5px;transition:width 0.4s"></div></div>'
+    +'<div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--hint);margin-top:6px"><span>'+fmt2(alloc)+'</span><span>of '+fmt2(total)+'</span></div>';
+}
+function sbRenderTable(w) {
+  var body=gg(w.id+'-body'); if(!body)return;
+  var data=(sbGetData(w.config)||[]).slice(0,w.config.limit||10);
+  if(!data.length){body.innerHTML='<div style="padding:16px;color:var(--hint);font-size:12px;text-align:center">No data</div>';return;}
+  var keys=Object.keys(data[0]).filter(function(k){return k!=='personal_finance_category'&&k!=='category';}).slice(0,6);
+  body.innerHTML='<div style="overflow-x:auto;max-height:'+(w.config.height||200)+'px">'
+    +'<table class="tbl" style="border:none"><thead><tr>'+keys.map(function(k){return '<th>'+esc(k)+'</th>';}).join('')+'</tr></thead>'
+    +'<tbody>'+data.map(function(row){
+      return '<tr>'+keys.map(function(k){
+        var v=row[k];
+        if(v===null||v===undefined)v='';
+        var s=typeof v==='number'?fmt2(v):String(v).slice(0,40);
+        return '<td class="'+(typeof v==='number'?'mono':'')+'" style="font-size:11.5px">'+esc(s)+'</td>';
+      }).join('')+'</tr>';
+    }).join('')+'</tbody></table></div>';
+  sbSetWidgetStatus(w.id, data.length+' rows shown','');
+}
+function sbRenderList(w) {
+  var body=gg(w.id+'-body'); if(!body)return;
+  var data=(sbGetData(w.config)||[]).slice(0,w.config.limit||10);
+  var lk=w.config.labelKey||'label', vk=w.config.valueKey||'value';
+  body.style.padding='8px 0'; body.innerHTML=data.map(function(d,i){
+    var col=PAL[i%PAL.length];
+    var lbl=d.name||d[lk]||('Item '+(i+1));
+    var val=+(d[vk]||d.pay||d.amt||d.value||d.amount||0);
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 14px;border-bottom:1px solid var(--border)">'
+      +'<div style="display:flex;align-items:center;gap:8px"><div style="width:7px;height:7px;border-radius:2px;background:'+col+';flex-shrink:0"></div>'
+      +'<span style="font-size:12.5px">'+esc(String(lbl))+'</span></div>'
+      +(val?'<span class="mono" style="font-size:12px;color:var(--cyan)">'+fmt2(val)+'</span>':'')
+      +'</div>';
+  }).join('');
+}
+function sbRenderAccounts(w) {
+  var body=gg(w.id+'-body'); if(!body)return;
+  var data=(sbGetData(w.config)||[]).slice(0,w.config.limit||10);
+  if(!data.length){body.innerHTML='<div style="padding:16px;color:var(--hint);font-size:12px;text-align:center">No Plaid accounts connected.<br><button class="btn" style="margin-top:8px" onclick="openLinkHandler()">Connect bank</button></div>';return;}
+  body.style.padding='8px 0';
+  body.innerHTML=data.map(function(a){
+    var bal=a.balances?(a.balances.current??0):0;
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--border)">'
+      +'<div><div style="font-size:13px;font-weight:500">'+esc(a.name||'Account')+'</div>'
+      +'<div style="font-size:10.5px;color:var(--hint)">'+(a.institution||'')+(a.mask?' ···'+a.mask:'')+'</div></div>'
+      +'<span class="mono" style="color:var(--cyan)">'+fmt2(bal)+'</span></div>';
+  }).join('');
+}
+function sbRenderTxnFeed(w) {
+  var body=gg(w.id+'-body'); if(!body)return;
+  var data=(sbGetData(w.config)||[]).filter(function(t){return t.amount>0;}).slice(0,w.config.limit||10);
+  if(!data.length){body.innerHTML='<div style="padding:16px;color:var(--hint);font-size:12px;text-align:center">No transactions yet.</div>';return;}
+  body.style.padding='8px 0';
+  body.innerHTML=data.map(function(t){
+    var cat=getTxnCategory(t);
+    var col=getCatColor(cat);
+    return '<div style="display:flex;align-items:center;gap:10px;padding:7px 14px;border-bottom:1px solid var(--border)">'
+      +'<div style="width:8px;height:8px;border-radius:2px;background:'+col+';flex-shrink:0"></div>'
+      +'<div style="flex:1;min-width:0"><div style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(t.merchant_name||t.name||'')+'</div>'
+      +'<div style="font-size:10px;color:var(--hint)">'+esc(t.date)+' · '+esc(cat)+'</div></div>'
+      +'<span class="mono" style="color:var(--red);font-size:12px">'+fmt2(t.amount)+'</span></div>';
+  }).join('');
+}
+function sbRenderCustomJS(w) {
+  var body=gg(w.id+'-body'); if(!body)return;
+  body.style.padding='12px';
+  var code=w.config.customJS||'container.innerHTML="<p>Write JS in the inspector</p>";';
+  try{
+    var data=sbGetData(w.config);
+    (new Function('container','data','fmt2','fmtM','PAL','esc','getCatColor','getTxnCategory',code))
+      (body,data,fmt2,fmtM,PAL,esc,getCatColor,getTxnCategory);
+    sbSetWidgetStatus(w.id,'Custom JS ran OK','var(--green)');
+  }catch(e){
+    body.innerHTML='<div style="color:var(--red);font-size:11.5px;padding:8px;font-family:var(--mono)">Error: '+esc(e.message)+'</div>';
+    sbSetWidgetStatus(w.id,'Error: '+e.message,'var(--red)');
+  }
+}
+function sbRenderDivider(w){var body=gg(w.id+'-body');if(!body)return;body.style.padding='0';body.innerHTML='<hr style="border:none;border-top:1px solid var(--border);margin:0">';}
+function sbRenderText(w){var body=gg(w.id+'-body');if(!body)return;body.style.padding='14px 16px';body.innerHTML='<div contenteditable="true" style="font-size:13px;color:var(--text);outline:none;min-height:40px;line-height:1.6" onblur="sbUpdateWidgetConfig(\''+w.id+'\',\'text\',this.innerText,false)">'+esc(w.config.text||'Click to edit text...')+'</div>';}
+function sbRenderSpacer(w){var body=gg(w.id+'-body');if(!body)return;body.style.cssText='height:'+(w.config.height||40)+'px';}
+
+// ── Data tester ───────────────────────────────────────────────────────────────
+function sbToggleDataTester() {
+  var panel=gg('sbDataTesterPanel');
+  var btn=gg('sbDataTesterBtn');
+  var open=panel.style.display==='none'||!panel.style.display;
+  panel.style.display=open?'block':'none';
+  if(btn)btn.style.color=open?'var(--cyan)':'';
+  if(open) {
+    // Populate source dropdown
+    var sel=gg('sbDsSelect');
+    if(sel&&sel.options.length<=1){
+      Object.entries(SB_DATA_SOURCES).forEach(function(e){
+        var opt=document.createElement('option');opt.value=e[0];opt.textContent=e[1].label;sel.appendChild(opt);
+      });
+    }
+  }
+}
+
+function sbRunDataTest() {
+  var sel=gg('sbDsSelect'), custom=gg('sbDsCustom');
+  var result=gg('sbDsResult'), meta=gg('sbDsResultMeta');
+  if(!result)return;
+  var data;
+  var expr=(custom&&custom.value.trim())||'';
+  if(expr){
+    try{data=(new Function('allTxns','allAccts','bills','incomeSources','nwAssets','nwLiab','zeroBuckets','getUserCategories','monthlyIncome','monthlyBills',
+      'return ('+expr+')'))(allTxns,typeof allAccts!=='undefined'?allAccts:[],bills,incomeSources,nwAssets,nwLiab,zeroBuckets,getUserCategories,monthlyIncome,monthlyBills);}
+    catch(e){result.textContent='Error: '+e.message;result.style.color='var(--red)';return;}
+  } else if(sel&&sel.value){
+    var src=SB_DATA_SOURCES[sel.value]; if(!src)return; data=src.fn();
+  } else {return;}
+  _sbLastDsData=data;
+  result.style.color='var(--text)';
+  var str=JSON.stringify(data,null,2);
+  result.textContent=str.slice(0,3000)+(str.length>3000?'\n…(truncated)':'');
+  if(meta)meta.textContent=Array.isArray(data)?data.length+' items':'1 value';
+}
+
+function sbInspectData(id) {
+  var w=_sbWidgets.find(function(x){return x.id===id;}); if(!w)return;
+  var data=sbGetData(w.config);
+  _sbLastDsData=data;
+  var panel=gg('sbDataTesterPanel');
+  if(panel&&(panel.style.display==='none'||!panel.style.display))sbToggleDataTester();
+  var result=gg('sbDsResult'),meta=gg('sbDsResultMeta');
+  if(result){
+    var str=JSON.stringify(data,null,2);
+    result.textContent=str?str.slice(0,3000)+(str.length>3000?'\n…':''):'(empty)';
+    result.style.color='var(--text)';
+  }
+  if(meta&&Array.isArray(data))meta.textContent=data.length+' items';
+}
+
+function sbUseDataInWidget() {
+  if(!_sbSelected||!_sbLastDsData)return;
+  var custom=gg('sbDsCustom');
+  if(custom&&custom.value.trim()) sbUpdateWidgetConfig(_sbSelected,'customQuery',custom.value.trim());
+  sbRenderWidget(_sbSelected);
+  showToast('Data applied to widget','success');
+}
+
+// ── Status bar ────────────────────────────────────────────────────────────────
+function sbSetStatus(msg){var el=gg('sbStatus');if(el)el.textContent=msg;}
+function sbUpdateStatus(){sbSetStatus(_sbWidgets.length+' widget'+(  _sbWidgets.length!==1?'s':'')+' on canvas');}
+
+// ── Run all ───────────────────────────────────────────────────────────────────
+function sbRunAll(){_sbWidgets.forEach(function(w){sbRenderWidget(w.id);});showToast('All '+_sbWidgets.length+' widgets re-rendered','success');}
+
+// ── Canvas width helper ───────────────────────────────────────────────────────
+function sbSetCanvasWidth(n){var cv=gg('sbCanvas');if(cv)cv.style.gridTemplateColumns=n===1?'1fr':n===3?'1fr 1fr 1fr':'1fr 1fr';}
+
+// ── Templates ─────────────────────────────────────────────────────────────────
+function sbLoadTemplate(id) {
+  sbClearCanvas();
+  var tpl=id==='default'?SB_DEFAULT_TEMPLATE:(_sbTemplates[id]||null);
+  if(!tpl){showToast('Template not found','error');return;}
+  tpl.forEach(function(item){sbAddWidget(item.type,item.config);});
+  sbSetStatus('Loaded template: '+(id==='default'?'Default':id));
+  showToast('Template loaded','success');
+}
+function sbSaveTemplate() {
+  var name=prompt('Template name:'); if(!name)return;
+  _sbTemplates[name]=_sbWidgets.map(function(w){return {type:w.type,config:Object.assign({},w.config)};});
+  try{localStorage.setItem('sb_templates',JSON.stringify(_sbTemplates));}catch(e){}
+  sbRenderTemplateBar();
+  showToast('Saved as "'+name+'"','success');
+}
+function sbClearCanvas() {
+  _sbWidgets.forEach(function(w){if(_sbChartInsts[w.id])try{_sbChartInsts[w.id].destroy();}catch(e){}});
+  _sbWidgets=[]; _sbSelected=null; _sbChartInsts={};
+  var cv=gg('sbCanvas');if(cv)cv.innerHTML='';
+  var empty=document.createElement('div');
+  empty.id='sbCanvasEmpty';
+  empty.style.cssText='grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--hint)';
+  empty.innerHTML='<div style="font-size:32px;margin-bottom:12px">&#128203;</div><div style="font-size:14px;font-weight:500;margin-bottom:6px">Canvas is empty</div><div style="font-size:12px">Drag widgets from the library &#8592; or load a template above</div>';
+  if(cv)cv.appendChild(empty);
+  var insp=gg('sbInspector');if(insp)insp.innerHTML='<div style="color:var(--hint);font-size:12px;text-align:center;padding:24px 8px">Click a widget to inspect it.</div>';
+  sbSetStatus('Canvas cleared');
+}
+function sbRenderTemplateBar() {
+  var el=gg('sbTemplateBar'); if(!el)return;
+  var keys=Object.keys(_sbTemplates);
+  if(!keys.length){el.innerHTML='<span style="font-size:11.5px;color:var(--hint)">No saved templates yet</span>';return;}
+  el.innerHTML=keys.map(function(k){
+    return '<div style="display:flex;align-items:center;gap:4px">'
+      +'<button class="btn" onclick="sbLoadTemplate(\''+esc(k)+'\')" style="font-size:11px;padding:3px 10px">'+esc(k)+'</button>'
+      +'<button onclick="sbDeleteTemplate(\''+esc(k)+'\')" style="background:none;border:none;color:var(--red);font-size:13px;cursor:pointer;padding:2px 4px" title="Delete">&#10005;</button>'
+      +'</div>';
+  }).join('');
+}
+function sbDeleteTemplate(name){
+  if(!confirm('Delete template "'+name+'"?'))return;
+  delete _sbTemplates[name];
+  try{localStorage.setItem('sb_templates',JSON.stringify(_sbTemplates));}catch(e){}
+  sbRenderTemplateBar();
+  showToast('Deleted "'+name+'"','success');
+}
+function sbExportTemplates(){
+  var data={templates:_sbTemplates,canvas:_sbWidgets.map(function(w){return {type:w.type,config:Object.assign({},w.config)};})};
+  var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mdf_sandbox_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  showToast('Sandbox exported','success');
+}
+function sbImportTemplates(input){
+  var file=input.files[0]; if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var d=JSON.parse(e.target.result);
+      if(d.templates)Object.assign(_sbTemplates,d.templates);
+      try{localStorage.setItem('sb_templates',JSON.stringify(_sbTemplates));}catch(err){}
+      sbRenderTemplateBar();
+      if(d.canvas&&d.canvas.length){
+        if(confirm('Also load the exported canvas? ('+d.canvas.length+' widgets)')){
+          sbClearCanvas(); d.canvas.forEach(function(item){sbAddWidget(item.type,item.config);});
+        }
+      }
+      showToast('Imported '+Object.keys(d.templates||{}).length+' templates','success');
+    }catch(err){showToast('Invalid sandbox file','error');}
+  };
+  reader.readAsText(file);
+}
+
+function sbInitSandbox() {
+  try{var saved=JSON.parse(localStorage.getItem('sb_templates')||'{}');if(saved)_sbTemplates=saved;}catch(e){}
+  sbRenderTemplateBar();
+  sbSetStatus('Ready — drag a widget from the library to start');
+}
+
+// fdRender alias
+function fdRender(){if(typeof initFireDrill==='function'){initFireDrill();}else{fdSetScenario('job');}}
+
 
 </script>
 
