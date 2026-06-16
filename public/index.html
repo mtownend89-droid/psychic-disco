@@ -1,3 +1,25 @@
+function getBucketColor(name){
+  var cats=getUserCategories();
+  var found=cats.find(function(c){return c.label===name||c.id===name;});
+  if(found)return found.color;
+  // Legacy fallbacks
+  var lc=name?name.toLowerCase():'';
+  if(lc.includes('food')||lc.includes('groc'))return'#3dda91';
+  if(lc.includes('dining')||lc.includes('restaurant'))return'#f5a623';
+  if(lc.includes('housing')||lc.includes('mortgage')||lc.includes('rent'))return'#6b9ef5';
+  if(lc.includes('util'))return'#45c8fc';
+  if(lc.includes('auto')||lc.includes('car')||lc.includes('gas'))return'#b09afa';
+  if(lc.includes('health')||lc.includes('medical'))return'#34d399';
+  if(lc.includes('shop'))return'#fb923c';
+  if(lc.includes('entertain'))return'#f472b6';
+  if(lc.includes('travel'))return'#818cf8';
+  if(lc.includes('sub')||lc.includes('stream'))return'#22d3ee';
+  if(lc.includes('insur'))return'#a3e635';
+  if(lc.includes('sav')||lc.includes('invest'))return'#4ade80';
+  if(lc.includes('income')||lc.includes('paycheck'))return'#3dda91';
+  if(lc.includes('loan')||lc.includes('credit'))return'#f87171';
+  return PAL[Math.abs(name?name.split('').reduce(function(h,ch){return(h<<5)-h+ch.charCodeAt(0);}|0:0)%PAL.length];
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1027,6 +1049,12 @@ canvas.chart-interactive { cursor: crosshair; }
     padding:4px 8px;
   }
 }
+
+
+/* Editable widget titles */
+.dh-label{cursor:text;}
+.dh-label:hover{color:var(--text) !important;text-decoration:underline dotted var(--border2);}
+.dh-label:focus{outline:none;color:var(--text) !important;border-bottom:1px solid var(--green);padding-bottom:1px;}
 
 </style>
 
@@ -4212,8 +4240,10 @@ function showPage(page){
   const nb=document.querySelector(`.nav-btn[onclick="showPage('${page}')"]`);if(nb)nb.classList.add('active');
   const tt=gg('topbarTitle');if(tt)tt.textContent=PT[page]||page;
   if(typeof updateBottomNav!=='undefined')updateBottomNav(page);
+  setTimeout(initEditableLabels,150);
   if(window.innerWidth<=900&&typeof closeSidebar!=='undefined')closeSidebar();
   setTimeout(wrapTablesForMobile,120);
+  setTimeout(initEditableLabels,160);
   if(page==='retirement')calcAll();
   if(page==='expenses'){syncZeroBucketsFromCategories();renderBillsTab();updateBudgetMetrics();initBillMonthSelectors();}
   if(page==='playground'){fdRender();}
@@ -4227,6 +4257,8 @@ async function init(){
   ['dashEditBar','expEditBar','retEditBar'].forEach(id=>{const el=gg(id);if(el)el.style.display='none';});
   ['dashContainer','expContainer','retContainer'].forEach(id=>initDrag(gg(id)));
   setTimeout(renderCharts,200);
+  setTimeout(initEditableLabels,400);
+  setTimeout(initEditableLabels,300);
   setTimeout(renderSWOT,350);
   ['dashboard','expenses','retirement'].forEach(loadSO);
   const sel=gg('calMonthSel');
@@ -4720,8 +4752,14 @@ function renderZeroGroupChart() {
 }
 function renderBillCatChart(){
   if(!gg('billCatChart'))return;
-  var CAT_C={HM:'#3dda91',LOAN:'#f5a623',CC:'#6b9ef5',CAR:'#b09afa',PH:'#38bdf8',TV:'#818cf8',FAM:'#f46a6a',SAVE:'#34d399',OTHER:'#94a3b8'};
-  var CAT_L={HM:'🏠 Housing',LOAN:'🏦 Loans',CC:'💳 Credit Cards',CAR:'🚗 Auto',PH:'📱 Phone',TV:'📺 Cable/Internet',FAM:'👨‍👩‍👧 Family',SAVE:'💰 Savings',OTHER:'Other'};
+  // Build color/label maps from user categories (Settings → Categories)
+  var userCats=getUserCategories().filter(function(c){return !c.group;});
+  var CAT_C={OTHER:'#94a3b8'};
+  var CAT_L={OTHER:'Other'};
+  userCats.forEach(function(cat){CAT_C[cat.id]=cat.color;CAT_L[cat.id]=cat.label;});
+  // Legacy short-code fallbacks
+  Object.assign(CAT_C,{HM:'#3dda91',LOAN:'#f5a623',CC:'#6b9ef5',CAR:'#b09afa',PH:'#38bdf8',TV:'#818cf8',FAM:'#f46a6a',SAVE:'#34d399'});
+  Object.assign(CAT_L,{HM:'🏠 Housing',LOAN:'🏦 Loans',CC:'💳 Credit Cards',CAR:'🚗 Auto',PH:'📱 Phone',TV:'📺 Cable/Internet',FAM:'👨‍👩‍👧 Family',SAVE:'💰 Savings'});
   var byCat={};bills.forEach(function(b){byCat[b.cat]=(byCat[b.cat]||0)+b.pay;});
   var entries=Object.entries(byCat).sort(function(a,b){return b[1]-a[1];});
   var tot=entries.reduce(function(s,e){return s+e[1];},0);
@@ -6827,6 +6865,7 @@ var _CHART_PREFS = [
   {id:'zeroChart',  label:'Budget Allocation',   canvas:'zeroChart',     options:['Doughnut','Pie']},
   {id:'cfMonthly',  label:'Cash Flow Monthly',   canvas:'cfMonthlyChart',options:['Bar','Line','Area']},
   {id:'billCat',    label:'Bills by Category',   canvas:'billCatChart',  options:['Doughnut','Pie','Bar']},
+  {id:'sankey',     label:'Money Flow (Sankey)', canvas:'sankeyChart',   options:['Sankey','Bar']},
 ];
 function renderChartPrefs() {
   var el=gg('chartPrefRows'); if(!el) return;
@@ -6849,6 +6888,14 @@ function applyChartPref(chartId, type) {
   if (chartId === 'zeroChart') { if(typeof renderZeroChart==='function') renderZeroChart(); }
   if (chartId === 'cfMonthly') { if(typeof renderCashFlow==='function') renderCashFlow(); }
   if (chartId === 'billCat')   { if(typeof renderBillCatChart==='function') renderBillCatChart(); }
+  if (chartId === 'sankey')    {
+    if(this.value==='Bar'){ 
+      // Show a bar chart of income vs bills vs discretionary
+      showToast('Sankey alternative: bar mode coming soon','success');
+    } else {
+      if(typeof renderSankey==='function') renderSankey();
+    }
+  }
   showToast('Chart updated \u2014 '+chartId+' \u2192 '+type,'success');
 }
 
@@ -7599,6 +7646,37 @@ window.addEventListener('resize',function(){
   setTimeout(wrapTablesForMobile,100);
 });
 window.addEventListener('load',function(){setTimeout(wrapTablesForMobile,600);});
+
+// ── Editable widget title labels ──────────────────────────────────────────────
+var _widgetLabels = {};
+try { _widgetLabels = JSON.parse(localStorage.getItem('mdf_widget_labels')||'{}'); } catch(e){}
+
+function initEditableLabels() {
+  document.querySelectorAll('.dh-label').forEach(function(el) {
+    if (el.dataset.editable) return; // already initialised
+    el.dataset.editable = '1';
+    var section = el.closest('[data-id]');
+    var id = section ? section.dataset.id : null;
+    if (!id) return;
+    if (_widgetLabels[id]) el.textContent = _widgetLabels[id];
+    el.contentEditable = 'true';
+    el.spellcheck = false;
+    el.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+      if (e.key === 'Escape') { el.textContent = _widgetLabels[id] || el.textContent; el.blur(); }
+    });
+    el.addEventListener('blur', function() {
+      var v = el.textContent.trim();
+      if (!v) { el.textContent = _widgetLabels[id] || id; return; }
+      if (v !== _widgetLabels[id]) {
+        _widgetLabels[id] = v;
+        localStorage.setItem('mdf_widget_labels', JSON.stringify(_widgetLabels));
+        showToast('Title saved','success');
+      }
+    });
+    el.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+  });
+}
 </script>
 
 <!-- ── ACTION PLAN PANEL — body level ── -->
