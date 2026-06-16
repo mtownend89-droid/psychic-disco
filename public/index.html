@@ -1,25 +1,3 @@
-function getBucketColor(name){
-  var cats=getUserCategories();
-  var found=cats.find(function(c){return c.label===name||c.id===name;});
-  if(found)return found.color;
-  // Legacy fallbacks
-  var lc=name?name.toLowerCase():'';
-  if(lc.includes('food')||lc.includes('groc'))return'#3dda91';
-  if(lc.includes('dining')||lc.includes('restaurant'))return'#f5a623';
-  if(lc.includes('housing')||lc.includes('mortgage')||lc.includes('rent'))return'#6b9ef5';
-  if(lc.includes('util'))return'#45c8fc';
-  if(lc.includes('auto')||lc.includes('car')||lc.includes('gas'))return'#b09afa';
-  if(lc.includes('health')||lc.includes('medical'))return'#34d399';
-  if(lc.includes('shop'))return'#fb923c';
-  if(lc.includes('entertain'))return'#f472b6';
-  if(lc.includes('travel'))return'#818cf8';
-  if(lc.includes('sub')||lc.includes('stream'))return'#22d3ee';
-  if(lc.includes('insur'))return'#a3e635';
-  if(lc.includes('sav')||lc.includes('invest'))return'#4ade80';
-  if(lc.includes('income')||lc.includes('paycheck'))return'#3dda91';
-  if(lc.includes('loan')||lc.includes('credit'))return'#f87171';
-  return PAL[Math.abs(name?name.split('').reduce(function(h,ch){return(h<<5)-h+ch.charCodeAt(0);}|0:0)%PAL.length];
-}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7721,7 +7699,7 @@ function initEditableLabels() {
       <button class="stab" onclick="switchSettingsTab('typography')">&#65328; Typography</button>
       <button class="stab" onclick="switchSettingsTab('profile')">&#128100; Profile</button>
       <button class="stab" onclick="switchSettingsTab('categories')">&#127991; Categories</button>
-      <button class="stab" onclick="switchSettingsTab('data')">&#128190; Data</button>
+      
     </div>
 
     <div class="settings-body">
@@ -7882,11 +7860,7 @@ function initEditableLabels() {
       </div>
 
       <!-- S5 + DATA: Chart preferences & data management -->
-      <div id="stab-data" class="stab-panel" style="display:none">
-        <div class="s-section">
-          <div class="s-section-title">Chart preferences (S5)</div>
-          <div id="chartPrefRows"></div>
-        </div>
+      <div 
         <div class="s-section">
           <div class="s-section-title">Data management</div>
           <div class="s-row">
