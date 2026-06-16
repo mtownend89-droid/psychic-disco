@@ -4156,14 +4156,22 @@ async function openLinkHandler(){
 function showDashboard(){gg('connectScreen').style.display='none';showPage('dashboard');}
 async function refreshAll(){await Promise.all([loadAccounts(),loadTransactions()]);}
 async function loadAccounts(){
-  const d=await fetch('/api/accounts').then(r=>r.json());
-  allAccts=d.accounts||[];
-  renderAccounts();renderBanks();updateDashMetrics();injectPlaidRet();syncBillsFromPlaid();syncNWFromPlaid();
+  try{
+    const r=await fetch('/api/accounts');
+    const d=await r.json();
+    allAccts=d.accounts||[];
+    if(d.errors){d.errors.forEach(function(e){console.warn('Account error:',e.institution,e.error);if(e.needsRelink)showToast(e.institution+' needs re-linking','error');});}
+    renderAccounts();renderBanks();updateDashMetrics();injectPlaidRet();syncBillsFromPlaid();syncNWFromPlaid();
+  }catch(e){console.error('loadAccounts:',e);showToast('Failed to load accounts: '+e.message,'error');}
 }
 async function loadTransactions(){
-  const d=await fetch('/api/transactions').then(r=>r.json());
-  allTxns=d.transactions||[];
-  filterTransactions();renderCharts();updateSpendMetrics();populateFilters();renderSWOT();
+  try{
+    const r=await fetch('/api/transactions');
+    const d=await r.json();
+    allTxns=d.transactions||[];
+    if(d.errors){d.errors.forEach(function(e){console.warn('Txn error:',e.institution,e.error);});}
+    filterTransactions();renderCharts();updateSpendMetrics();populateFilters();renderSWOT();
+  }catch(e){console.error('loadTransactions:',e);showToast('Failed to load transactions: '+e.message,'error');}
 }
 function injectPlaidRet(){
   const retT=['investment','brokerage','401k','ira','roth','retirement','hsa'];
