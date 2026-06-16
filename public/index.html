@@ -4107,12 +4107,15 @@ async function init(){
   try{const s=JSON.parse(localStorage.getItem('zeroBuckets'));if(s?.length)zeroBuckets=s;}catch(e){}
   try{const s=JSON.parse(localStorage.getItem('nwAssets'));if(s?.length)nwAssets=s;}catch(e){}
   try{const s=JSON.parse(localStorage.getItem('nwLiab'));if(s?.length)nwLiab=s;}catch(e){}
+  // Always show dashboard — connect screen shows inside page-content if no accounts
+  showPage('dashboard');
+  // Load server data in background
   try{
     const h=await fetch('/api/health').then(r=>r.json());
     const b=gg('envBadge');if(b){b.textContent=h.env==='production'?'Production':'Sandbox';b.className='env-badge '+(h.env==='production'?'env-production':'env-sandbox');}
-    const ac=await fetch('/api/accounts').then(r=>r.json());
-    if(ac.accounts?.length){showDashboard();await refreshAll();}
-  }catch(e){showError('Cannot reach server.');}
+    // Try to load accounts — if any exist, populate everything and hide connect screen
+    await refreshAll();
+  }catch(e){console.error('init error:',e);showError('Cannot reach server.');}
 }
 const saveBills=()=>{try{localStorage.setItem('bills',JSON.stringify(bills));}catch(e){}};
 const saveIncomeSrc=()=>{try{localStorage.setItem('incomeSources',JSON.stringify(incomeSources));}catch(e){}};
@@ -4139,7 +4142,7 @@ async function openLinkHandler(){
           if(res.error){showToast('Exchange failed: '+res.error,'error');return;}
           showToast(inst+' connected! Loading data...','success');
           await refreshAll();
-          showPage('dashboard');
+          showDashboard();
         }catch(ex){showToast('Exchange error: '+ex.message,'error');}
       },
       onExit:(err,meta)=>{
@@ -4154,12 +4157,19 @@ async function openLinkHandler(){
   }
 }
 function showDashboard(){gg('connectScreen').style.display='none';showPage('dashboard');}
-async function refreshAll(){await Promise.all([loadAccounts(),loadTransactions()]);}
+async function refreshAll(){
+  await Promise.all([loadAccounts(),loadTransactions()]);
+  // Hide connect screen if we now have accounts
+  var cs=gg('connectScreen');
+  if(cs&&allAccts.length>0) cs.style.display='none';
+}
 async function loadAccounts(){
   try{
     const r=await fetch('/api/accounts');
     const d=await r.json();
     allAccts=d.accounts||[];
+    // Hide connect screen once we have account data
+    if(allAccts.length>0){var cs=gg('connectScreen');if(cs)cs.style.display='none';}
     if(d.errors){d.errors.forEach(function(e){console.warn('Account error:',e.institution,e.error);if(e.needsRelink)showToast(e.institution+' needs re-linking','error');});}
     renderAccounts();renderBanks();updateDashMetrics();injectPlaidRet();syncBillsFromPlaid();syncNWFromPlaid();
   }catch(e){console.error('loadAccounts:',e);showToast('Failed to load accounts: '+e.message,'error');}
