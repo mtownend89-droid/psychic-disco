@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Matt & Dana | Finance</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600;700&family=Nunito:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&family=Fira+Code:wght@400;500&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -2118,22 +2118,35 @@ if (window.Chart) {
 // D1 — MASTER CATEGORY SYSTEM
 // ══════════════════════════════════════════════════════════════════════════════
 const DEFAULT_CATEGORIES = [
-  { id:'food',         label:'Food & Groceries',   color:'#3dda91', plaid:['FOOD_AND_DRINK','GROCERIES'] },
-  { id:'dining',       label:'Dining Out',          color:'#f5a623', plaid:['FOOD_AND_DRINK'] },
-  { id:'housing',      label:'Housing',             color:'#6b9ef5', plaid:['RENT_AND_UTILITIES','MORTGAGE'] },
-  { id:'utilities',    label:'Utilities',           color:'#45c8fc', plaid:['RENT_AND_UTILITIES','UTILITIES'] },
-  { id:'transport',    label:'Auto & Transport',    color:'#b09afa', plaid:['TRANSPORTATION','AUTO'] },
-  { id:'gas',          label:'Gas & Fuel',          color:'#f46a6a', plaid:['TRANSPORTATION'] },
-  { id:'health',       label:'Health & Medical',    color:'#34d399', plaid:['MEDICAL','HEALTHCARE_SERVICES'] },
-  { id:'shopping',     label:'Shopping',            color:'#fb923c', plaid:['GENERAL_MERCHANDISE','CLOTHING'] },
-  { id:'entertainment',label:'Entertainment',       color:'#f472b6', plaid:['ENTERTAINMENT','RECREATION'] },
-  { id:'travel',       label:'Travel',              color:'#818cf8', plaid:['TRAVEL','AIRLINES'] },
-  { id:'subscriptions',label:'Subscriptions',      color:'#22d3ee', plaid:['SUBSCRIPTION','TELECOM'] },
-  { id:'insurance',    label:'Insurance',           color:'#a3e635', plaid:['INSURANCE'] },
-  { id:'savings',      label:'Savings & Invest',   color:'#4ade80', plaid:['TRANSFER_OUT','INVESTMENT'] },
-  { id:'income',       label:'Income',             color:'#3dda91', plaid:['TRANSFER_IN','INCOME','PAYROLL'] },
-  { id:'loans',        label:'Loan Payments',      color:'#f87171', plaid:['LOAN_PAYMENTS','CREDIT_CARD'] },
-  { id:'other',        label:'Other',              color:'#94a3b8', plaid:[] },
+  // ── Group: Everyday Living ──
+  { id:'everyday',     label:'Everyday Living',    color:'#3dda91', plaid:[], group:true },
+  { id:'food',         label:'Food & Groceries',   color:'#3dda91', plaid:['FOOD_AND_DRINK','GROCERIES'],          parent:'everyday' },
+  { id:'dining',       label:'Dining Out',          color:'#f5a623', plaid:['FOOD_AND_DRINK'],                      parent:'everyday' },
+  { id:'shopping',     label:'Shopping',            color:'#fb923c', plaid:['GENERAL_MERCHANDISE','CLOTHING'],      parent:'everyday' },
+  { id:'subscriptions',label:'Subscriptions',      color:'#22d3ee', plaid:['SUBSCRIPTION','TELECOM'],              parent:'everyday' },
+  // ── Group: Home & Fixed ──
+  { id:'home_group',   label:'Home & Fixed',        color:'#6b9ef5', plaid:[], group:true },
+  { id:'housing',      label:'Housing',             color:'#6b9ef5', plaid:['RENT_AND_UTILITIES','MORTGAGE'],       parent:'home_group' },
+  { id:'utilities',    label:'Utilities',           color:'#45c8fc', plaid:['RENT_AND_UTILITIES','UTILITIES'],      parent:'home_group' },
+  { id:'insurance',    label:'Insurance',           color:'#a3e635', plaid:['INSURANCE'],                          parent:'home_group' },
+  { id:'loans',        label:'Loan Payments',       color:'#f87171', plaid:['LOAN_PAYMENTS','CREDIT_CARD'],         parent:'home_group' },
+  // ── Group: Auto & Transport ──
+  { id:'auto_group',   label:'Auto & Transport',    color:'#b09afa', plaid:[], group:true },
+  { id:'transport',    label:'Auto Payments',       color:'#b09afa', plaid:['TRANSPORTATION','AUTO'],               parent:'auto_group' },
+  { id:'gas',          label:'Gas & Fuel',          color:'#f46a6a', plaid:['TRANSPORTATION'],                      parent:'auto_group' },
+  // ── Group: Health ──
+  { id:'health_group', label:'Health & Wellness',   color:'#34d399', plaid:[], group:true },
+  { id:'health',       label:'Medical',             color:'#34d399', plaid:['MEDICAL','HEALTHCARE_SERVICES'],       parent:'health_group' },
+  // ── Group: Lifestyle ──
+  { id:'lifestyle',    label:'Lifestyle',           color:'#f472b6', plaid:[], group:true },
+  { id:'entertainment',label:'Entertainment',       color:'#f472b6', plaid:['ENTERTAINMENT','RECREATION'],          parent:'lifestyle' },
+  { id:'travel',       label:'Travel',              color:'#818cf8', plaid:['TRAVEL','AIRLINES'],                   parent:'lifestyle' },
+  // ── Group: Financial ──
+  { id:'financial',    label:'Financial',           color:'#4ade80', plaid:[], group:true },
+  { id:'savings',      label:'Savings & Invest',    color:'#4ade80', plaid:['TRANSFER_OUT','INVESTMENT'],           parent:'financial' },
+  { id:'income',       label:'Income',              color:'#3dda91', plaid:['TRANSFER_IN','INCOME','PAYROLL'],      parent:'financial' },
+  // ── Ungrouped ──
+  { id:'other',        label:'Other',               color:'#94a3b8', plaid:[] },
 ];
 
 function getUserCategories() {
@@ -5875,16 +5888,22 @@ function resetCustomColors() {
 
 // S4: Typography
 var _FONTS = [
-  {id:'dm',     label:'DM Sans',     sample:'The quick brown fox',  css:"'DM Sans', sans-serif"},
-  {id:'inter',  label:'Inter',       sample:'The quick brown fox',  css:"'Inter', sans-serif"},
-  {id:'system', label:'System UI',   sample:'The quick brown fox',  css:"system-ui, -apple-system, sans-serif"},
-  {id:'roboto', label:'Roboto',      sample:'The quick brown fox',  css:"'Roboto', sans-serif"},
+  {id:'dm',        label:'DM Sans',        sample:'The quick brown fox — $12,345',  css:"'DM Sans', sans-serif"},
+  {id:'inter',     label:'Inter',          sample:'The quick brown fox — $12,345',  css:"'Inter', sans-serif"},
+  {id:'nunito',    label:'Nunito',         sample:'The quick brown fox — $12,345',  css:"'Nunito', sans-serif"},
+  {id:'plusjakarta',label:'Plus Jakarta',  sample:'The quick brown fox — $12,345',  css:"'Plus Jakarta Sans', sans-serif"},
+  {id:'outfit',    label:'Outfit',         sample:'The quick brown fox — $12,345',  css:"'Outfit', sans-serif"},
+  {id:'manrope',   label:'Manrope',        sample:'The quick brown fox — $12,345',  css:"'Manrope', sans-serif"},
+  {id:'roboto',    label:'Roboto',         sample:'The quick brown fox — $12,345',  css:"'Roboto', sans-serif"},
+  {id:'system',    label:'System UI',      sample:'The quick brown fox — $12,345',  css:"system-ui, -apple-system, sans-serif"},
 ];
 var _MONO_FONTS = [
-  {id:'dmmono',  label:'DM Mono',     css:"'DM Mono', monospace"},
-  {id:'jetmono', label:'JetBrains',   css:"'JetBrains Mono', monospace"},
-  {id:'fira',    label:'Fira Code',   css:"'Fira Code', monospace"},
-  {id:'sysmono', label:'System mono', css:"ui-monospace, monospace"},
+  {id:'dmmono',    label:'DM Mono',       css:"'DM Mono', monospace"},
+  {id:'jetmono',   label:'JetBrains Mono',css:"'JetBrains Mono', monospace"},
+  {id:'fira',      label:'Fira Code',     css:"'Fira Code', monospace"},
+  {id:'cascadia',  label:'Cascadia Code', css:"'Cascadia Code', monospace"},
+  {id:'sourcecp',  label:'Source Code Pro',css:"'Source Code Pro', monospace"},
+  {id:'sysmono',   label:'System mono',   css:"ui-monospace, monospace"},
 ];
 var _currentFont = 'dm', _currentMono = 'dmmono';
 function renderTypography() {
@@ -5968,19 +5987,40 @@ function renderCategoryEditor() {
   var cats=getUserCategories();
   var el=gg('categoryEditorBody'); if(!el) return;
   el.innerHTML='';
-  cats.forEach(function(cat,i){
+  // Render groups first, then their children, then ungrouped
+  var groups=cats.filter(function(c){return c.group;});
+  var ungrouped=cats.filter(function(c){return !c.group&&!c.parent;});
+  function makeRow(cat,i,indent){
     var row=document.createElement('div');
-    row.style.cssText='display:grid;grid-template-columns:28px 1fr 90px 32px;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);';
-    row.innerHTML='<input type="color" value="'+cat.color+'" style="width:24px;height:24px;border-radius:50%;border:none;cursor:pointer;padding:0;background:none" id="ccat-color-'+i+'">'
-      +'<input type="text" value="'+cat.label+'" class="sel" style="height:28px;font-size:12px" id="ccat-label-'+i+'">'
-      +'<input type="text" value="'+(cat.keywords||[]).join(',')+'" class="sel" style="height:28px;font-size:11px" placeholder="keywords" id="ccat-kw-'+i+'">'
-      +'<button class="btn danger" onclick="deleteCategoryRow('+i+')" style="padding:3px 7px;font-size:11px">&times;</button>';
+    row.style.cssText='display:grid;grid-template-columns:28px 1fr 90px 32px;gap:6px;align-items:center;padding:5px 0 5px '+(indent?'20px':'0')+';border-bottom:1px solid var(--border);';
+    row.innerHTML='<input type="color" value="'+(cat.color||'#888')+'" style="width:22px;height:22px;border-radius:50%;border:2px solid var(--border2);cursor:pointer;padding:0" id="ccat-color-'+i+'">'
+      +'<div style="display:flex;align-items:center;gap:6px">'
+        +(cat.group?'<span style="font-size:9px;font-weight:700;background:var(--surface3);color:var(--muted);padding:1px 5px;border-radius:3px;text-transform:uppercase;flex-shrink:0">GROUP</span>':'')
+        +(indent?'<span style="color:var(--hint);font-size:12px;flex-shrink:0">&#8627;</span>':'')
+        +'<input type="text" value="'+esc(cat.label)+'" class="sel" style="height:27px;font-size:12px;flex:1" id="ccat-label-'+i+'">'
+      +'</div>'
+      +'<input type="text" value="'+(cat.keywords||[]).join(',')+'" class="sel" style="height:27px;font-size:10.5px" placeholder="keywords" id="ccat-kw-'+i+'">'
+      +'<button class="btn danger" onclick="deleteCategoryRow('+i+')" style="padding:2px 7px;font-size:11px">&times;</button>';
     el.appendChild(row);
+  }
+  groups.forEach(function(grp){
+    var gi=cats.indexOf(grp);
+    makeRow(grp,gi,false);
+    cats.filter(function(ch){return ch.parent===grp.id;}).forEach(function(ch){
+      makeRow(ch,cats.indexOf(ch),true);
+    });
   });
+  ungrouped.forEach(function(cat){makeRow(cat,cats.indexOf(cat),false);});
 }
 function addCategoryRow() {
   var cats=getUserCategories();
   cats.push({id:'cat_'+Date.now(),label:'New Category',color:'#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0'),keywords:[]});
+  localStorage.setItem('mdf_categories',JSON.stringify(cats));
+  renderCategoryEditor();
+}
+function addCategoryGroup() {
+  var cats=getUserCategories();
+  cats.push({id:'grp_'+Date.now(),label:'New Group',color:'#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0'),plaid:[],group:true});
   localStorage.setItem('mdf_categories',JSON.stringify(cats));
   renderCategoryEditor();
 }
@@ -6094,6 +6134,72 @@ function loadSettingsState() {
     var savedCP=JSON.parse(localStorage.getItem('mdf_chart_prefs')||'null'); if(savedCP) _chartPrefs=savedCP;
     var savedProfile=localStorage.getItem('mdf_profile'); if(savedProfile) { _currentProfile=savedProfile; switchProfile(savedProfile); }
   } catch(e) {}
+}
+
+
+// ── SETTINGS: consolidated Apply functions ────────────────────────────────────
+function applyThemeChanges() {
+  applyTheme(_currentTheme);
+  localStorage.setItem('mdf_theme', JSON.stringify({id:_currentTheme}));
+  var s=gg('themeApplyStatus');if(s){s.textContent='&#10003; Applied!';setTimeout(function(){s.textContent='';},2500);}
+  showToast('Theme applied — '+THEMES[_currentTheme].name,'success');
+}
+
+function applyTypographyChanges() {
+  // Font size
+  var sl=gg('fontSizeSlider');if(sl){document.documentElement.style.fontSize=sl.value+'px';localStorage.setItem('mdf_font_size',sl.value);}
+  // Font already applied live on click, just persist
+  localStorage.setItem('mdf_font',_currentFont);
+  localStorage.setItem('mdf_mono_font',_currentMono);
+  var s=gg('typoApplyStatus');if(s){s.textContent='✓ Applied!';setTimeout(function(){s.textContent='';},2500);}
+  showToast('Typography updated','success');
+}
+
+function applyProfileChanges() {
+  // Household name
+  var hn=gg('householdNameInput');if(hn)applyHouseholdName(hn.value);
+  // Currency / date format / compact nums
+  var cur=gg('currencySelect');if(cur)applyPref('currency',cur.value);
+  var df=gg('dateFormatSelect');if(df)applyPref('dateFormat',df.value);
+  var cn=gg('compactNumToggle');if(cn)applyPref('compactNums',cn.checked);
+  // Save profiles
+  localStorage.setItem('mdf_profiles',JSON.stringify(_profiles));
+  var s=gg('profileApplyStatus');if(s){s.textContent='✓ Applied!';setTimeout(function(){s.textContent='';},2500);}
+  showToast('Profile settings saved','success');
+}
+
+// Override saveCategories to also show the apply status
+var _origSaveCategories = saveCategories;
+function saveCategories() {
+  var cats=getUserCategories();
+  cats.forEach(function(cat,i){
+    var cl=gg('ccat-color-'+i),lb=gg('ccat-label-'+i),kw=gg('ccat-kw-'+i);
+    if(cl) cat.color=cl.value;
+    if(lb) cat.label=lb.value;
+    if(kw) cat.keywords=kw.value.split(',').map(function(s){return s.trim();}).filter(Boolean);
+  });
+  localStorage.setItem('mdf_categories',JSON.stringify(cats));
+  var s=gg('catApplyStatus');if(s){s.textContent='✓ Categories saved!';setTimeout(function(){s.textContent='';},2500);}
+  showToast('Categories saved — '+cats.filter(function(c){return !c.group;}).length+' categories','success');
+  renderCategoryEditor();
+}
+
+// Override applyCustomColors to add toast + persist
+function applyCustomColors() {
+  _COLOR_DEFS.forEach(function(d){
+    var inp=gg('cpick-'+d.key); if(!inp) return;
+    document.documentElement.style.setProperty(d.var, inp.value);
+    _customColors[d.key]=inp.value;
+  });
+  localStorage.setItem('mdf_custom_colors', JSON.stringify(_customColors));
+  showToast('Custom colors applied','success');
+}
+function resetCustomColors() {
+  _customColors={};
+  localStorage.removeItem('mdf_custom_colors');
+  applyTheme(_currentTheme);
+  renderColorEditor();
+  showToast('Colors reset to theme','success');
 }
 
 // ── EXPORTS ───────────────────────────────────────────────────────────────────
@@ -6214,6 +6320,12 @@ checkAuthAndInit();
             </div>
           </div>
         </div>
+        <!-- Apply -->
+        <div style="padding:16px 0 4px;border-top:1px solid var(--border);margin-top:8px;display:flex;align-items:center;justify-content:space-between">
+          <span id="themeApplyStatus" style="font-size:12px;color:var(--green)"></span>
+          <button class="btn primary" onclick="applyThemeChanges()" style="min-width:130px">&#10003; Apply Theme</button>
+        </div>
+
         <!-- S7: Export/import -->
         <div class="s-section">
           <div class="s-section-title">Export / Import</div>
@@ -6240,9 +6352,9 @@ checkAuthAndInit();
           <div class="s-section-title">Accent colors</div>
           <div class="color-grid" id="colorsAccent"></div>
         </div>
-        <div style="margin-top:12px">
-          <button class="btn" onclick="applyCustomColors()">&#10003; Apply colors</button>
-          <button class="btn" style="margin-left:8px" onclick="resetCustomColors()">&#8634; Reset</button>
+        <div style="padding:16px 0 4px;border-top:1px solid var(--border);margin-top:16px;display:flex;align-items:center;justify-content:space-between">
+          <button class="btn" onclick="resetCustomColors()" style="color:var(--muted)">&#8634; Reset to theme</button>
+          <button class="btn primary" onclick="applyCustomColors()" style="min-width:130px">&#10003; Apply Colors</button>
         </div>
       </div>
 
@@ -6265,6 +6377,10 @@ checkAuthAndInit();
         <div class="s-section">
           <div class="s-section-title">Number font</div>
           <div id="monoFontOptions"></div>
+        </div>
+        <div style="padding:16px 0 4px;border-top:1px solid var(--border);margin-top:16px;display:flex;align-items:center;justify-content:space-between">
+          <span id="typoApplyStatus" style="font-size:12px;color:var(--green)"></span>
+          <button class="btn primary" onclick="applyTypographyChanges()" style="min-width:130px">&#10003; Apply Typography</button>
         </div>
       </div>
 
@@ -6306,6 +6422,10 @@ checkAuthAndInit();
             <label class="s-toggle"><input type="checkbox" id="compactNumToggle" onchange="applyPref('compactNums',this.checked)"><span class="s-toggle-slider"></span></label>
           </div>
         </div>
+        <div style="padding:16px 0 4px;border-top:1px solid var(--border);margin-top:16px;display:flex;align-items:center;justify-content:space-between">
+          <span id="profileApplyStatus" style="font-size:12px;color:var(--green)"></span>
+          <button class="btn primary" onclick="applyProfileChanges()" style="min-width:130px">&#10003; Apply Profile</button>
+        </div>
       </div>
 
       <!-- S8: CATEGORIES -->
@@ -6313,7 +6433,7 @@ checkAuthAndInit();
         <div class="s-section">
           <div class="s-section-title" style="display:flex;align-items:center;justify-content:space-between">
             Transaction categories
-            <button class="btn" onclick="addCategoryRow()" style="font-size:11px;padding:3px 10px">+ Add</button>
+            <div style="display:flex;gap:6px"><button class="btn" onclick="addCategoryRow()" style="font-size:11px;padding:3px 10px">+ Category</button><button class="btn" onclick="addCategoryGroup()" style="font-size:11px;padding:3px 10px">+ Group</button></div>
           </div>
           <div style="display:grid;grid-template-columns:28px 1fr 90px 32px;gap:6px;padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:4px">
             <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Color</div>
@@ -6322,7 +6442,10 @@ checkAuthAndInit();
             <div></div>
           </div>
           <div id="categoryEditorBody"></div>
-          <button class="btn primary" style="margin-top:12px;width:100%" onclick="saveCategories()">&#10003; Save Categories</button>
+          <div style="padding:16px 0 4px;border-top:1px solid var(--border);margin-top:16px;display:flex;align-items:center;justify-content:space-between">
+          <span id="catApplyStatus" style="font-size:12px;color:var(--green)"></span>
+          <button class="btn primary" onclick="saveCategories()" style="min-width:130px">&#10003; Apply Categories</button>
+        </div>
         </div>
       </div>
 
