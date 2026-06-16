@@ -97,8 +97,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
   min-width:0;
 }
 .page{min-width:0;max-width:100%;}
-.page{display:none;}.page.active{display:block;animation:fadeIn 0.2s ease;}
+.page{display:none;}.page.active{display:block;animation:slideInLeft 0.22s cubic-bezier(.25,.46,.45,.94);}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+@keyframes slideInLeft{from{opacity:0;transform:translateX(32px);}to{opacity:1;transform:translateX(0);}}
 
 /* ── CONNECT SCREEN ── */
 #connectScreen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:58vh;text-align:center;gap:18px;}
@@ -925,7 +926,7 @@ canvas.chart-interactive { cursor: crosshair; }
 .bn-btn:hover,.bn-btn.active{color:var(--green)}
 .bn-btn svg{stroke-linecap:round;stroke-linejoin:round}
 
-@media(max-width:768px){
+@media(max-width:900px){
   /* M1: show hamburger */
   #hamburgerBtn{display:flex !important;align-items:center}
   /* M1: sidebar becomes slide-in drawer */
@@ -936,6 +937,8 @@ canvas.chart-interactive { cursor: crosshair; }
   /* M4: show bottom nav, pad content above it */
   #bottomNav{display:flex !important}
   #page-content{padding-bottom:68px !important}
+  /* M2: closeSidebar on phone nav */
+  .nav-btn:active{background:var(--surface2)}
   /* M2: tab rows scroll horizontally */
   .tab-row,.time-toggle,.settings-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap !important;scrollbar-width:none}
   .tab-row::-webkit-scrollbar,.time-toggle::-webkit-scrollbar,.settings-tabs::-webkit-scrollbar{display:none}
@@ -975,6 +978,24 @@ canvas.chart-interactive { cursor: crosshair; }
 /* iPhone: hide Playground + Sandbox nav items */
 @media(max-width:430px){
   .phone-hide{display:none !important;}
+}
+
+
+@media(max-width:900px){
+  .page.active{animation:slideInLeft 0.22s cubic-bezier(.25,.46,.45,.94) !important;}
+}
+
+
+@media(max-width:480px){
+  /* Plan button cards - force single column */
+  #inc5030 > div {grid-template-columns:1fr !important;}
+  .swot-action-btn{width:100%;justify-content:center;}
+}
+
+
+/* Desktop: use subtle fade instead of slide */
+@media(min-width:901px){
+  .page.active{animation:fadeIn 0.18s ease !important;}
 }
 
 </style>
@@ -4145,7 +4166,7 @@ function showPage(page){
   const nb=document.querySelector(`.nav-btn[onclick="showPage('${page}')"]`);if(nb)nb.classList.add('active');
   const tt=gg('topbarTitle');if(tt)tt.textContent=PT[page]||page;
   if(typeof updateBottomNav!=='undefined')updateBottomNav(page);
-  if(window.innerWidth<=768&&typeof closeSidebar!=='undefined')closeSidebar();
+  if(window.innerWidth<=900&&typeof closeSidebar!=='undefined')closeSidebar();
   setTimeout(wrapTablesForMobile,120);
   if(page==='retirement')calcAll();
   if(page==='expenses'){syncZeroBucketsFromCategories();renderBillsTab();updateBudgetMetrics();initBillMonthSelectors();}
@@ -4175,14 +4196,21 @@ async function init(){
   try{const s=JSON.parse(localStorage.getItem('nwAssets'));if(s?.length)nwAssets=s;}catch(e){}
   try{const s=JSON.parse(localStorage.getItem('nwLiab'));if(s?.length)nwLiab=s;}catch(e){}
   showPage('dashboard');
+  // Show connect screen immediately — hide it once we confirm accounts exist
+  var cs=gg('connectScreen');
+  if(cs) cs.style.display='flex';
   try{
     const h=await fetch('/api/health').then(r=>r.json());
     const b=gg('envBadge');if(b){b.textContent=h.env==='production'?'Production':'Sandbox';b.className='env-badge '+(h.env==='production'?'env-production':'env-sandbox');}
     await refreshAll();
-    // Show connect screen only if still no accounts after loading
-    var cs=gg('connectScreen');
+    // Hide connect screen only if we got accounts
     if(cs) cs.style.display = allAccts.length===0 ? 'flex' : 'none';
-  }catch(e){console.error('init error:',e);showError('Cannot reach server.');}
+  }catch(e){
+    console.error('init error:',e);
+    showError('Cannot reach server.');
+    // Keep connect screen visible so user can try connecting
+    if(cs) cs.style.display='flex';
+  }
 }
 const saveBills=()=>{try{localStorage.setItem('bills',JSON.stringify(bills));}catch(e){}};
 const saveIncomeSrc=()=>{try{localStorage.setItem('incomeSources',JSON.stringify(incomeSources));}catch(e){}};
@@ -5206,12 +5234,14 @@ function renderIncomeTab(){
           +'<div style="height:100%;width:'+bp+'%;background:'+cat.col+';border-radius:2px"></div></div>'
         +'<div style="font-size:10.5px;color:var(--muted)">Target: '+(cat.tgt*100)+'% · Actual: '+bp+'%'
           +'<span style="margin-left:6px;color:'+(ok?'var(--green)':'var(--amber)')+'">'+( ok?'✓ on track':'↕ adjust' )+'</span></div>';
-      if (pk) {
+      // Always show a plan button — use best plan key or fallback
+      var planKey = pk || cat.op || cat.up;
+      if (planKey) {
         var btn = document.createElement('button');
         btn.className = 'swot-action-btn';
-        btn.style.cssText = 'background:'+cat.col+'22;color:'+cat.col+';border:1px solid '+cat.col+'44;margin-top:8px;display:inline-flex;align-items:center;gap:4px';
-        btn.textContent = '▶ Plan';
-        (function(planKey){ btn.onclick = function(){ openActionPlan(planKey); }; })(pk);
+        btn.style.cssText = 'background:'+cat.col+'22;color:'+cat.col+';border:1px solid '+cat.col+'44;margin-top:8px;display:inline-flex;align-items:center;gap:4px;width:100%;justify-content:center';
+        btn.textContent = '▶ View Plan';
+        (function(planKey2){ btn.onclick = function(){ openActionPlan(planKey2); }; })(planKey);
         card.appendChild(btn);
       }
       grid5030.appendChild(card);
@@ -7507,7 +7537,7 @@ function updateBottomNav(page){
   });
 }
 function wrapTablesForMobile(){
-  if(window.innerWidth>768)return;
+  if(window.innerWidth>900)return;
   document.querySelectorAll('.card .tbl, .card-sm .tbl').forEach(function(tbl){
     if(!tbl.parentElement.classList.contains('tbl-wrap')){
       var w=document.createElement('div');
@@ -7519,7 +7549,7 @@ function wrapTablesForMobile(){
 }
 document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSidebar();});
 window.addEventListener('resize',function(){
-  if(window.innerWidth>768){closeSidebar();document.body.style.overflow='';}
+  if(window.innerWidth>900){closeSidebar();document.body.style.overflow='';}
   setTimeout(wrapTablesForMobile,100);
 });
 window.addEventListener('load',function(){setTimeout(wrapTablesForMobile,600);});
