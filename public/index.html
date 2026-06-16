@@ -1323,6 +1323,15 @@ canvas.chart-interactive { cursor: crosshair; }
             <div class="chart-widget-legend" id="zeroChartLegend" style="border-top:1px solid var(--border);padding:8px 14px 10px"></div>
             <div class="d2-stat-strip" id="zeroChartStats" style="border-top:1px solid var(--border);padding:6px 14px 10px"></div>
           </div>
+                <!-- Group rollup chart -->
+                <div class="card card-sm" style="padding:0;overflow:hidden;margin-top:12px">
+                  <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px 10px;border-bottom:1px solid var(--border)">
+                    <div class="card-title" style="margin-bottom:0">By Group</div>
+                    <span id="zeroGroupTotal" style="font-size:12px;font-weight:700;font-family:var(--mono);color:var(--cyan)"></span>
+                  </div>
+                  <div style="position:relative;height:180px;padding:10px"><canvas id="zeroGroupChart"></canvas></div>
+                  <div class="chart-widget-legend" id="zeroGroupLegend" style="border-top:1px solid var(--border);padding:10px 16px 12px"></div>
+                </div>
         </div>
       </div>
 
@@ -2001,7 +2010,7 @@ async function checkAuthAndInit() {
 
 // ── GLOBALS ──────────────────────────────────────────────────────────────────
 let allTxns=[],allAccts=[],catChartI=null,dailyChartI=null;
-const RC={},BC={},NWC={},CFC={};
+const RC={},BC={},NWC={},CFC={};BC.zeroGroup=null;
 const gg=id=>document.getElementById(id);
 const fmtM=n=>'$'+(Math.abs(n)>=1e6?(Math.abs(n)/1e6).toFixed(2)+'M':Math.abs(n)>=1000?Math.round(Math.abs(n)/1000)+'K':Math.round(Math.abs(n)).toLocaleString());
 const fmtK=n=>'$'+Math.round(Math.abs(n)).toLocaleString();
@@ -3414,7 +3423,27 @@ function openCatPopover(txn,pillEl,event){
   _catPopoverTxn=txn;_catPopoverPill=pillEl;
   var pop=gg('catPopover'),sel=gg('catPopoverSel');if(!pop||!sel)return;
   var cats=getUserCategories(),cur=getTxnCategory(txn);
-  sel.innerHTML=cats.map(function(c){return '<option value="'+esc(c.label)+'"'+(c.label===cur?' selected':'')+'>'+esc(c.label)+'</option>';}).join('');
+  // Build grouped <optgroup> dropdown matching the category tree
+  var groups=cats.filter(function(g){return g.group;});
+  var ungrouped=cats.filter(function(x){return !x.group&&!x.parent;});
+  var html='';
+  groups.forEach(function(grp){
+    var children=cats.filter(function(ch){return ch.parent===grp.id&&!ch.group;});
+    if(!children.length)return;
+    html+='<optgroup label="'+esc(grp.label)+'">';
+    children.forEach(function(ch){
+      html+='<option value="'+esc(ch.label)+'"'+(ch.label===cur?' selected':'')+'>'+esc(ch.label)+'</option>';
+    });
+    html+='</optgroup>';
+  });
+  if(ungrouped.length){
+    html+='<optgroup label="Other">';
+    ungrouped.forEach(function(ch){
+      html+='<option value="'+esc(ch.label)+'"'+(ch.label===cur?' selected':'')+'>'+esc(ch.label)+'</option>';
+    });
+    html+='</optgroup>';
+  }
+  sel.innerHTML=html;
   var rect=pillEl.getBoundingClientRect();
   var left=Math.max(8,Math.min(rect.left,window.innerWidth-228));
   var top=rect.bottom+6;
@@ -3449,7 +3478,7 @@ function syncZeroBucketsFromCategories(){
   var saved={};
   zeroBuckets.forEach(function(b){if(b.catId)saved[b.catId]=b.amt;});
   try{var ls=JSON.parse(localStorage.getItem('zeroBuckets')||'[]');ls.forEach(function(b){if(b.catId&&!(b.catId in saved))saved[b.catId]=b.amt;});}catch(e){}
-  zeroBuckets=cats.filter(function(c){return !_NON_DISC.includes(c.id);}).map(function(c){return {name:c.label,catId:c.id,amt:saved[c.id]||0};});
+  zeroBuckets=cats.filter(function(c){return !_NON_DISC.includes(c.id)&&!c.group;}).map(function(c){return {name:c.label,catId:c.id,amt:saved[c.id]||0,parent:c.parent||null};});
 }
 
 
@@ -4069,6 +4098,64 @@ function saveNewBill(){
   if(!b.name){showToast('Enter a name','error');return;}
   bills.push(b);saveBills();closeAddBillModal();renderBillsTab();showToast(b.name+' added!','success');
 }
+
+function renderZeroGroupChart() {
+  var el = gg('zeroGroupChart'); if(!el) return;
+  var cats = getUserCategories();
+  var groups = cats.filter(function(c){ return c.group; });
+
+  // Sum zeroBuckets by their parent group
+  var grpTotals = {}, grpColors = {}, grpLabels = {};
+  groups.forEach(function(g){ grpTotals[g.id]=0; grpColors[g.id]=g.color; grpLabels[g.id]=g.label; });
+
+  var ungroupedTotal = 0;
+  zeroBuckets.forEach(function(b){
+    if(b.parent && grpTotals[b.parent] !== undefined) grpTotals[b.parent] += b.amt;
+    else ungroupedTotal += b.amt;
+  });
+
+  var entries = groups.filter(function(g){ return grpTotals[g.id] > 0; }).map(function(g){
+    return {label:g.label, val:grpTotals[g.id], color:g.color};
+  });
+  if(ungroupedTotal > 0) entries.push({label:'Ungrouped', val:ungroupedTotal, color:'#94a3b8'});
+
+  var bil = monthlyBills();
+  entries.push({label:'Bills', val:bil, color:'#f46a6a'});
+
+  var tot = entries.reduce(function(s,e){return s+e.val;},0);
+  var surfC = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()||'#1a1d27';
+
+  var gt = gg('zeroGroupTotal');
+  if(gt) gt.textContent = fmt2(Math.round(tot));
+
+  if(BC.zeroGroup) BC.zeroGroup.destroy();
+  BC.zeroGroup = new Chart(el, {
+    type: 'doughnut',
+    data: {
+      labels: entries.map(function(e){return e.label;}),
+      datasets: [{
+        data: entries.map(function(e){return Math.round(e.val);}),
+        backgroundColor: entries.map(function(e){return e.color;}),
+        borderWidth: 2, borderColor: surfC
+      }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, cutout:'60%',
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:function(ctx){return ' '+fmt2(ctx.parsed);}}}} }
+  });
+
+  var leg = gg('zeroGroupLegend');
+  if(leg) {
+    leg.innerHTML = entries.map(function(e){
+      var pct = tot>0?Math.round(e.val/tot*100):0;
+      return '<div class="cwl-item">'
+        +'<div class="cwl-dot" style="background:'+e.color+'"></div>'
+        +'<span class="cwl-label">'+esc(e.label)+'</span>'
+        +'<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text);margin-right:4px">'+fmt2(Math.round(e.val))+'</span>'
+        +'<span class="cwl-pct">'+pct+'%</span>'
+        +'</div>';
+    }).join('');
+  }
+}
 function renderBillCatChart(){
   if(!gg('billCatChart'))return;
   var CAT_C={HM:'#3dda91',LOAN:'#f5a623',CC:'#6b9ef5',CAR:'#b09afa',PH:'#38bdf8',TV:'#818cf8',FAM:'#f46a6a',SAVE:'#34d399',OTHER:'#94a3b8'};
@@ -4444,7 +4531,27 @@ function renderZeroBudget(){
   const zr=gg('zRemaining');if(zr){zr.textContent=fmt2(Math.abs(unalloc));zr.style.color=Math.abs(unalloc)<1?'var(--green)':unalloc>0?'var(--amber)':'var(--red)';}
   const el=gg('zeroBudgetSliders');if(!el)return;
   el.innerHTML='';
+  // Build ordered list with group headers
+  var cats = getUserCategories();
+  var grpMap = {}; cats.filter(function(c){return c.group;}).forEach(function(g){grpMap[g.id]=g;});
+  // Group header tracking
+  var lastGroup = '__none__';
   zeroBuckets.forEach(function(b,i){
+    // Insert group header if this bucket belongs to a new group
+    var grpId = b.parent || '__none__';
+    if(grpId !== lastGroup){
+      lastGroup = grpId;
+      var grp = grpMap[grpId];
+      if(grp){
+        var hdr = document.createElement('div');
+        hdr.style.cssText='display:flex;align-items:center;gap:8px;padding:10px 0 4px;margin-top:4px;border-top:1px solid var(--border)';
+        hdr.innerHTML='<div style="width:8px;height:8px;border-radius:2px;background:'+grp.color+';flex-shrink:0"></div>'
+          +'<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)">'+esc(grp.label)+'</span>'
+          +'<div style="flex:1;height:1px;background:var(--border)"></div>'
+          +'<span id="zgrp-total-'+grp.id+'" style="font-size:10px;font-family:var(--mono);color:var(--muted)"></span>';
+        el.appendChild(hdr);
+      }
+    }
     var pct   = rem>0 ? Math.round(b.amt/rem*100) : 0;
     var color = getBucketColor(b);
     var row   = document.createElement('div');
@@ -4458,6 +4565,12 @@ function renderZeroBudget(){
       +'<button class="zb-step" onclick="zbStep('+i+',10)" title="Increase $10">▲</button>'
       +'<span class="zb-pct" id="zp-'+i+'">'+pct+'%</span>';
     el.appendChild(row);
+  });
+  // Update group totals
+  var grpTotals = {};
+  zeroBuckets.forEach(function(b){ if(b.parent){grpTotals[b.parent]=(grpTotals[b.parent]||0)+b.amt;} });
+  Object.entries(grpTotals).forEach(function(e){
+    var el2=gg('zgrp-total-'+e[0]);if(el2)el2.textContent=fmt2(Math.round(e[1]));
   });
   clearTimeout(window._zcTimer);
   window._zcTimer = setTimeout(renderZeroChart, 150);
@@ -4512,6 +4625,7 @@ function renderZeroChart(){
     return '<div class="cwl-item"><div class="cwl-dot" style="background:'+colors[i]+'"></div>'
       +'<span class="cwl-label">'+esc(lbl)+'</span><span class="cwl-pct">'+pct+'%</span></div>';
   }).join('');
+  renderZeroGroupChart();
   var strip=gg('zeroChartStats');
   if(strip){
     var ap=Math.round(alloc),bilR=Math.round(bil),unR=Math.round(unalloc);
