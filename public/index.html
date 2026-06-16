@@ -782,6 +782,68 @@ canvas.chart-interactive { cursor: crosshair; }
 .dp-debt-row:last-child{border-bottom:none;}
 .dp-debt-name{font-weight:500;}
 .dp-order-badge{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:10px;font-weight:700;flex-shrink:0;}
+
+/* ── SETTINGS ────────────────────────────────────────────────────────────────*/
+.settings-modal{position:fixed;inset:0;z-index:500;display:none;align-items:flex-start;justify-content:flex-end;}
+.settings-modal.open{display:flex;}
+.settings-backdrop{position:absolute;inset:0;background:rgba(0,0,0,0.55);}
+.settings-panel{position:relative;width:540px;max-width:95vw;height:100vh;background:var(--sidebar);border-left:1px solid var(--border2);display:flex;flex-direction:column;overflow:hidden;animation:slideInRight 0.22s ease;}
+@keyframes slideInRight{from{transform:translateX(100%);}to{transform:translateX(0);}}
+.settings-hdr{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 16px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.settings-hdr-title{font-size:16px;font-weight:700;color:var(--text);}
+.settings-tabs{display:flex;gap:2px;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;flex-wrap:wrap;}
+.stab{padding:5px 12px;border-radius:6px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;border:none;background:none;transition:all 0.12s;white-space:nowrap;}
+.stab:hover{color:var(--text);background:var(--surface2);}
+.stab.active{color:var(--text);background:var(--surface2);border:1px solid var(--border2);}
+.settings-body{flex:1;overflow-y:auto;padding:20px;}
+.s-section{margin-bottom:28px;}
+.s-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.s-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);gap:12px;}
+.s-row:last-child{border-bottom:none;}
+.s-label{font-size:13px;font-weight:500;color:var(--text);}
+.s-sub{font-size:11.5px;color:var(--muted);margin-top:2px;}
+/* Themes S2 */
+.theme-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:4px;}
+.theme-swatch{border-radius:8px;overflow:hidden;cursor:pointer;border:2px solid var(--border);transition:all 0.15s;aspect-ratio:4/3;}
+.theme-swatch:hover{border-color:var(--border2);transform:scale(1.03);}
+.theme-swatch.active{border-color:var(--green);}
+.theme-preview{width:100%;height:100%;display:grid;grid-template-columns:1fr 3fr;}
+.theme-preview-sb{background:var(--p-sb,#111318);}
+.theme-preview-main{display:flex;flex-direction:column;gap:3px;padding:6px;background:var(--p-bg,#0d0f14);}
+.theme-preview-card{border-radius:3px;height:8px;background:var(--p-card,#161920);}
+.theme-preview-accent{height:4px;border-radius:2px;width:60%;background:var(--p-accent,#2ecc8a);}
+.theme-name{font-size:10px;font-weight:600;color:var(--muted);text-align:center;padding:4px 2px;background:var(--surface2);}
+/* S3 Color editor */
+.color-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;}
+.color-row{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);}
+.color-swatch{width:28px;height:28px;border-radius:6px;border:2px solid var(--border2);cursor:pointer;flex-shrink:0;}
+.color-label{font-size:12px;font-weight:500;color:var(--text);flex:1;}
+/* S4 Typography */
+.font-option{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:all 0.12s;margin-bottom:6px;}
+.font-option:hover{border-color:var(--border2);}
+.font-option.active{border-color:var(--green);background:rgba(46,204,138,0.05);}
+.font-option-name{font-size:13px;font-weight:600;color:var(--text);}
+.font-option-sample{font-size:11px;color:var(--muted);}
+/* S6 Profiles */
+.profile-card{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all 0.12s;margin-bottom:8px;}
+.profile-card:hover{border-color:var(--border2);}
+.profile-card.active{border-color:var(--green);background:rgba(46,204,138,0.05);}
+.profile-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;}
+/* S8 Category editor */
+.cat-editor-row{display:grid;grid-template-columns:32px 1fr 90px 70px 32px;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);}
+.cat-color-dot{width:20px;height:20px;border-radius:50%;border:2px solid var(--border2);cursor:pointer;flex-shrink:0;}
+/* S9 Live preview */
+.s-preview-box{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:8px;}
+/* Settings gear button in sidebar */
+.sb-settings-btn{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:8px;border:none;background:none;color:var(--muted);cursor:pointer;font-size:12.5px;font-weight:500;transition:all 0.12s;margin-bottom:4px;}
+.sb-settings-btn:hover{background:var(--surface2);color:var(--text);}
+/* Toggle switch */
+.s-toggle{position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0;}
+.s-toggle input{opacity:0;width:0;height:0;}
+.s-toggle-slider{position:absolute;inset:0;background:var(--surface3);border-radius:22px;cursor:pointer;transition:background 0.2s;}
+.s-toggle-slider::before{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;left:3px;top:3px;transition:transform 0.2s;}
+.s-toggle input:checked+.s-toggle-slider{background:var(--green);}
+.s-toggle input:checked+.s-toggle-slider::before{transform:translateX(18px);}
 </style>
 
 </head>
@@ -851,6 +913,10 @@ canvas.chart-interactive { cursor: crosshair; }
       <div class="sb-avatar">MD</div>
       <div><div class="sb-uname">Matt &amp; Dana</div><div class="sb-ulabel">Household</div></div>
     </div>
+    <button class="sb-settings-btn" onclick="openSettings()">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </button>
     <button class="sb-connect" onclick="openLinkHandler()">
       <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Connect bank
     </button>
@@ -5662,6 +5728,374 @@ function dpRenderDebtList(sorted){
   }).join('');
 }
 
+
+// ── SETTINGS (S1-S9) ─────────────────────────────────────────────────────────
+
+// S2: Built-in themes
+const THEMES = {
+  dark:       {name:'Dark',          bg:'#0d0f14', sb:'#111318', surface:'#161920', surface2:'#1c1f28', surface3:'#232734', text:'#e4e6f0', muted:'#8b8fa8', hint:'#484c65', green:'#2ecc8a', red:'#f05c5c', amber:'#f0a540', blue:'#5b8def', purple:'#a78bfa', cyan:'#38bdf8'},
+  light:      {name:'Light',         bg:'#f4f5f8', sb:'#ffffff', surface:'#ffffff', surface2:'#f0f1f5', surface3:'#e4e6ed', text:'#1a1d2e', muted:'#6b7080', hint:'#9ca3b0', green:'#16a34a', red:'#dc2626', amber:'#d97706', blue:'#2563eb', purple:'#7c3aed', cyan:'#0891b2'},
+  midnight:   {name:'Midnight Blue', bg:'#0a0e1a', sb:'#0d1220', surface:'#111827', surface2:'#1a2236', surface3:'#1e2a40', text:'#e0e8ff', muted:'#7080a8', hint:'#3a4a68', green:'#34d399', red:'#f87171', amber:'#fbbf24', blue:'#60a5fa', purple:'#a78bfa', cyan:'#38bdf8'},
+  forest:     {name:'Forest',        bg:'#0a110d', sb:'#0d1510', surface:'#121a14', surface2:'#182019', surface3:'#1e271f', text:'#d4ead8', muted:'#7a9b7e', hint:'#3d5c42', green:'#4ade80', red:'#f87171', amber:'#fbbf24', blue:'#60a5fa', purple:'#c084fc', cyan:'#34d399'},
+  rosegold:   {name:'Rose Gold',     bg:'#12090b', sb:'#1a0d10', surface:'#1f1214', surface2:'#261519', surface3:'#2d1b1f', text:'#f5dde2', muted:'#a0788080', hint:'#5a3a3e', green:'#a3e635', red:'#fb7185', amber:'#fbbf24', blue:'#60a5fa', purple:'#f0abfc', cyan:'#f9a8d4'},
+  slate:      {name:'Slate Pro',     bg:'#0f1117', sb:'#161b27', surface:'#1c2333', surface2:'#232d42', surface3:'#2a3552', text:'#e2e8f5', muted:'#7d8db0', hint:'#404e6a', green:'#22d3ee', red:'#f43f5e', amber:'#f59e0b', blue:'#818cf8', purple:'#a78bfa', cyan:'#22d3ee'},
+  solarized:  {name:'Solarized',     bg:'#002b36', sb:'#073642', surface:'#073642', surface2:'#0d4050', surface3:'#12505e', text:'#fdf6e3', muted:'#839496', hint:'#586e75', green:'#859900', red:'#dc322f', amber:'#b58900', blue:'#268bd2', purple:'#6c71c4', cyan:'#2aa198'},
+};
+
+let _currentTheme = 'dark';
+let _customColors = {};
+let _currentProfile = 'household';
+let _profiles = [
+  {id:'household', name:'Matt & Dana', label:'Household', initials:'MD', color:'#2ecc8a'},
+  {id:'matt',      name:'Matt',        label:'Personal',  initials:'M',  color:'#5b8def'},
+  {id:'dana',      name:'Dana',        label:'Personal',  initials:'D',  color:'#a78bfa'},
+];
+let _prefs = {currency:'USD', dateFormat:'MM/DD/YYYY', compactNums:false};
+let _chartPrefs = {};
+
+function openSettings() {
+  var m = gg('settingsModal'); if(!m) return;
+  m.classList.add('open');
+  loadSettingsState();
+  switchSettingsTab('themes');
+}
+function closeSettings() {
+  var m = gg('settingsModal'); if(m) m.classList.remove('open');
+}
+function switchSettingsTab(tab) {
+  document.querySelectorAll('#settingsTabRow .stab').forEach(function(b){
+    b.classList.toggle('active', b.textContent.toLowerCase().indexOf(tab) >= 0 || b.onclick.toString().indexOf(tab) >= 0);
+  });
+  document.querySelectorAll('.stab-panel').forEach(function(p){ p.style.display='none'; });
+  var p = gg('stab-'+tab); if(p) p.style.display='block';
+  if(tab==='themes')     renderThemeGrid();
+  if(tab==='colors')     renderColorEditor();
+  if(tab==='typography') renderTypography();
+  if(tab==='profile')    renderProfiles();
+  if(tab==='categories') renderCategoryEditor();
+  if(tab==='data')       renderChartPrefs();
+}
+
+// S2: Theme grid
+function renderThemeGrid() {
+  var grid = gg('themeGrid'); if(!grid) return;
+  grid.innerHTML = Object.entries(THEMES).map(function(e){
+    var id=e[0],th=e[1];
+    return '<div class="theme-swatch'+(id===_currentTheme?' active':'')+'" onclick="applyTheme(\''+id+'\')" title="'+th.name+'">'
+      +'<div class="theme-preview">'
+        +'<div class="theme-preview-sb" style="background:'+th.sb+'"></div>'
+        +'<div class="theme-preview-main" style="background:'+th.bg+'">'
+          +'<div class="theme-preview-card" style="background:'+th.surface+'"></div>'
+          +'<div class="theme-preview-accent" style="background:'+th.green+'"></div>'
+          +'<div class="theme-preview-card" style="background:'+th.surface2+'"></div>'
+        +'</div>'
+      +'</div>'
+      +'<div class="theme-name" style="background:'+th.sb+';color:'+th.muted+'">'+th.name+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function applyTheme(id) {
+  var th = THEMES[id]; if(!th) return;
+  _currentTheme = id;
+  var root = document.documentElement;
+  var map = {
+    '--bg':th.bg,'--sidebar':th.sb,'--surface':th.surface,'--surface2':th.surface2,'--surface3':th.surface3,
+    '--text':th.text,'--muted':th.muted,'--hint':th.hint,
+    '--green':th.green,'--red':th.red,'--amber':th.amber,'--blue':th.blue,'--purple':th.purple,'--cyan':th.cyan,
+    '--green-dim':'rgba('+hexToRgb(th.green)+',0.1)','--red-dim':'rgba('+hexToRgb(th.red)+',0.1)',
+    '--amber-dim':'rgba('+hexToRgb(th.amber)+',0.1)','--blue-dim':'rgba('+hexToRgb(th.blue)+',0.1)',
+    '--purple-dim':'rgba('+hexToRgb(th.purple)+',0.1)','--cyan-dim':'rgba('+hexToRgb(th.cyan)+',0.1)',
+  };
+  Object.entries(map).forEach(function(e){ root.style.setProperty(e[0],e[1]); });
+  // Light theme: flip border colors
+  if(id==='light'){
+    root.style.setProperty('--border','rgba(0,0,0,0.08)');
+    root.style.setProperty('--border2','rgba(0,0,0,0.15)');
+  } else {
+    root.style.setProperty('--border','rgba(255,255,255,0.06)');
+    root.style.setProperty('--border2','rgba(255,255,255,0.1)');
+  }
+  localStorage.setItem('mdf_theme', JSON.stringify({id:id, custom:_customColors}));
+  renderThemeGrid();
+}
+
+function hexToRgb(hex) {
+  hex = hex.replace('#','');
+  if(hex.length===3) hex=hex.split('').map(function(h){return h+h;}).join('');
+  var r=parseInt(hex.slice(0,2),16),g=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);
+  return r+','+g+','+b;
+}
+
+// S3: Color editor
+var _COLOR_DEFS = [
+  {key:'bg',      label:'Background',   var:'--bg',      group:'bg'},
+  {key:'sidebar', label:'Sidebar',      var:'--sidebar', group:'bg'},
+  {key:'surface', label:'Card surface', var:'--surface', group:'bg'},
+  {key:'surface2',label:'Input/row',    var:'--surface2',group:'bg'},
+  {key:'text',    label:'Primary text', var:'--text',    group:'text'},
+  {key:'muted',   label:'Muted text',   var:'--muted',   group:'text'},
+  {key:'green',   label:'Green',        var:'--green',   group:'accent'},
+  {key:'red',     label:'Red',          var:'--red',     group:'accent'},
+  {key:'amber',   label:'Amber',        var:'--amber',   group:'accent'},
+  {key:'blue',    label:'Blue',         var:'--blue',    group:'accent'},
+  {key:'purple',  label:'Purple',       var:'--purple',  group:'accent'},
+  {key:'cyan',    label:'Cyan',         var:'--cyan',    group:'accent'},
+];
+function renderColorEditor() {
+  ['bg','text','accent'].forEach(function(group) {
+    var el = gg('colors'+group.charAt(0).toUpperCase()+group.slice(1)); if(!el) return;
+    var defs = _COLOR_DEFS.filter(function(d){return d.group===group;});
+    el.innerHTML = defs.map(function(d){
+      var cur = getComputedStyle(document.documentElement).getPropertyValue(d.var).trim() || '#888';
+      return '<div class="color-row">'
+        +'<input type="color" class="color-swatch" id="cpick-'+d.key+'" value="'+rgbToHex(cur)+'" style="background:'+cur+'">'
+        +'<span class="color-label">'+d.label+'</span>'
+        +'</div>';
+    }).join('');
+  });
+}
+function rgbToHex(val) {
+  if(val.startsWith('#')) return val.slice(0,7);
+  var m=val.match(/\d+/g); if(!m||m.length<3) return '#888888';
+  return '#'+[m[0],m[1],m[2]].map(function(n){return parseInt(n).toString(16).padStart(2,'0');}).join('');
+}
+function applyCustomColors() {
+  _COLOR_DEFS.forEach(function(d){
+    var inp=gg('cpick-'+d.key); if(!inp) return;
+    document.documentElement.style.setProperty(d.var, inp.value);
+  });
+  localStorage.setItem('mdf_custom_colors', JSON.stringify(_customColors));
+  showToast('Colors applied!','success');
+}
+function resetCustomColors() {
+  applyTheme(_currentTheme);
+  renderColorEditor();
+}
+
+// S4: Typography
+var _FONTS = [
+  {id:'dm',     label:'DM Sans',     sample:'The quick brown fox',  css:"'DM Sans', sans-serif"},
+  {id:'inter',  label:'Inter',       sample:'The quick brown fox',  css:"'Inter', sans-serif"},
+  {id:'system', label:'System UI',   sample:'The quick brown fox',  css:"system-ui, -apple-system, sans-serif"},
+  {id:'roboto', label:'Roboto',      sample:'The quick brown fox',  css:"'Roboto', sans-serif"},
+];
+var _MONO_FONTS = [
+  {id:'dmmono',  label:'DM Mono',     css:"'DM Mono', monospace"},
+  {id:'jetmono', label:'JetBrains',   css:"'JetBrains Mono', monospace"},
+  {id:'fira',    label:'Fira Code',   css:"'Fira Code', monospace"},
+  {id:'sysmono', label:'System mono', css:"ui-monospace, monospace"},
+];
+var _currentFont = 'dm', _currentMono = 'dmmono';
+function renderTypography() {
+  var fo = gg('fontOptions'); if(fo) fo.innerHTML = _FONTS.map(function(f){
+    return '<div class="font-option'+(f.id===_currentFont?' active':'')+'" onclick="applyFont(\''+f.id+'\')" style="font-family:'+f.css+'">'
+      +'<div><div class="font-option-name">'+f.label+'</div><div class="font-option-sample" style="font-family:'+f.css+'">'+f.sample+' — $12,345.67</div></div>'
+      +'</div>';
+  }).join('');
+  var mf = gg('monoFontOptions'); if(mf) mf.innerHTML = _MONO_FONTS.map(function(f){
+    return '<div class="font-option'+(f.id===_currentMono?' active':'')+'" onclick="applyMonoFont(\''+f.id+'\')" style="font-family:'+f.css+'">'
+      +'<div><div class="font-option-name">'+f.label+'</div><div class="font-option-sample" style="font-family:'+f.css+'">$10,787.87 · 4.25% · 2026-06-15</div></div>'
+      +'</div>';
+  }).join('');
+  var sl=gg('fontSizeSlider'); if(sl){var fs=parseInt(getComputedStyle(document.documentElement).fontSize)||14;sl.value=fs;var lbl=gg('fontSizeLabel');if(lbl)lbl.textContent=fs+'px';}
+}
+function applyFont(id) {
+  var f = _FONTS.find(function(x){return x.id===id;}); if(!f) return;
+  _currentFont = id;
+  document.documentElement.style.setProperty('--font', f.css);
+  localStorage.setItem('mdf_font', id);
+  renderTypography();
+}
+function applyMonoFont(id) {
+  var f = _MONO_FONTS.find(function(x){return x.id===id;}); if(!f) return;
+  _currentMono = id;
+  document.documentElement.style.setProperty('--mono', f.css);
+  localStorage.setItem('mdf_mono_font', id);
+  renderTypography();
+}
+function applyFontSize(size) {
+  document.documentElement.style.fontSize = size+'px';
+  var lbl=gg('fontSizeLabel'); if(lbl) lbl.textContent=size+'px';
+  localStorage.setItem('mdf_font_size', size);
+}
+
+// S6: Profiles
+function renderProfiles() {
+  var el=gg('profileCards'); if(!el) return;
+  el.innerHTML = _profiles.map(function(p){
+    return '<div class="profile-card'+(p.id===_currentProfile?' active':'')+'" onclick="switchProfile(\''+p.id+'\')">'
+      +'<div class="profile-avatar" style="background:'+p.color+'33;color:'+p.color+'">'+p.initials+'</div>'
+      +'<div><div style="font-size:13.5px;font-weight:600;color:var(--text)">'+p.name+'</div>'
+      +'<div style="font-size:11.5px;color:var(--muted)">'+p.label+'</div></div>'
+      +(p.id===_currentProfile?'<span style="margin-left:auto;font-size:11px;color:var(--green);font-weight:700">ACTIVE</span>':'')
+      +'</div>';
+  }).join('');
+  var hn=gg('householdNameInput');
+  if(hn){ var p=_profiles.find(function(x){return x.id===_currentProfile;}); if(p) hn.value=p.name; }
+}
+function switchProfile(id) {
+  _currentProfile = id;
+  var p=_profiles.find(function(x){return x.id===id;});
+  if(p){
+    var sb=document.querySelector('.sb-uname'); if(sb) sb.textContent=p.name;
+    var sl=document.querySelector('.sb-ulabel'); if(sl) sl.textContent=p.label;
+    var av=document.querySelector('.sb-avatar'); if(av){ av.textContent=p.initials; av.style.background=p.color+'33'; av.style.color=p.color; }
+  }
+  localStorage.setItem('mdf_profile', id);
+  renderProfiles();
+  showToast('Switched to '+( p?p.name:'profile'),'success');
+}
+function applyHouseholdName(val) {
+  var p=_profiles.find(function(x){return x.id===_currentProfile;}); if(!p) return;
+  p.name=val;
+  var sb=document.querySelector('.sb-uname'); if(sb) sb.textContent=val;
+  localStorage.setItem('mdf_profiles', JSON.stringify(_profiles));
+}
+function addProfile() {
+  var name=prompt('Profile name:'); if(!name) return;
+  var id='profile_'+Date.now();
+  _profiles.push({id:id,name:name,label:'Personal',initials:name.slice(0,2).toUpperCase(),color:'#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0')});
+  localStorage.setItem('mdf_profiles', JSON.stringify(_profiles));
+  renderProfiles();
+}
+function applyPref(key,val) {
+  _prefs[key]=val; localStorage.setItem('mdf_prefs',JSON.stringify(_prefs));
+}
+
+// S8: Category editor
+function renderCategoryEditor() {
+  var cats=getUserCategories();
+  var el=gg('categoryEditorBody'); if(!el) return;
+  el.innerHTML='';
+  cats.forEach(function(cat,i){
+    var row=document.createElement('div');
+    row.style.cssText='display:grid;grid-template-columns:28px 1fr 90px 32px;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);';
+    row.innerHTML='<input type="color" value="'+cat.color+'" style="width:24px;height:24px;border-radius:50%;border:none;cursor:pointer;padding:0;background:none" id="ccat-color-'+i+'">'
+      +'<input type="text" value="'+cat.label+'" class="sel" style="height:28px;font-size:12px" id="ccat-label-'+i+'">'
+      +'<input type="text" value="'+(cat.keywords||[]).join(',')+'" class="sel" style="height:28px;font-size:11px" placeholder="keywords" id="ccat-kw-'+i+'">'
+      +'<button class="btn danger" onclick="deleteCategoryRow('+i+')" style="padding:3px 7px;font-size:11px">&times;</button>';
+    el.appendChild(row);
+  });
+}
+function addCategoryRow() {
+  var cats=getUserCategories();
+  cats.push({id:'cat_'+Date.now(),label:'New Category',color:'#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0'),keywords:[]});
+  localStorage.setItem('mdf_categories',JSON.stringify(cats));
+  renderCategoryEditor();
+}
+function deleteCategoryRow(i) {
+  var cats=getUserCategories(); cats.splice(i,1);
+  localStorage.setItem('mdf_categories',JSON.stringify(cats));
+  renderCategoryEditor();
+}
+function saveCategories() {
+  var cats=getUserCategories();
+  cats.forEach(function(cat,i){
+    var cl=gg('ccat-color-'+i),lb=gg('ccat-label-'+i),kw=gg('ccat-kw-'+i);
+    if(cl) cat.color=cl.value;
+    if(lb) cat.label=lb.value;
+    if(kw) cat.keywords=kw.value.split(',').map(function(s){return s.trim();}).filter(Boolean);
+  });
+  localStorage.setItem('mdf_categories',JSON.stringify(cats));
+  showToast('Categories saved!','success');
+  renderCategoryEditor();
+}
+
+// S5: Chart preferences
+var _CHART_PREFS = [
+  {id:'plChart',    label:'Income vs Spending', options:['Bar','Line','Area']},
+  {id:'nwChart',    label:'Net Worth Overview',  options:['Doughnut','Pie','Bar']},
+  {id:'zeroChart',  label:'Budget Allocation',   options:['Doughnut','Pie']},
+  {id:'cfMonthly',  label:'Cash Flow Monthly',   options:['Bar','Line','Area']},
+  {id:'billCat',    label:'Bills by Category',   options:['Doughnut','Pie','Bar']},
+];
+function renderChartPrefs() {
+  var el=gg('chartPrefRows'); if(!el) return;
+  el.innerHTML=_CHART_PREFS.map(function(p){
+    var cur=_chartPrefs[p.id]||p.options[0];
+    return '<div class="s-row">'
+      +'<div><div class="s-label">'+p.label+'</div></div>'
+      +'<select class="sel" style="height:28px;font-size:12px" onchange="_chartPrefs[\''+p.id+'\']=this.value;localStorage.setItem(\'mdf_chart_prefs\',JSON.stringify(_chartPrefs))">'
+      +p.options.map(function(o){return '<option value="'+o+'"'+(o===cur?' selected':'')+'>'+o+'</option>';}).join('')
+      +'</select></div>';
+  }).join('');
+}
+
+// S7: Export / import theme
+function exportTheme() {
+  var data={theme:_currentTheme,customColors:_customColors,font:_currentFont,monoFont:_currentMono,fontSize:parseInt(getComputedStyle(document.documentElement).fontSize)||14};
+  var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mdf_theme.json';a.click();
+  showToast('Theme exported!','success');
+}
+function importTheme(input) {
+  var file=input.files[0]; if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var d=JSON.parse(e.target.result);
+      if(d.theme&&THEMES[d.theme]) applyTheme(d.theme);
+      if(d.font) applyFont(d.font);
+      if(d.monoFont) applyMonoFont(d.monoFont);
+      if(d.fontSize) applyFontSize(d.fontSize);
+      showToast('Theme imported!','success');
+      renderThemeGrid();
+    }catch(err){showToast('Invalid theme file','error');}
+  };
+  reader.readAsText(file);
+}
+function resetTheme() {
+  applyTheme('dark');
+  showToast('Theme reset to Dark','success');
+}
+
+// Export/import all settings
+function exportAllSettings() {
+  var data={theme:_currentTheme,font:_currentFont,monoFont:_currentMono,prefs:_prefs,profiles:_profiles,chartPrefs:_chartPrefs,categories:getUserCategories()};
+  var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mdf_settings.json';a.click();
+  showToast('Settings exported!','success');
+}
+function importAllSettings(input) {
+  var file=input.files[0]; if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var d=JSON.parse(e.target.result);
+      if(d.theme) applyTheme(d.theme);
+      if(d.font) applyFont(d.font);
+      if(d.monoFont) applyMonoFont(d.monoFont);
+      if(d.categories) localStorage.setItem('mdf_categories',JSON.stringify(d.categories));
+      if(d.prefs) {_prefs=d.prefs;localStorage.setItem('mdf_prefs',JSON.stringify(d.prefs));}
+      if(d.profiles) {_profiles=d.profiles;localStorage.setItem('mdf_profiles',JSON.stringify(d.profiles));}
+      if(d.chartPrefs) {_chartPrefs=d.chartPrefs;localStorage.setItem('mdf_chart_prefs',JSON.stringify(d.chartPrefs));}
+      showToast('Settings imported!','success');
+    }catch(err){showToast('Invalid settings file','error');}
+  };
+  reader.readAsText(file);
+}
+function clearAllLocalData() {
+  if(!confirm('Clear ALL local data? This cannot be undone.')) return;
+  ['bills','incomeSources','nwAssets','nwLiab','zeroBuckets','mdf_categories'].forEach(function(k){localStorage.removeItem(k);});
+  showToast('Local data cleared. Refresh to reset.','success');
+}
+
+// Load saved settings on init
+function loadSettingsState() {
+  try {
+    var saved=JSON.parse(localStorage.getItem('mdf_theme')||'null');
+    if(saved&&saved.id&&THEMES[saved.id]) { _currentTheme=saved.id; applyTheme(saved.id); }
+    var savedFont=localStorage.getItem('mdf_font'); if(savedFont) applyFont(savedFont);
+    var savedMono=localStorage.getItem('mdf_mono_font'); if(savedMono) applyMonoFont(savedMono);
+    var savedSize=localStorage.getItem('mdf_font_size'); if(savedSize) applyFontSize(parseInt(savedSize));
+    var savedPrefs=JSON.parse(localStorage.getItem('mdf_prefs')||'null'); if(savedPrefs) _prefs=savedPrefs;
+    var savedProfs=JSON.parse(localStorage.getItem('mdf_profiles')||'null'); if(savedProfs) _profiles=savedProfs;
+    var savedCP=JSON.parse(localStorage.getItem('mdf_chart_prefs')||'null'); if(savedCP) _chartPrefs=savedCP;
+    var savedProfile=localStorage.getItem('mdf_profile'); if(savedProfile) { _currentProfile=savedProfile; switchProfile(savedProfile); }
+  } catch(e) {}
+}
+
 // ── EXPORTS ───────────────────────────────────────────────────────────────────
 function exportCSV(){
   if(!allTxns.length){showToast('No transactions','error');return;}
@@ -5701,6 +6135,8 @@ function showToast(msg,type='success'){const t=gg('toast');t.textContent=msg;t.c
 const plaidS=document.createElement('script');
 plaidS.src='https://cdn.plaid.com/link/v2/stable/link-initialize.js';
 document.head.appendChild(plaidS);
+loadSettingsState();
+loadSettingsState();
 checkAuthAndInit();
 
 </script>
@@ -5724,6 +6160,203 @@ checkAuthAndInit();
   <div style="display:flex;gap:6px">
     <button class="btn" style="flex:1" onclick="closeCatPopover()">Cancel</button>
     <button class="btn primary" style="flex:1" onclick="applyCatPopover()">Apply</button>
+  </div>
+</div>
+
+
+<!-- ── SETTINGS MODAL (S1-S9) ── -->
+<div id="settingsModal" class="settings-modal" onclick="if(event.target===this||event.target.classList.contains('settings-backdrop'))closeSettings()">
+  <div class="settings-backdrop"></div>
+  <div class="settings-panel">
+    <div class="settings-hdr">
+      <div>
+        <div class="settings-hdr-title">&#9881;&#65039; Settings</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Customize your experience</div>
+      </div>
+      <button onclick="closeSettings()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px;line-height:1">&times;</button>
+    </div>
+
+    <!-- Tab row -->
+    <div class="settings-tabs" id="settingsTabRow">
+      <button class="stab active" onclick="switchSettingsTab('themes')">&#127912; Themes</button>
+      <button class="stab" onclick="switchSettingsTab('colors')">&#127744; Colors</button>
+      <button class="stab" onclick="switchSettingsTab('typography')">&#65328; Typography</button>
+      <button class="stab" onclick="switchSettingsTab('profile')">&#128100; Profile</button>
+      <button class="stab" onclick="switchSettingsTab('categories')">&#127991; Categories</button>
+      <button class="stab" onclick="switchSettingsTab('data')">&#128190; Data</button>
+    </div>
+
+    <div class="settings-body">
+
+      <!-- S2: THEMES -->
+      <div id="stab-themes" class="stab-panel">
+        <div class="s-section">
+          <div class="s-section-title">Built-in themes</div>
+          <div class="theme-grid" id="themeGrid"></div>
+        </div>
+        <!-- S9: Live preview -->
+        <div class="s-section">
+          <div class="s-section-title">Live preview</div>
+          <div class="s-preview-box" id="themePreview">
+            <div style="display:flex;gap:10px;margin-bottom:10px">
+              <div style="width:60px;height:60px;border-radius:8px;background:var(--sidebar);border:1px solid var(--border)"></div>
+              <div style="flex:1">
+                <div style="height:12px;border-radius:3px;background:var(--surface2);margin-bottom:6px;width:70%"></div>
+                <div style="height:8px;border-radius:2px;background:var(--surface3);margin-bottom:4px;width:90%"></div>
+                <div style="height:8px;border-radius:2px;background:var(--surface3);width:60%"></div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <div style="flex:1;height:32px;border-radius:6px;background:var(--green);opacity:0.8"></div>
+              <div style="flex:1;height:32px;border-radius:6px;background:var(--red);opacity:0.8"></div>
+              <div style="flex:1;height:32px;border-radius:6px;background:var(--cyan);opacity:0.8"></div>
+              <div style="flex:1;height:32px;border-radius:6px;background:var(--amber);opacity:0.8"></div>
+            </div>
+          </div>
+        </div>
+        <!-- S7: Export/import -->
+        <div class="s-section">
+          <div class="s-section-title">Export / Import</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn" onclick="exportTheme()">&#8659; Export theme JSON</button>
+            <button class="btn" onclick="gg('themeImportFile').click()">&#8657; Import theme JSON</button>
+            <input type="file" id="themeImportFile" accept=".json" style="display:none" onchange="importTheme(this)">
+            <button class="btn" onclick="resetTheme()">&#8634; Reset to default</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- S3: COLORS -->
+      <div id="stab-colors" class="stab-panel" style="display:none">
+        <div class="s-section">
+          <div class="s-section-title">Background &amp; surfaces</div>
+          <div class="color-grid" id="colorsBg"></div>
+        </div>
+        <div class="s-section">
+          <div class="s-section-title">Text &amp; borders</div>
+          <div class="color-grid" id="colorsText"></div>
+        </div>
+        <div class="s-section">
+          <div class="s-section-title">Accent colors</div>
+          <div class="color-grid" id="colorsAccent"></div>
+        </div>
+        <div style="margin-top:12px">
+          <button class="btn" onclick="applyCustomColors()">&#10003; Apply colors</button>
+          <button class="btn" style="margin-left:8px" onclick="resetCustomColors()">&#8634; Reset</button>
+        </div>
+      </div>
+
+      <!-- S4: TYPOGRAPHY -->
+      <div id="stab-typography" class="stab-panel" style="display:none">
+        <div class="s-section">
+          <div class="s-section-title">Interface font</div>
+          <div id="fontOptions"></div>
+        </div>
+        <div class="s-section">
+          <div class="s-section-title">Font size</div>
+          <div class="s-row">
+            <div><div class="s-label">Base font size</div><div class="s-sub">Affects all text proportionally</div></div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <input type="range" id="fontSizeSlider" min="12" max="18" value="14" step="1" oninput="applyFontSize(this.value)" style="width:100px">
+              <span id="fontSizeLabel" class="mono" style="font-size:13px;font-weight:700;min-width:30px">14px</span>
+            </div>
+          </div>
+        </div>
+        <div class="s-section">
+          <div class="s-section-title">Number font</div>
+          <div id="monoFontOptions"></div>
+        </div>
+      </div>
+
+      <!-- S6: PROFILE -->
+      <div id="stab-profile" class="stab-panel" style="display:none">
+        <div class="s-section">
+          <div class="s-section-title">Active profile</div>
+          <div id="profileCards"></div>
+          <button class="btn" style="margin-top:10px" onclick="addProfile()">+ Add profile</button>
+        </div>
+        <div class="s-section">
+          <div class="s-section-title">Household name</div>
+          <div class="s-row">
+            <div><div class="s-label">Display name</div><div class="s-sub">Shown in sidebar</div></div>
+            <input type="text" id="householdNameInput" class="sel" style="width:160px;height:32px;font-size:13px" placeholder="Matt &amp; Dana" oninput="applyHouseholdName(this.value)">
+          </div>
+        </div>
+        <div class="s-section">
+          <div class="s-section-title">Preferences</div>
+          <div class="s-row">
+            <div><div class="s-label">Currency</div><div class="s-sub">Display format</div></div>
+            <select class="sel" id="currencySelect" onchange="applyPref('currency',this.value)" style="height:32px;font-size:13px">
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (&#8364;)</option>
+              <option value="GBP">GBP (&#163;)</option>
+              <option value="CAD">CAD (C$)</option>
+            </select>
+          </div>
+          <div class="s-row">
+            <div><div class="s-label">Date format</div><div class="s-sub">How dates are displayed</div></div>
+            <select class="sel" id="dateFormatSelect" onchange="applyPref('dateFormat',this.value)" style="height:32px;font-size:13px">
+              <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+              <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+              <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+            </select>
+          </div>
+          <div class="s-row">
+            <div><div class="s-label">Compact numbers</div><div class="s-sub">Show $10K instead of $10,000</div></div>
+            <label class="s-toggle"><input type="checkbox" id="compactNumToggle" onchange="applyPref('compactNums',this.checked)"><span class="s-toggle-slider"></span></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- S8: CATEGORIES -->
+      <div id="stab-categories" class="stab-panel" style="display:none">
+        <div class="s-section">
+          <div class="s-section-title" style="display:flex;align-items:center;justify-content:space-between">
+            Transaction categories
+            <button class="btn" onclick="addCategoryRow()" style="font-size:11px;padding:3px 10px">+ Add</button>
+          </div>
+          <div style="display:grid;grid-template-columns:28px 1fr 90px 32px;gap:6px;padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:4px">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Color</div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Label</div>
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Keyword</div>
+            <div></div>
+          </div>
+          <div id="categoryEditorBody"></div>
+          <button class="btn primary" style="margin-top:12px;width:100%" onclick="saveCategories()">&#10003; Save Categories</button>
+        </div>
+      </div>
+
+      <!-- S5 + DATA: Chart preferences & data management -->
+      <div id="stab-data" class="stab-panel" style="display:none">
+        <div class="s-section">
+          <div class="s-section-title">Chart preferences (S5)</div>
+          <div id="chartPrefRows"></div>
+        </div>
+        <div class="s-section">
+          <div class="s-section-title">Data management</div>
+          <div class="s-row">
+            <div><div class="s-label">Clear all local data</div><div class="s-sub">Removes bills, income, NW, budgets from this device</div></div>
+            <button class="btn danger" onclick="clearAllLocalData()">Clear data</button>
+          </div>
+          <div class="s-row">
+            <div><div class="s-label">Export all settings</div><div class="s-sub">Theme, categories, preferences as JSON</div></div>
+            <button class="btn" onclick="exportAllSettings()">&#8659; Export</button>
+          </div>
+          <div class="s-row">
+            <div><div class="s-label">Import settings</div><div class="s-sub">Restore from exported JSON</div></div>
+            <button class="btn" onclick="gg('settingsImportFile').click()">&#8657; Import</button>
+            <input type="file" id="settingsImportFile" accept=".json" style="display:none" onchange="importAllSettings(this)">
+          </div>
+        </div>
+        <div class="s-section">
+          <div class="s-section-title">App version</div>
+          <div class="s-row">
+            <div><div class="s-label">Matt &amp; Dana Finance</div><div class="s-sub" id="appVersionLabel">v2.0 · Built with &#10084; and Claude</div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
   </div>
 </div>
 
