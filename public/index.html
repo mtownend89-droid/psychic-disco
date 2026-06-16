@@ -4085,7 +4085,7 @@ function renderBillCatChart(){
   var el=gg('billCatChart');if(!el)return;
   if(BC.billCat)BC.billCat.destroy();
   BC.billCat=new Chart(el,{
-    type:'doughnut',
+    type:(function(){var t=(_chartPrefs['billCat']||'Doughnut').toLowerCase();return t==='pie'?'pie':t==='bar'?'bar':'doughnut';})(),
     data:{
       labels:entries.map(function(e){return CAT_L[e[0]]||e[0];}),
       datasets:[{
@@ -4503,7 +4503,7 @@ function renderZeroChart(){
   var el=gg('zeroChart');if(!el)return;
   var surfC=getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()||'#1a1d27';
   if(BC.zero)BC.zero.destroy();
-  BC.zero=new Chart(el,{type:'doughnut',data:{labels:labels,datasets:[{data:vals,backgroundColor:colors,borderWidth:2,borderColor:surfC}]},
+  BC.zero=new Chart(el,{type:(function(){var t=(_chartPrefs['zeroChart']||'Doughnut').toLowerCase();return t==='pie'?'pie':'doughnut';})(),data:{labels:labels,datasets:[{data:vals,backgroundColor:colors,borderWidth:2,borderColor:surfC}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'58%',events:['click'],
       plugins:{legend:{display:false},tooltip:{enabled:false}}}});
   var leg=gg('zeroChartLegend');
@@ -4858,7 +4858,7 @@ function renderCashFlow() {
     if (CFC.monthly) CFC.monthly.destroy();
     var mutC = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim() || '#666';
     CFC.monthly = new Chart(mc, {
-      type: 'bar',
+      type: (function(){var t=(_chartPrefs['cfMonthly']||'Bar').toLowerCase();return t==='line'||t==='area'?'line':'bar';})(),
       data: {
         labels: months.map(function(m){ return m.slice(5); }),
         datasets: [
@@ -5984,38 +5984,156 @@ function applyPref(key,val) {
 
 // S8: Category editor
 function renderCategoryEditor() {
-  var cats=getUserCategories();
-  var el=gg('categoryEditorBody'); if(!el) return;
-  el.innerHTML='';
-  // Render groups first, then their children, then ungrouped
-  var groups=cats.filter(function(c){return c.group;});
-  var ungrouped=cats.filter(function(c){return !c.group&&!c.parent;});
-  function makeRow(cat,i,indent){
-    var row=document.createElement('div');
-    row.style.cssText='display:grid;grid-template-columns:28px 1fr 90px 32px;gap:6px;align-items:center;padding:5px 0 5px '+(indent?'20px':'0')+';border-bottom:1px solid var(--border);';
-    row.innerHTML='<input type="color" value="'+(cat.color||'#888')+'" style="width:22px;height:22px;border-radius:50%;border:2px solid var(--border2);cursor:pointer;padding:0" id="ccat-color-'+i+'">'
-      +'<div style="display:flex;align-items:center;gap:6px">'
-        +(cat.group?'<span style="font-size:9px;font-weight:700;background:var(--surface3);color:var(--muted);padding:1px 5px;border-radius:3px;text-transform:uppercase;flex-shrink:0">GROUP</span>':'')
-        +(indent?'<span style="color:var(--hint);font-size:12px;flex-shrink:0">&#8627;</span>':'')
-        +'<input type="text" value="'+esc(cat.label)+'" class="sel" style="height:27px;font-size:12px;flex:1" id="ccat-label-'+i+'">'
-      +'</div>'
-      +'<input type="text" value="'+(cat.keywords||[]).join(',')+'" class="sel" style="height:27px;font-size:10.5px" placeholder="keywords" id="ccat-kw-'+i+'">'
-      +'<button class="btn danger" onclick="deleteCategoryRow('+i+')" style="padding:2px 7px;font-size:11px">&times;</button>';
-    el.appendChild(row);
-  }
+  var cats = getUserCategories();
+  var el = gg('categoryEditorBody'); if (!el) return;
+  el.innerHTML = '';
+
+  // Build the ordered list: groups with their children inlined
+  var ordered = [];
+  var groups = cats.filter(function(c){ return c.group; });
+  var ungrouped = cats.filter(function(c){ return !c.group && !c.parent; });
   groups.forEach(function(grp){
-    var gi=cats.indexOf(grp);
-    makeRow(grp,gi,false);
-    cats.filter(function(ch){return ch.parent===grp.id;}).forEach(function(ch){
-      makeRow(ch,cats.indexOf(ch),true);
+    ordered.push({cat:grp, indent:false, isGroup:true});
+    cats.filter(function(ch){ return ch.parent === grp.id; }).forEach(function(ch){
+      ordered.push({cat:ch, indent:true, isGroup:false});
     });
   });
-  ungrouped.forEach(function(cat){makeRow(cat,cats.indexOf(cat),false);});
+  ungrouped.forEach(function(cat){ ordered.push({cat:cat, indent:false, isGroup:false}); });
+
+  var dragSrcIdx = null;
+
+  ordered.forEach(function(item, visIdx) {
+    var cat = item.cat;
+    var realIdx = cats.indexOf(cat);
+    var row = document.createElement('div');
+    row.dataset.realIdx = realIdx;
+    row.dataset.visIdx  = visIdx;
+    row.dataset.isGroup = item.isGroup ? '1' : '0';
+    row.draggable = true;
+    row.style.cssText = 'display:grid;grid-template-columns:18px 28px 1fr 90px 32px;gap:6px;align-items:center;'
+      + 'padding:5px 0 5px ' + (item.indent ? '28px' : '0') + ';border-bottom:1px solid var(--border);'
+      + 'cursor:grab;transition:opacity 0.15s,background 0.1s;';
+    row.setAttribute('data-id', cat.id);
+
+    // Drag handle
+    var handle = '<span style="color:var(--hint);font-size:12px;cursor:grab;user-select:none">&#8942;&#8942;</span>';
+    var colorPick = '<input type="color" value="'+(cat.color||'#888888')+'" style="width:22px;height:22px;border-radius:50%;border:2px solid var(--border2);cursor:pointer;padding:0;flex-shrink:0" id="ccat-color-'+realIdx+'">';
+    var label = '<div style="display:flex;align-items:center;gap:6px">'
+      + (item.isGroup ? '<span style="font-size:9px;font-weight:700;background:var(--surface3);color:var(--muted);padding:1px 5px;border-radius:3px;text-transform:uppercase;flex-shrink:0;letter-spacing:.04em">GROUP</span>' : '')
+      + (item.indent ? '<span style="color:var(--hint);font-size:13px;flex-shrink:0">&#8627;</span>' : '')
+      + '<input type="text" value="'+esc(cat.label)+'" class="sel" style="height:27px;font-size:12px;flex:1" id="ccat-label-'+realIdx+'">'
+      + '</div>';
+    var kw = '<input type="text" value="'+(cat.keywords||[]).join(',')+'" class="sel" style="height:27px;font-size:10.5px" placeholder="keywords" id="ccat-kw-'+realIdx+'">';
+    var del = '<button class="btn danger" onclick="deleteCategoryRow('+realIdx+')" style="padding:2px 7px;font-size:11px">&times;</button>';
+    row.innerHTML = handle + colorPick + label + kw + del;
+
+    // ── Drag events ──
+    row.addEventListener('dragstart', function(e){
+      dragSrcIdx = visIdx;
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(function(){ row.style.opacity='0.4'; }, 0);
+    });
+    row.addEventListener('dragend', function(){
+      row.style.opacity='1';
+      el.querySelectorAll('[data-vis]').forEach(function(r){ r.style.background=''; r.style.borderTop=''; });
+    });
+    row.addEventListener('dragover', function(e){
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      el.querySelectorAll('[data-id]').forEach(function(r){ r.style.borderTop=''; r.style.background=''; });
+      row.style.borderTop = '2px solid var(--green)';
+      // If dragging onto a GROUP row, highlight it as a drop zone
+      if (row.dataset.isGroup === '1') row.style.background = 'rgba(46,204,138,0.06)';
+    });
+    row.addEventListener('dragleave', function(){
+      row.style.borderTop=''; row.style.background='';
+    });
+    row.addEventListener('drop', function(e){
+      e.preventDefault();
+      row.style.borderTop=''; row.style.background='';
+      if (dragSrcIdx === null || dragSrcIdx === visIdx) return;
+      var srcItem = ordered[dragSrcIdx];
+      var tgtItem = ordered[visIdx];
+      var srcCat  = srcItem.cat;
+      var tgtCat  = tgtItem.cat;
+
+      // Dropping ONTO a GROUP = make it a child
+      if (tgtItem.isGroup && !srcItem.isGroup) {
+        srcCat.parent = tgtCat.id;
+      } else {
+        // Dropping beside = adopt same parent (or ungroup)
+        srcCat.parent = tgtCat.parent || undefined;
+        // Reorder in cats array: move srcCat after tgtCat
+        var srcRealIdx = cats.indexOf(srcCat);
+        var tgtRealIdx = cats.indexOf(tgtCat);
+        cats.splice(srcRealIdx, 1);
+        var newTgt = cats.indexOf(tgtCat);
+        cats.splice(newTgt + 1, 0, srcCat);
+      }
+      localStorage.setItem('mdf_categories', JSON.stringify(cats));
+      renderCategoryEditor();
+    });
+
+    el.appendChild(row);
+
+    // Drop zone AFTER each group (before its children) — a thin visual target
+    if (item.isGroup) {
+      var zone = document.createElement('div');
+      zone.style.cssText = 'height:4px;margin:0 0 0 28px;border-radius:2px;transition:background 0.1s;';
+      zone.dataset.dropzone = cat.id;
+      zone.addEventListener('dragover', function(e){
+        e.preventDefault(); zone.style.background='var(--green)';
+      });
+      zone.addEventListener('dragleave', function(){ zone.style.background=''; });
+      zone.addEventListener('drop', function(e){
+        e.preventDefault(); zone.style.background='';
+        if (dragSrcIdx === null) return;
+        var srcCat2 = ordered[dragSrcIdx].cat;
+        srcCat2.parent = cat.id;
+        // Move to just after the group in cats array
+        var si = cats.indexOf(srcCat2);
+        cats.splice(si, 1);
+        var gi = cats.indexOf(cat);
+        cats.splice(gi + 1, 0, srcCat2);
+        localStorage.setItem('mdf_categories', JSON.stringify(cats));
+        renderCategoryEditor();
+      });
+      el.appendChild(zone);
+    }
+  });
+
+  // Ungrouped drop zone at very bottom
+  var bottomZone = document.createElement('div');
+  bottomZone.style.cssText = 'height:24px;margin-top:6px;border:1.5px dashed var(--border2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--hint);transition:all 0.12s;';
+  bottomZone.textContent = 'Drop here to ungroup';
+  bottomZone.addEventListener('dragover', function(e){ e.preventDefault(); bottomZone.style.borderColor='var(--green)'; bottomZone.style.color='var(--green)'; });
+  bottomZone.addEventListener('dragleave', function(){ bottomZone.style.borderColor='var(--border2)'; bottomZone.style.color='var(--hint)'; });
+  bottomZone.addEventListener('drop', function(e){
+    e.preventDefault(); bottomZone.style.borderColor='var(--border2)'; bottomZone.style.color='var(--hint)';
+    if (dragSrcIdx === null) return;
+    var srcCat3 = ordered[dragSrcIdx].cat;
+    delete srcCat3.parent;
+    localStorage.setItem('mdf_categories', JSON.stringify(cats));
+    renderCategoryEditor();
+  });
+  el.appendChild(bottomZone);
 }
+
 function addCategoryRow() {
-  var cats=getUserCategories();
-  cats.push({id:'cat_'+Date.now(),label:'New Category',color:'#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0'),keywords:[]});
-  localStorage.setItem('mdf_categories',JSON.stringify(cats));
+  var cats = getUserCategories();
+  var groups = cats.filter(function(c){ return c.group; });
+  var parentId = '';
+  if (groups.length) {
+    var opts = ['(No group — ungrouped)'].concat(groups.map(function(g){ return g.label; }));
+    var choice = prompt('Add to group?\n\n' + opts.map(function(o,i){ return i+'. '+o; }).join('\n') + '\n\nEnter number:');
+    if (choice === null) return;
+    var idx = parseInt(choice);
+    if (idx > 0 && groups[idx-1]) parentId = groups[idx-1].id;
+  }
+  cats.push({id:'cat_'+Date.now(), label:'New Category',
+    color:'#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0'),
+    keywords:[], parent: parentId||undefined});
+  localStorage.setItem('mdf_categories', JSON.stringify(cats));
   renderCategoryEditor();
 }
 function addCategoryGroup() {
@@ -6044,23 +6162,36 @@ function saveCategories() {
 
 // S5: Chart preferences
 var _CHART_PREFS = [
-  {id:'plChart',    label:'Income vs Spending', options:['Bar','Line','Area']},
-  {id:'nwChart',    label:'Net Worth Overview',  options:['Doughnut','Pie','Bar']},
-  {id:'zeroChart',  label:'Budget Allocation',   options:['Doughnut','Pie']},
-  {id:'cfMonthly',  label:'Cash Flow Monthly',   options:['Bar','Line','Area']},
-  {id:'billCat',    label:'Bills by Category',   options:['Doughnut','Pie','Bar']},
+  {id:'plChart',    label:'Income vs Spending', canvas:'plChart',       options:['Bar','Line','Area']},
+  {id:'nwChart',    label:'Net Worth Overview',  canvas:'nwChart',       options:['Doughnut','Pie','Bar']},
+  {id:'zeroChart',  label:'Budget Allocation',   canvas:'zeroChart',     options:['Doughnut','Pie']},
+  {id:'cfMonthly',  label:'Cash Flow Monthly',   canvas:'cfMonthlyChart',options:['Bar','Line','Area']},
+  {id:'billCat',    label:'Bills by Category',   canvas:'billCatChart',  options:['Doughnut','Pie','Bar']},
 ];
 function renderChartPrefs() {
   var el=gg('chartPrefRows'); if(!el) return;
   el.innerHTML=_CHART_PREFS.map(function(p){
     var cur=_chartPrefs[p.id]||p.options[0];
     return '<div class="s-row">'
-      +'<div><div class="s-label">'+p.label+'</div></div>'
-      +'<select class="sel" style="height:28px;font-size:12px" onchange="_chartPrefs[\''+p.id+'\']=this.value;localStorage.setItem(\'mdf_chart_prefs\',JSON.stringify(_chartPrefs))">'
+      +'<div><div class="s-label">'+p.label+'</div><div class="s-sub">Canvas: '+p.canvas+'</div></div>'
+      +'<select class="sel" style="height:28px;font-size:12px" onchange="applyChartPref(\''+p.id+'\',this.value)">'
       +p.options.map(function(o){return '<option value="'+o+'"'+(o===cur?' selected':'')+'>'+o+'</option>';}).join('')
       +'</select></div>';
   }).join('');
 }
+
+function applyChartPref(chartId, type) {
+  _chartPrefs[chartId] = type;
+  localStorage.setItem('mdf_chart_prefs', JSON.stringify(_chartPrefs));
+  // Re-render the relevant chart immediately
+  if (chartId === 'plChart')   { if(typeof renderPLChart==='function') renderPLChart(); }
+  if (chartId === 'nwChart')   { var ta=nwAssets.reduce(function(s,a){return s+a.value;},0),tl=nwLiab.reduce(function(s,l){return s+l.value;},0); renderNWCharts(ta,tl); }
+  if (chartId === 'zeroChart') { if(typeof renderZeroChart==='function') renderZeroChart(); }
+  if (chartId === 'cfMonthly') { if(typeof renderCashFlow==='function') renderCashFlow(); }
+  if (chartId === 'billCat')   { if(typeof renderBillCatChart==='function') renderBillCatChart(); }
+  showToast('Chart updated \u2014 '+chartId+' \u2192 '+type,'success');
+}
+
 
 // S7: Export / import theme
 function exportTheme() {
