@@ -4125,36 +4125,85 @@ const saveNW=()=>{try{localStorage.setItem('nwAssets',JSON.stringify(nwAssets));
 // ── PLAID ─────────────────────────────────────────────────────────────────────
 async function openLinkHandler(){
   try{
+    // Step 1: get link token
+    sbLog('Plaid: requesting link token...');
     const linkRes=await fetch('/api/create_link_token',{method:'POST'});
-    if(!linkRes.ok){const err=await linkRes.json().catch(()=>({}));showToast('Link token failed: '+(err.error||linkRes.status),'error');return;}
-    const {link_token}=await linkRes.json();
-    if(!link_token){showToast('No link token returned from server','error');return;}
+    const linkStatus=linkRes.status;
+    if(!linkRes.ok){
+      const err=await linkRes.json().catch(()=>({}));
+      const msg='Link token failed ('+linkStatus+'): '+(err.error||'unknown');
+      sbLog('ERROR: '+msg);
+      showToast(msg,'error');
+      return;
+    }
+    const linkData=await linkRes.json();
+    const link_token=linkData.link_token;
+    if(!link_token){
+      sbLog('ERROR: no link_token in response: '+JSON.stringify(linkData));
+      showToast('No link token returned','error');
+      return;
+    }
+    sbLog('Link token received. Opening Plaid Link...');
     const handler=Plaid.create({token:link_token,
       onSuccess:async(pub,meta)=>{
         const inst=meta.institution?.name||'Bank';
+        sbLog('Plaid onSuccess for: '+inst+' (pub token: '+pub.slice(0,12)+'...)');
         try{
+          // Step 2: exchange public token
+          sbLog('Exchanging token with server...');
+          const tok=authToken();
+          sbLog('Auth token present: '+(tok?'YES ('+tok.length+' chars)':'NO — not logged in?'));
           const xRes=await fetch('/api/exchange_token',{
             method:'POST',
-            headers:{'Content-Type':'application/json','Authorization':'Bearer '+authToken()},
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
             body:JSON.stringify({public_token:pub,institution_name:inst})
           });
+          sbLog('Exchange response status: '+xRes.status);
           const res=await xRes.json();
+          sbLog('Exchange response: '+JSON.stringify(res));
           if(res.error){showToast('Exchange failed: '+res.error,'error');return;}
           showToast(inst+' connected! Loading data...','success');
-          await refreshAll();
+          sbLog('Loading accounts and transactions...');
+          // Step 3: reload data
+          await loadAccounts();
+          await loadTransactions();
+          sbLog('allAccts.length = '+allAccts.length);
+          sbLog('allTxns.length  = '+allTxns.length);
           showDashboard();
-        }catch(ex){showToast('Exchange error: '+ex.message,'error');}
+          sbLog('Done. connectScreen hidden, dashboard shown.');
+        }catch(ex){
+          sbLog('ERROR in onSuccess: '+ex.message);
+          showToast('Exchange error: '+ex.message,'error');
+        }
       },
       onExit:(err,meta)=>{
-        if(err){showToast('Plaid Link: '+err.error_message,'error');}
-        console.log('Plaid exit:',err,meta);
+        if(err){
+          sbLog('Plaid onExit error: '+JSON.stringify(err));
+          showToast('Plaid Link: '+err.error_message,'error');
+        } else {
+          sbLog('Plaid Link closed by user (no error).');
+        }
       }
     });
     handler.open();
   }catch(e){
-    console.error('openLinkHandler error:',e);
+    sbLog('FATAL in openLinkHandler: '+e.message);
     showToast('Failed to open Plaid Link: '+e.message,'error');
   }
+}
+
+// ── Debug log helper (shown in connect screen + console) ─────────────────────
+function sbLog(msg){
+  console.log('[Plaid]', msg);
+  var el=gg('plaidDebugLog');
+  if(!el){
+    el=document.createElement('pre');
+    el.id='plaidDebugLog';
+    el.style.cssText='background:rgba(0,0,0,0.5);color:#3dda91;font-family:monospace;font-size:10px;padding:12px;border-radius:8px;max-height:220px;overflow-y:auto;text-align:left;margin-top:16px;width:90%;max-width:600px;white-space:pre-wrap;word-break:break-all;';
+    var cs=gg('connectScreen');if(cs)cs.appendChild(el);
+  }
+  el.textContent+='['+new Date().toLocaleTimeString()+']: '+msg+'\n';
+  el.scrollTop=el.scrollHeight;
 }
 function showDashboard(){gg('connectScreen').style.display='none';showPage('dashboard');}
 async function refreshAll(){
