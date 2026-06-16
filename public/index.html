@@ -1034,6 +1034,18 @@ canvas.chart-interactive { cursor: crosshair; }
 .dh-label:hover{color:var(--text) !important;text-decoration:underline dotted var(--border2);}
 .dh-label:focus{outline:none;color:var(--text) !important;border-bottom:1px solid var(--green);padding-bottom:1px;}
 
+
+/* Editable nav + tab labels */
+.nav-label{cursor:pointer;transition:color .12s;}
+.nav-label:hover{color:var(--text) !important;}
+.nav-label[contenteditable="true"]{outline:none;border-bottom:1px solid var(--green);color:var(--text) !important;}
+.tab-label{cursor:pointer;}
+.tab-label:hover{opacity:.85;}
+.tab-label[contenteditable="true"]{outline:none;border-bottom:1px solid var(--green);}
+/* Financial Health compact grid */
+#dashHealthPanel > div:nth-child(even){border-right:none;}
+#dashHealthPanel > div:nth-last-child(-n+2){border-bottom:none;}
+
 </style>
 
   <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
@@ -1083,23 +1095,23 @@ canvas.chart-interactive { cursor: crosshair; }
   </div>
   <div class="sb-nav">
     <button class="nav-btn active" onclick="showPage('dashboard')">
-      <span class="nav-ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>Dashboard
+      <span class="nav-ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><span class="nav-label" data-navpage="dashboard">Dashboard</span>
     </button>
     <button class="nav-btn" onclick="showPage('transactions')">
-      <span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span>Transactions
+      <span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span><span class="nav-label" data-navpage="transactions">Transactions</span>
     </button>
     <button class="nav-btn" onclick="showPage('expenses')">
-      <span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span>Budget &amp; Bills
+      <span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></span><span class="nav-label" data-navpage="expenses">Budget &amp; Bills</span>
     </button>
     <button class="nav-btn" onclick="showPage('networth')">
-      <span class="nav-ic"><svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></span>Net Worth
+      <span class="nav-ic"><svg viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></span><span class="nav-label" data-navpage="networth">Net Worth</span>
     </button>
 
     <button class="nav-btn phone-hide" onclick="showPage('playground')">
-      <span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"/><path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/><path d="M9.5 14c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5S8 21.33 8 20.5v-5c0-.83.67-1.5 1.5-1.5z"/><path d="M3.5 14H5v1.5c0 .83-.67 1.5-1.5 1.5S2 16.33 2 15.5 2.67 14 3.5 14z"/><path d="M14 14.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-5c-.83 0-1.5-.67-1.5-1.5z"/><path d="M15.5 9H14V7.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/><path d="M10 9.5C10 8.67 9.33 8 8.5 8h-5C2.67 8 2 8.67 2 9.5S2.67 11 3.5 11h5c.83 0 1.5-.67 1.5-1.5z"/><path d="M8.5 15H10v1.5c0 .83-.67 1.5-1.5 1.5S7 17.33 7 16.5 7.67 15 8.5 15z"/></svg></span>The Playground
+      <span class="nav-ic"><svg viewBox="0 0 24 24"><path d="M14.5 10c-.83 0-1.5-.67-1.5-1.5v-5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5z"/><path d="M20.5 10H19V8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/><path d="M9.5 14c.83 0 1.5.67 1.5 1.5v5c0 .83-.67 1.5-1.5 1.5S8 21.33 8 20.5v-5c0-.83.67-1.5 1.5-1.5z"/><path d="M3.5 14H5v1.5c0 .83-.67 1.5-1.5 1.5S2 16.33 2 15.5 2.67 14 3.5 14z"/><path d="M14 14.5c0-.83.67-1.5 1.5-1.5h5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-5c-.83 0-1.5-.67-1.5-1.5z"/><path d="M15.5 9H14V7.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/><path d="M10 9.5C10 8.67 9.33 8 8.5 8h-5C2.67 8 2 8.67 2 9.5S2.67 11 3.5 11h5c.83 0 1.5-.67 1.5-1.5z"/><path d="M8.5 15H10v1.5c0 .83-.67 1.5-1.5 1.5S7 17.33 7 16.5 7.67 15 8.5 15z"/></svg></span><span class="nav-label" data-navpage="playground">The Playground</span>
     </button>
     <button class="nav-btn phone-hide" onclick="showPage('sandbox')">
-      <span class="nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>Sandbox
+      <span class="nav-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span><span class="nav-label" data-navpage="sandbox">Sandbox</span>
     </button>
     <div class="sb-section">Reports</div>
   </div>
@@ -1295,6 +1307,18 @@ canvas.chart-interactive { cursor: crosshair; }
           </div>
         </div>
 
+        <!-- ── FINANCIAL HEALTH ── -->
+        <div class="drag-section" data-id="fin-health">
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg></div><span class="dh-label">&#9889; Financial Health</span></div>
+          <div class="card" style="padding:0;overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px 8px;border-bottom:1px solid var(--border)">
+              <div class="card-title" style="margin-bottom:0">&#9889; Financial Health</div>
+              <span id="dashFHScore" style="font-size:11px;font-weight:700;font-family:var(--mono)"></span>
+            </div>
+            <div id="dashHealthPanel" style="display:grid;grid-template-columns:1fr 1fr;gap:0"></div>
+          </div>
+        </div>
+
         <!-- ── ACTION PLAN PANEL (slides in when an item is clicked) ── -->
 
         <!-- ── D4: Account Chips ── -->
@@ -1373,11 +1397,11 @@ canvas.chart-interactive { cursor: crosshair; }
         <div class="widget w-amber"><div class="wlabel">Zero-Budget Gap</div><div class="wvalue amber" id="bUnalloc">—</div><div class="wsub">unallocated</div></div>
       </div>
       <div class="tab-row" id="expTabRow">
-        <button class="tab-btn active" onclick="switchExpTab('bills')">Bills &amp; Expenses</button>
-        <button class="tab-btn" onclick="switchExpTab('calendar')">P&amp;L Calendar</button>
-        <button class="tab-btn" onclick="switchExpTab('zero')">Zero Budget</button>
-        <button class="tab-btn" onclick="switchExpTab('income')">Income Sources</button>
-        <button class="tab-btn" onclick="switchExpTab('cashflow')">Cash Flow</button>
+        <button class="tab-btn active" onclick="switchExpTab('bills')"><span class="tab-label" data-exptab="bills">Bills &amp; Expenses</span></button>
+        <button class="tab-btn" onclick="switchExpTab('calendar')"><span class="tab-label" data-exptab="calendar">P&amp;L Calendar</span></button>
+        <button class="tab-btn" onclick="switchExpTab('zero')"><span class="tab-label" data-exptab="zero">Zero Budget</span></button>
+        <button class="tab-btn" onclick="switchExpTab('income')"><span class="tab-label" data-exptab="income">Income Sources</span></button>
+        <button class="tab-btn" onclick="switchExpTab('cashflow')"><span class="tab-label" data-exptab="cashflow">Cash Flow</span></button>
       </div>
 
       <!-- BILLS PANEL -->
@@ -1727,7 +1751,7 @@ canvas.chart-interactive { cursor: crosshair; }
               <div style="position:relative;height:180px;padding:12px"><canvas id="nwAllocChart"></canvas></div>
               <div class="chart-widget-legend" id="nwAllocLegend" style="border-top:1px solid var(--border);padding:10px 16px 12px"></div>
             </div>
-            <div class="card" style="padding:16px"><div class="card-title">Financial Health</div><div id="nwHealthPanel"></div></div>
+            
           </div>
         </div>
       </div>
@@ -4222,6 +4246,7 @@ function showPage(page){
   if(window.innerWidth<=900&&typeof closeSidebar!=='undefined')closeSidebar();
   setTimeout(wrapTablesForMobile,120);
   setTimeout(initEditableLabels,160);
+  setTimeout(initEditableNavLabels,180);
   if(page==='retirement')calcAll();
   if(page==='expenses'){syncZeroBucketsFromCategories();renderBillsTab();updateBudgetMetrics();initBillMonthSelectors();}
   if(page==='playground'){fdRender();}
@@ -4236,6 +4261,7 @@ async function init(){
   ['dashContainer','expContainer','retContainer'].forEach(id=>initDrag(gg(id)));
   setTimeout(renderCharts,200);
   setTimeout(initEditableLabels,400);
+  setTimeout(initEditableNavLabels,450);
   setTimeout(initEditableLabels,300);
   setTimeout(renderSWOT,350);
   ['dashboard','expenses','retirement'].forEach(loadSO);
@@ -4513,6 +4539,7 @@ function updateSpendMetrics(){
   const tc=gg('mTxnCount');if(tc)tc.textContent=rec.length;
 }
 function renderCharts(){
+  renderDashHealth();
   const cut = getChartCutDate(_chartRange);
   const rec = allTxns.filter(t=>t.date>=cut&&t.amount>0);
   const byCat={};
@@ -5404,7 +5431,7 @@ function renderNWCharts(totA,totL){
   if(allocLeg){var allocTot=es.reduce(function(s,e){return s+e[1];},0);allocLeg.innerHTML=es.map(function(e,i){var pct=allocTot>0?Math.round(e[1]/allocTot*100):0;return '<div class="cwl-item"><div class="cwl-dot" style="background:'+colors[i]+'"></div><span class="cwl-label">'+e[0]+'</span><span style="font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--text);margin-right:4px">'+fmtM(e[1])+'</span><span class="cwl-pct">'+pct+'%</span></div>';}).join('');}
 }
 function renderNWHealth(totA,totL,nw){
-  const el=gg('nwHealthPanel');if(!el)return;
+  const el=gg('nwHealthPanel')||gg('dashHealthPanel');if(!el)return;
   const dta=totA>0?Math.round(totL/totA*100):0;
   const equity=nwAssets.filter(a=>a.cat==='Real Estate').reduce((s,a)=>s+a.value,0)-nwLiab.filter(l=>l.cat==='Mortgage'||l.cat==='HELOC').reduce((s,l)=>s+l.value,0);
   const ccD=bills.filter(b=>b.cat==='CC').reduce((s,b)=>s+Math.abs(b.bal||0),0);
@@ -7653,6 +7680,106 @@ function initEditableLabels() {
       }
     });
     el.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+  });
+}
+
+// ── Dashboard Financial Health widget ────────────────────────────────────────
+function renderDashHealth() {
+  var el = gg('dashHealthPanel'); if (!el) return;
+  var totA = nwAssets.reduce(function(s,a){return s+a.value;},0);
+  var totL = nwLiab.reduce(function(s,l){return s+l.value;},0);
+  var nw   = totA - totL;
+  var dta  = totA>0 ? Math.round(totL/totA*100) : 0;
+  var equity = nwAssets.filter(function(a){return a.cat==='Real Estate';}).reduce(function(s,a){return s+a.value;},0)
+             - nwLiab.filter(function(l){return l.cat==='Mortgage'||l.cat==='HELOC';}).reduce(function(s,l){return s+l.value;},0);
+  var ccD  = bills.filter(function(b){return b.cat==='CC';}).reduce(function(s,b){return s+Math.abs(b.bal||0);},0);
+  var dti  = monthlyIncome()>0 ? Math.round(monthlyBills()/monthlyIncome()*100) : 0;
+  var sc   = {good:'var(--green)',warn:'var(--amber)',danger:'var(--red)'};
+  var inds = [
+    {l:'Net Worth',       v:fmtM(nw),     st:nw>0?'good':nw>-50000?'warn':'danger',   n:nw>=0?'Positive ✓':'Build equity'},
+    {l:'Debt/Asset',      v:dta+'%',      st:dta<50?'good':dta<80?'warn':'danger',     n:dta<50?'Healthy ✓':'Getting high'},
+    {l:'Home Equity',     v:fmtM(equity), st:equity>0?'good':'warn',                   n:equity>0?'Positive ✓':'Underwater'},
+    {l:'CC Debt',         v:fmtM(ccD),    st:ccD<5000?'good':ccD<20000?'warn':'danger',n:ccD<5000?'Managed ✓':'Track closely'},
+    {l:'Debt/Income',     v:dti+'%',      st:dti<36?'good':dti<50?'warn':'danger',     n:dti<36?'Healthy ✓':'Approaching limit'},
+  ];
+  // Score: count of 'good' indicators
+  var goodCount = inds.filter(function(i){return i.st==='good';}).length;
+  var scoreEl = gg('dashFHScore');
+  if (scoreEl) {
+    scoreEl.textContent = goodCount+'/'+inds.length+' healthy';
+    scoreEl.style.color = goodCount>=4?'var(--green)':goodCount>=2?'var(--amber)':'var(--red)';
+  }
+  el.innerHTML = inds.map(function(ind) {
+    return '<div style="padding:9px 14px;border-bottom:1px solid var(--border);border-right:1px solid var(--border)">'
+      +'<div style="font-size:10.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">'+ind.l+'</div>'
+      +'<div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px">'
+        +'<div style="font-family:var(--mono);font-size:14px;font-weight:700;color:'+sc[ind.st]+'">'+ind.v+'</div>'
+        +'<div style="font-size:10px;color:'+sc[ind.st]+';text-align:right;line-height:1.3">'+ind.n+'</div>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
+// ── Editable sidebar nav labels ───────────────────────────────────────────────
+var _navLabels = {};
+try { _navLabels = JSON.parse(localStorage.getItem('mdf_nav_labels')||'{}'); } catch(e){}
+
+function initEditableNavLabels() {
+  // Sidebar nav labels
+  document.querySelectorAll('.nav-label[data-navpage]').forEach(function(el) {
+    if (el.dataset.editable) return;
+    el.dataset.editable = '1';
+    var page = el.dataset.navpage;
+    if (_navLabels[page]) el.textContent = _navLabels[page];
+    el.addEventListener('dblclick', function(e) {
+      e.stopPropagation(); e.preventDefault();
+      el.contentEditable = 'true';
+      el.focus();
+      var range = document.createRange(); range.selectNodeContents(el);
+      window.getSelection().removeAllRanges(); window.getSelection().addRange(range);
+    });
+    el.addEventListener('keydown', function(e) {
+      if (e.key==='Enter'){e.preventDefault();el.blur();}
+      if (e.key==='Escape'){el.textContent=_navLabels[page]||el.textContent;el.blur();}
+    });
+    el.addEventListener('blur', function() {
+      el.contentEditable = 'false';
+      var v = el.textContent.trim();
+      if (v && v!==_navLabels[page]) {
+        _navLabels[page] = v;
+        localStorage.setItem('mdf_nav_labels', JSON.stringify(_navLabels));
+        // Update topbar title too
+        var tt = gg('topbarTitle');
+        if (tt && document.querySelector('.nav-btn.active .nav-label[data-navpage="'+page+'"]')) tt.textContent = v;
+        showToast('Label saved','success');
+      }
+    });
+    el.addEventListener('mousedown', function(e) { if(el.contentEditable==='true') e.stopPropagation(); });
+  });
+  // Budget & Bills tab labels
+  document.querySelectorAll('.tab-label[data-exptab]').forEach(function(el) {
+    if (el.dataset.editable) return;
+    el.dataset.editable = '1';
+    var tab = el.dataset.exptab;
+    var key = 'exptab_'+tab;
+    if (_navLabels[key]) el.innerHTML = _navLabels[key];
+    el.addEventListener('dblclick', function(e) {
+      e.stopPropagation(); e.preventDefault();
+      el.contentEditable = 'true';
+      el.focus();
+      var range = document.createRange(); range.selectNodeContents(el);
+      window.getSelection().removeAllRanges(); window.getSelection().addRange(range);
+    });
+    el.addEventListener('keydown', function(e) {
+      if (e.key==='Enter'){e.preventDefault();el.blur();}
+      if (e.key==='Escape'){el.innerHTML=_navLabels[key]||el.innerHTML;el.blur();}
+    });
+    el.addEventListener('blur', function() {
+      el.contentEditable = 'false';
+      var v = el.innerHTML.trim();
+      if (v) { _navLabels[key]=v; localStorage.setItem('mdf_nav_labels',JSON.stringify(_navLabels)); showToast('Tab renamed','success'); }
+    });
+    el.addEventListener('mousedown', function(e) { if(el.contentEditable==='true') e.stopPropagation(); });
   });
 }
 </script>
