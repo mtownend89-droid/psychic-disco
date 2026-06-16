@@ -844,6 +844,20 @@ canvas.chart-interactive { cursor: crosshair; }
 .s-toggle-slider::before{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;left:3px;top:3px;transition:transform 0.2s;}
 .s-toggle input:checked+.s-toggle-slider{background:var(--green);}
 .s-toggle input:checked+.s-toggle-slider::before{transform:translateX(18px);}
+
+/* ── W1: Universal Chart Widget ── */
+.chart-widget{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column;}
+.chart-widget-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.chart-widget-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);}
+.chart-widget-badge{font-size:12px;font-weight:700;font-family:var(--mono);}
+.chart-widget-canvas{position:relative;flex:1;padding:12px;}
+.chart-widget-legend{display:flex;flex-wrap:wrap;gap:5px 12px;padding:8px 14px 12px;border-top:1px solid var(--border);flex-shrink:0;}
+.cwl-item{display:flex;align-items:center;gap:6px;min-width:80px;}
+.cwl-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0;}
+.cwl-label{font-size:11.5px;color:var(--text);font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cwl-badge{font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;flex-shrink:0;}
+.cwl-amt{font-size:11px;font-family:var(--mono);font-weight:700;color:var(--text);flex-shrink:0;}
+.cwl-pct{font-size:10.5px;color:var(--muted);flex-shrink:0;}
 </style>
 
 </head>
@@ -1473,11 +1487,13 @@ canvas.chart-interactive { cursor: crosshair; }
       <div class="page-hdr">
         <div><div class="page-title">Net Worth</div><div class="page-sub" id="nwSub">Assets − Liabilities · click any value to edit</div></div>
         <div class="page-hdr-right">
+          <button class="btn" onclick="toggleEditMode('networth')" id="nwEditBtn">&#8942;&#8942; Arrange</button>
           <button class="btn green-outline" onclick="syncNWFromPlaid()">&#8635; Sync Plaid</button>
           <button class="btn primary" onclick="exportNWExcel()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
         </div>
       </div>
 
+      <div class="edit-bar" id="nwEditBar" style="display:none"><span>Drag handles to reorder</span><button class="btn" onclick="toggleEditMode('networth')">Done</button></div>
       <!-- N1: Tab row -->
       <div class="tab-row" id="nwTabRow" style="margin-bottom:18px">
         <button class="tab-btn active" onclick="switchNWTab('networth')">&#127968; Net Worth</button>
@@ -1494,20 +1510,26 @@ canvas.chart-interactive { cursor: crosshair; }
           <div class="widget w-purple"><div class="wlabel">Last Updated</div><div class="wvalue purple" id="nwDate" style="font-size:13px">—</div><div class="wsub">snapshot date</div></div>
         </div>
         <div class="g-main-side">
-          <div>
-            <div class="card" style="margin-bottom:14px">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px">
-                <div class="card-title" style="margin-bottom:0">Assets</div>
-                <button class="btn" onclick="addNWRow('asset')">+ Add asset</button>
+          <div id="nwContainer" class="drag-container">
+            <div class="drag-section" data-id="nw-assets">
+              <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Assets</div></div>
+              <div class="card">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px">
+                  <div class="card-title" style="margin-bottom:0">Assets</div>
+                  <button class="btn" onclick="addNWRow('asset')">+ Add asset</button>
+                </div>
+                <table class="tbl"><thead><tr><th style="width:40%">Item</th><th>Value</th><th>Notes</th><th></th></tr></thead><tbody id="nwAssetsBody"></tbody></table>
               </div>
-              <table class="tbl"><thead><tr><th style="width:40%">Item</th><th>Value</th><th>Notes</th><th></th></tr></thead><tbody id="nwAssetsBody"></tbody></table>
             </div>
-            <div class="card">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px">
-                <div class="card-title" style="margin-bottom:0">Liabilities</div>
-                <button class="btn" onclick="addNWRow('liab')">+ Add liability</button>
+            <div class="drag-section" data-id="nw-liab">
+              <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Liabilities</div></div>
+              <div class="card">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px">
+                  <div class="card-title" style="margin-bottom:0">Liabilities</div>
+                  <button class="btn" onclick="addNWRow('liab')">+ Add liability</button>
+                </div>
+                <table class="tbl"><thead><tr><th style="width:40%">Item</th><th>Balance</th><th>Notes</th><th></th></tr></thead><tbody id="nwLiabBody"></tbody></table>
               </div>
-              <table class="tbl"><thead><tr><th style="width:40%">Item</th><th>Balance</th><th>Notes</th><th></th></tr></thead><tbody id="nwLiabBody"></tbody></table>
             </div>
           </div>
           <div>
@@ -3628,6 +3650,87 @@ function renderBillsByMonth() {
 }
 
 // ── BILLS DATA ────────────────────────────────────────────────────────────────
+
+// ── W2: Universal chart legend builder ───────────────────────────────────────
+/**
+ * buildChartLegend(containerId, items)
+ * items: [{label, value, color, pct?, badge?, highlight?}]
+ * Renders cwl-item rows into the container.
+ * If pct is omitted, calculates from total of all values.
+ */
+function buildChartLegend(containerId, items, opts) {
+  var el = gg(containerId); if (!el) return;
+  opts = opts || {};
+  var total = opts.total || items.reduce(function(s,i){return s+(i.value||0);},0);
+  el.innerHTML = items.map(function(item) {
+    var pct = item.pct !== undefined ? item.pct : (total>0?Math.round((item.value||0)/total*100):0);
+    var amt = item.value !== undefined ? fmt2(Math.round(item.value)) : '';
+    return '<div class="cwl-item">'
+      +'<div class="cwl-dot" style="background:'+item.color+'"></div>'
+      +'<span class="cwl-label" title="'+esc(item.label)+'">'+esc(item.label)+'</span>'
+      +(item.badge?'<span class="cwl-badge" style="background:'+item.color+'22;color:'+item.color+'">'+esc(item.badge)+'</span>':'')
+      +(opts.showAmt!==false&&amt?'<span class="cwl-amt">'+amt+'</span>':'')
+      +'<span class="cwl-pct">'+pct+'%</span>'
+      +'</div>';
+  }).join('');
+}
+
+/**
+ * buildChartWidget(canvasId, type, data, options)
+ * Thin wrapper around new Chart() that also renders the legend.
+ * data: {labels, datasets, legendContainer?}
+ * Returns the Chart instance.
+ */
+function buildChartWidget(chartRef, canvasId, type, labels, values, colors, opts) {
+  opts = opts || {};
+  var el = gg(canvasId); if (!el) return null;
+  var surfC = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()||'#1a1d27';
+  if (chartRef && chartRef.destroy) chartRef.destroy();
+  var inst = new Chart(el, {
+    type: type,
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: colors,
+        borderWidth: opts.borderWidth!==undefined?opts.borderWidth:2,
+        borderColor: surfC,
+        borderRadius: opts.borderRadius||0,
+        fill: opts.fill||false,
+        tension: opts.tension||0.3,
+        borderSkipped: false,
+      }]
+    },
+    options: Object.assign({
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: opts.cutout||'0%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor:'rgba(15,17,23,0.93)',titleColor:'#f0f2fa',bodyColor:'#b0b4cc',
+          borderColor:'rgba(255,255,255,0.1)',borderWidth:1,padding:10,
+          callbacks: {
+            label: function(ctx){ return ' '+esc(ctx.label)+':  '+fmt2(ctx.parsed.r||ctx.parsed.y||ctx.parsed||0); }
+          }
+        }
+      },
+      scales: opts.noScales ? undefined : {
+        x: { grid:{display:false} },
+        y: { grid:{color:'rgba(128,128,128,0.07)'}, ticks:{callback:function(v){return fmtM(v);}} }
+      }
+    }, opts.chartOptions||{})
+  });
+  // Build legend if container specified
+  if (opts.legendId) {
+    var total = values.reduce(function(s,v){return s+v;},0);
+    buildChartLegend(opts.legendId, labels.map(function(lbl,i){
+      return {label:lbl, value:values[i], color:colors[i]};
+    }), {total:total, showAmt:opts.showAmt!==false});
+  }
+  return inst;
+}
+
 let bills=[
   {cat:'HM',name:"M&T Mortgage",note:'Mortgage',apr:2.625,due:5,bal:-292452.38,min:2638.46,pay:2638.46,promo:'',paid:false},
   {cat:'LOAN',name:'Navy HELOC',note:'Navy Federal',apr:7.75,due:1,bal:-45427.90,min:454.28,pay:461.64,promo:'',paid:false},
@@ -3713,9 +3816,9 @@ function calcAll(){calcGrowth();calcLongevity();calcRoth();calcSS();calcAlloc();
 let dragSrc=null,editModes={dashboard:false,expenses:false,retirement:false};
 function toggleEditMode(p){
   editModes[p]=!editModes[p];const on=editModes[p];
-  const cMap={dashboard:'dashContainer',expenses:'expContainer',retirement:'retContainer'};
-  const bMap={dashboard:'dashEditBar',expenses:'expEditBar',retirement:'retEditBar'};
-  const btnMap={dashboard:'dashEditBtn',expenses:'expEditBtn',retirement:'retEditBtn'};
+  const cMap={dashboard:'dashContainer',expenses:'expContainer',retirement:'retContainer',networth:'nwContainer'};
+  const bMap={dashboard:'dashEditBar',expenses:'expEditBar',retirement:'retEditBar',networth:'nwEditBar'};
+  const btnMap={dashboard:'dashEditBtn',expenses:'expEditBtn',retirement:'retEditBtn',networth:'nwEditBtn'};
   const c=gg(cMap[p]),b=gg(bMap[p]),btn=gg(btnMap[p]);
   if(b)b.style.display=on?'flex':'none';
   if(btn)btn.textContent=on?'✓ Done':'⠿ Arrange';
@@ -3735,8 +3838,8 @@ function initDrag(c){
     s.addEventListener('drop',e=>{e.preventDefault();s.classList.remove('drag-over');if(dragSrc&&s!==dragSrc){const kids=[...c.children];const si=kids.indexOf(dragSrc),ti=kids.indexOf(s);si<ti?c.insertBefore(dragSrc,s.nextSibling):c.insertBefore(dragSrc,s);}});
   });
 }
-function saveSO(p){const cMap={dashboard:'dashContainer',expenses:'expContainer',retirement:'retContainer'};try{const c=gg(cMap[p]);localStorage.setItem('so-'+p,JSON.stringify([...c.querySelectorAll('.drag-section')].map(s=>s.dataset.id)));}catch(e){}}
-function loadSO(p){const cMap={dashboard:'dashContainer',expenses:'expContainer',retirement:'retContainer'};try{const sv=JSON.parse(localStorage.getItem('so-'+p));if(!sv)return;const c=gg(cMap[p]);sv.forEach(id=>{const el=c.querySelector(`[data-id="${id}"]`);if(el)c.appendChild(el);});}catch(e){}}
+function saveSO(p){const cMap={dashboard:'dashContainer',expenses:'expContainer',retirement:'retContainer',networth:'nwContainer'};try{const c=gg(cMap[p]);localStorage.setItem('so-'+p,JSON.stringify([...c.querySelectorAll('.drag-section')].map(s=>s.dataset.id)));}catch(e){}}
+function loadSO(p){const cMap={dashboard:'dashContainer',expenses:'expContainer',retirement:'retContainer',networth:'nwContainer'};try{const sv=JSON.parse(localStorage.getItem('so-'+p));if(!sv)return;const c=gg(cMap[p]);sv.forEach(id=>{const el=c.querySelector(`[data-id="${id}"]`);if(el)c.appendChild(el);});}catch(e){}}
 
 // ── PAGE NAV ──────────────────────────────────────────────────────────────────
 const PT={dashboard:'Dashboard',transactions:'Transactions',expenses:'Budget & Bills',networth:'Net Worth',retirement:'Retirement',cashflow:'Cash Flow'};
@@ -4186,30 +4289,12 @@ function renderBillCatChart(){
   });
 
   // Legend — with highest-spend badge and dollar amounts
-  var leg=gg('billCatLegend');
-  if(leg){
-    leg.innerHTML=entries.map(function(e,i){
-      var col=CAT_C[e[0]]||'#94a3b8';
-      var lbl=CAT_L[e[0]]||e[0];
-      var pct=tot>0?Math.round(e[1]/tot*100):0;
-      // Find the single highest individual bill in this category
-      var catBills=bills.filter(function(b){return b.cat===e[0];}).sort(function(a,b){return b.pay-a.pay;});
-      var topBill=catBills[0];
-      var topTag=topBill
-        ?'<span style="font-size:10px;font-weight:600;background:'+col+'22;color:'+col+';padding:1px 7px;border-radius:3px;white-space:nowrap;flex-shrink:0">'
-          +esc(topBill.name.split(' ').slice(0,2).join(' '))+': '+fmt2(topBill.pay)
-          +'</span>'
-        :'';
-      return '<div class="cwl-item" style="min-width:160px;gap:6px">'
-        +'<div class="cwl-dot" style="background:'+col+'"></div>'
-        +'<span class="cwl-label">'+lbl+'</span>'
-        +topTag
-        +'<span class="cwl-pct">'+pct+'%</span>'
-        +'</div>';
-    }).join('');
-  }
-
-  // Breakdown panel (right side)
+  buildChartLegend('billCatLegend', entries.map(function(e) {
+    var col = CAT_C[e[0]]||'#94a3b8';
+    var topBill = bills.filter(function(b){return b.cat===e[0];}).sort(function(a,b){return b.pay-a.pay;})[0];
+    return {label:CAT_L[e[0]]||e[0], value:e[1], color:col,
+      badge:topBill?topBill.name.split(' ').slice(0,2).join(' ')+': '+fmt2(topBill.pay):null};
+  }), {total:tot});
   renderBillBreakdown(entries,tot,CAT_L,CAT_C);
 }
 
@@ -4789,6 +4874,7 @@ function renderRetirementTab(){
   else calcGrowth();
 }
 function renderNetWorth(){
+  initDrag(gg('nwContainer'));loadSO('networth');
   const totA=nwAssets.reduce((s,a)=>s+a.value,0);
   const totL=nwLiab.reduce((s,l)=>s+l.value,0);
   const nw=totA-totL;const dta=totA>0?Math.round(totL/totA*100):0;
@@ -4831,8 +4917,7 @@ function renderNWCharts(totA,totL){
   var surfC=getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()||'#1a1d27';
   var nc=gg('nwChart');
   if(nc){if(NWC.main)NWC.main.destroy();NWC.main=new Chart(nc,{type:'doughnut',data:{labels:['Assets','Liabilities'],datasets:[{data:[Math.round(totA),Math.round(totL)],backgroundColor:['#2ecc8a','#f05c5c'],borderWidth:2,borderColor:surfC}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ' '+fmtM(ctx.parsed);}}}}}});}
-  var nwLeg=gg('nwChartLegend');
-  if(nwLeg){var tot=totA+totL;nwLeg.innerHTML=[{lbl:'Assets',val:totA,col:'#2ecc8a'},{lbl:'Liabilities',val:totL,col:'#f05c5c'}].map(function(item){var pct=tot>0?Math.round(item.val/tot*100):0;return '<div class="cwl-item"><div class="cwl-dot" style="background:'+item.col+'"></div><span class="cwl-label">'+item.lbl+'</span><span style="font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--text);margin-right:4px">'+fmtM(item.val)+'</span><span class="cwl-pct">'+pct+'%</span></div>';}).join('');}
+  buildChartLegend('nwChartLegend', [{label:'Assets',value:totA,color:'#2ecc8a'},{label:'Liabilities',value:totL,color:'#f05c5c'}], {total:totA+totL});
   var catTot={};nwAssets.forEach(function(a){catTot[a.cat]=(catTot[a.cat]||0)+a.value;});
   var es=Object.entries(catTot).filter(function(e){return e[1]>0;}).sort(function(a,b){return b[1]-a[1];});
   var colors=es.map(function(_,i){return PAL[i%PAL.length];});
