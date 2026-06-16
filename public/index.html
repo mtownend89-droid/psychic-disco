@@ -101,7 +101,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
 
 /* ── CONNECT SCREEN ── */
-#connectScreen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:58vh;text-align:center;gap:18px;}
+#connectScreen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:58vh;text-align:center;gap:18px;}
 .cn-icon{width:68px;height:68px;background:var(--green-dim);border:1px solid rgba(46,204,138,0.2);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:4px;}
 #connectScreen h1{font-size:23px;font-weight:600;}
 #connectScreen p{color:var(--muted);max-width:380px;line-height:1.75;font-size:13.5px;}
@@ -4107,14 +4107,14 @@ async function init(){
   try{const s=JSON.parse(localStorage.getItem('zeroBuckets'));if(s?.length)zeroBuckets=s;}catch(e){}
   try{const s=JSON.parse(localStorage.getItem('nwAssets'));if(s?.length)nwAssets=s;}catch(e){}
   try{const s=JSON.parse(localStorage.getItem('nwLiab'));if(s?.length)nwLiab=s;}catch(e){}
-  // Always show dashboard — connect screen shows inside page-content if no accounts
   showPage('dashboard');
-  // Load server data in background
   try{
     const h=await fetch('/api/health').then(r=>r.json());
     const b=gg('envBadge');if(b){b.textContent=h.env==='production'?'Production':'Sandbox';b.className='env-badge '+(h.env==='production'?'env-production':'env-sandbox');}
-    // Try to load accounts — if any exist, populate everything and hide connect screen
     await refreshAll();
+    // Show connect screen only if still no accounts after loading
+    var cs=gg('connectScreen');
+    if(cs) cs.style.display = allAccts.length===0 ? 'flex' : 'none';
   }catch(e){console.error('init error:',e);showError('Cannot reach server.');}
 }
 const saveBills=()=>{try{localStorage.setItem('bills',JSON.stringify(bills));}catch(e){}};
