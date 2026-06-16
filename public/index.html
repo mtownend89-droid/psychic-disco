@@ -279,7 +279,8 @@ input[type=range]{width:100%;accent-color:var(--green);}
 .drag-section{position:relative;margin-bottom:20px;}
 .drag-section.dragging{opacity:0.3;}
 .drag-section.drag-over{outline:2px dashed var(--green);outline-offset:5px;border-radius:var(--radius);}
-.dh-row{display:flex;align-items:center;gap:7px;margin-bottom:10px;}
+.dh-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:2px 0;}
+.dh-label{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);user-select:none;}
 .dh{display:flex;align-items:center;gap:6px;cursor:grab;color:var(--hint);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;user-select:none;padding:3px 5px;border-radius:4px;transition:all 0.13s;}
 .dh:hover{color:var(--muted);background:rgba(255,255,255,0.04);}
 .dh:active{cursor:grabbing;}
@@ -1147,7 +1148,7 @@ canvas.chart-interactive { cursor: crosshair; }
       <div class="edit-bar" id="dashEditBar"><span>Drag handles to reorder widgets</span><button class="btn" onclick="toggleEditMode('dashboard')">Done</button></div>
       <div class="drag-container" id="dashContainer">
         <div class="drag-section" data-id="overview">
-          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Overview</div></div>
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Overview</div><span class="dh-label">Overview</span></div>
           <div class="wgrid">
             <div class="widget w-green"><div class="wlabel">Net Balance</div><div class="wvalue green" id="mNetBal">—</div><div class="wsub">all accounts</div></div>
             <div class="widget w-red"><div class="wlabel">Spent (30d)</div><div class="wvalue red" id="mSpent">—</div><div class="wsub">credit &amp; debit</div></div>
@@ -1158,7 +1159,7 @@ canvas.chart-interactive { cursor: crosshair; }
         </div>
         <!-- ── SANKEY: Long Widget — always full width ── -->
         <div class="drag-section widget-long" data-id="sankey">
-          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Money Flow · Long Widget</div></div>
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Money Flow · Long Widget</div><span class="dh-label">Money Flow</span></div>
           <div class="card widget-long-card" style="overflow:hidden">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
               <div style="display:flex;align-items:center;gap:10px">
@@ -1193,7 +1194,7 @@ canvas.chart-interactive { cursor: crosshair; }
         <!-- ── SPENDING BY CATEGORY: own full-width section ── -->
         <!-- ── D2: COMBINED SPEND + P&L widget — Long Widget ── -->
         <div class="drag-section widget-long" data-id="cat-chart">
-          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Spending &amp; Income vs Spending · Long Widget</div></div>
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Spending &amp; Income vs Spending · Long Widget</div><span class="dh-label">Spending by Category</span></div>
           <div class="card widget-long-card">
 
             <!-- Header: title + shared time toggle (mirrors Sankey) -->
@@ -1250,7 +1251,7 @@ canvas.chart-interactive { cursor: crosshair; }
         </div>
         <!-- ── D3: FINANCIAL SWOT ── -->
         <div class="drag-section" data-id="swot">
-          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Financial SWOT</div></div>
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Financial SWOT</div><span class="dh-label">Financial SWOT</span></div>
           <div class="card" style="padding:0;overflow:hidden">
             <!-- Header -->
             <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
@@ -1292,7 +1293,7 @@ canvas.chart-interactive { cursor: crosshair; }
 
         <!-- ── D4: Account Chips ── -->
         <div class="drag-section" data-id="accts-banks">
-          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Accounts</div></div>
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Accounts</div><span class="dh-label">Linked Accounts</span></div>
           <div class="card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
               <div class="card-title" style="margin-bottom:0">🏦 Linked Accounts</div>
@@ -1377,7 +1378,7 @@ canvas.chart-interactive { cursor: crosshair; }
       <div class="tab-panel active" id="ep-bills">
         <div class="drag-container" id="expContainer">
           <div class="drag-section" data-id="bills-tbl">
-            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Bills table</div></div>
+            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Bills table</div><span class="dh-label">Bills Table</span></div>
             <div class="card">
               <div class="filter-row" style="margin-bottom:12px">
                 <span style="font-size:13.5px;font-weight:600;">Monthly bills &amp; fixed expenses</span>
@@ -1423,7 +1424,7 @@ canvas.chart-interactive { cursor: crosshair; }
           </div>
           <!-- ── B1: Bills by Category ── -->
           <div class="drag-section" data-id="bills-charts">
-            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Bills by category</div></div>
+            <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Bills by category</div><span class="dh-label">Bills Charts</span></div>
             <div class="card" style="padding:0;overflow:hidden">
               <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px 10px;border-bottom:1px solid var(--border)">
                 <div class="card-title" style="margin-bottom:0">💳 Bills by Category</div>
@@ -1687,7 +1688,7 @@ canvas.chart-interactive { cursor: crosshair; }
         <div class="g-main-side">
           <div id="nwContainer" class="drag-container">
             <div class="drag-section" data-id="nw-assets">
-              <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Assets</div></div>
+              <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Assets</div><span class="dh-label">Assets</span></div>
               <div class="card">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px">
                   <div class="card-title" style="margin-bottom:0">Assets</div>
@@ -1697,7 +1698,7 @@ canvas.chart-interactive { cursor: crosshair; }
               </div>
             </div>
             <div class="drag-section" data-id="nw-liab">
-              <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Liabilities</div></div>
+              <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Liabilities</div><span class="dh-label">Liabilities</span></div>
               <div class="card">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px">
                   <div class="card-title" style="margin-bottom:0">Liabilities</div>
@@ -1727,9 +1728,13 @@ canvas.chart-interactive { cursor: crosshair; }
 
       <!-- N1: RETIREMENT TAB -->
       <div class="tab-panel" id="nwp-retirement" style="display:none">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+          <button class="btn" onclick="toggleEditMode('retirement')" id="retEditBtn">&#8942;&#8942; Arrange</button>
+        </div>
+        <div class="edit-bar" id="retEditBar" style="display:none"><span>Drag widgets to reorder</span><button class="btn" onclick="toggleEditMode('retirement')">Done</button></div>
         <div class="drag-container" id="retContainer">
         <div class="drag-section" data-id="ret-accts">
-          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Live accounts</div></div>
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Live accounts</div><span class="dh-label">Retirement Accounts</span></div>
           <div class="card card-sm">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
               <div class="card-title" style="margin-bottom:0">Linked retirement accounts</div>
@@ -1744,7 +1749,7 @@ canvas.chart-interactive { cursor: crosshair; }
           </div>
         </div>
         <div class="drag-section" data-id="ret-inputs">
-          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Inputs</div></div>
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Inputs</div><span class="dh-label">Retirement Inputs</span></div>
           <div class="card">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
               <div><div style="font-size:14px;font-weight:600">Retirement inputs</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Shared across all calculators below</div></div>
@@ -1785,7 +1790,7 @@ canvas.chart-interactive { cursor: crosshair; }
           </div>
         </div>
         <div class="drag-section" data-id="ret-results">
-          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Results</div></div>
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg>Results</div><span class="dh-label">Retirement Results</span></div>
           <div class="g5" style="margin-bottom:14px">
             <div class="widget w-green"><div class="wlabel">Nest Egg</div><div class="wvalue green" id="sum-nest">—</div><div class="wsub">at retirement</div></div>
             <div class="widget w-cyan"><div class="wlabel">Monthly Income</div><div class="wvalue cyan" id="sum-income">—</div><div class="wsub">4% + SS</div></div>
@@ -2207,10 +2212,17 @@ canvas.chart-interactive { cursor: crosshair; }
 
     <!-- ── CASH FLOW ── -->
     <div id="cashflow" class="page">
-      <div class="page-hdr"><div><div class="page-title">Cash Flow</div><div class="page-sub">Income vs spending over time</div></div></div>
-      <div class="g2">
-        <div class="card card-sm"><div class="card-title">monthly income vs expenses</div><div class="chart-wrap" style="height:230px"><canvas id="cfMonthlyChart"></canvas></div></div>
-        <div class="card card-sm"><div class="card-title">top spending categories</div><div class="chart-wrap" style="height:230px"><canvas id="cfCatChart"></canvas></div></div>
+      <div class="page-hdr"><div><div class="page-title">Cash Flow</div><div class="page-sub">Income vs spending over time</div></div><button class="btn" onclick="toggleEditMode('cashflow')" id="cfEditBtn">&#8942;&#8942; Arrange</button></div>
+      <div class="edit-bar" id="cfEditBar" style="display:none"><span>Drag widgets to reorder</span><button class="btn" onclick="toggleEditMode('cashflow')">Done</button></div>
+      <div class="drag-container" id="cfContainer">
+        <div class="drag-section" data-id="cf-monthly">
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg></div><span class="dh-label">Monthly Income vs Expenses</span></div>
+          <div class="card card-sm"><div class="card-title">monthly income vs expenses</div><div class="chart-wrap" style="height:230px"><canvas id="cfMonthlyChart"></canvas></div></div>
+        </div>
+        <div class="drag-section" data-id="cf-cats">
+          <div class="dh-row"><div class="dh" draggable="true"><svg viewBox="0 0 16 16"><circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/><circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/><circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/></svg></div><span class="dh-label">Top Spending Categories</span></div>
+          <div class="card card-sm"><div class="card-title">top spending categories</div><div class="chart-wrap" style="height:230px"><canvas id="cfCatChart"></canvas></div></div>
+        </div>
       </div>
       <div class="card card-sm"><div class="card-title">month-by-month summary</div>
         <table class="tbl"><thead><tr><th>Month</th><th>Income</th><th>Expenses</th><th>Net</th><th>Transactions</th></tr></thead>
@@ -4159,19 +4171,24 @@ function calcAll(){calcGrowth();calcLongevity();calcRoth();calcSS();calcAlloc();
 let dragSrc=null,editModes={dashboard:false,expenses:false,retirement:false};
 function toggleEditMode(p){
   editModes[p]=!editModes[p];const on=editModes[p];
-  const cMap={dashboard:'dashContainer',expenses:'expContainer',retirement:'retContainer',networth:'nwContainer'};
-  const bMap={dashboard:'dashEditBar',expenses:'expEditBar',retirement:'retEditBar',networth:'nwEditBar'};
-  const btnMap={dashboard:'dashEditBtn',expenses:'expEditBtn',retirement:'retEditBtn',networth:'nwEditBtn'};
+  const cMap={dashboard:'dashContainer',expenses:'expContainer',retirement:'retContainer',networth:'nwContainer',cashflow:'cfContainer'};
+  const bMap={dashboard:'dashEditBar',expenses:'expEditBar',retirement:'retEditBar',networth:'nwEditBar',cashflow:'cfEditBar'};
+  const btnMap={dashboard:'dashEditBtn',expenses:'expEditBtn',retirement:'retEditBtn',networth:'nwEditBtn',cashflow:'cfEditBtn'};
   const c=gg(cMap[p]),b=gg(bMap[p]),btn=gg(btnMap[p]);
   if(b)b.style.display=on?'flex':'none';
   if(btn)btn.textContent=on?'✓ Done':'⠿ Arrange';
-  c&&c.querySelectorAll('.dh').forEach(h=>{h.style.opacity=on?'1':'0.2';h.style.pointerEvents=on?'auto':'none';});
+  c&&c.querySelectorAll('.dh').forEach(h=>{
+    h.style.opacity=on?'1':'0';
+    h.style.pointerEvents=on?'auto':'none';
+    h.style.width=on?'':'0';h.style.overflow=on?'':'hidden';h.style.marginRight=on?'':'0';
+  });
+  c&&c.querySelectorAll('.dh-label').forEach(l=>{l.style.color=on?'var(--text)':'var(--muted)';l.style.opacity=on?'1':'0.7';});
   if(!on)saveSO(p);
 }
 function initDrag(c){
   if(!c)return;
   c.querySelectorAll('.dh').forEach(h=>{
-    h.style.opacity='0.2';h.style.pointerEvents='none';
+    h.style.opacity='0';h.style.width='0';h.style.overflow='hidden';h.style.marginRight='0';h.style.pointerEvents='none';
     h.addEventListener('dragstart',e=>{dragSrc=h.closest('.drag-section');dragSrc.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
     h.addEventListener('dragend',()=>{dragSrc&&dragSrc.classList.remove('dragging');c.querySelectorAll('.drag-section').forEach(s=>s.classList.remove('drag-over'));dragSrc=null;});
   });
@@ -4181,8 +4198,8 @@ function initDrag(c){
     s.addEventListener('drop',e=>{e.preventDefault();s.classList.remove('drag-over');if(dragSrc&&s!==dragSrc){const kids=[...c.children];const si=kids.indexOf(dragSrc),ti=kids.indexOf(s);si<ti?c.insertBefore(dragSrc,s.nextSibling):c.insertBefore(dragSrc,s);}});
   });
 }
-function saveSO(p){const cMap={dashboard:'dashContainer',expenses:'expContainer',retirement:'retContainer',networth:'nwContainer'};try{const c=gg(cMap[p]);localStorage.setItem('so-'+p,JSON.stringify([...c.querySelectorAll('.drag-section')].map(s=>s.dataset.id)));}catch(e){}}
-function loadSO(p){const cMap={dashboard:'dashContainer',expenses:'expContainer',retirement:'retContainer',networth:'nwContainer'};try{const sv=JSON.parse(localStorage.getItem('so-'+p));if(!sv)return;const c=gg(cMap[p]);sv.forEach(id=>{const el=c.querySelector(`[data-id="${id}"]`);if(el)c.appendChild(el);});}catch(e){}}
+function saveSO(p){const cMap={dashboard:'dashContainer',expenses:'expContainer',retirement:'retContainer',networth:'nwContainer',cashflow:'cfContainer'};try{const c=gg(cMap[p]);localStorage.setItem('so-'+p,JSON.stringify([...c.querySelectorAll('.drag-section')].map(s=>s.dataset.id)));}catch(e){}}
+function loadSO(p){const cMap={dashboard:'dashContainer',expenses:'expContainer',retirement:'retContainer',networth:'nwContainer',cashflow:'cfContainer'};try{const sv=JSON.parse(localStorage.getItem('so-'+p));if(!sv)return;const c=gg(cMap[p]);sv.forEach(id=>{const el=c.querySelector(`[data-id="${id}"]`);if(el)c.appendChild(el);});}catch(e){}}
 
 // ── PAGE NAV ──────────────────────────────────────────────────────────────────
 const PT={dashboard:'Dashboard',transactions:'Transactions',expenses:'Budget & Bills',networth:'Net Worth',retirement:'Retirement',cashflow:'Cash Flow',playground:'The Playground',sandbox:'Sandbox'};
@@ -4202,7 +4219,7 @@ function showPage(page){
   if(page==='playground'){fdRender();}
   if(page==='sandbox'){sbInitSandbox();}
   if(page==='networth'){renderNetWorth();}
-  if(page==='cashflow')renderCashFlow();
+  if(page==='cashflow'){renderCashFlow();setTimeout(function(){initDrag(gg('cfContainer'));loadSO('cashflow');},100);}
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
