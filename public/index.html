@@ -1046,6 +1046,30 @@ canvas.chart-interactive { cursor: crosshair; }
 #dashHealthPanel > div:nth-child(even){border-right:none;}
 #dashHealthPanel > div:nth-last-child(-n+2){border-bottom:none;}
 
+
+/* ── FIRE Tab ── */
+.fire-type-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px 14px;cursor:pointer;transition:all .15s;text-align:center;}
+.fire-type-card:hover{border-color:var(--border2);transform:translateY(-2px);}
+.fire-type-card.active{border-color:var(--amber);background:rgba(240,165,64,.07);}
+.fire-type-icon{font-size:22px;margin-bottom:4px;}
+.fire-type-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;}
+.fire-type-sub{font-size:11px;color:var(--muted);}
+.fire-type-mult{font-size:10px;font-weight:700;color:var(--amber);margin-top:3px;font-family:var(--mono);}
+.fire-plan-btn{background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px 14px;cursor:pointer;transition:all .12s;text-align:left;width:100%;}
+.fire-plan-btn:hover{border-color:var(--amber);background:rgba(240,165,64,.05);}
+.fire-plan-icon{font-size:18px;margin-bottom:5px;}
+.fire-plan-title{font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:2px;}
+.fire-plan-impact{font-size:11px;color:var(--amber);font-weight:600;margin-bottom:3px;}
+.fire-plan-sub{font-size:10.5px;color:var(--muted);line-height:1.4;}
+.fire-milestone{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;background:var(--surface2);}
+.fire-milestone.done{background:rgba(46,204,138,.07);border:1px solid rgba(46,204,138,.2);}
+.fire-milestone.next{background:rgba(240,165,64,.07);border:1px solid rgba(240,165,64,.2);}
+.fire-ms-icon{font-size:18px;flex-shrink:0;}
+.fire-ms-body{flex:1;min-width:0;}
+.fire-ms-title{font-size:12.5px;font-weight:600;color:var(--text);}
+.fire-ms-sub{font-size:11px;color:var(--muted);}
+.fire-ms-val{font-size:13px;font-weight:700;font-family:var(--mono);flex-shrink:0;}
+
 </style>
 
   <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
@@ -1704,6 +1728,7 @@ canvas.chart-interactive { cursor: crosshair; }
       <div class="tab-row" id="nwTabRow" style="margin-bottom:18px">
         <button class="tab-btn active" onclick="switchNWTab('networth')">&#127968; Net Worth</button>
         <button class="tab-btn" onclick="switchNWTab('retirement')">&#8987; Retirement</button>
+        <button class="tab-btn" onclick="switchNWTab('fire')">&#128293; FIRE</button>
       </div>
 
       <!-- NET WORTH TAB -->
@@ -1875,7 +1900,210 @@ canvas.chart-interactive { cursor: crosshair; }
         </div>
       </div>
     </div>
+      
+
+      <!-- ── FIRE TAB ── -->
+      <div class="tab-panel" id="nwp-fire" style="display:none">
+
+        <!-- FIRE Type selector -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px">
+          <div class="fire-type-card active" onclick="setFireType('lean')" data-firetype="lean">
+            <div class="fire-type-icon">&#127793;</div>
+            <div class="fire-type-name">Lean FIRE</div>
+            <div class="fire-type-sub">Frugal &lt;$40K/yr</div>
+            <div class="fire-type-mult">25&#215; expenses</div>
+          </div>
+          <div class="fire-type-card" onclick="setFireType('regular')" data-firetype="regular">
+            <div class="fire-type-icon">&#128293;</div>
+            <div class="fire-type-name">FIRE</div>
+            <div class="fire-type-sub">Standard 4% rule</div>
+            <div class="fire-type-mult">25&#215; expenses</div>
+          </div>
+          <div class="fire-type-card" onclick="setFireType('barista')" data-firetype="barista">
+            <div class="fire-type-icon">&#9749;</div>
+            <div class="fire-type-name">Barista FIRE</div>
+            <div class="fire-type-sub">Part-time + portfolio</div>
+            <div class="fire-type-mult">12-15&#215; expenses</div>
+          </div>
+          <div class="fire-type-card" onclick="setFireType('coast')" data-firetype="coast">
+            <div class="fire-type-icon">&#127955;</div>
+            <div class="fire-type-name">Coast FIRE</div>
+            <div class="fire-type-sub">Let compound run</div>
+            <div class="fire-type-mult">Stop contributing</div>
+          </div>
+          <div class="fire-type-card" onclick="setFireType('fat')" data-firetype="fat">
+            <div class="fire-type-icon">&#129396;</div>
+            <div class="fire-type-name">Fat FIRE</div>
+            <div class="fire-type-sub">Luxury &gt;$100K/yr</div>
+            <div class="fire-type-mult">33&#215; expenses</div>
+          </div>
+        </div>
+
+        <!-- FIRE type banner -->
+        <div id="fireTypeBanner" class="insight" style="margin-bottom:18px;border-left:3px solid var(--amber)">
+          <strong id="fireTypeBannerTitle">&#128293; FIRE</strong> &mdash;
+          <span id="fireTypeBannerDesc">Save 25&times; your annual expenses. Withdraw 4% per year indefinitely.</span>
+        </div>
+
+        <!-- Stat widgets -->
+        <div class="wgrid" style="margin-bottom:18px" id="fireStatRow"></div>
+
+        <div class="g2" style="margin-bottom:18px">
+          <!-- LEFT: Calculator inputs -->
+          <div class="card" style="padding:0;overflow:hidden">
+            <div style="padding:12px 16px 10px;border-bottom:1px solid var(--border)">
+              <div class="card-title" style="margin-bottom:0">&#128200; FIRE Calculator</div>
+            </div>
+            <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+
+              <div>
+                <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:6px">Current Age</label>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <input type="range" id="fireAge" min="20" max="65" value="35" step="1" oninput="calcFireNW()" style="flex:1">
+                  <span id="fireAgeVal" class="mono" style="font-size:15px;font-weight:700;min-width:36px">35</span>
+                </div>
+              </div>
+
+              <div>
+                <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:6px">Target Retire Age</label>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <input type="range" id="fireRetireAge" min="30" max="70" value="50" step="1" oninput="calcFireNW()" style="flex:1">
+                  <span id="fireRetireAgeVal" class="mono" style="font-size:15px;font-weight:700;min-width:36px">50</span>
+                </div>
+              </div>
+
+              <div>
+                <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:6px">Annual Expenses in Retirement ($)</label>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input type="range" id="fireExpenses" min="20000" max="200000" value="60000" step="1000" oninput="calcFireNW()" style="flex:1">
+                  <span id="fireExpensesVal" class="mono" style="font-size:13px;font-weight:700;min-width:64px">$60,000</span>
+                </div>
+              </div>
+
+              <div>
+                <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:6px">Annual Investment Return (%)</label>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <input type="range" id="fireReturn" min="3" max="12" value="7" step="0.5" oninput="calcFireNW()" style="flex:1">
+                  <span id="fireReturnVal" class="mono" style="font-size:13px;font-weight:700;min-width:40px">7.0%</span>
+                </div>
+              </div>
+
+              <div>
+                <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:6px">Safe Withdrawal Rate (%)</label>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <input type="range" id="fireSWR" min="2" max="6" value="4" step="0.1" oninput="calcFireNW()" style="flex:1">
+                  <span id="fireSWRVal" class="mono" style="font-size:13px;font-weight:700;min-width:40px">4.0%</span>
+                </div>
+              </div>
+
+              <div>
+                <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:6px">Monthly Savings / Investment ($)</label>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input type="range" id="fireSavings" min="0" max="20000" value="2000" step="100" oninput="calcFireNW()" style="flex:1">
+                  <span id="fireSavingsVal" class="mono" style="font-size:13px;font-weight:700;min-width:64px">$2,000</span>
+                </div>
+              </div>
+
+              <!-- Barista mode: part-time income -->
+              <div id="baristaRow" style="display:none">
+                <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:6px">Part-time Income / Year ($)</label>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input type="range" id="firePartTime" min="0" max="60000" value="20000" step="1000" oninput="calcFireNW()" style="flex:1">
+                  <span id="firePartTimeVal" class="mono" style="font-size:13px;font-weight:700;min-width:64px">$20,000</span>
+                </div>
+              </div>
+
+              <div style="border-top:1px solid var(--border);padding-top:12px">
+                <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Using your current net worth as starting portfolio: <span id="fireCurrentNW" class="mono" style="color:var(--cyan)">—</span></div>
+                <button class="btn" onclick="fireUseNW()" style="font-size:12px;width:100%">&#8635; Sync from Net Worth</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: Results + progress -->
+          <div style="display:flex;flex-direction:column;gap:12px">
+
+            <!-- FIRE Number gauge -->
+            <div class="card" style="padding:16px;text-align:center">
+              <div class="card-title" style="margin-bottom:4px">Your FIRE Number</div>
+              <div id="fireNumberDisplay" style="font-size:36px;font-weight:700;font-family:var(--mono);color:var(--amber);line-height:1;margin-bottom:4px">—</div>
+              <div id="fireNumberSub" style="font-size:12px;color:var(--muted);margin-bottom:14px">target portfolio</div>
+              <!-- Progress bar -->
+              <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);margin-bottom:4px">
+                <span>Progress</span><span id="fireProgressPct" style="font-family:var(--mono);font-weight:700">0%</span>
+              </div>
+              <div style="height:10px;border-radius:5px;background:var(--surface3);overflow:hidden;margin-bottom:6px">
+                <div id="fireProgressBar" style="height:100%;border-radius:5px;background:var(--amber);transition:width 0.5s;width:0%"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--hint)">
+                <span id="fireCurrentLabel">$0 today</span><span id="fireTargetLabel">$0 needed</span>
+              </div>
+            </div>
+
+            <!-- FIRE date -->
+            <div class="card" style="padding:16px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                <div class="card-title" style="margin-bottom:0">Projected FIRE Date</div>
+                <div id="fireDateBadge" style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--amber)22;color:var(--amber)">calculating...</div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center">
+                  <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">FIRE Age</div>
+                  <div id="fireAgeResult" style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--cyan)">—</div>
+                </div>
+                <div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center">
+                  <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Years Away</div>
+                  <div id="fireYearsResult" style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--green)">—</div>
+                </div>
+                <div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center">
+                  <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Monthly Need</div>
+                  <div id="fireMonthlyNeed" style="font-size:16px;font-weight:700;font-family:var(--mono);color:var(--text)">—</div>
+                </div>
+                <div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center">
+                  <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Savings Rate</div>
+                  <div id="fireSavingsRate" style="font-size:16px;font-weight:700;font-family:var(--mono);color:var(--text)">—</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Coast FIRE info -->
+            <div class="card" style="padding:14px" id="coastFireCard">
+              <div class="card-title" style="margin-bottom:8px">&#127955; Coast FIRE Number</div>
+              <div style="font-size:11.5px;color:var(--muted);margin-bottom:8px">Amount needed today that grows to your FIRE number by retirement — then you can stop contributing.</div>
+              <div id="coastFireNum" style="font-size:20px;font-weight:700;font-family:var(--mono);color:var(--purple)">—</div>
+              <div id="coastFireStatus" style="font-size:11.5px;margin-top:6px;color:var(--muted)"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Portfolio projection chart -->
+        <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">
+          <div style="padding:12px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+            <div class="card-title" style="margin-bottom:0">&#128200; Portfolio Growth Projection</div>
+            <span id="fireChartBadge" style="font-size:11px;color:var(--muted)"></span>
+          </div>
+          <div style="padding:14px 16px;position:relative;height:240px"><canvas id="nwFireChart"></canvas></div>
+          <div style="padding:8px 16px 12px;border-top:1px solid var(--border);display:flex;gap:16px;font-size:11px;color:var(--muted)">
+            <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--cyan);margin-right:4px"></span>Portfolio growth</span>
+            <span><span style="display:inline-block;width:10px;height:2px;background:var(--amber);margin-right:4px;vertical-align:middle"></span>FIRE target</span>
+          </div>
+        </div>
+
+        <!-- Action Plan buttons -->
+        <div class="card" style="padding:16px;margin-bottom:16px">
+          <div class="card-title" style="margin-bottom:14px">&#127919; Action Plans — accelerate your FIRE date</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px" id="firePlanGrid"></div>
+        </div>
+
+        <!-- FIRE Milestones -->
+        <div class="card" style="padding:16px">
+          <div class="card-title" style="margin-bottom:14px">&#127942; FIRE Milestones</div>
+          <div id="fireMilestones" style="display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+
       </div>
+
+    </div>
     
 
     <!-- ── PLAYGROUND ── -->
@@ -7781,6 +8009,275 @@ function initEditableNavLabels() {
     });
     el.addEventListener('mousedown', function(e) { if(el.contentEditable==='true') e.stopPropagation(); });
   });
+}
+
+// ── FIRE CALCULATOR (Net Worth tab) ──────────────────────────────────────────
+var _fireType = 'regular';
+var _nwFireChart = null;
+
+var FIRE_TYPES = {
+  lean:    {name:'Lean FIRE',    icon:'🌱', mult:25, swr:4,   desc:'Frugal living under $40K/yr. Maximum freedom through minimal spending.'},
+  regular: {name:'FIRE',        icon:'🔥', mult:25, swr:4,   desc:'Save 25× your annual expenses. Withdraw 4% per year indefinitely.'},
+  barista: {name:'Barista FIRE',icon:'☕', mult:12, swr:4,   desc:'Partial retirement with part-time income covering healthcare & extras.'},
+  coast:   {name:'Coast FIRE',  icon:'🏄', mult:25, swr:4,   desc:'Save enough early that compound growth handles the rest. Stop contributing.'},
+  fat:     {name:'Fat FIRE',    icon:'🤑', mult:33, swr:3,   desc:'Retire with $100K+/yr spending. Higher portfolio, more cushion.'},
+};
+
+var FIRE_PLANS = [
+  {icon:'💰', title:'Boost savings rate',    impact:'+3–7 yrs sooner',  sub:'Every 1% more saved shaves months off your timeline. Aim for 25%+ of take-home.',     fn:'fireBoostSavings'},
+  {icon:'📉', title:'Cut annual expenses',   impact:'+2–10 yrs sooner', sub:'Reducing $10K/yr in spending cuts your FIRE number by $250K at the 4% rule.',         fn:'fireCutExpenses'},
+  {icon:'📈', title:'Optimize investments',  impact:'Lower fees = more', sub:'Move to low-cost index funds. Every 0.5% in fees costs ~$100K over 20 years.',         fn:'fireOptimizeInvest'},
+  {icon:'🏠', title:'House hack / HELOC',   impact:'Free housing costs', sub:'Renting a room or ADU can offset thousands in annual expenses.',                        fn:'fireHouseHack'},
+  {icon:'🧾', title:'Max tax-advantaged',    impact:'33% more growth',   sub:'Max 401k ($23K), IRA ($7K), HSA ($4.3K). Tax savings compound dramatically.',          fn:'fireMaxTax'},
+  {icon:'📊', title:'Side income / hustle',  impact:'+1–5 yrs sooner',  sub:'$1K/mo in side income = $300K less you need to save (at 4% SWR).',                     fn:'fireSideIncome'},
+  {icon:'🌍', title:'Geo-arbitrage',         impact:'Cut expenses 40%',  sub:'Living abroad or relocating to LCOL area dramatically reduces your FIRE number.',       fn:'fireGeoArb'},
+  {icon:'🏥', title:'Plan for healthcare',   impact:'Budget $500–800/mo',sub:'ACA marketplace or Barista FIRE for employer coverage. A critical FIRE cost.',          fn:'fireHealthcare'},
+];
+
+function setFireType(type) {
+  _fireType = type;
+  document.querySelectorAll('.fire-type-card').forEach(function(el){
+    el.classList.toggle('active', el.dataset.firetype===type);
+  });
+  var ft = FIRE_TYPES[type];
+  var banner = document.getElementById('fireTypeBanner');
+  var bt = document.getElementById('fireTypeBannerTitle');
+  var bd = document.getElementById('fireTypeBannerDesc');
+  if(bt) bt.innerHTML = ft.icon+' '+ft.name;
+  if(bd) bd.textContent = ft.desc;
+  // Barista: show part-time input
+  var br = document.getElementById('baristaRow');
+  if(br) br.style.display = (type==='barista')?'block':'none';
+  // Update SWR
+  var swr = document.getElementById('fireSWR');
+  if(swr){ swr.value = ft.swr; document.getElementById('fireSWRVal').textContent = ft.swr.toFixed(1)+'%'; }
+  calcFireNW();
+}
+
+function fireUseNW() {
+  var totA = nwAssets.reduce(function(s,a){return s+a.value;},0);
+  var totL = nwLiab.reduce(function(s,l){return s+l.value;},0);
+  var nw = Math.max(0, totA-totL);
+  // Set current savings to monthly income minus bills as savings estimate
+  var monthlySave = Math.max(0, monthlyIncome()-monthlyBills());
+  var savSlider = document.getElementById('fireSavings');
+  if(savSlider){ savSlider.value = Math.min(20000, Math.round(monthlySave/100)*100); }
+  // Set expenses to annual bills + discretionary as estimate
+  var annualExp = (monthlyBills()*12);
+  var expSlider = document.getElementById('fireExpenses');
+  if(expSlider){ expSlider.value = Math.max(20000, Math.min(200000, Math.round(annualExp/1000)*1000)); }
+  calcFireNW();
+  showToast('Synced from your Net Worth data','success');
+}
+
+function calcFireNW() {
+  var age         = +document.getElementById('fireAge').value;
+  var retireAge   = +document.getElementById('fireRetireAge').value;
+  var expenses    = +document.getElementById('fireExpenses').value;
+  var returnRate  = +document.getElementById('fireReturn').value / 100;
+  var swr         = +document.getElementById('fireSWR').value / 100;
+  var monthlySav  = +document.getElementById('fireSavings').value;
+  var partTime    = _fireType==='barista' ? (+document.getElementById('firePartTime').value) : 0;
+
+  // Update display labels
+  document.getElementById('fireAgeVal').textContent        = age;
+  document.getElementById('fireRetireAgeVal').textContent  = retireAge;
+  document.getElementById('fireExpensesVal').textContent   = '$'+expenses.toLocaleString();
+  document.getElementById('fireReturnVal').textContent     = (+document.getElementById('fireReturn').value).toFixed(1)+'%';
+  document.getElementById('fireSWRVal').textContent        = (+document.getElementById('fireSWR').value).toFixed(1)+'%';
+  document.getElementById('fireSavingsVal').textContent    = '$'+monthlySav.toLocaleString();
+  if(document.getElementById('firePartTimeVal')) document.getElementById('firePartTimeVal').textContent = '$'+partTime.toLocaleString();
+
+  // Current portfolio = net worth investable (assets - liabilities)
+  var totA = nwAssets.reduce(function(s,a){return s+a.value;},0);
+  var totL = nwLiab.reduce(function(s,l){return s+l.value;},0);
+  var currentPortfolio = Math.max(0, totA-totL);
+  var nwEl = document.getElementById('fireCurrentNW');
+  if(nwEl) nwEl.textContent = fmt2(currentPortfolio);
+
+  // FIRE number
+  var adjustedExpenses = Math.max(0, expenses - partTime);
+  var fireNumber = adjustedExpenses / swr;
+
+  // Years to FIRE by simulation
+  var balance = currentPortfolio;
+  var annualSavings = monthlySav * 12;
+  var yearsToFire = null;
+  var projLabels = [], projPortfolio = [], projTarget = [];
+  var maxYears = Math.max(retireAge - age + 20, 50);
+
+  for(var yr=0; yr<=maxYears; yr++) {
+    projLabels.push(age+yr);
+    projPortfolio.push(Math.round(balance));
+    projTarget.push(Math.round(fireNumber));
+    if(balance >= fireNumber && yearsToFire===null) yearsToFire = yr;
+    balance = balance * (1+returnRate) + annualSavings;
+  }
+
+  var fireAge      = yearsToFire!==null ? age + yearsToFire : '>'+( age+maxYears);
+  var yearsAway    = yearsToFire!==null ? yearsToFire : maxYears+'+';
+  var progress     = Math.min(100, Math.round(currentPortfolio/fireNumber*100));
+  var savingsRate  = monthlyIncome()>0 ? Math.round(monthlySav/monthlyIncome()*100) : 0;
+
+  // Coast FIRE number
+  var coastFire = fireNumber / Math.pow(1+returnRate, retireAge-age);
+
+  // Update UI
+  document.getElementById('fireNumberDisplay').textContent = fmt2(Math.round(fireNumber));
+  document.getElementById('fireNumberSub').textContent     = 'at '+((+document.getElementById('fireSWR').value).toFixed(1))+'% withdrawal';
+  document.getElementById('fireProgressPct').textContent   = progress+'%';
+  document.getElementById('fireProgressBar').style.width   = progress+'%';
+  document.getElementById('fireProgressBar').style.background = progress>=100?'var(--green)':progress>=50?'var(--cyan)':'var(--amber)';
+  document.getElementById('fireCurrentLabel').textContent  = fmt2(currentPortfolio)+' today';
+  document.getElementById('fireTargetLabel').textContent   = fmt2(Math.round(fireNumber))+' needed';
+  document.getElementById('fireAgeResult').textContent     = typeof fireAge==='string'?fireAge:fireAge;
+  document.getElementById('fireYearsResult').textContent   = yearsAway+'';
+  document.getElementById('fireMonthlyNeed').textContent   = fmt2(Math.round(expenses/12));
+  document.getElementById('fireSavingsRate').textContent   = savingsRate+'%';
+
+  var dateStr = yearsToFire!==null ? 'est. '+(new Date().getFullYear()+yearsToFire) : 'Need more savings';
+  var badge = document.getElementById('fireDateBadge');
+  if(badge){ badge.textContent=dateStr; badge.style.background=yearsToFire&&yearsToFire<=20?'rgba(46,204,138,.15)':'rgba(240,165,64,.15)'; badge.style.color=yearsToFire&&yearsToFire<=20?'var(--green)':'var(--amber)'; }
+
+  // Coast FIRE
+  var coastEl = document.getElementById('coastFireNum');
+  if(coastEl) coastEl.textContent = fmt2(Math.round(coastFire));
+  var coastStatus = document.getElementById('coastFireStatus');
+  if(coastStatus){
+    if(currentPortfolio >= coastFire) {
+      coastStatus.innerHTML = '<span style="color:var(--green);font-weight:700">&#10003; You\'ve hit Coast FIRE!</span> Your portfolio will grow to your FIRE number without any more contributions.';
+    } else {
+      var gap = coastFire - currentPortfolio;
+      coastStatus.textContent = 'Need '+fmt2(Math.round(gap))+' more to reach Coast FIRE.';
+    }
+  }
+
+  // Stat row
+  var sr = document.getElementById('fireStatRow');
+  if(sr){
+    sr.innerHTML = [
+      {lbl:'FIRE Number',    val:fmt2(Math.round(fireNumber)), cls:'amber', sub:'target portfolio'},
+      {lbl:'Current Progress',val:progress+'%',               cls:progress>=100?'green':progress>=50?'cyan':'amber', sub:'of FIRE number'},
+      {lbl:'Coast FIRE',     val:fmt2(Math.round(coastFire)), cls:'purple', sub:'needed today'},
+      {lbl:'FIRE Age',       val:typeof fireAge==='number'?fireAge:fireAge+'', cls:'green', sub:'projected'},
+    ].map(function(w){
+      return '<div class="widget w-'+w.cls+'"><div class="wlabel">'+w.lbl+'</div>'
+        +'<div class="wvalue '+w.cls+'">'+w.val+'</div>'
+        +'<div class="wsub">'+w.sub+'</div></div>';
+    }).join('');
+  }
+
+  // Portfolio chart
+  renderFireChart(projLabels, projPortfolio, projTarget, fireNumber, yearsToFire, age);
+
+  // Action plans
+  renderFirePlans(expenses, monthlySav, currentPortfolio, fireNumber, yearsToFire);
+
+  // Milestones
+  renderFireMilestones(currentPortfolio, fireNumber, coastFire, yearsToFire, age);
+}
+
+function renderFireChart(labels, portfolio, target, fireNum, yearsToFire, currentAge) {
+  var el = document.getElementById('nwFireChart'); if(!el) return;
+  if(_nwFireChart) _nwFireChart.destroy();
+  var mutC = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim()||'#666';
+  // mark fire year
+  var fireLabel = yearsToFire!==null ? 'FIRE at '+( currentAge+yearsToFire) : null;
+  _nwFireChart = new Chart(el, {
+    type:'line',
+    data:{
+      labels:labels,
+      datasets:[
+        {label:'Portfolio',data:portfolio,borderColor:'var(--cyan)',backgroundColor:'rgba(56,189,248,.08)',fill:true,borderWidth:2,tension:0.3,pointRadius:0,pointHoverRadius:4},
+        {label:'FIRE Target',data:target,borderColor:'var(--amber)',borderDash:[6,4],borderWidth:2,fill:false,pointRadius:0,tension:0},
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'rgba(15,17,23,.93)',titleColor:'#f0f2fa',bodyColor:'#b0b4cc',
+          borderColor:'rgba(255,255,255,.1)',borderWidth:1,padding:10,
+          callbacks:{label:function(ctx){return ' '+ctx.dataset.label+': '+fmt2(ctx.parsed.y);}}
+        },
+        annotation: yearsToFire!==null ? {
+          annotations:{fireLine:{type:'line',xMin:currentAge+yearsToFire,xMax:currentAge+yearsToFire,borderColor:'rgba(46,204,138,.5)',borderWidth:2,borderDash:[4,4],label:{content:'🔥 FIRE!',enabled:true,position:'start',color:'var(--green)',font:{size:11}}}}
+        } : undefined
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{color:mutC,font:{size:10},maxTicksLimit:10}},
+        y:{grid:{color:'rgba(128,128,128,.07)'},ticks:{color:mutC,callback:function(v){return fmtM(v);}}}
+      }
+    }
+  });
+  var badge = document.getElementById('fireChartBadge');
+  if(badge) badge.textContent = yearsToFire!==null ? 'FIRE at age '+(currentAge+yearsToFire) : 'Extend timeline or increase savings';
+}
+
+function renderFirePlans(expenses, monthlySav, current, fireNum, yearsToFire) {
+  var el = document.getElementById('firePlanGrid'); if(!el) return;
+  el.innerHTML = FIRE_PLANS.map(function(plan){
+    return '<button class="fire-plan-btn" onclick="openActionPlan(\''+plan.fn+'\')||fireShowPlanDetail(\''+plan.fn+'\')">'
+      +'<div class="fire-plan-icon">'+plan.icon+'</div>'
+      +'<div class="fire-plan-title">'+plan.title+'</div>'
+      +'<div class="fire-plan-impact">'+plan.impact+'</div>'
+      +'<div class="fire-plan-sub">'+plan.sub+'</div>'
+      +'</button>';
+  }).join('');
+}
+
+function fireShowPlanDetail(key) {
+  var plan = FIRE_PLANS.find(function(p){return p.fn===key;});
+  if(plan) showToast(plan.title+': '+plan.sub,'success');
+}
+
+function renderFireMilestones(current, fireNum, coastFire, yearsToFire, age) {
+  var el = document.getElementById('fireMilestones'); if(!el) return;
+  var milestones = [
+    {pct:10, icon:'🌱', label:'10% there',      desc:'First step — building the habit'},
+    {pct:25, icon:'📈', label:'25% FI',          desc:'One quarter of the way'},
+    {pct:50, icon:'⚡', label:'Half-FIRE',        desc:'Halfway to full independence'},
+    {pct:75, icon:'🚀', label:'75% FI',          desc:'Three quarters — coast may be possible'},
+    {val:coastFire, icon:'🏄', label:'Coast FIRE', desc:'Portfolio grows to FIRE on its own'},
+    {pct:100,icon:'🔥', label:'Full FIRE',        desc:'Financial independence achieved!'},
+  ];
+  el.innerHTML = milestones.map(function(ms){
+    var target   = ms.val!==undefined ? ms.val : fireNum * ms.pct/100;
+    var done     = current >= target;
+    var isNext   = !done && current >= (ms.pct?fireNum*(ms.pct-25)/100:0);
+    var pct2     = Math.min(100, Math.round(current/target*100));
+    return '<div class="fire-milestone '+(done?'done':isNext?'next':'')+'">'
+      +'<div class="fire-ms-icon">'+ms.icon+'</div>'
+      +'<div class="fire-ms-body">'
+        +'<div class="fire-ms-title">'+ms.label+(done?' ✓':'')+'</div>'
+        +'<div class="fire-ms-sub">'+ms.desc+'</div>'
+        +(done?'':('<div style="height:4px;background:var(--surface3);border-radius:2px;margin-top:5px;overflow:hidden"><div style="height:100%;width:'+pct2+'%;background:var(--amber);border-radius:2px"></div></div>'))
+      +'</div>'
+      +'<div class="fire-ms-val" style="color:'+(done?'var(--green)':'var(--muted)')+'">'+fmt2(Math.round(target))+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+// Extend switchNWTab to handle fire tab
+var _origSwitchNWTab = switchNWTab;
+function switchNWTab(tab) {
+  document.querySelectorAll('#nwTabRow .tab-btn').forEach(function(b,i){
+    b.classList.toggle('active',['networth','retirement','fire'][i]===tab);
+  });
+  ['nwp-networth','nwp-retirement','nwp-fire'].forEach(function(id){
+    var el=gg(id); if(el) el.style.display='none';
+  });
+  var p=gg('nwp-'+tab); if(p) p.style.display='block';
+  if(tab==='retirement'){requestAnimationFrame(function(){requestAnimationFrame(function(){renderRetirementTab();});});}
+  if(tab==='networth'){renderNetWorth();}
+  if(tab==='fire'){
+    requestAnimationFrame(function(){requestAnimationFrame(function(){
+      // Pre-populate with live data
+      fireUseNW();
+    });});
+  }
 }
 </script>
 
