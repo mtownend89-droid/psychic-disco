@@ -98,6 +98,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 }
 .page{min-width:0;max-width:100%;}
 .page{display:none;}.page.active{display:block;animation:slideInLeft 0.22s cubic-bezier(.25,.46,.45,.94);}
+#sandbox.page.active{animation:fadeIn 0.15s ease !important;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
 @keyframes slideInLeft{from{opacity:0;transform:translateX(32px);}to{opacity:1;transform:translateX(0);}}
 
@@ -1065,6 +1066,21 @@ canvas.chart-interactive { cursor: crosshair; }
 .wiz-field label{font-size:11.5px;font-weight:600;color:var(--text);display:block;margin-bottom:5px;}
 .wiz-field .wiz-desc{font-size:10.5px;color:var(--muted);margin-bottom:6px;line-height:1.5;}
 .wiz-preview-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:12px;min-height:60px;font-size:11.5px;color:var(--muted);}
+
+
+/* ── Sandbox page specific ── */
+#sandbox.page{padding-top:0;margin-top:0;padding:0;}
+#sandbox .page-hdr{margin-top:0;padding-top:0;}
+#sbCanvas{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  min-height:120px;
+  align-content:start;
+}
+.sb-widget-card.span-2{grid-column:1/-1;}
+/* Wizard modal must be fixed, not affect page flow */
+#sbWizardModal{position:fixed !important;}
 
 </style>
 
@@ -2350,38 +2366,6 @@ canvas.chart-interactive { cursor: crosshair; }
         </div>
       </div>
 
-      <!-- WIZARD MODAL -->
-      <div id="sbWizardModal" style="display:none;position:fixed;inset:0;z-index:400;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px)">
-        <div style="background:var(--surface);border:1px solid var(--border2);border-radius:14px;width:560px;max-width:95vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.5)">
-
-          <!-- Wizard header -->
-          <div style="padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-            <div>
-              <div style="font-size:15px;font-weight:700;color:var(--text)" id="sbWizTitle">Add a Widget</div>
-              <div style="font-size:11.5px;color:var(--muted);margin-top:2px" id="sbWizSubtitle">Step 1 of 3 &mdash; Choose a widget type</div>
-            </div>
-            <button onclick="sbWizardClose()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px">&times;</button>
-          </div>
-
-          <!-- Step progress -->
-          <div style="display:flex;padding:0 22px;border-bottom:1px solid var(--border);flex-shrink:0">
-            <div id="sbWizStep1Tab" class="wiz-step-tab active" onclick="sbWizGoTo(1)">1&nbsp; Widget Type</div>
-            <div id="sbWizStep2Tab" class="wiz-step-tab" onclick="if(_sbWizStep>=2)sbWizGoTo(2)">2&nbsp; Data Source</div>
-            <div id="sbWizStep3Tab" class="wiz-step-tab" onclick="if(_sbWizStep>=3)sbWizGoTo(3)">3&nbsp; Configure</div>
-          </div>
-
-          <!-- Wizard body (scrollable) -->
-          <div id="sbWizBody" style="flex:1;overflow-y:auto;padding:20px 22px"></div>
-
-          <!-- Wizard footer -->
-          <div style="padding:14px 22px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0">
-            <button class="btn" id="sbWizBackBtn" onclick="sbWizardBack()" style="display:none">&#8592; Back</button>
-            <div style="flex:1"></div>
-            <button class="btn" onclick="sbWizardClose()">Cancel</button>
-            <button class="btn primary" id="sbWizNextBtn" onclick="sbWizardNext()">Next &#8594;</button>
-          </div>
-        </div>
-      </div>
 
     </div>
 
@@ -7294,6 +7278,9 @@ function sbAddWidget(type, cfg) {
   sbRenderWidget(id);
   sbSelectWidget(id);
   sbSetStatus('Added: '+def.label);
+  // Update widget counter
+  var cnt=gg('sbWidgetCount');
+  if(cnt) cnt.textContent=_sbWidgets.length+' widget'+(_sbWidgets.length!==1?'s':'');
 }
 
 function sbRemoveWidget(id) {
@@ -7302,6 +7289,8 @@ function sbRemoveWidget(id) {
   var el=gg(id);if(el)el.remove();
   if(_sbSelected===id){_sbSelected=null;var insp=gg('sbInspector');if(insp)insp.innerHTML='<div style="color:var(--hint);font-size:12px;text-align:center;padding:24px 8px">Click a widget to inspect it.</div>';}
   if(!_sbWidgets.length){var empty=gg('sbCanvasEmpty');if(empty)empty.style.display='block';}
+  var cnt=gg('sbWidgetCount');
+  if(cnt) cnt.textContent=_sbWidgets.length+' widget'+(_sbWidgets.length!==1?'s':'');
 }
 
 function sbDuplicateWidget(id) {
@@ -7449,6 +7438,7 @@ function sbGetData(cfg) {
 function sbRenderBarChart(w) {
   var body=gg(w.id+'-body'); if(!body)return;
   var data=sbGetData(w.config)||[];
+  if(!data.length){body.style.padding='16px';body.innerHTML='<div style="color:var(--hint);font-size:12px;text-align:center;padding:20px">No data yet — connect your bank or check the data source.</div>';sbSetWidgetStatus(w.id,'No data','var(--hint)');return;}
   var lk=w.config.labelKey||'label', vk=w.config.valueKey||'value';
   var labels=data.map(function(d){return d[lk]||String(d);});
   var vals=data.map(function(d){return+(d[vk]||d.spending||d.value||0);});
@@ -7699,6 +7689,8 @@ function sbClearCanvas() {
   if(cv)cv.appendChild(empty);
   var insp=gg('sbInspector');if(insp)insp.innerHTML='<div style="color:var(--hint);font-size:12px;text-align:center;padding:24px 8px">Click a widget to inspect it.</div>';
   sbSetStatus('Canvas cleared');
+  var cnt=gg('sbWidgetCount');
+  if(cnt) cnt.textContent='0 widgets';
 }
 function sbRenderTemplateBar() {
   var el=gg('sbTemplateBar'); if(!el)return;
@@ -8637,5 +8629,37 @@ function switchNWTab(tab) {
   <button class="bn-btn" onclick="toggleSidebar()"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg><span>More</span></button>
 </nav>
 
+<!-- WIZARD MODAL -->
+      <div id="sbWizardModal" style="display:none;position:fixed;inset:0;z-index:400;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px)">
+        <div style="background:var(--surface);border:1px solid var(--border2);border-radius:14px;width:560px;max-width:95vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.5)">
+
+          <!-- Wizard header -->
+          <div style="padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+            <div>
+              <div style="font-size:15px;font-weight:700;color:var(--text)" id="sbWizTitle">Add a Widget</div>
+              <div style="font-size:11.5px;color:var(--muted);margin-top:2px" id="sbWizSubtitle">Step 1 of 3 &mdash; Choose a widget type</div>
+            </div>
+            <button onclick="sbWizardClose()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px">&times;</button>
+          </div>
+
+          <!-- Step progress -->
+          <div style="display:flex;padding:0 22px;border-bottom:1px solid var(--border);flex-shrink:0">
+            <div id="sbWizStep1Tab" class="wiz-step-tab active" onclick="sbWizGoTo(1)">1&nbsp; Widget Type</div>
+            <div id="sbWizStep2Tab" class="wiz-step-tab" onclick="if(_sbWizStep>=2)sbWizGoTo(2)">2&nbsp; Data Source</div>
+            <div id="sbWizStep3Tab" class="wiz-step-tab" onclick="if(_sbWizStep>=3)sbWizGoTo(3)">3&nbsp; Configure</div>
+          </div>
+
+          <!-- Wizard body (scrollable) -->
+          <div id="sbWizBody" style="flex:1;overflow-y:auto;padding:20px 22px"></div>
+
+          <!-- Wizard footer -->
+          <div style="padding:14px 22px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0">
+            <button class="btn" id="sbWizBackBtn" onclick="sbWizardBack()" style="display:none">&#8592; Back</button>
+            <div style="flex:1"></div>
+            <button class="btn" onclick="sbWizardClose()">Cancel</button>
+            <button class="btn primary" id="sbWizNextBtn" onclick="sbWizardNext()">Next &#8594;</button>
+          </div>
+        </div>
+      </div>
 </body>
 </html>
