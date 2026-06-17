@@ -861,67 +861,37 @@ canvas.chart-interactive { cursor: crosshair; }
 .cwl-amt{font-size:11px;font-family:var(--mono);font-weight:700;color:var(--text);flex-shrink:0;}
 .cwl-pct{font-size:10.5px;color:var(--muted);flex-shrink:0;}
 
-/* ── SANDBOX PAGE BUILDER ── */
-.sb-canvas{min-height:400px;background:repeating-linear-gradient(0deg,transparent,transparent 39px,var(--border) 39px,var(--border) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,var(--border) 39px,var(--border) 40px);border:1.5px dashed var(--border2);border-radius:var(--radius);position:relative;padding:16px;display:flex;flex-wrap:wrap;gap:12px;align-content:flex-start;}
-.sb-canvas.drag-over{border-color:var(--green);background-color:rgba(46,204,138,0.03);}
-.sb-widget-block{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative;min-width:240px;flex:1;}
-.sb-widget-block:hover .sb-widget-toolbar{opacity:1;}
-.sb-widget-block.selected{border-color:var(--green);box-shadow:0 0 0 2px rgba(46,204,138,0.2);}
-.sb-widget-toolbar{position:absolute;top:6px;right:6px;display:flex;gap:4px;opacity:0;transition:opacity 0.15s;z-index:10;}
-.sb-widget-tool-btn{width:24px;height:24px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all 0.12s;}
-.sb-widget-tool-btn:hover{background:var(--surface3);color:var(--text);}
-.sb-widget-resize{width:16px;height:16px;position:absolute;bottom:4px;right:4px;cursor:se-resize;color:var(--hint);font-size:10px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.15s;}
-.sb-widget-block:hover .sb-widget-resize{opacity:1;}
-/* Library panel */
-.sb-library{width:220px;flex-shrink:0;}
-.sb-lib-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;cursor:grab;transition:all 0.12s;margin-bottom:6px;background:var(--surface);}
-.sb-lib-item:hover{border-color:var(--green);background:rgba(46,204,138,0.05);transform:translateX(2px);}
-.sb-lib-item:active{cursor:grabbing;}
-.sb-lib-icon{font-size:18px;flex-shrink:0;}
-.sb-lib-label{font-size:12px;font-weight:500;color:var(--text);}
-.sb-lib-sub{font-size:10.5px;color:var(--muted);}
-/* Inspector panel */
-.sb-inspector{width:220px;flex-shrink:0;}
-.sb-insp-row{display:flex;flex-direction:column;gap:3px;margin-bottom:10px;}
-.sb-insp-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);}
-.sb-insp-val{height:28px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:0 8px;color:var(--text);font-size:12px;}
-.sb-insp-val:focus{outline:none;border-color:var(--green);}
-/* Templates */
-.sb-template-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px 14px;cursor:pointer;transition:all 0.15s;margin-bottom:8px;}
-.sb-template-card:hover{border-color:var(--green);background:rgba(46,204,138,0.04);}
-.sb-template-card.active{border-color:var(--green);}
-
-/* ── SANDBOX PAGE BUILDER ── */
-.sb-library{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;overflow-y:auto;max-height:calc(100vh - 200px);}
-.sb-lib-group{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--hint);padding:10px 0 4px;border-top:1px solid var(--border);margin-top:6px;}
-.sb-lib-group:first-child{border-top:none;margin-top:0;padding-top:0;}
-.sb-lib-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;cursor:grab;transition:all 0.12s;border:1px solid transparent;margin-bottom:2px;}
-.sb-lib-item:hover{background:var(--surface2);border-color:var(--border);}
-.sb-lib-item:active{cursor:grabbing;opacity:0.7;}
-.sb-lib-icon{font-size:16px;flex-shrink:0;width:20px;text-align:center;}
-.sb-lib-label{font-size:11.5px;font-weight:600;color:var(--text);}
-.sb-lib-sub{font-size:10px;color:var(--hint);}
-.sb-widget-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:border-color 0.12s;position:relative;}
+/* ── SANDBOX (rebuilt) ── */
+.sb-lib-pill{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;transition:all .12s;user-select:none;}
+.sb-lib-pill:hover{border-color:var(--cyan);background:rgba(56,189,248,.06);color:var(--cyan);}
+.sb-lib-pill:active{transform:scale(.97);}
+.sb-pill-sep{width:1px;height:20px;background:var(--border);display:inline-block;margin:0 2px;}
+.sb-widget-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative;transition:border-color .12s;}
 .sb-widget-card:hover{border-color:var(--border2);}
-.sb-widget-card.selected{border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan)20;}
+.sb-widget-card.selected{border-color:var(--cyan);box-shadow:0 0 0 1px rgba(56,189,248,.2);}
 .sb-widget-card.span-2{grid-column:1/-1;}
-.sb-widget-header{display:flex;align-items:center;justify-content:space-between;padding:9px 12px 8px;border-bottom:1px solid var(--border);background:var(--surface2);}
-.sb-widget-title{font-size:11.5px;font-weight:700;color:var(--text);}
-.sb-widget-actions{display:flex;gap:4px;opacity:0;transition:opacity 0.12s;}
-.sb-widget-card:hover .sb-widget-actions{opacity:1;}
-.sb-widget-actions button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 5px;border-radius:4px;}
+.sb-widget-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-bottom:1px solid var(--border);}
+.sb-widget-title{font-size:11.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px;}
+.sb-widget-src{font-size:9.5px;background:var(--surface3);color:var(--hint);padding:1px 6px;border-radius:3px;font-family:var(--mono);}
+.sb-widget-actions{display:flex;gap:2px;opacity:0;transition:opacity .12s;}
+.sb-widget-card:hover .sb-widget-actions,.sb-widget-card.selected .sb-widget-actions{opacity:1;}
+.sb-widget-actions button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 5px;border-radius:3px;}
 .sb-widget-actions button:hover{background:var(--surface3);color:var(--text);}
-.sb-widget-body{padding:12px;}
-.sb-widget-status{font-size:10px;padding:4px 12px 6px;color:var(--hint);font-family:var(--mono);}
-.sb-inspector-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;overflow-y:auto;max-height:calc(100vh - 200px);}
-.sb-insp-row{margin-bottom:10px;}
-.sb-insp-label{display:block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;}
-.sb-insp-val{width:100%;height:30px;font-size:12px;}
-.sb-insp-section{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--hint);padding:10px 0 6px;border-top:1px solid var(--border);margin-top:12px;}
-.sb-insp-code{width:100%;min-height:90px;font-family:var(--mono);font-size:10.5px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;color:var(--text);resize:vertical;line-height:1.5;outline:none;}
-.sb-insp-code:focus{border-color:var(--cyan);}
-#sbCanvas.drag-over{border-color:var(--cyan);background:rgba(56,189,248,0.03);}
-
+.sb-widget-body{padding:10px;}
+.sb-widget-status{font-size:10px;padding:2px 12px 4px;color:var(--hint);font-family:var(--mono);border-top:1px solid var(--border);}
+/* Wizard */
+.sb-wiz-step{animation:fadeIn .2s ease;}
+.sb-wiz-field{margin-bottom:16px;}
+.sb-wiz-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px;display:block;}
+.sb-wiz-input{width:100%;height:36px;font-size:13px;}
+.sb-wiz-select{width:100%;height:36px;font-size:13px;}
+.sb-wiz-preview{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:8px;min-height:80px;position:relative;}
+.sb-wiz-ds-card{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:all .12s;margin-bottom:6px;background:var(--surface);}
+.sb-wiz-ds-card:hover,.sb-wiz-ds-card.active{border-color:var(--cyan);background:rgba(56,189,248,.05);}
+.sb-wiz-ds-icon{font-size:18px;flex-shrink:0;}
+.sb-wiz-ds-name{font-size:12.5px;font-weight:600;color:var(--text);}
+.sb-wiz-ds-sub{font-size:11px;color:var(--muted);}
+#sbCanvas.drag-over{border-color:var(--green) !important;background:rgba(46,204,138,.02);}
 /* ── M1-M4: MOBILE ── */
 .bn-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:9px;font-weight:700;letter-spacing:.04em;padding:4px 2px;text-transform:uppercase;transition:color .12s}
 .bn-btn:hover,.bn-btn.active{color:var(--green)}
@@ -1069,6 +1039,32 @@ canvas.chart-interactive { cursor: crosshair; }
 .fire-ms-title{font-size:12.5px;font-weight:600;color:var(--text);}
 .fire-ms-sub{font-size:11px;color:var(--muted);}
 .fire-ms-val{font-size:13px;font-weight:700;font-family:var(--mono);flex-shrink:0;}
+
+
+/* ── Sandbox Wizard ── */
+.wiz-step-tab{padding:10px 16px;font-size:12px;font-weight:600;color:var(--hint);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;}
+.wiz-step-tab.active{color:var(--green);border-bottom-color:var(--green);}
+.wiz-step-tab:hover{color:var(--text);}
+.sb-widget-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.sb-pick-card{background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:all .15s;text-align:center;}
+.sb-pick-card:hover{border-color:var(--border2);transform:translateY(-2px);}
+.sb-pick-card.selected{border-color:var(--green);background:rgba(46,204,138,.06);}
+.sb-pick-icon{font-size:26px;margin-bottom:6px;}
+.sb-pick-label{font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:3px;}
+.sb-pick-desc{font-size:10.5px;color:var(--muted);line-height:1.4;}
+.sb-ds-card{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .12s;margin-bottom:8px;}
+.sb-ds-card:hover{border-color:var(--border2);}
+.sb-ds-card.selected{border-color:var(--green);background:rgba(46,204,138,.05);}
+.sb-ds-icon{font-size:20px;flex-shrink:0;margin-top:1px;}
+.sb-ds-label{font-size:13px;font-weight:600;color:var(--text);}
+.sb-ds-desc{font-size:11px;color:var(--muted);line-height:1.45;margin-top:2px;}
+.sb-ds-sample{font-size:10px;font-family:var(--mono);color:var(--hint);margin-top:4px;padding:3px 7px;background:var(--surface3);border-radius:4px;display:inline-block;}
+.wiz-section-title{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;margin-top:16px;}
+.wiz-section-title:first-child{margin-top:0;}
+.wiz-field{margin-bottom:14px;}
+.wiz-field label{font-size:11.5px;font-weight:600;color:var(--text);display:block;margin-bottom:5px;}
+.wiz-field .wiz-desc{font-size:10.5px;color:var(--muted);margin-bottom:6px;line-height:1.5;}
+.wiz-preview-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:12px;min-height:60px;font-size:11.5px;color:var(--muted);}
 
 </style>
 
@@ -2309,163 +2305,84 @@ canvas.chart-interactive { cursor: crosshair; }
 
     <!-- ── SANDBOX ── -->
     <div id="sandbox" class="page">
+
+      <!-- Header -->
       <div class="page-hdr">
         <div>
           <div class="page-title">&#129514; Sandbox</div>
-          <div class="page-sub">Build custom pages &#183; wire live data &#183; test &amp; save as templates</div>
+          <div class="page-sub">Build custom views with live data &#183; step-by-step widget wizard</div>
         </div>
         <div class="page-hdr-right" style="gap:8px;flex-wrap:wrap">
-          <button class="btn" onclick="sbToggleDataTester()" id="sbDataTesterBtn">&#128200; Data Tester</button>
-          <button class="btn" onclick="sbClearCanvas()" title="Clear canvas">&#128465; Clear</button>
+          <button class="btn" onclick="sbClearCanvas()">&#128465; Clear</button>
           <button class="btn" onclick="sbSaveTemplate()">&#128190; Save Template</button>
           <button class="btn" onclick="sbExportTemplates()">&#8659; Export</button>
           <input type="file" id="sbImportFile" accept=".json" style="display:none" onchange="sbImportTemplates(this)">
           <button class="btn" onclick="gg('sbImportFile').click()">&#8657; Import</button>
-          <button class="btn primary" onclick="sbRunAll()">&#9654; Run All</button>
+          <button class="btn primary" onclick="sbRunAll()">&#9654; Refresh All</button>
         </div>
       </div>
 
       <!-- Template bar -->
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)">
-        <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;flex-shrink:0">Templates:</span>
-        <div id="sbTemplateBar" style="display:flex;gap:6px;flex-wrap:wrap;flex:1"></div>
-        <button class="btn" onclick="sbLoadTemplate('default')" style="font-size:11px;flex-shrink:0">&#128196; Default</button>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);flex-shrink:0">Templates:</span>
+        <div id="sbTemplateBar" style="display:flex;gap:6px;flex-wrap:wrap;flex:1;min-height:24px"></div>
+        <button class="btn" onclick="sbLoadTemplate('default')" style="font-size:11px;flex-shrink:0">&#128196; Load Default</button>
       </div>
 
-      <!-- Data tester panel (collapsible) -->
-      <div id="sbDataTesterPanel" style="display:none;margin-bottom:14px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border)">
-          <div style="font-size:12px;font-weight:700;color:var(--cyan)">&#128200; Live Data Source Tester</div>
-          <button onclick="sbToggleDataTester()" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer">&times;</button>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
-          <div style="padding:14px 16px;border-right:1px solid var(--border)">
-            <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:10px">Source / Expression</div>
-            <select class="sel" id="sbDsSelect" onchange="sbRunDataTest()" style="width:100%;margin-bottom:8px;height:32px">
-              <option value="">— pick a source —</option>
-            </select>
-            <textarea id="sbDsCustom" class="sel" placeholder="Custom JS expression&#10;e.g. allTxns.filter(t=>t.amount>500).slice(0,5)" style="width:100%;height:80px;font-family:var(--mono);font-size:11px;resize:vertical;line-height:1.5;margin-bottom:8px"></textarea>
-            <div style="display:flex;gap:6px">
-              <button class="btn primary" onclick="sbRunDataTest()" style="flex:1">&#9654; Run</button>
-              <button class="btn" onclick="sbDsCustom.value=''" style="font-size:11px">Clear</button>
-            </div>
-          </div>
-          <div style="padding:14px 16px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-              <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase">Output</div>
-              <span id="sbDsResultMeta" style="font-size:10.5px;color:var(--hint)"></span>
-            </div>
-            <pre id="sbDsResult" style="font-family:var(--mono);font-size:10.5px;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;max-height:160px;overflow:auto;white-space:pre-wrap;word-break:break-all;margin:0">Run a source to see output...</pre>
-            <button class="btn" onclick="sbUseDataInWidget()" style="margin-top:8px;font-size:11px;width:100%">&#8599; Use in selected widget</button>
-          </div>
+      <!-- Status -->
+      <div id="sbStatus" style="font-size:12px;color:var(--muted);margin-bottom:12px"></div>
+
+      <!-- ADD WIDGET button row -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <button class="btn primary" onclick="sbWizardOpen()" style="gap:8px;font-size:13px;padding:8px 18px">
+          &#43; Add Widget
+        </button>
+        <span id="sbWidgetCount" style="font-size:11.5px;color:var(--muted)">0 widgets</span>
+      </div>
+
+      <!-- CANVAS -->
+      <div id="sbCanvas" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;min-height:200px">
+        <div id="sbCanvasEmpty" style="grid-column:1/-1;border:2px dashed var(--border);border-radius:var(--radius);padding:48px 20px;text-align:center;color:var(--hint)">
+          <div style="font-size:36px;margin-bottom:10px">&#128203;</div>
+          <div style="font-size:14px;font-weight:500;margin-bottom:6px">No widgets yet</div>
+          <div style="font-size:12px;margin-bottom:16px">Click <strong>+ Add Widget</strong> above to get started, or load a template.</div>
+          <button class="btn primary" onclick="sbWizardOpen()">&#43; Add your first widget</button>
         </div>
       </div>
 
-      <!-- Status bar -->
-      <div id="sbStatus" style="font-size:11.5px;color:var(--muted);margin-bottom:10px;min-height:18px"></div>
+      <!-- WIZARD MODAL -->
+      <div id="sbWizardModal" style="display:none;position:fixed;inset:0;z-index:400;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px)">
+        <div style="background:var(--surface);border:1px solid var(--border2);border-radius:14px;width:560px;max-width:95vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.5)">
 
-      <!-- 3-panel layout -->
-      <div style="display:grid;grid-template-columns:180px 1fr 220px;gap:12px;align-items:flex-start;min-height:500px">
-
-        <!-- LEFT: Widget Library -->
-        <div class="sb-library" style="position:sticky;top:16px">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">Widget Library</div>
-
-          <div class="sb-lib-group">&#128202; Charts</div>
-          <div class="sb-lib-item" draggable="true" data-wtype="chart-bar" ondragstart="sbLibDragStart(event,this)" title="Bar/Line/Area chart with configurable data source">
-            <span class="sb-lib-icon">&#128202;</span>
-            <div><div class="sb-lib-label">Bar Chart</div><div class="sb-lib-sub">Grouped bars</div></div>
-          </div>
-          <div class="sb-lib-item" draggable="true" data-wtype="chart-doughnut" ondragstart="sbLibDragStart(event,this)" title="Doughnut or pie chart">
-            <span class="sb-lib-icon">&#11835;</span>
-            <div><div class="sb-lib-label">Doughnut</div><div class="sb-lib-sub">Category slices</div></div>
-          </div>
-          <div class="sb-lib-item" draggable="true" data-wtype="chart-line" ondragstart="sbLibDragStart(event,this)" title="Line or area trend chart">
-            <span class="sb-lib-icon">&#128200;</span>
-            <div><div class="sb-lib-label">Line / Area</div><div class="sb-lib-sub">Trend over time</div></div>
-          </div>
-          <div class="sb-lib-item" draggable="true" data-wtype="chart-horizontal-bar" ondragstart="sbLibDragStart(event,this)" title="Horizontal bar - good for rankings">
-            <span class="sb-lib-icon">&#127991;</span>
-            <div><div class="sb-lib-label">Horiz. Bar</div><div class="sb-lib-sub">Rankings</div></div>
-          </div>
-
-          <div class="sb-lib-group">&#128208; Metrics</div>
-          <div class="sb-lib-item" draggable="true" data-wtype="metric-single" ondragstart="sbLibDragStart(event,this)">
-            <span class="sb-lib-icon">&#128176;</span>
-            <div><div class="sb-lib-label">KPI Card</div><div class="sb-lib-sub">Single big number</div></div>
-          </div>
-          <div class="sb-lib-item" draggable="true" data-wtype="metric-row" ondragstart="sbLibDragStart(event,this)">
-            <span class="sb-lib-icon">&#128290;</span>
-            <div><div class="sb-lib-label">Metric Row</div><div class="sb-lib-sub">Multi-stat strip</div></div>
-          </div>
-          <div class="sb-lib-item" draggable="true" data-wtype="metric-progress" ondragstart="sbLibDragStart(event,this)">
-            <span class="sb-lib-icon">&#127919;</span>
-            <div><div class="sb-lib-label">Progress Bar</div><div class="sb-lib-sub">Goal tracking</div></div>
-          </div>
-
-          <div class="sb-lib-group">&#128203; Data</div>
-          <div class="sb-lib-item" draggable="true" data-wtype="data-table" ondragstart="sbLibDragStart(event,this)">
-            <span class="sb-lib-icon">&#128203;</span>
-            <div><div class="sb-lib-label">Table</div><div class="sb-lib-sub">Rows of data</div></div>
-          </div>
-          <div class="sb-lib-item" draggable="true" data-wtype="data-list" ondragstart="sbLibDragStart(event,this)">
-            <span class="sb-lib-icon">&#128221;</span>
-            <div><div class="sb-lib-label">List</div><div class="sb-lib-sub">Bullet-style rows</div></div>
-          </div>
-          <div class="sb-lib-item" draggable="true" data-wtype="plaid-accounts" ondragstart="sbLibDragStart(event,this)">
-            <span class="sb-lib-icon">&#127970;</span>
-            <div><div class="sb-lib-label">Accounts</div><div class="sb-lib-sub">Live Plaid data</div></div>
-          </div>
-          <div class="sb-lib-item" draggable="true" data-wtype="plaid-txns" ondragstart="sbLibDragStart(event,this)">
-            <span class="sb-lib-icon">&#128184;</span>
-            <div><div class="sb-lib-label">Transactions</div><div class="sb-lib-sub">Live feed</div></div>
-          </div>
-
-          <div class="sb-lib-group">&#9881; Custom</div>
-          <div class="sb-lib-item" draggable="true" data-wtype="custom-js" ondragstart="sbLibDragStart(event,this)" title="Write custom JS to render anything">
-            <span class="sb-lib-icon">&#128187;</span>
-            <div><div class="sb-lib-label">Custom Widget</div><div class="sb-lib-sub">Write your own JS</div></div>
-          </div>
-
-          <div class="sb-lib-group">&#128195; Layout</div>
-          <div class="sb-lib-item" draggable="true" data-wtype="layout-divider" ondragstart="sbLibDragStart(event,this)">
-            <span class="sb-lib-icon">&#10134;</span>
-            <div><div class="sb-lib-label">Divider</div><div class="sb-lib-sub">Visual separator</div></div>
-          </div>
-          <div class="sb-lib-item" draggable="true" data-wtype="layout-text" ondragstart="sbLibDragStart(event,this)">
-            <span class="sb-lib-icon">&#128196;</span>
-            <div><div class="sb-lib-label">Text / Note</div><div class="sb-lib-sub">Markdown-ish text</div></div>
-          </div>
-          <div class="sb-lib-item" draggable="true" data-wtype="layout-spacer" ondragstart="sbLibDragStart(event,this)">
-            <span class="sb-lib-icon">&#8597;</span>
-            <div><div class="sb-lib-label">Spacer</div><div class="sb-lib-sub">Vertical gap</div></div>
-          </div>
-        </div>
-
-        <!-- CENTER: Canvas -->
-        <div id="sbCanvas"
-          ondragover="sbCanvasDragOver(event)"
-          ondragleave="sbCanvasDragLeave(event)"
-          ondrop="sbCanvasDrop(event)"
-          style="min-height:480px;border:2px dashed var(--border);border-radius:var(--radius);padding:16px;transition:border-color 0.15s;display:grid;grid-template-columns:1fr 1fr;gap:12px;align-content:start">
-          <div id="sbCanvasEmpty" style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--hint)">
-            <div style="font-size:32px;margin-bottom:12px">&#128203;</div>
-            <div style="font-size:14px;font-weight:500;margin-bottom:6px">Canvas is empty</div>
-            <div style="font-size:12px">Drag widgets from the library &#8592; or load a template above</div>
-          </div>
-        </div>
-
-        <!-- RIGHT: Inspector -->
-        <div class="sb-inspector-panel" style="position:sticky;top:16px">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">Inspector</div>
-          <div id="sbInspector">
-            <div style="color:var(--hint);font-size:12px;text-align:center;padding:24px 8px">
-              Click a widget on the canvas to inspect and edit it.
+          <!-- Wizard header -->
+          <div style="padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+            <div>
+              <div style="font-size:15px;font-weight:700;color:var(--text)" id="sbWizTitle">Add a Widget</div>
+              <div style="font-size:11.5px;color:var(--muted);margin-top:2px" id="sbWizSubtitle">Step 1 of 3 &mdash; Choose a widget type</div>
             </div>
+            <button onclick="sbWizardClose()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px">&times;</button>
+          </div>
+
+          <!-- Step progress -->
+          <div style="display:flex;padding:0 22px;border-bottom:1px solid var(--border);flex-shrink:0">
+            <div id="sbWizStep1Tab" class="wiz-step-tab active" onclick="sbWizGoTo(1)">1&nbsp; Widget Type</div>
+            <div id="sbWizStep2Tab" class="wiz-step-tab" onclick="if(_sbWizStep>=2)sbWizGoTo(2)">2&nbsp; Data Source</div>
+            <div id="sbWizStep3Tab" class="wiz-step-tab" onclick="if(_sbWizStep>=3)sbWizGoTo(3)">3&nbsp; Configure</div>
+          </div>
+
+          <!-- Wizard body (scrollable) -->
+          <div id="sbWizBody" style="flex:1;overflow-y:auto;padding:20px 22px"></div>
+
+          <!-- Wizard footer -->
+          <div style="padding:14px 22px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0">
+            <button class="btn" id="sbWizBackBtn" onclick="sbWizardBack()" style="display:none">&#8592; Back</button>
+            <div style="flex:1"></div>
+            <button class="btn" onclick="sbWizardClose()">Cancel</button>
+            <button class="btn primary" id="sbWizNextBtn" onclick="sbWizardNext()">Next &#8594;</button>
           </div>
         </div>
-
       </div>
+
     </div>
 
     <!-- ── CASH FLOW ── -->
@@ -7833,6 +7750,204 @@ function sbInitSandbox() {
   sbSetStatus('Ready — drag a widget from the library to start');
 }
 
+// ── SANDBOX WIZARD ───────────────────────────────────────────────────────────
+var _sbWizStep = 1, _sbWizType = null, _sbWizSource = null, _sbWizConfig = {};
+
+var SB_WIDGET_CATALOG = [
+  {type:'chart-bar',            icon:'📊', label:'Bar Chart',       group:'Charts',   desc:'Compare values across categories or time periods. Great for monthly spending.',     bestFor:['byMonth','byCategory']},
+  {type:'chart-line',           icon:'📈', label:'Line / Area',      group:'Charts',   desc:'Show trends over time. Best for portfolio growth, spending over months.',           bestFor:['byMonth','transactions']},
+  {type:'chart-doughnut',       icon:'🍩', label:'Doughnut Chart',   group:'Charts',   desc:'Show proportions of a whole. Perfect for category breakdowns and allocation.',       bestFor:['byCategory','netWorthSummary']},
+  {type:'chart-horizontal-bar', icon:'📉', label:'Horizontal Bar',   group:'Charts',   desc:'Rank items side by side. Best for top spending categories.',                        bestFor:['byCategory','bills']},
+  {type:'metric-single',        icon:'💰', label:'KPI Card',          group:'Metrics',  desc:'One big number with a label. Use for net worth, monthly income, or any value.',    bestFor:['monthlyIncome','netCashFlow']},
+  {type:'metric-row',           icon:'🔢', label:'Metric Row',        group:'Metrics',  desc:'3–5 KPI numbers in a row. Great for a financial summary strip.',                   bestFor:['netWorthSummary','monthlyIncome']},
+  {type:'metric-progress',      icon:'🎯', label:'Progress Bar',      group:'Metrics',  desc:'How far toward a goal — budget allocated, savings target.',                        bestFor:['budget','netWorthSummary']},
+  {type:'data-table',           icon:'📋', label:'Data Table',        group:'Data',     desc:'Rows and columns. Auto-detects fields. Good for transactions and bills.',           bestFor:['transactions','bills']},
+  {type:'data-list',            icon:'📝', label:'Simple List',       group:'Data',     desc:'Clean label + value rows. Easier to read than a full table.',                       bestFor:['bills','income']},
+  {type:'plaid-accounts',       icon:'🏦', label:'Plaid Accounts',    group:'Live',     desc:'Live account balances from connected banks and credit cards via Plaid.',             bestFor:['accounts']},
+  {type:'plaid-txns',           icon:'💸', label:'Transaction Feed',  group:'Live',     desc:'Scrolling feed of recent transactions colored by category.',                        bestFor:['transactions']},
+  {type:'custom-js',            icon:'💻', label:'Custom Widget',     group:'Advanced', desc:'Write your own JS. Full access to all app data and Chart.js.',                     bestFor:[]},
+  {type:'layout-text',          icon:'📄', label:'Text / Note',       group:'Layout',   desc:'Free-form text block. Click to edit. Great for section headers.',                   bestFor:[]},
+  {type:'layout-divider',       icon:'➖', label:'Divider',           group:'Layout',   desc:'A horizontal line to separate sections.',                                           bestFor:[]},
+];
+
+var SB_DS_CATALOG = [
+  {key:'byMonth',         icon:'📅', label:'Spending by Month',     desc:'Income and spending totalled per calendar month. Perfect for bar and line charts.',      sample:'{label:"2024-01", income:8200, spending:4100}'},
+  {key:'byCategory',      icon:'🏷',  label:'Spending by Category',  desc:'Total spent per transaction category. Best for doughnut and horizontal bar.',             sample:'{label:"Food & Groceries", value:842}'},
+  {key:'transactions',    icon:'💳', label:'All Transactions',       desc:'Every Plaid transaction — date, amount, merchant, category.',                             sample:'{name:"Starbucks", amount:6.50, date:"2024-01-15"}'},
+  {key:'accounts',        icon:'🏦', label:'Plaid Accounts',         desc:'Live linked bank and credit card accounts with current balances.',                        sample:'{name:"Chase Checking", balances:{current:4200}}'},
+  {key:'bills',           icon:'📋', label:'Bills',                  desc:'Recurring bills with amounts, due dates, and category.',                                  sample:'{name:"Mortgage", pay:2638, cat:"HM"}'},
+  {key:'income',          icon:'💵', label:'Income Sources',         desc:'Your income sources with amounts and pay frequency.',                                     sample:'{name:"Matt Paycheck", amount:4525}'},
+  {key:'assets',          icon:'📈', label:'Net Worth Assets',       desc:'Assets — home, investments, vehicles, savings.',                                          sample:'{name:"Home", value:450000, cat:"Real Estate"}'},
+  {key:'liabilities',     icon:'📉', label:'Liabilities',           desc:'Debts — mortgage, auto loans, credit cards.',                                             sample:'{name:"Mortgage", value:302000}'},
+  {key:'budget',          icon:'🎯', label:'Zero Budget Buckets',    desc:'Budget allocations per category.',                                                        sample:'{name:"Food", amt:400}'},
+  {key:'monthlyIncome',   icon:'💰', label:'Monthly Income',         desc:'Total monthly income from all sources (computed).',                                       sample:'{label:"Monthly Income", value:10787}'},
+  {key:'monthlyBills',    icon:'🧾', label:'Monthly Bills',          desc:'Total monthly fixed bills (computed).',                                                   sample:'{label:"Monthly Bills", value:3200}'},
+  {key:'netCashFlow',     icon:'⚡', label:'Net Cash Flow',          desc:'Monthly income minus bills — your surplus or deficit.',                                   sample:'{label:"Net Cash Flow", value:7587}'},
+  {key:'netWorthSummary', icon:'🏛',  label:'Net Worth Summary',      desc:'Assets, liabilities, and net worth as three values.',                                    sample:'{label:"Net Worth", value:295000}'},
+];
+
+function sbWizardOpen() {
+  _sbWizStep=1; _sbWizType=null; _sbWizSource=null; _sbWizConfig={};
+  gg('sbWizardModal').style.display='flex';
+  sbWizRender();
+}
+function sbWizardClose() { gg('sbWizardModal').style.display='none'; }
+function sbWizGoTo(step) { _sbWizStep=step; sbWizRender(); }
+function sbWizardBack() { if(_sbWizStep>1){_sbWizStep--;sbWizRender();} }
+function sbWizardNext() {
+  if(_sbWizStep===1){
+    if(!_sbWizType){showToast('Please select a widget type','error');return;}
+    var noData=['layout-text','layout-divider','layout-spacer'].includes(_sbWizType);
+    if(noData){sbWizardFinish();return;}
+    if(!_sbWizSource){var wt=SB_WIDGET_TYPES[_sbWizType];_sbWizSource=wt?wt.defaultSource:'byCategory';}
+    _sbWizStep=2; sbWizRender();
+  } else if(_sbWizStep===2){
+    if(!_sbWizSource){showToast('Please select a data source','error');return;}
+    _sbWizStep=3; sbWizRender();
+  } else {
+    sbWizardFinish();
+  }
+}
+function sbWizardFinish() {
+  var cfg=Object.assign({},_sbWizConfig);
+  var t=gg('wcfgTitle'),lm=gg('wcfgLimit'),col=gg('wcfgColor'),js=gg('wcfgJS');
+  if(t)cfg.title=t.value||cfg.title;
+  if(lm)cfg.limit=+lm.value||10;
+  if(col)cfg.color=col.value;
+  if(js)cfg.customJS=js.value;
+  if(_sbWizSource)cfg.source=_sbWizSource;
+  sbAddWidget(_sbWizType,cfg);
+  sbWizardClose();
+  showToast('Widget added!','success');
+}
+
+function sbWizRender() {
+  var body=gg('sbWizBody'),ttl=gg('sbWizTitle'),sub=gg('sbWizSubtitle');
+  var back=gg('sbWizBackBtn'),next=gg('sbWizNextBtn');
+  [1,2,3].forEach(function(s){var el=gg('sbWizStep'+s+'Tab');if(el)el.classList.toggle('active',s===_sbWizStep);});
+  back.style.display=_sbWizStep>1?'inline-flex':'none';
+  next.textContent=_sbWizStep===3?'✓ Add Widget':'Next →';
+  if(_sbWizStep===1)sbWizStep1(body,ttl,sub);
+  else if(_sbWizStep===2)sbWizStep2(body,ttl,sub);
+  else sbWizStep3(body,ttl,sub);
+}
+
+function sbWizStep1(body,ttl,sub){
+  ttl.textContent='Choose a Widget Type';
+  sub.textContent='Step 1 of 3 — What kind of widget do you want?';
+  var groups={};
+  SB_WIDGET_CATALOG.forEach(function(w){if(!groups[w.group])groups[w.group]=[];groups[w.group].push(w);});
+  body.innerHTML=Object.entries(groups).map(function(e){
+    return '<div class="wiz-section-title">'+e[0]+'</div>'
+      +'<div class="sb-widget-pick">'+e[1].map(function(w){
+        return '<div class="sb-pick-card'+(_sbWizType===w.type?' selected':'')+'" onclick="sbWizPickType(\''+w.type+'\',this)">'
+          +'<div class="sb-pick-icon">'+w.icon+'</div>'
+          +'<div class="sb-pick-label">'+esc(w.label)+'</div>'
+          +'<div class="sb-pick-desc">'+esc(w.desc)+'</div>'
+          +'</div>';
+      }).join('')+'</div>';
+  }).join('');
+}
+
+function sbWizPickType(type,el){
+  _sbWizType=type;
+  document.querySelectorAll('.sb-pick-card').forEach(function(c){c.classList.remove('selected');});
+  el.classList.add('selected');
+  var wt=SB_WIDGET_TYPES[type];
+  if(wt&&wt.defaultSource)_sbWizSource=wt.defaultSource;
+}
+
+function sbWizStep2(body,ttl,sub){
+  var def=SB_WIDGET_CATALOG.find(function(w){return w.type===_sbWizType;})||{label:_sbWizType,bestFor:[]};
+  ttl.textContent='Choose a Data Source';
+  sub.textContent='Step 2 of 3 — What data should "'+def.label+'" display?';
+  var rec=def.bestFor||[];
+  body.innerHTML=
+    '<div style="background:rgba(46,204,138,.08);border:1px solid rgba(46,204,138,.2);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px">'
+    +'<strong>💡 Recommended for '+esc(def.label)+':</strong> '
+    +(rec.length?rec.map(function(r){var d=SB_DS_CATALOG.find(function(x){return x.key===r;});return d?('<span style="color:var(--green);font-weight:600">'+esc(d.label)+'</span>'):r;}).join(', '):'Any source works')
+    +'</div>'
+    +SB_DS_CATALOG.map(function(ds){
+      var isRec=rec.includes(ds.key);
+      return '<div class="sb-ds-card'+(ds.key===_sbWizSource?' selected':'')+'" onclick="sbWizPickSrc(\''+ds.key+'\',this)">'
+        +'<div class="sb-ds-icon">'+ds.icon+'</div>'
+        +'<div style="flex:1;min-width:0">'
+          +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
+            +'<div class="sb-ds-label">'+esc(ds.label)+'</div>'
+            +(isRec?'<span style="font-size:9px;font-weight:700;background:rgba(46,204,138,.15);color:var(--green);padding:1px 6px;border-radius:3px">✓ RECOMMENDED</span>':'')
+          +'</div>'
+          +'<div class="sb-ds-desc">'+esc(ds.desc)+'</div>'
+          +'<div class="sb-ds-sample">'+esc(ds.sample)+'</div>'
+        +'</div></div>';
+    }).join('');
+}
+function sbWizPickSrc(key,el){
+  _sbWizSource=key;
+  document.querySelectorAll('.sb-ds-card').forEach(function(c){c.classList.remove('selected');});
+  el.classList.add('selected');
+}
+
+function sbWizStep3(body,ttl,sub){
+  var def=SB_WIDGET_CATALOG.find(function(w){return w.type===_sbWizType;})||{label:_sbWizType,icon:'📦'};
+  var ds=SB_DS_CATALOG.find(function(d){return d.key===_sbWizSource;})||{label:_sbWizSource||'None'};
+  ttl.textContent='Configure Your Widget';
+  sub.textContent='Step 3 of 3 — Set title, size, and display options';
+  var isChart=_sbWizType&&_sbWizType.startsWith('chart-');
+  var isCustom=_sbWizType==='custom-js';
+  var hasData=!!_sbWizSource;
+  var w=_sbWizConfig.width||'1';
+
+  var html='<div style="background:var(--surface2);border-radius:8px;padding:10px 14px;margin-bottom:16px;display:flex;gap:10px;align-items:center">'
+    +'<span style="font-size:22px">'+def.icon+'</span>'
+    +'<div><strong>'+esc(def.label)+'</strong>'+(hasData?' ← <span style="color:var(--cyan)">'+esc(ds.label)+'</span>':'')+'</div></div>'
+    // Title
+    +'<div class="wiz-field"><label>Widget Title</label>'
+    +'<div class="wiz-desc">The name shown in the widget header.</div>'
+    +'<input type="text" class="sel" id="wcfgTitle" value="'+esc(def.label)+'" style="height:34px;font-size:13px;width:100%"></div>'
+    // Width
+    +'<div class="wiz-field"><label>Width</label>'
+    +'<div class="wiz-desc">Half-width widgets sit side by side. Full-width spans the entire canvas.</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button class="btn" id="wcfgW1" onclick="sbWizSetW(\'1\')" style="flex:1'+(w==='1'?';border-color:var(--green)':'')+'">½ Half-width</button>'
+    +'<button class="btn" id="wcfgW2" onclick="sbWizSetW(\'2\')" style="flex:1'+(w==='2'?';border-color:var(--green)':'')+'">━ Full-width</button>'
+    +'</div></div>';
+
+  if(hasData&&!isChart){
+    html+='<div class="wiz-field"><label>Row Limit</label>'
+    +'<div class="wiz-desc">Max items to show. Higher = taller widget.</div>'
+    +'<input type="number" class="sel" id="wcfgLimit" value="10" min="1" max="50" style="height:32px;width:100px"></div>';
+  }
+  if(isChart){
+    var ctypes=[{v:'bar',i:'📊'},{v:'line',i:'📈'},{v:'doughnut',i:'🍩'},{v:'pie',i:'🥧'}];
+    var defCT=_sbWizType.replace('chart-','');
+    html+='<div class="wiz-field"><label>Chart Style</label>'
+    +'<div class="wiz-desc">How the data is visualized.</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
+    +ctypes.map(function(ct){
+      var sel=(_sbWizConfig.chartType||defCT)===ct.v;
+      return '<button class="btn wcfg-ct" data-ct="'+ct.v+'" onclick="sbWizSetCT(\''+ct.v+'\')" style="flex:1;min-width:80px'+(sel?';border-color:var(--green)':'')+'">'+ct.i+' '+(ct.v.charAt(0).toUpperCase()+ct.v.slice(1))+'</button>';
+    }).join('')+'</div></div>';
+  }
+  if(isCustom){
+    html+='<div class="wiz-field"><label>Custom JavaScript</label>'
+    +'<div class="wiz-desc">Renders into the widget body. Use: <code style="font-family:var(--mono);font-size:10px;background:var(--surface3);padding:1px 5px;border-radius:3px">container, data, fmt2, fmtM, PAL, esc</code></div>'
+    +'<textarea class="sel" id="wcfgJS" style="height:90px;font-family:var(--mono);font-size:11px;resize:vertical">container.innerHTML = \'&lt;p&gt;\'+data.length+\' items&lt;/p&gt;\';</textarea></div>';
+  }
+  html+='<div class="wiz-field"><label>Accent Color</label>'
+    +'<div class="wiz-desc">Used for chart bars and metric values.</div>'
+    +'<input type="color" id="wcfgColor" value="#38bdf8" style="height:36px;width:60px;border-radius:6px;border:1px solid var(--border);padding:2px;cursor:pointer"></div>';
+  body.innerHTML=html;
+}
+
+function sbWizSetW(v){
+  _sbWizConfig.width=v;
+  ['1','2'].forEach(function(n){var el=gg('wcfgW'+n);if(el)el.style.borderColor=n===v?'var(--green)':'';});
+}
+function sbWizSetCT(ct){
+  _sbWizConfig.chartType=ct;
+  document.querySelectorAll('.wcfg-ct').forEach(function(el){el.style.borderColor=el.dataset.ct===ct?'var(--green)':'';});
+}
+
 // fdRender alias
 function fdRender(){if(typeof initFireDrill==='function'){initFireDrill();}else{fdSetScenario('job');}}
 
@@ -8145,7 +8260,7 @@ function calcFireNW() {
   var coastStatus = document.getElementById('coastFireStatus');
   if(coastStatus){
     if(currentPortfolio >= coastFire) {
-      coastStatus.innerHTML = '<span style="color:var(--green);font-weight:700">&#10003; You\'ve hit Coast FIRE!</span> Your portfolio will grow to your FIRE number without any more contributions.';
+      coastStatus.innerHTML = '<span style="color:var(--green);font-weight:700">✓ You\'ve hit Coast FIRE!</span> Your portfolio will grow to your FIRE number without any more contributions.';
     } else {
       var gap = coastFire - currentPortfolio;
       coastStatus.textContent = 'Need '+fmt2(Math.round(gap))+' more to reach Coast FIRE.';
