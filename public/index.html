@@ -59,7 +59,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 #richieIntro{
   position:fixed;inset:0;z-index:3000;
   background:#080a10;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  display:none;flex-direction:column;align-items:center;justify-content:center;
   overflow:hidden;
   animation:fade-in 0.6s ease;
 }
@@ -172,7 +172,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 #setupWizard{
   position:fixed;inset:0;z-index:2900;
   background:#080a10;
-  display:flex;align-items:center;justify-content:center;
+  display:none;align-items:center;justify-content:center;
   animation:fade-in 0.4s ease;
   overflow-y:auto;
   padding:20px;
@@ -702,6 +702,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .e-shake{animation:e-shake .6s ease-in-out;}
 @keyframes e-sad{0%{transform:translateY(0) scale(1);}100%{transform:translateY(8px) scale(1.04,.92) rotate(-3deg);}}
 .e-sad{animation:e-sad .7s ease-out forwards;}
+@keyframes e-hop{0%,100%{transform:translateY(0) rotate(-3deg);}50%{transform:translateY(-12px) rotate(3deg);}}
+.e-hopping{animation:e-hop .42s ease-in-out infinite;}
+.r-zzz{position:absolute;font-size:18px;font-weight:800;color:#a78bfa;font-style:italic;opacity:0;}
 /* ── Settings page ── */
 .set-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:14px;}
 .set-card-label{font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;}
@@ -1419,6 +1422,135 @@ function engCategoryBreakdown(days){
   return Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([label,value])=>({label,value,color:getCatColor(label)}));
 }
 
+/* ── Real financial data (ported from live app) ── */
+let bills=[
+  {cat:'HM',name:"M&T Mortgage",note:'Mortgage',apr:2.625,due:5,bal:-292452.38,min:2638.46,pay:2638.46,promo:'',paid:false},
+  {cat:'LOAN',name:'Navy HELOC',note:'Navy Federal',apr:7.75,due:1,bal:-45427.90,min:454.28,pay:461.64,promo:'',paid:false},
+  {cat:'LOAN',name:'Windows Loan',note:'0% Promo',apr:0,due:12,bal:-11339.55,min:315.00,pay:315.00,promo:'0% 3yr',paid:false},
+  {cat:'CAR',name:'Dana Auto',note:'Capitol 1',apr:7.86,due:15,bal:-6430.19,min:300.61,pay:300.61,promo:'',paid:false},
+  {cat:'CAR',name:'Matt Auto',note:'Wells Fargo',apr:5.14,due:28,bal:-11865.37,min:451.50,pay:451.50,promo:'',paid:false},
+  {cat:'CAR',name:'State Farm Ins',note:'Insurance',apr:0,due:15,bal:0,min:265.93,pay:265.93,promo:'',paid:false},
+  {cat:'PH',name:'T-Mobile',note:'Phone',apr:0,due:1,bal:0,min:274.94,pay:274.94,promo:'',paid:false},
+  {cat:'HM',name:'Lake Worth Utilities',note:'Utilities',apr:0,due:10,bal:0,min:321.00,pay:321.00,promo:'',paid:false},
+  {cat:'TV',name:'Xfinity',note:'Cable',apr:0,due:29,bal:0,min:319.66,pay:319.66,promo:'',paid:false},
+  {cat:'CC',name:'Amex Blue Cash',note:'AMEX',apr:24.49,due:3,bal:-1134.61,min:53.41,pay:256.00,promo:'0% 15mo',paid:false},
+  {cat:'CC',name:'Savor',note:'Capitol 1',apr:29.49,due:3,bal:-678.59,min:29.00,pay:100.00,promo:'3% Food',paid:false},
+  {cat:'CC',name:'Chase Freedom',note:'Chase',apr:0,due:3,bal:-803.71,min:40.00,pay:100.00,promo:'3% Food',paid:false},
+  {cat:'CC',name:'Wells Fargo Reflect',note:'Wells Fargo',apr:0,due:12,bal:-2908.35,min:73.00,pay:287.93,promo:'0% thru 5/27',paid:false},
+  {cat:'CC',name:'Best Buy CC',note:'CITI',apr:28.74,due:12,bal:-434.10,min:29.00,pay:92.61,promo:'0% thru 9/26',paid:false},
+  {cat:'CC',name:'Home Depot',note:'CITI',apr:29.99,due:6,bal:-903.68,min:29.00,pay:82.15,promo:'0% thru 4/27',paid:false},
+  {cat:'CC',name:'Harbor Freight',note:'Synchrony',apr:0,due:20,bal:-238.15,min:44.00,pay:44.00,promo:'0% thru 10/26',paid:false},
+  {cat:'CC',name:'Amazon CC',note:'Synchrony',apr:29.74,due:8,bal:-585.57,min:81.00,pay:100.00,promo:'',paid:false},
+  {cat:'CC',name:'Costco CC',note:'CITI',apr:18.74,due:28,bal:-152.70,min:29.00,pay:152.70,promo:'',paid:false},
+  {cat:'CC',name:'Double Cash Back',note:'CITI',apr:26.49,due:16,bal:-21.69,min:29.00,pay:21.69,promo:'',paid:false},
+  {cat:'CC',name:'Hilton Honors',note:'AMEX',apr:28.49,due:2,bal:-1268.93,min:29.00,pay:29.00,promo:'HH Points',paid:false},
+  {cat:'CC',name:'Platinum',note:'Capitol 1',apr:28.74,due:14,bal:-118.14,min:29.00,pay:150.00,promo:'',paid:false},
+  {cat:'FAM',name:'Ana Mom',note:'Family',apr:0,due:30,bal:-2500,min:204.99,pay:204.99,promo:'',paid:false},
+];
+let incomeSources=[
+  {name:'Matt Paycheck',freq:'biweekly',amt:2088.50},
+  {name:'Dana Paycheck',freq:'weekly',amt:788.01},
+  {name:'Auto Allowance',freq:'monthly',amt:1650.00},
+  {name:'Quarterly Bonus',freq:'quarterly',amt:3594.23},
+];
+let zeroBuckets=[
+  {name:'Groceries',amt:350},{name:'Dining out',amt:200},{name:'Gas',amt:300},
+  {name:'Medical',amt:150},{name:'Clothing',amt:100},{name:'Entertainment',amt:100},
+  {name:'Savings',amt:500},{name:'Emergency fund',amt:200},{name:'Misc',amt:100},
+];
+let nwAssets=[
+  {cat:'Cash & Bank',name:'Checking accounts',value:0,note:'From Plaid',plaid:true},
+  {cat:'Cash & Bank',name:'Savings accounts',value:0,note:'From Plaid',plaid:true},
+  {cat:'Cash & Bank',name:'Cash on hand',value:500,note:''},
+  {cat:'Investments',name:'401k / Retirement',value:0,note:'From Plaid',plaid:true},
+  {cat:'Investments',name:'IRA (Roth/Traditional)',value:0,note:'From Plaid',plaid:true},
+  {cat:'Investments',name:'Brokerage accounts',value:0,note:'From Plaid',plaid:true},
+  {cat:'Real Estate',name:'Primary home (est. value)',value:485000,note:'Lake Worth, FL'},
+  {cat:'Vehicles',name:"Matt's vehicle",value:18000,note:'Wells Fargo'},
+  {cat:'Vehicles',name:"Dana's vehicle",value:12000,note:'Capitol 1'},
+  {cat:'Personal Property',name:'Jewelry & collectibles',value:0,note:''},
+  {cat:'Other Assets',name:'Life insurance (cash value)',value:0,note:''},
+  {cat:'Other Assets',name:'HSA balance',value:0,note:''},
+];
+let nwLiab=[
+  {cat:'Mortgage',name:'M&T Mortgage',value:292452.38,note:'2.625%'},
+  {cat:'HELOC',name:'Navy HELOC',value:45427.90,note:'7.75%'},
+  {cat:'Auto Loans',name:'Matt Auto',value:11865.37,note:'5.14%'},
+  {cat:'Auto Loans',name:'Dana Auto',value:6430.19,note:'7.86%'},
+  {cat:'Personal Loans',name:'Windows Loan',value:11339.55,note:'0%'},
+  {cat:'Credit Cards',name:'Total CC debt',value:9248.22,note:'See bills'},
+  {cat:'Family',name:'Ana Mom',value:14000,note:'Family'},
+];
+
+/* ── Derived metrics from bills/income/net worth ── */
+const FREQ_TO_MONTHLY={weekly:52/12, biweekly:26/12, monthly:1, quarterly:1/3, annual:1/12, yearly:1/12};
+function engMonthlyIncome(){ return incomeSources.reduce((s,i)=>s+i.amt*(FREQ_TO_MONTHLY[i.freq]||1),0); }
+function engMonthlyBills(){ return bills.reduce((s,b)=>s+(b.pay||0),0); }
+function engBillsDebt(){ return bills.reduce((s,b)=>s+Math.abs(b.bal||0),0); }
+function engNWAssets(){ return nwAssets.reduce((s,a)=>s+(a.value||0),0); }
+function engNWLiab(){ return nwLiab.reduce((s,l)=>s+(l.value||0),0); }
+function engNetWorth(){ return engNWAssets()-engNWLiab(); }
+function engUpcomingBills(){
+  const today=new Date().getDate();
+  return [...bills].filter(b=>b.pay>0).sort((a,b)=>{
+    const da=a.due<today?a.due+31:a.due, db=b.due<today?b.due+31:b.due; return da-db;
+  });
+}
+// Monthly spend series from live transactions, last N months
+function engMonthlySeries(months){
+  months=months||6; const now=new Date(); const out=[];
+  for(let m=months-1;m>=0;m--){
+    const d=new Date(now.getFullYear(),now.getMonth()-m,1);
+    const next=new Date(now.getFullYear(),now.getMonth()-m+1,1);
+    const lbl=d.toLocaleString('en-US',{month:'short'});
+    let spend=0,income=0;
+    allTxns.forEach(t=>{ const td=new Date(t.date); if(td>=d&&td<next){ if(t.amount>0)spend+=t.amount; else income+=Math.abs(t.amount); } });
+    out.push({label:lbl,spend:Math.round(spend),income:Math.round(income)});
+  }
+  return out;
+}
+
+/* ── Chart.js utilities (ported buildChartWidget / buildChartLegend) ── */
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function buildChartLegend(containerId, items, opts){
+  const el=gg(containerId); if(!el) return; opts=opts||{};
+  const total=opts.total||items.reduce((s,i)=>s+(i.value||0),0);
+  el.innerHTML=items.map(item=>{
+    const pct=item.pct!==undefined?item.pct:(total>0?Math.round((item.value||0)/total*100):0);
+    const amt=item.value!==undefined?fmtK(Math.round(item.value)):'';
+    return '<div class="cwl-item"><div class="cwl-dot" style="background:'+item.color+'"></div>'
+      +'<span class="cwl-label" title="'+esc(item.label)+'">'+esc(item.label)+'</span>'
+      +(opts.showAmt!==false&&amt?'<span class="cwl-amt">'+amt+'</span>':'')
+      +'<span class="cwl-pct">'+pct+'%</span></div>';
+  }).join('');
+}
+const _charts={}; // canvasId -> Chart instance (destroy-before-recreate)
+function buildChartWidget(canvasId, type, labels, values, colors, opts){
+  opts=opts||{};
+  const el=gg(canvasId); if(!el||typeof Chart==='undefined') return null;
+  const surfC=getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()||'#161920';
+  if(_charts[canvasId]&&_charts[canvasId].destroy) _charts[canvasId].destroy();
+  const inst=new Chart(el,{
+    type:type,
+    data:{labels:labels,datasets:(opts.datasets||[{
+      data:values, backgroundColor:colors,
+      borderWidth:opts.borderWidth!==undefined?opts.borderWidth:2, borderColor:surfC,
+      borderRadius:opts.borderRadius||0, fill:opts.fill||false, tension:opts.tension||0.3, borderSkipped:false,
+    }])},
+    options:Object.assign({
+      responsive:true, maintainAspectRatio:false, cutout:opts.cutout||'0%',
+      plugins:{ legend:{display:!!opts.builtinLegend, labels:{color:'#8b8fa8',font:{size:11}}},
+        tooltip:{ backgroundColor:'rgba(13,15,20,0.95)',titleColor:'#e4e6f0',bodyColor:'#b0b4cc',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,padding:10,
+          callbacks:{ label:ctx=>' '+esc(ctx.label)+':  '+fmtK(ctx.parsed.r||ctx.parsed.y||ctx.parsed||0) } } },
+      scales:opts.noScales?undefined:{ x:{grid:{display:false},ticks:{color:'#8b8fa8',font:{size:10}}}, y:{grid:{color:'rgba(128,128,128,0.07)'},ticks:{color:'#8b8fa8',font:{size:10},callback:v=>fmtM(v)}} }
+    }, opts.chartOptions||{})
+  });
+  _charts[canvasId]=inst;
+  if(opts.legendId){ const total=values.reduce((s,v)=>s+v,0); buildChartLegend(opts.legendId, labels.map((l,i)=>({label:l,value:values[i],color:colors[i]})), {total:total,showAmt:opts.showAmt!==false}); }
+  return inst;
+}
+
+
 /* ── Plaid connection (ported, adapted) ── */
 function authToken(){ return sessionStorage.getItem('mdf_token')||''; }
 let _toastT=null;
@@ -1473,13 +1605,20 @@ function updateConnectBtn(){
 const ONESHOTS=['bounce','flip','spin','turn','wiggle','tada','pulse','pop','nod','heart','shake','sad'];
 const EMOTION_MAP={happy:'bounce',excited:'tada',celebrate:'flip',proud:'pulse',curious:'wiggle',surprised:'pop',love:'heart',sad:'sad',no:'shake',idle:null};
 class RichieEmoji{
-  constructor(el){ this.el=el; this.talking=false; this.sleeping=false; this._t=null; if(el) this.idleMode(); }
+  constructor(el,zzzEl){ this.el=el; this.zzz=zzzEl||null; this.talking=false; this.sleeping=false; this._t=null; if(el) this.idleMode(); }
   _clear(){ if(!this.el)return; ONESHOTS.forEach(a=>this.el.classList.remove('e-'+a)); this.el.classList.remove('e-idle','e-talking','e-sleeping'); }
-  idleMode(){ this._clear(); this.sleeping=false; this.talking=false; this.el.classList.add('e-idle'); }
+  idleMode(){ if(!this.el)return; this._clear(); this.sleeping=false; this.talking=false; this._setZzz(false); this.el.classList.add('e-idle'); }
   do(anim){ if(!this.el||this.sleeping||!anim)return; this._clear(); void this.el.offsetWidth; this.el.classList.add('e-'+anim);
-    clearTimeout(this._t); this._t=setTimeout(()=>{ if(this.sleeping)return; this._clear(); this.el.classList.add(this.talking?'e-talking':'e-idle'); }, anim==='turn'?1600:1000); }
-  emotion(name){ this.do(EMOTION_MAP[name]!==undefined?EMOTION_MAP[name]:'bounce'); }
+    clearTimeout(this._t); this._t=setTimeout(()=>{ if(this.sleeping||!this.el)return; this._clear(); this.el.classList.add(this.talking?'e-talking':'e-idle'); }, anim==='turn'?1600:1000); }
+  emotion(name){ if(EMOTION_MAP[name]!==undefined){ this.do(EMOTION_MAP[name]); } else if(ONESHOTS.includes(name)){ this.do(name); } else { this.do('bounce'); } }
+  express(name){ this.emotion(name); }
+  turnAround(){ this.do('turn'); }
+  wave(){ this.do('wiggle'); }
   talk(on){ this.talking=on; if(this.sleeping||!this.el)return; this._clear(); this.el.classList.add(on?'e-talking':'e-idle'); }
+  sleep(on){ this.sleeping=on; this.talking=false; if(!this.el)return; this._clear(); this.el.classList.add(on?'e-sleeping':'e-idle'); this._setZzz(on); }
+  setWalking(on){ if(!this.el)return; this.el.classList.toggle('e-hopping',on); if(!on&&!this.sleeping) this.idleMode(); }
+  face(){} look(){}
+  _setZzz(on){ if(!this.zzz)return; this.zzz.innerHTML=on?'<span class="r-zzz" style="animation:zzz 2.4s ease-out infinite">z</span><span class="r-zzz" style="font-size:15px;animation:zzz 2.4s ease-out .8s infinite">z</span><span class="r-zzz" style="font-size:11px;animation:zzz 2.4s ease-out 1.6s infinite">z</span>':''; }
 }
 
 /* ═══════════════ PERSONAS & LEVELS ═══════════════ */
@@ -1491,6 +1630,7 @@ const RICHIE_PERSONAS={
   retired:{name:"Retired Millionaire",icon:"🏖️",accent:"#f0a540",blurb:"Relaxed & big-picture. Enjoy, but stay smart.",introLine:"Ahh, good choice. *sips drink* I made my money, now I share what I learned. Stick with me — we'll get you here too.",quips:["Relax. Money's a long game. I learned that eventually.","Spend on what you love, cut what you don't. That's the secret.","Time in the market beats timing the market.","Build it once, let it work forever. Then? Beach.","Don't sweat the small stuff. Sweat the big stuff, then relax."]},
   investor:{name:"Value Investor",icon:"📈",accent:"#38bdf8",blurb:"Patient & folksy. Long-term compounding.",introLine:"A wise pick. My philosophy: be patient, buy quality, let compounding do the heavy lifting. Shall we?",quips:["Compounding is the eighth wonder of the world. Let it run.","Price is what you pay; value is what you get.","The market transfers money from the impatient to the patient.","Be fearful when others are greedy. Especially on payday.","Our favorite holding period? Forever."]},
 };
+const PERSONA_ORDER=['coach','crusher','accountant','mascot','retired','investor'];
 const LEVELS=[
   {n:1,key:'penny',icon:'🪙',name:'Penny',desc:"New to managing money — I'll explain everything."},
   {n:2,key:'saver',icon:'💵',name:'Saver',desc:"You know the basics. Light guidance."},
@@ -1680,6 +1820,41 @@ function renderCanvas(pg){
     <div class="canvas-grid" id="canvasGrid">${cards}</div>
   </div>`;
   wireDragDrop();
+  mountWidgetCharts(pg);
+}
+
+/* After the canvas HTML is in the DOM, instantiate any Chart.js widgets. */
+function mountWidgetCharts(pg){
+  if(typeof Chart==='undefined') return;
+  (pg.widgets||[]).forEach(w=>{
+    const cid='cv_'+w.uid;
+    if(!gg(cid)) return;
+    try{ buildWidgetChart(w, cid); }catch(e){ /* ignore individual chart errors */ }
+  });
+}
+function buildWidgetChart(w, cid){
+  const live=dataLoaded;
+  if(w.type==='cashflow_chart'){
+    const ser=live?engMonthlySeries(6):[{label:'Jan',spend:2800,income:5200},{label:'Feb',spend:3100,income:5200},{label:'Mar',spend:2950,income:5800},{label:'Apr',spend:3300,income:5200},{label:'May',spend:3050,income:5200},{label:'Jun',spend:3118,income:5400}];
+    buildChartWidget(cid,'bar',ser.map(s=>s.label),null,null,{
+      datasets:[
+        {label:'Income',data:ser.map(s=>s.income),backgroundColor:'#2ecc8a',borderRadius:4,borderWidth:0},
+        {label:'Spending',data:ser.map(s=>s.spend),backgroundColor:'#f05c5c',borderRadius:4,borderWidth:0},
+      ], builtinLegend:true
+    });
+  } else if(w.type==='net_worth_chart'){
+    // Net worth trend: if no time-series, synthesize a gentle ramp toward current net worth
+    const cur=live?engNetBalance()+engNWAssets()-engNWLiab():engNetWorth();
+    const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const vals=months.map((_,i)=>Math.round(cur*(0.86+0.14*(i/(months.length-1)))));
+    buildChartWidget(cid,'line',months,vals,'#5b8def',{fill:true,tension:0.35,
+      datasets:[{data:vals,borderColor:'#5b8def',backgroundColor:'rgba(91,141,239,0.12)',fill:true,tension:0.35,pointRadius:0,borderWidth:2}]});
+  } else if(w.type==='retirement_proj'){
+    const yrs=['Now','+5y','+10y','+15y','+20y','+23y'];
+    const start=live?Math.max(engNWAssets(),45000):45000;
+    const vals=yrs.map((_,i)=>Math.round(start*Math.pow(1.07,i*5)+1200*12*((Math.pow(1.07,i*5)-1)/0.07)));
+    buildChartWidget(cid,'line',yrs,vals,'#f0a540',{datasets:[{data:vals,borderColor:'#f0a540',backgroundColor:'rgba(240,165,64,0.12)',fill:true,tension:0.3,pointRadius:0,borderWidth:2}]});
+  }
 }
 
 function renderWidgetBody(w){
@@ -1693,14 +1868,14 @@ function renderWidgetBody(w){
     case 'income_month': { if(dataLoaded){ const inc=engIncome30(); return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(inc)}</div><div class="wph-sub">last 30 days</div></div>`; } return `<div class="wph"><div class="wph-stat" style="color:var(--green)">$5,400</div><div class="wph-sub">last 30 days \u00b7 sample</div></div>`; }
     case 'debt_summary': { if(dataLoaded){ const d=engTotalDebt(); return `<div class="wph"><div class="wph-stat" style="color:var(--red)">${fmtK(d)}</div><div class="wph-sub">across credit accounts</div></div>`; } return `<div class="wph"><div class="wph-stat" style="color:var(--red)">$12,430</div><div class="wph-sub">\u25BC sample data</div></div>`; }
     case 'top_categories': { if(dataLoaded){ const cats=engCategoryBreakdown(30).slice(0,4); if(cats.length) return `<div class="wph">${cats.map(c=>`<div class="wph-row"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c.color};margin-right:7px"></span>${c.label}</span><b>${fmtK(c.value)}</b></div>`).join('')}</div>`; } return `<div class="wph">${[['Dining','612','#f5a623'],['Groceries','498','#3dda91'],['Transport','284','#b09afa']].map(r=>`<div class="wph-row"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${r[2]};margin-right:7px"></span>${r[0]}</span><b>$${r[1]}</b></div>`).join('')}</div>`; }
-    case 'bills_list': return `<div class="wph">${[['Rent','Jun 1'],['Electric','Jun 8'],['Internet','Jun 12']].map(r=>`<div class="wph-row"><span>${r[0]}</span><span style="color:var(--muted)">${r[1]}</span></div>`).join('')}</div>`;
+    case 'bills_list': { const up=engUpcomingBills().slice(0,5); if(up.length) return `<div class="wph">${up.map(b=>`<div class="wph-row"><span>${b.name}</span><span><b>${fmtK(b.pay)}</b> <span style="color:var(--muted);font-size:11px">· ${b.due}${b.due%10===1&&b.due!==11?'st':b.due%10===2&&b.due!==12?'nd':b.due%10===3&&b.due!==13?'rd':'th'}</span></span></div>`).join('')}</div>`; return `<div class="wph"><div class="wph-sub">No bills yet.</div></div>`; }
     case 'budget_doughnut': { if(dataLoaded){ const cats=engCategoryBreakdown(30).slice(0,6); const tot=cats.reduce((s,c)=>s+c.value,0); if(tot>0){ let acc=0; const stops=cats.map(c=>{ const a=acc/tot*100; acc+=c.value; const b=acc/tot*100; return `${c.color} ${a.toFixed(1)}% ${b.toFixed(1)}%`; }).join(','); return `<div class="wph" style="text-align:center"><div style="width:90px;height:90px;border-radius:50%;margin:6px auto;background:conic-gradient(${stops})"></div><div class="wph-sub">${cats.length} categories \u00b7 ${fmtK(tot)}</div></div>`; } } return `<div class="wph" style="text-align:center"><div style="width:90px;height:90px;border-radius:50%;margin:6px auto;background:conic-gradient(var(--green) 0 38%,var(--blue) 38% 62%,var(--amber) 62% 82%,var(--purple) 82% 100%)"></div><div class="wph-sub">4 categories \u00b7 sample</div></div>`; }
-    case 'cashflow_chart': return `<div class="wph"><div class="wph-sub">Income vs spending</div>${bars(10)}</div>`;
-    case 'net_worth_chart': return `<div class="wph"><div class="wph-sub">Last 12 months</div>${bars(12)}</div>`;
-    case 'fire_progress': return `<div class="wph"><div class="wph-stat">38%</div><div class="wph-sub">to financial independence</div><div class="xp-bar" style="margin-top:8px"><div class="xp-fill" style="width:38%"></div></div></div>`;
-    case 'retirement_proj': return `<div class="wph"><div class="wph-sub">Projected at 65</div><div class="wph-stat">$1.84M</div>${bars(8)}</div>`;
-    case 'debt_payoff': return `<div class="wph"><div class="wph-sub">Debt-free in</div><div class="wph-stat">2 yr 4 mo</div><div class="wph-sub">avalanche method</div></div>`;
-    case 'zero_budget': return `<div class="wph"><div class="wph-row"><span>To budget</span><b style="color:var(--green)">$0 left</b></div><div class="wph-row"><span>Assigned</span><b>$5,400</b></div></div>`;
+    case 'cashflow_chart': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Income vs spending${dataLoaded?' · last 6 mo':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
+    case 'net_worth_chart': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Net worth trend${dataLoaded?'':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
+    case 'fire_progress': { const target=engMonthlyBills()*12*25; const cur=dataLoaded?Math.max(engNWAssets(),engNetBalance()):engNWAssets(); const pct=target>0?Math.min(100,Math.round(cur/target*100)):0; return `<div class="wph"><div class="wph-stat">${pct}%</div><div class="wph-sub">to FI (${fmtM(target)} target)</div><div class="xp-bar" style="margin-top:8px"><div class="xp-fill" style="width:${pct}%"></div></div></div>`; }
+    case 'retirement_proj': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Projected growth</div><div style="height:140px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
+    case 'debt_payoff': { const totDebt=engBillsDebt(); const totPay=engMonthlyBills(); const avgApr=bills.filter(b=>b.bal<0&&b.apr>0).reduce((s,b,_,a)=>s+b.apr/a.length,0)||5; const r=avgApr/100/12; const months=(totPay>totDebt*r)?Math.ceil(Math.log(totPay/(totPay-totDebt*r))/Math.log(1+r)):999; const yrs=Math.floor(months/12), mo=months%12; return `<div class="wph"><div class="wph-sub">Debt-free in (avalanche)</div><div class="wph-stat">${months>=999?'—':yrs+' yr '+mo+' mo'}</div><div class="wph-sub">${fmtM(totDebt)} at ${avgApr.toFixed(1)}% avg APR</div></div>`; }
+    case 'zero_budget': { const income=engMonthlyIncome(); const assigned=zeroBuckets.reduce((s,z)=>s+z.amt,0)+engMonthlyBills(); const left=income-assigned; return `<div class="wph"><div class="wph-row"><span>Monthly income</span><b>${fmtK(income)}</b></div><div class="wph-row"><span>Assigned</span><b>${fmtK(assigned)}</b></div><div class="wph-row"><span>To budget</span><b style="color:${Math.abs(left)<1?'var(--green)':left>0?'var(--amber)':'var(--red)'}">${left>=0?'':'-'}${fmtK(left)} ${Math.abs(left)<1?'✓':'left'}</b></div></div>`; }
     default: return `<div class="wph"><div class="wph-sub">${def.name}</div></div>`;
   }
 }
@@ -1885,7 +2060,7 @@ function introApplyAccent(){ const p=setupConfig.persona&&RICHIE_PERSONAS[setupC
 function runIntro(){
   const stars=gg('riStars'); if(stars){ let sh=''; for(let i=0;i<40;i++) sh+=`<div class="ri-star" style="left:${Math.random()*100}%;top:${Math.random()*100}%;--dur:${2+Math.random()*3}s;--delay:${Math.random()*3}s"></div>`; stars.innerHTML=sh; }
   gg('riDots').innerHTML=RICHIE_STORY.map((_,i)=>`<div class="ri-dot" id="riDot-${i}"></div>`).join('');
-  riChar=new RichieEmoji(gg('riChar')); riChar.sleep(true);
+  riChar=new RichieEmoji(gg('riChar'), gg('riZzz')); riChar.sleep(true);
   gg('richieIntro').style.display='flex';
   riScene=0; riRenderScene();
 }
@@ -1896,8 +2071,8 @@ function riRenderScene(){
   choices.style.display='none'; cta.style.display='none';
   if(scene.choice){ bubble.style.display='none'; hint.style.display='none'; riShowChoices(scene.choice); return; }
   bubble.style.display='block';
-  if(scene.wake && riChar.sleeping){ riChar.sleep(false); riChar.wave(); }
-  else if(scene.emotion){ setTimeout(()=>riChar.emotion(scene.emotion), 120); }
+  if(scene.wake && riChar && riChar.sleeping){ riChar.sleep(false); riChar.wave(); }
+  else if(scene.emotion){ setTimeout(()=>{ if(riChar) riChar.emotion(scene.emotion); }, 120); }
   riTypeText(scene.text);
   hint.style.display = (riScene===RICHIE_STORY.length-1)?'none':'inline';
 }
@@ -1934,14 +2109,14 @@ function riPickPersona(key,e){
   if(e)e.stopPropagation();
   setupConfig.persona=key; introApplyAccent();
   gg('riChoices').style.display='none'; document.querySelector('.ri-bubble-wrap').style.display='block';
-  riChar.emotion('excited'); riScene++; gg('riClickHint').style.display='inline';
+  if(riChar) riChar.emotion('excited'); riScene++; gg('riClickHint').style.display='inline';
   riTypeText(RICHIE_PERSONAS[key].introLine||"Great pick! Let's keep going.");
 }
 function riPickLevel(n,e){
   if(e)e.stopPropagation();
   setupConfig.level=n; const lv=LEVELS.find(l=>l.n===n);
   gg('riChoices').style.display='none'; document.querySelector('.ri-bubble-wrap').style.display='block';
-  riChar.emotion('happy'); riScene++; gg('riClickHint').style.display='inline';
+  if(riChar) riChar.emotion('happy'); riScene++; gg('riClickHint').style.display='inline';
   riTypeText(`${lv.icon} ${lv.name} it is. Good to know \u2014 I'll keep things just right for you.`);
 }
 function riFinishIntro(){
