@@ -665,6 +665,32 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .wd-search input{width:100%;height:38px;background:var(--surface2);border:1.5px solid var(--border);border-radius:9px;padding:0 12px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;}
 .wd-search input:focus{border-color:rgba(46,204,138,0.4);}
 .wd-list{flex:1;overflow-y:auto;padding:8px 16px 20px;}
+/* ── Widget wizard ── */
+.ww-back{width:30px;height:30px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ww-back:hover{background:var(--surface3);}
+.ww-steps{display:flex;gap:6px;padding:0 18px 12px;}
+.ww-step-dot{flex:1;height:4px;border-radius:2px;background:var(--border2);transition:background .2s;}
+.ww-step-dot.active{background:var(--green);}
+.ww-step-dot.done{background:var(--green);opacity:0.5;}
+.ww-card{display:flex;align-items:center;gap:12px;padding:14px 13px;border-radius:12px;background:var(--surface);border:1px solid var(--border);cursor:pointer;margin-bottom:9px;transition:all .14s;}
+.ww-card:hover{border-color:var(--green);transform:translateY(-1px);}
+.ww-card.locked{opacity:.55;cursor:default;}
+.ww-card.locked:hover{transform:none;border-color:var(--border);}
+.ww-card-icon{font-size:26px;flex-shrink:0;width:30px;text-align:center;}
+.ww-card-name{font-size:14px;font-weight:600;color:var(--text);}
+.ww-card-desc{font-size:11.5px;color:var(--muted);line-height:1.45;margin-top:2px;}
+.ww-card-arrow{color:var(--muted);font-size:15px;flex-shrink:0;}
+.ww-preview{text-align:center;padding:18px 10px;background:var(--surface2);border-radius:12px;margin-bottom:6px;}
+.ww-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:16px 0 9px;}
+.ww-size-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.ww-size-opt{border:2px solid var(--border);border-radius:12px;padding:13px 10px;cursor:pointer;text-align:center;transition:all .14s;}
+.ww-size-opt:hover{border-color:var(--border2);}
+.ww-size-opt.selected{border-color:var(--green);background:var(--green-dim);}
+.ww-size-vis{height:30px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;}
+.ww-size-box{height:22px;border-radius:4px;background:var(--green);opacity:0.8;}
+.ww-size-box.half{width:46%;}
+.ww-size-box.full{width:92%;}
+.ww-size-name{font-size:13px;font-weight:600;color:var(--text);}
 .wd-cat{font-size:9.5px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:.12em;margin:14px 4px 6px;}
 .wd-item{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;background:var(--surface);border:1px solid var(--border);cursor:pointer;margin-bottom:7px;transition:all .14s;}
 .wd-item:hover{border-color:var(--green);background:var(--surface2);transform:translateX(-3px);}
@@ -1410,13 +1436,20 @@ canvas.chart-interactive{cursor:crosshair;}
 <div id="drawerScrim" onclick="closeWidgetDrawer()"></div>
 <div id="widgetDrawer">
   <div class="wd-header">
-    <div>
-      <h3>Widget Library</h3>
-      <p id="wdSubtitle">Tap to add to this page</p>
+    <div style="display:flex;align-items:center;gap:10px">
+      <button class="ww-back" id="wwBack" onclick="wwPrev()" style="display:none">←</button>
+      <div>
+        <h3 id="wwTitle">Add a widget</h3>
+        <p id="wdSubtitle">Step 1 of 3 · Pick a category</p>
+      </div>
     </div>
     <button class="rp-close" onclick="closeWidgetDrawer()">×</button>
   </div>
-  <div class="wd-search"><input type="text" id="wdSearch" placeholder="Search widgets…" oninput="renderWidgetLibrary()"></div>
+  <div class="ww-steps" id="wwSteps">
+    <div class="ww-step-dot active" data-s="1"></div>
+    <div class="ww-step-dot" data-s="2"></div>
+    <div class="ww-step-dot" data-s="3"></div>
+  </div>
   <div class="wd-list" id="wdList"></div>
 </div>
 
@@ -1922,44 +1955,114 @@ const WIDGET_CATALOG=[
 const WIDGET_BY_ID=Object.fromEntries(WIDGET_CATALOG.map(w=>[w.id,w]));
 function widgetUnlocked(w){ return APP.proMode || w.minLevel<=APP.level; }
 
-function openWidgetDrawer(){ gg('widgetDrawer').classList.add('open'); gg('drawerScrim').classList.add('open'); renderWidgetLibrary(); setTimeout(()=>gg('wdSearch').focus(),60); }
-function closeWidgetDrawer(){ gg('widgetDrawer').classList.remove('open'); gg('drawerScrim').classList.remove('open'); }
-function renderWidgetLibrary(){
-  const q=(gg('wdSearch').value||'').toLowerCase();
-  const cats={};
-  WIDGET_CATALOG.filter(w=>!q||w.name.toLowerCase().includes(q)||w.desc.toLowerCase().includes(q)).forEach(w=>{ (cats[w.cat]=cats[w.cat]||[]).push(w); });
-  let html='';
-  Object.keys(cats).forEach(cat=>{
-    html+=`<div class="wd-cat">${cat}</div>`;
-    cats[cat].forEach(w=>{
-      const locked=!widgetUnlocked(w);
-      html+=`<div class="wd-item" onclick="addWidget('${w.id}')" style="${locked?'opacity:.55':''}">
-        <div class="wd-item-icon">${w.icon}</div>
-        <div style="flex:1;min-width:0"><div class="wd-item-name">${w.name}${locked?' 🔒':''}</div>
-        <div class="wd-item-desc">${locked?'Unlocks at level '+w.minLevel+' (or Pro Mode)':w.desc}</div></div>
-        <div class="wd-item-add">+</div></div>`;
-    });
-  });
-  gg('wdList').innerHTML=html||'<div style="padding:20px;text-align:center;color:var(--hint);font-size:12px">No widgets match that search.</div>';
+/* ── Widget Wizard (step-by-step add/edit) ── */
+let _ww={step:1, cat:null, widgetId:null, span:null, editUid:null};
+function openWidgetDrawer(){
+  _ww={step:1, cat:null, widgetId:null, span:null, editUid:null};
+  gg('widgetDrawer').classList.add('open'); gg('drawerScrim').classList.add('open');
+  wwRender();
 }
-function addWidget(wid){
-  const w=WIDGET_BY_ID[wid]; if(!w) return;
-  if(!widgetUnlocked(w)){ richieSay(`That one unlocks at level ${w.minLevel}. Keep hitting goals \u2014 or flip on Pro Mode in Settings.`); return; }
+function closeWidgetDrawer(){ gg('widgetDrawer').classList.remove('open'); gg('drawerScrim').classList.remove('open'); }
+// Entry point for EDITING an existing widget (size change) — jumps straight to the size step
+function openWidgetEditor(uid){
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(!pg) return;
-  pg.widgets.push({uid:'w'+Date.now()+Math.floor(Math.random()*999),type:wid,span:w.span});
+  const w=pg.widgets.find(x=>x.uid===uid); if(!w) return;
+  const def=WIDGET_BY_ID[w.type]||{};
+  _ww={step:3, cat:def.cat||null, widgetId:w.type, span:w.span, editUid:uid};
+  gg('widgetDrawer').classList.add('open'); gg('drawerScrim').classList.add('open');
+  wwRender();
+}
+function wwSteps(){ return _ww.editUid ? ['Resize'] : ['Pick a category','Pick a widget','Choose size']; }
+function wwRender(){
+  const steps=wwSteps(); const total=steps.length;
+  // step indicator
+  const dotsWrap=gg('wwSteps');
+  dotsWrap.innerHTML=steps.map((_,i)=>`<div class="ww-step-dot${(i+1)===_ww.step?' active':(i+1)<_ww.step?' done':''}"></div>`).join('');
+  gg('wwBack').style.display=(_ww.step>1 && !_ww.editUid)?'flex':'none';
+  const stepLabel=_ww.editUid?'Resize widget':`Step ${_ww.step} of ${total} · ${steps[_ww.step-1]}`;
+  gg('wdSubtitle').textContent=stepLabel;
+  gg('wwTitle').textContent=_ww.editUid?'Edit widget':'Add a widget';
+  const list=gg('wdList');
+  if(_ww.editUid){ list.innerHTML=wwSizeStep(); return; }
+  if(_ww.step===1) list.innerHTML=wwCategoryStep();
+  else if(_ww.step===2) list.innerHTML=wwWidgetStep();
+  else if(_ww.step===3) list.innerHTML=wwSizeStep();
+}
+function wwCategoryStep(){
+  // distinct categories with counts
+  const cats={};
+  WIDGET_CATALOG.forEach(w=>{ (cats[w.cat]=cats[w.cat]||[]).push(w); });
+  const icons={'Overview':'📊','Budget':'🎯','Cash Flow':'🌊','Wealth':'📈','Debt':'🚨'};
+  return Object.keys(cats).map(cat=>{
+    const items=cats[cat]; const unlocked=items.filter(w=>widgetUnlocked(w)).length;
+    return `<div class="ww-card" onclick="wwPickCat('${cat.replace(/'/g,"\\'")}')">
+      <div class="ww-card-icon">${icons[cat]||'🧩'}</div>
+      <div style="flex:1;min-width:0"><div class="ww-card-name">${cat}</div>
+      <div class="ww-card-desc">${items.length} widget${items.length!==1?'s':''}${unlocked<items.length?` · ${unlocked} unlocked`:''}</div></div>
+      <div class="ww-card-arrow">→</div></div>`;
+  }).join('');
+}
+function wwPickCat(cat){ _ww.cat=cat; _ww.step=2; wwRender(); }
+function wwWidgetStep(){
+  const items=WIDGET_CATALOG.filter(w=>w.cat===_ww.cat);
+  return items.map(w=>{
+    const locked=!widgetUnlocked(w);
+    return `<div class="ww-card${locked?' locked':''}" onclick="${locked?`wwLocked(${w.minLevel})`:`wwPickWidget('${w.id}')`}">
+      <div class="ww-card-icon">${w.icon}</div>
+      <div style="flex:1;min-width:0"><div class="ww-card-name">${w.name}${locked?' 🔒':''}</div>
+      <div class="ww-card-desc">${locked?'Unlocks at level '+w.minLevel+' (or Pro Mode)':w.desc}</div></div>
+      <div class="ww-card-arrow">${locked?'🔒':'→'}</div></div>`;
+  }).join('');
+}
+function wwLocked(lvl){ richieSay(`That one unlocks at level ${lvl}. Keep hitting goals \u2014 or flip on Pro Mode in Settings.`); }
+function wwPickWidget(wid){ _ww.widgetId=wid; const def=WIDGET_BY_ID[wid]; _ww.span=def.span||1; _ww.step=3; wwRender(); }
+function wwSizeStep(){
+  const def=WIDGET_BY_ID[_ww.widgetId]||{}; const span=_ww.span||def.span||1;
+  return `<div class="ww-preview">
+      <div class="ww-card-icon" style="font-size:34px">${def.icon||'🧩'}</div>
+      <div class="ww-card-name" style="font-size:16px;margin-top:6px">${def.name||'Widget'}</div>
+      <div class="ww-card-desc" style="margin-top:4px">${def.desc||''}</div>
+    </div>
+    <div class="ww-section-label">How wide should it be?</div>
+    <div class="ww-size-grid">
+      <div class="ww-size-opt${span===1?' selected':''}" onclick="wwSetSize(1)">
+        <div class="ww-size-vis"><div class="ww-size-box half"></div></div>
+        <div class="ww-size-name">Half width</div><div class="ww-card-desc">Compact · fits beside another</div>
+      </div>
+      <div class="ww-size-opt${span===2?' selected':''}" onclick="wwSetSize(2)">
+        <div class="ww-size-vis"><div class="ww-size-box full"></div></div>
+        <div class="ww-size-name">Full width</div><div class="ww-card-desc">Spans the whole row</div>
+      </div>
+    </div>
+    <button class="btn primary" style="width:100%;margin-top:18px" onclick="wwFinish()">${_ww.editUid?'Save changes':'Add to page'} ✓</button>`;
+}
+function wwSetSize(s){ _ww.span=s; wwRender(); }
+function wwPrev(){ if(_ww.step>1){ _ww.step--; wwRender(); } }
+function wwFinish(){
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(!pg){ closeWidgetDrawer(); return; }
+  if(_ww.editUid){
+    const w=pg.widgets.find(x=>x.uid===_ww.editUid);
+    if(w){ w.span=_ww.span; saveState(); renderCanvas(pg); }
+    closeWidgetDrawer();
+    if(sbRichie)sbRichie.do('nod');
+    return;
+  }
+  const def=WIDGET_BY_ID[_ww.widgetId];
+  if(!def||!widgetUnlocked(def)){ closeWidgetDrawer(); return; }
+  pg.widgets.push({uid:'w'+Date.now()+Math.floor(Math.random()*999),type:_ww.widgetId,span:_ww.span||def.span});
   saveState(); renderCanvas(pg);
   awardXp(3,'Widget added!');
+  closeWidgetDrawer();
   if(sbRichie)sbRichie.do('bounce');
+  richieSay(`Added ${def.name}! Drag it by the handle to reorder, or tap the resize icon anytime.`);
 }
 function removeWidget(uid){
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(!pg) return;
+  const w=pg.widgets.find(x=>x.uid===uid); const def=w?WIDGET_BY_ID[w.type]:null;
+  if(def && !confirm(`Remove "${def.name}" from this page?`)) return;
   pg.widgets=pg.widgets.filter(w=>w.uid!==uid); saveState(); renderCanvas(pg);
 }
-function toggleWidgetSpan(uid){
-  const pg=APP.pages.find(p=>p.id===APP.activePage); if(!pg) return;
-  const w=pg.widgets.find(x=>x.uid===uid); if(!w) return;
-  w.span=w.span===2?1:2; saveState(); renderCanvas(pg);
-}
+function toggleWidgetSpan(uid){ openWidgetEditor(uid); }
 
 function renderCanvas(pg){
   gg('tbIcon').textContent=pg.icon; gg('tbTitle').textContent=pg.name;
