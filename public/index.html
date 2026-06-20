@@ -56,6 +56,24 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 /* ══════════════════════════════════════════════════════════════════════
    RICHIE INTRO STORY
 ══════════════════════════════════════════════════════════════════════ */
+/* ═══ LOGIN + WELCOME-BACK ═══ */
+#loginScreen,#welcomeBack{position:fixed;inset:0;z-index:3100;background:#080a10;display:none;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:20px;animation:fade-in .5s ease;}
+.login-card{position:relative;z-index:2;background:rgba(22,25,32,0.85);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:34px 30px;width:min(380px,92vw);text-align:center;box-shadow:0 24px 70px rgba(0,0,0,0.5);}
+.login-title{font-size:23px;margin:10px 0 6px;color:var(--text);}
+.login-sub{font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:20px;}
+.login-fields{display:flex;flex-direction:column;gap:11px;}
+.login-fields input{height:44px;background:var(--surface2);border:1px solid var(--border2);border-radius:11px;color:var(--text);padding:0 14px;font-size:14px;}
+.login-fields input:focus{outline:none;border-color:var(--green);}
+.login-btn{height:44px;font-size:15px;margin-top:4px;}
+.login-err{color:#f05c5c;font-size:12.5px;min-height:16px;text-align:left;}
+.wb-inner{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;width:min(820px,94vw);}
+.wb-swot{width:100%;grid-template-columns:1fr 1fr;gap:12px;margin-top:22px;}
+@media(max-width:620px){.wb-swot{grid-template-columns:1fr;}}
+.swot-cell{background:rgba(22,25,32,0.85);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:14px 16px;text-align:left;}
+.swot-head{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+.swot-cell ul{margin:0;padding-left:18px;}
+.swot-cell li{font-size:12.5px;color:var(--text);line-height:1.5;margin-bottom:5px;}
+
 #richieIntro{
   position:fixed;inset:0;z-index:3000;
   background:#080a10;
@@ -1204,6 +1222,37 @@ canvas.chart-interactive{cursor:crosshair;}
 </head>
 <body>
 
+<!-- ═══ LOGIN SCREEN ═══ -->
+<div id="loginScreen" style="display:none">
+  <div class="ri-bg"></div>
+  <div class="login-card">
+    <span class="richie ri-char" id="loginRichie" style="font-size:88px">💰</span>
+    <h1 class="login-title">Welcome back</h1>
+    <p class="login-sub" id="loginSub">Richie's been keeping an eye on things. Sign in to see where you stand.</p>
+    <div class="login-fields">
+      <input type="text" id="loginUser" placeholder="Username" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+      <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      <div class="login-err" id="loginErr"></div>
+      <button class="btn primary login-btn" id="loginBtn" onclick="doLogin()">Sign in</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ RICHIE WELCOME-BACK + SWOT ═══ -->
+<div id="welcomeBack" style="display:none">
+  <div class="ri-bg"></div>
+  <div class="ri-stars" id="wbStars"></div>
+  <div class="wb-inner">
+    <span class="richie ri-char" id="wbRichie" style="font-size:120px">💰</span>
+    <div class="ri-bubble-wrap" style="margin-top:24px">
+      <div class="ri-bubble"><div class="ri-text" id="wbText"></div></div>
+    </div>
+    <div class="wb-swot" id="wbSwot" style="display:none"></div>
+    <button class="btn primary" id="wbContinue" style="display:none;margin-top:20px" onclick="wbEnter()">Let's dive in →</button>
+  </div>
+</div>
+
+
 <!-- ═══ INTRO STORY ═══ -->
 <div id="richieIntro" onclick="riAdvance(event)">
   <div class="ri-bg"></div>
@@ -2150,6 +2199,16 @@ function renderSettings(){
           <button class="btn" onclick="openCatEditor()">Edit categories</button>
         </div>
       </div>
+
+      <div class="set-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
+          <div>
+            <div class="set-card-label" style="margin:0">🔐 Session</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Sign out — you'll log back in and get a fresh SWOT next time.</div>
+          </div>
+          <button class="btn" onclick="logout()">Sign out</button>
+        </div>
+      </div>
     </div>`;
   gg('setPersonaRow').innerHTML=Object.keys(RICHIE_PERSONAS).map(k=>{
     const pp=RICHIE_PERSONAS[k];
@@ -2421,11 +2480,145 @@ function wizNext(){
   wizGoTo(wizStep+1);
 }
 function wizShake(id){const el=gg(id);if(!el)return;el.style.borderColor='#f05c5c';el.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:300});setTimeout(()=>el.style.borderColor='',800);}
+/* ═══════════════════════════════════════════════════════════════
+   AUTH (server login) + WELCOME-BACK SWOT
+═══════════════════════════════════════════════════════════════ */
+function setToken(t){ try{ sessionStorage.setItem('mdf_token',t||''); }catch(e){} }
+function clearToken(){ try{ sessionStorage.removeItem('mdf_token'); }catch(e){} }
+function isLoggedIn(){ return !!authToken(); }
+
+// Wrap fetch so every /api/ call carries the Bearer token automatically.
+(function installAuthFetch(){
+  const _fetch=window.fetch.bind(window);
+  window.fetch=function(url,opts){
+    opts=opts||{};
+    if(typeof url==='string' && url.indexOf('/api/')===0){
+      const tok=authToken();
+      if(tok){ opts.headers=Object.assign({}, opts.headers||{}, {'Authorization':'Bearer '+tok}); }
+    }
+    return _fetch(url,opts);
+  };
+})();
+
+async function doLogin(){
+  const u=gg('loginUser').value.trim(), p=gg('loginPass').value;
+  const err=gg('loginErr'), btn=gg('loginBtn');
+  err.textContent='';
+  if(!u||!p){ err.textContent='Enter your username and password.'; return; }
+  btn.disabled=true; btn.textContent='Signing in…';
+  let loginRichie=window._loginRichie;
+  try{
+    const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok || (!d.token && !d.ok)){
+      err.textContent=d.error||'Wrong username or password.';
+      btn.disabled=false; btn.textContent='Sign in';
+      if(loginRichie) loginRichie.emotion('no');
+      return;
+    }
+    // server may return {token} or {ok:true, token}; store whatever it gives
+    if(d.token) setToken(d.token);
+    btn.disabled=false; btn.textContent='Sign in';
+    gg('loginScreen').style.display='none';
+    gg('loginPass').value='';
+    // load data, then show Richie's welcome-back + SWOT
+    await loadEngineData();
+    runWelcomeBack();
+  }catch(e){
+    err.textContent='Could not reach the server. Try again.';
+    btn.disabled=false; btn.textContent='Sign in';
+  }
+}
+
+function showLogin(greet){
+  gg('appShell').style.display='none';
+  gg('richieAssistant').style.display='none';
+  gg('welcomeBack').style.display='none';
+  gg('loginScreen').style.display='flex';
+  if(greet) gg('loginSub').textContent=greet;
+  if(!window._loginRichie) window._loginRichie=new RichieEmoji(gg('loginRichie'));
+  setTimeout(()=>{ if(window._loginRichie) window._loginRichie.wave(); },300);
+  setTimeout(()=>{ const el=gg('loginUser'); if(el) el.focus(); },400);
+}
+
+// Build a SWOT snapshot from live Plaid data, falling back to bills/income.
+function buildSWOT(){
+  const live=dataLoaded;
+  const S=[],W=[],O=[],T=[];
+  const nw = live ? (engNetBalance()+engNWAssets()-engNWLiab()) : engNetWorth();
+  const monthlyIncome=engMonthlyIncome(), monthlyBills=engMonthlyBills();
+  const ccDebt = live ? engTotalDebt() : bills.filter(b=>b.cat==='CC').reduce((s,b)=>s+Math.abs(b.bal||0),0);
+  const totalDebt = live ? engTotalDebt() : engBillsDebt();
+  // Strengths
+  if(nw>0) S.push(`Net worth is positive at ${fmtM(nw)}.`);
+  if(monthlyIncome>monthlyBills) S.push(`Income (${fmtK(monthlyIncome)}/mo) covers your bills (${fmtK(monthlyBills)}/mo).`);
+  const cushion=monthlyIncome-monthlyBills;
+  if(cushion>0) S.push(`You have ${fmtK(cushion)}/mo of breathing room after fixed bills.`);
+  if(!S.length) S.push(`You're here and looking — that's the first win.`);
+  // Weaknesses
+  if(ccDebt>0) W.push(`${fmtK(ccDebt)} in credit-card balances.`);
+  const highApr=bills.filter(b=>b.apr>=25&&b.bal<0);
+  if(highApr.length) W.push(`${highApr.length} card${highApr.length>1?'s':''} above 25% APR draining cash.`);
+  if(cushion<=0) W.push(`Bills eat all of your income — no monthly cushion.`);
+  if(!W.length) W.push(`Nothing major — keep the momentum.`);
+  // Opportunities
+  if(ccDebt>0){ const extra=200; O.push(`Put an extra ${fmtK(extra)}/mo on the highest-APR card to cut months off payoff.`); }
+  if(cushion>200) O.push(`Auto-invest part of that ${fmtK(cushion)}/mo cushion toward FIRE.`);
+  const promo=bills.filter(b=>b.promo&&/0%/.test(b.promo));
+  if(promo.length) O.push(`${promo.length} balance${promo.length>1?'s are':' is'} on 0% promos — pay them before the rate jumps.`);
+  if(!O.length) O.push(`Set one money goal this month and let's track it.`);
+  // Threats
+  if(highApr.length) T.push(`High-APR balances grow fast if left unpaid.`);
+  if(promo.length) T.push(`Promo APRs expire — missing the window means back-interest.`);
+  if(!live) T.push(`No bank connected yet — these numbers are from your manual data.`);
+  if(!T.length) T.push(`Watch for lifestyle creep as income grows.`);
+  return {S,W,O,T,nw};
+}
+
+function runWelcomeBack(){
+  gg('welcomeBack').style.display='flex';
+  const stars=gg('wbStars'); if(stars){ let s=''; for(let i=0;i<30;i++) s+=`<div class="ri-star" style="left:${Math.random()*100}%;top:${Math.random()*100}%;--dur:${2+Math.random()*3}s;--delay:${Math.random()*3}s"></div>`; stars.innerHTML=s; }
+  const wb=new RichieEmoji(gg('wbRichie')); window._wbRichie=wb;
+  wb.do('bounce');
+  const name=(JSON.parse(localStorage.getItem('richie_setup')||'{}').householdName)||(APP&&APP.household)||'friend';
+  const swot=buildSWOT();
+  const greet=`Welcome back! Here's your money SWOT — a quick read on where ${name} stands today.`;
+  // typewriter greeting
+  let i=0; const el=gg('wbText'); el.innerHTML='';
+  (function type(){
+    if(i<=greet.length){ el.textContent=greet.slice(0,i); i++; setTimeout(type,18); }
+    else { wb.talk(false); showSwotPanel(swot); }
+  })();
+  wb.talk(true);
+}
+function showSwotPanel(swot){
+  const sec=(title,items,color,icon)=>`<div class="swot-cell"><div class="swot-head" style="color:${color}">${icon} ${title}</div><ul>${items.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;
+  const el=gg('wbSwot');
+  el.innerHTML=
+    sec('Strengths',swot.S,'#2ecc8a','💪')+
+    sec('Weaknesses',swot.W,'#f05c5c','⚠️')+
+    sec('Opportunities',swot.O,'#5b8def','🚀')+
+    sec('Threats',swot.T,'#f0a540','🛡️');
+  el.style.display='grid';
+  gg('wbContinue').style.display='inline-block';
+  if(window._wbRichie) window._wbRichie.emotion('proud');
+}
+function wbEnter(){
+  gg('welcomeBack').style.display='none';
+  enterApp();
+}
+function logout(){
+  clearToken();
+  showLogin("Signed out. Sign back in when you're ready.");
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
 function wizFinish(){
   setupConfig.xp=(setupConfig.level-1)*20;
   try{ localStorage.setItem('richie_setup',JSON.stringify(setupConfig)); localStorage.removeItem('richie_app'); }catch(e){}
   gg('setupWizard').style.display='none';
-  boot(); // hand off to the real app
+  // After first-run setup, require login before entering (server auth + Plaid).
+  showLogin("You're all set! Sign in to lock things down — Richie will greet you each time.");
 }
 
 function boot(){
@@ -2454,11 +2647,11 @@ function enterApp(){
   });
 }
 function start(){
-  // First run? No saved setup → play Richie's intro story, then the wizard, then enterApp().
   let hasSetup=false;
   try{ hasSetup=!!(localStorage.getItem('richie_setup')||localStorage.getItem('richie_app')); }catch(e){}
-  if(hasSetup){ enterApp(); }
-  else { runIntro(); }
+  if(!hasSetup){ runIntro(); return; }            // brand new → intro → wizard → login
+  if(isLoggedIn()){ enterApp(); }                 // already authenticated this session
+  else { showLogin(); }                           // returning → login → welcome-back SWOT
 }
 window.addEventListener('load',start);
 </script>
