@@ -1289,8 +1289,7 @@ canvas.chart-interactive{cursor:crosshair;}
     <div class="wiz-steps" id="wizSteps">
       <div class="wiz-step-tab active" data-step="1">1 · Who</div>
       <div class="wiz-step-tab" data-step="2">2 · Starter</div>
-      <div class="wiz-step-tab" data-step="3">3 · Bank</div>
-      <div class="wiz-step-tab" data-step="4">4 · Done</div>
+      <div class="wiz-step-tab" data-step="3">3 · Done</div>
     </div>
     <div class="wiz-body" id="wizBody"></div>
     <div class="wiz-footer">
@@ -1372,6 +1371,7 @@ canvas.chart-interactive{cursor:crosshair;}
     </div>
     <div class="rp-body">
       <div class="rp-tip" id="rpTip"></div>
+      <div id="rpAction"></div>
       <button class="rp-new-tip-btn" onclick="newRichieTip()">💬 Tell me something else</button>
     </div>
   </div>
@@ -1481,8 +1481,14 @@ async function loadTransactions(){
   const d=await _fetchJSON('/api/transactions'); if(!d) return false;
   allTxns=d.transactions||[]; return true;
 }
+let plaidLiabilities=null; // {credit_cards:[], mortgages:[]} from server when connected
+async function loadLiabilities(){
+  const d=await _fetchJSON('/api/liabilities'); if(!d) return false;
+  plaidLiabilities=d; return true;
+}
 async function loadEngineData(){
   const [a,b]=await Promise.all([loadAccounts(),loadTransactions()]);
+  loadLiabilities(); // fire-and-forget; enriches SWOT/debt when available
   dataLoaded=(a||b)&&(allAccts.length>0||allTxns.length>0);
   return dataLoaded;
 }
@@ -2288,13 +2294,39 @@ function toggleRichiePanel(){
   if(pn.classList.contains('open')){ newRichieTip(); if(rpChar)rpChar.do('wiggle'); }
 }
 function richieQuips(){ const p=RICHIE_PERSONAS[APP.persona]; return p?p.quips:["Money should be a journey, not a chore."]; }
-function newRichieTip(){ const b=richieQuips(); gg('rpTip').textContent=b[Math.floor(Math.random()*b.length)]; if(rpChar){rpChar.talk(true);setTimeout(()=>rpChar.talk(false),1300);} }
+function newRichieTip(){ const a=gg('rpAction'); if(a)a.innerHTML=''; const b=richieQuips(); gg('rpTip').textContent=b[Math.floor(Math.random()*b.length)]; if(rpChar){rpChar.talk(true);setTimeout(()=>rpChar.talk(false),1300);} }
 function newSbTip(){ const b=richieQuips(); gg('sbRichieTip').textContent=b[Math.floor(Math.random()*b.length)]; }
 function richieSay(msg){
   gg('richieAssistant').style.display='block';
+  const a=gg('rpAction'); if(a)a.innerHTML='';
   const pn=gg('richiePanel'); pn.classList.add('open');
   gg('rpTip').textContent=msg;
   if(rpChar){rpChar.talk(true);setTimeout(()=>rpChar.talk(false),1400);}
+}
+// Richie proactively offers to guide the first bank connection
+function richieGuideConnect(){
+  if(APP.plaidConnected||dataLoaded) return; // already connected
+  gg('richieAssistant').style.display='block';
+  const pn=gg('richiePanel'); pn.classList.add('open');
+  const p=RICHIE_PERSONAS[APP.persona];
+  const line = APP.persona==='crusher' ? "Time to face the numbers. Connect your bank and I'll show you exactly what we're up against."
+    : "Ready for the magic? Connect your bank and I'll fill every widget with your real numbers — balances, spending, the works. Bank-level encryption, read-only.";
+  gg('rpTip').textContent=line;
+  const a=gg('rpAction');
+  if(a) a.innerHTML=`<button class="btn primary" style="width:100%;margin-top:10px" onclick="richieStartConnect()">🏦 Connect my bank</button>
+    <button class="rp-new-tip-btn" style="margin-top:6px" onclick="richieMaybeLater()">Maybe later</button>`;
+  if(rpChar){rpChar.do('wiggle');rpChar.talk(true);setTimeout(()=>rpChar.talk(false),1500);}
+}
+function richieStartConnect(){
+  const a=gg('rpAction'); if(a)a.innerHTML='';
+  gg('rpTip').textContent="Opening the secure connection… pick your bank in the window that appears.";
+  if(rpChar)rpChar.do('bounce');
+  openLinkHandler();
+}
+function richieMaybeLater(){
+  const a=gg('rpAction'); if(a)a.innerHTML='';
+  gg('rpTip').textContent="No rush! Tap \"Connect your bank\" in the sidebar whenever you're ready. I'll be here.";
+  if(rpChar)rpChar.do('nod');
 }
 
 /* ═══════════════ SIDEBAR (mobile) ═══════════════ */
@@ -2411,16 +2443,16 @@ const WIZ_BUNDLES=[
   {id:'fire',icon:'🔥',name:'FIRE Path',desc:'Financial independence, mapped out.',quip:'"Retire early? My language."',pages:['FIRE','Retirement','Net Worth']},
   {id:'blank',icon:'🎨',name:'Blank Canvas',desc:'Start empty and build it your way.',quip:'"A true artist."',pages:['You build everything']},
 ];
-const WIZ_TITLES={1:"Who are we building this for?",2:"Pick your starting point",3:"Connect your money",4:"Your world is ready"};
-const WIZ_QUIPS={1:"Don't worry, this is the easy part.",2:"Pick a starter pack, or go rogue with a blank canvas.",3:"Connect your bank so I can see real numbers. Or skip \u2014 I'm patient.",4:"Look at you. All set up and dangerous."};
+const WIZ_TITLES={1:"Who are we building this for?",2:"Pick your starting point",3:"Your world is ready"};
+const WIZ_QUIPS={1:"Don't worry, this is the easy part.",2:"Pick a starter pack, or go rogue with a blank canvas.",3:"Look at you. All set up and dangerous."};
 function startWizard(){ gg('setupWizard').style.display='flex'; if(!wizChar) wizChar=new RichieEmoji(gg('wizRichie')); wizChar.do('bounce'); wizGoTo(1); }
 function wizGoTo(step){
   wizStep=step;
   document.querySelectorAll('.wiz-step-tab').forEach(t=>{const s=+t.dataset.step;t.className='wiz-step-tab'+(s===step?' active':s<step?' done':'');});
   gg('wizTitle').textContent=WIZ_TITLES[step]; gg('wizQuip').textContent=WIZ_QUIPS[step];
-  gg('wizBackBtn').style.visibility=step>1&&step<4?'visible':'hidden';
-  gg('wizNextBtn').textContent=step===4?"Enter my world \u2192":step===3?"Continue \u2192":"Next \u2192";
-  if(wizChar) wizChar.do(step===4?'tada':step%2===0?'wiggle':'bounce');
+  gg('wizBackBtn').style.visibility=step>1&&step<3?'visible':'hidden';
+  gg('wizNextBtn').textContent=step===3?"Sign in to finish \u2192":"Next \u2192";
+  if(wizChar) wizChar.do(step===3?'tada':step%2===0?'wiggle':'bounce');
   wizRenderBody();
 }
 function wizRenderBody(){
@@ -2439,12 +2471,6 @@ function wizRenderBody(){
         <div class="bundle-card-pages">${bn.pages.map(p=>`<span class="bundle-page-chip">${p}</span>`).join('')}</div>
         <div class="bundle-card-quip" style="margin-top:8px">${bn.quip}</div></div>`).join('')}</div>`;
   } else if(wizStep===3){
-    b.innerHTML=`<div class="plaid-connect-card"><div class="plaid-connect-icon">🏦</div>
-      <h3>${setupConfig.plaidConnected?'Bank connected \u2713':'Connect your accounts'}</h3>
-      <p>Link your bank and cards through Plaid for live balances, transactions, and spending. Bank-level encryption, read-only.</p>
-      <button class="btn primary" onclick="wizDoPlaid()" style="margin:0 auto">${setupConfig.plaidConnected?'Connected!':'Connect with Plaid'}</button></div>
-      <div style="text-align:center;font-size:12.5px;color:var(--hint)">No bank handy? Skip and connect later \u2014 Richie won't hold it against you.</div>`;
-  } else if(wizStep===4){
     const bundle=WIZ_BUNDLES.find(x=>x.id===setupConfig.bundle);
     const p=RICHIE_PERSONAS[setupConfig.persona]; const lv=LEVELS.find(l=>l.n===setupConfig.level);
     b.innerHTML=`<div class="wiz-success">
@@ -2454,8 +2480,8 @@ function wizRenderBody(){
       <div class="summary-row">
         <div class="summary-chip">Guide: <b>${p?p.icon+' '+p.name:'\u2014'}</b></div>
         <div class="summary-chip">Level: <b>${lv?lv.icon+' '+lv.name:'\u2014'}</b></div>
-        <div class="summary-chip">Bank: <b>${setupConfig.plaidConnected?'Connected':'Skipped'}</b></div>
       </div>
+      <p style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:4px">Next: sign in to secure your world. Once you're in, I'll help you connect your bank. \u{1F3E6}</p>
       <p style="font-size:13px;color:var(--green);font-style:italic">"${p?p.quips[0].replace(/"/g,''):'Let us make some money moves.'}"</p></div>`;
     setTimeout(()=>{ const el=gg('wizSuccessChar'); if(el){ const sc=new RichieEmoji(el); sc.do('celebrate'); } },120);
   }
@@ -2471,12 +2497,11 @@ function wizAddProfile(){if(setupConfig.profiles.length>=6)return;setupConfig.pr
 function wizRemoveProfile(i){setupConfig.profiles.splice(i,1);wizRenderProfiles();}
 function wizCycleAvatar(i){const a=['💰','😎','🧑','👩','🧔','👵','🦊','🐼','🤑','🧙'];const c=a.indexOf(setupConfig.profiles[i].avatar);setupConfig.profiles[i].avatar=a[(c+1)%a.length];wizRenderProfiles();}
 function wizPickBundle(id){setupConfig.bundle=id;wizRenderBody();}
-function wizDoPlaid(){ if(typeof Plaid!=='undefined'){ openLinkHandler(); setTimeout(()=>{ if(serverAvailable===false){ setupConfig.plaidConnected=false; } },100); } else { setupConfig.plaidConnected=true; wizRenderBody(); } }
 function wizBack(){if(wizStep>1)wizGoTo(wizStep-1);}
 function wizNext(){
   if(wizStep===1){ if(!setupConfig.householdName.trim()){wizShake('wizHousehold');return;} if(!setupConfig.profiles.some(p=>p.name.trim())){alert("Richie says: give me at least one name!");return;} }
   if(wizStep===2){ if(!setupConfig.bundle){alert("Richie says: pick a starter (Blank Canvas counts!)");return;} }
-  if(wizStep===4){ wizFinish(); return; }
+  if(wizStep===3){ wizFinish(); return; }
   wizGoTo(wizStep+1);
 }
 function wizShake(id){const el=gg(id);if(!el)return;el.style.borderColor='#f05c5c';el.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:300});setTimeout(()=>el.style.borderColor='',800);}
@@ -2547,7 +2572,13 @@ function buildSWOT(){
   const S=[],W=[],O=[],T=[];
   const nw = live ? (engNetBalance()+engNWAssets()-engNWLiab()) : engNetWorth();
   const monthlyIncome=engMonthlyIncome(), monthlyBills=engMonthlyBills();
-  const ccDebt = live ? engTotalDebt() : bills.filter(b=>b.cat==='CC').reduce((s,b)=>s+Math.abs(b.bal||0),0);
+  // Prefer real Plaid liabilities (actual APRs/min payments) when connected
+  const liabCards = (plaidLiabilities&&plaidLiabilities.credit_cards)||[];
+  const ccDebt = liabCards.length ? liabCards.reduce((s,c)=>s+Math.abs(c.current_balance||0),0)
+                : live ? engTotalDebt()
+                : bills.filter(b=>b.cat==='CC').reduce((s,b)=>s+Math.abs(b.bal||0),0);
+  const highApr = liabCards.length ? liabCards.filter(c=>(c.apr||0)>=25)
+                : bills.filter(b=>b.apr>=25&&b.bal<0);
   const totalDebt = live ? engTotalDebt() : engBillsDebt();
   // Strengths
   if(nw>0) S.push(`Net worth is positive at ${fmtM(nw)}.`);
@@ -2557,7 +2588,6 @@ function buildSWOT(){
   if(!S.length) S.push(`You're here and looking — that's the first win.`);
   // Weaknesses
   if(ccDebt>0) W.push(`${fmtK(ccDebt)} in credit-card balances.`);
-  const highApr=bills.filter(b=>b.apr>=25&&b.bal<0);
   if(highApr.length) W.push(`${highApr.length} card${highApr.length>1?'s':''} above 25% APR draining cash.`);
   if(cushion<=0) W.push(`Bills eat all of your income — no monthly cushion.`);
   if(!W.length) W.push(`Nothing major — keep the momentum.`);
@@ -2643,6 +2673,10 @@ function enterApp(){
     updateConnectBtn();
     if(ok && APP.activePage && APP.activePage!=='__settings__'){
       const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg) renderCanvas(pg);
+    }
+    // If no bank is connected yet, have Richie offer to guide the first connect
+    if(!ok && !APP.plaidConnected){
+      setTimeout(()=>richieGuideConnect(), 1400);
     }
   });
 }
