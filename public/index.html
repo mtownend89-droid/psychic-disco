@@ -663,6 +663,34 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .add-widget-fab:hover{background:rgba(46,204,138,0.16);border-style:solid;}
 .wph{padding:6px 2px;}
 .wph-stat{font-size:26px;font-weight:700;color:var(--text);}
+/* ── FIRE calculator widget ── */
+.fc-wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:4px;}
+@media(max-width:560px){.fc-wrap{grid-template-columns:1fr;}}
+.fc-sliders{display:flex;flex-direction:column;gap:11px;}
+.fc-slider-hdr{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-bottom:3px;}
+.fc-slider-hdr strong{color:var(--text);}
+.fc-slider input[type=range]{width:100%;accent-color:var(--green);height:4px;}
+.fc-results{display:flex;flex-direction:column;gap:6px;}
+.fc-stat{background:var(--surface2);border-radius:9px;padding:8px 12px;}
+.fc-stat-val{font-size:20px;font-weight:700;color:var(--text);}
+.fc-stat-lbl{font-size:11px;color:var(--muted);}
+.fc-note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:2px;}
+/* ── Category editor modal ── */
+.ce-modal{position:fixed;inset:0;z-index:2950;background:rgba(8,10,16,0.7);display:none;align-items:center;justify-content:center;padding:20px;}
+.ce-card{background:var(--surface);border:1px solid var(--border2);border-radius:16px;width:min(560px,94vw);max-height:86vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.5);}
+.ce-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 6px;}
+.ce-head h3{font-size:17px;margin:0;}
+.ce-x{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;}
+.ce-sub{padding:0 20px 12px;font-size:12.5px;color:var(--muted);}
+.ce-body{overflow-y:auto;padding:0 20px;flex:1;}
+.ce-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);}
+.ce-color{width:24px;height:24px;border-radius:50%;border:2px solid var(--border2);cursor:pointer;padding:0;flex-shrink:0;background:none;}
+.ce-label{flex:1;height:30px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:0 9px;font-size:13px;}
+.ce-grp{font-size:9px;font-weight:700;background:var(--surface3);color:var(--muted);padding:2px 6px;border-radius:3px;letter-spacing:.04em;flex-shrink:0;}
+.ce-arrow{color:var(--hint);flex-shrink:0;}
+.ce-del{background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;flex-shrink:0;opacity:0.6;}
+.ce-del:hover{opacity:1;}
+.ce-foot{display:flex;align-items:center;gap:8px;padding:14px 20px;border-top:1px solid var(--border);}
 .wph-sub{font-size:11.5px;color:var(--muted);margin-top:2px;}
 .wph-bars{display:flex;align-items:flex-end;gap:6px;height:70px;margin-top:10px;}
 .wph-bar{flex:1;border-radius:4px 4px 0 0;background:var(--green);opacity:0.8;}
@@ -1739,10 +1767,12 @@ const WIDGET_CATALOG=[
   {id:'bills_list',name:'Upcoming Bills',icon:'\U0001F4CB',cat:'Budget',span:1,minLevel:1,desc:"What's due and when."},
   {id:'zero_budget',name:'Zero-Based Budget',icon:'\U0001F9EE',cat:'Budget',span:2,minLevel:2,desc:'Give every dollar a job.'},
   {id:'cashflow_chart',name:'Cash Flow',icon:'\U0001F30A',cat:'Cash Flow',span:2,minLevel:1,desc:'Income vs. spending over time.'},
+  {id:'sankey',name:'Money Flow (Sankey)',icon:'\U0001F500',cat:'Cash Flow',span:2,minLevel:2,desc:'Visualize income flowing to spending.'},
   {id:'top_categories',name:'Top Categories',icon:'\U0001F4CA',cat:'Cash Flow',span:1,minLevel:1,desc:'Where your money goes most.'},
   {id:'net_worth_chart',name:'Net Worth Trend',icon:'\U0001F4C8',cat:'Wealth',span:2,minLevel:2,desc:'Net worth over months.'},
   {id:'fire_progress',name:'FIRE Progress',icon:'\U0001F525',cat:'Wealth',span:1,minLevel:3,desc:'Path to financial independence.'},
   {id:'retirement_proj',name:'Retirement Projection',icon:'\U0001F3D6\uFE0F',cat:'Wealth',span:2,minLevel:3,desc:"Where you're headed."},
+  {id:'fire_calc',name:'FIRE Calculator',icon:'\U0001F9EE',cat:'Wealth',span:2,minLevel:3,desc:'Interactive retirement projection — adjust and watch it update.'},
   {id:'debt_payoff',name:'Debt Payoff Planner',icon:'\U0001F6A8',cat:'Debt',span:2,minLevel:2,desc:'Snowball or avalanche.'},
   {id:'debt_summary',name:'Total Debt',icon:'\U0001F4B3',cat:'Debt',span:1,minLevel:1,desc:'What you owe at a glance.'},
 ];
@@ -1834,6 +1864,8 @@ function mountWidgetCharts(pg){
 }
 function buildWidgetChart(w, cid){
   const live=dataLoaded;
+  if(w.type==='sankey'){ buildSankey(cid); return; }
+  if(w.type==='fire_calc'){ fireRefresh(); return; }
   if(w.type==='cashflow_chart'){
     const ser=live?engMonthlySeries(6):[{label:'Jan',spend:2800,income:5200},{label:'Feb',spend:3100,income:5200},{label:'Mar',spend:2950,income:5800},{label:'Apr',spend:3300,income:5200},{label:'May',spend:3050,income:5200},{label:'Jun',spend:3118,income:5400}];
     buildChartWidget(cid,'bar',ser.map(s=>s.label),null,null,{
@@ -1857,6 +1889,149 @@ function buildWidgetChart(w, cid){
   }
 }
 
+/* Sankey money-flow (ported, per-widget canvas) */
+/* ── Category editor (ported, simplified for sandbox) ── */
+function saveUserCategories(cats){ try{ localStorage.setItem('mdf_categories',JSON.stringify(cats)); }catch(e){} }
+let _catEdit=null;
+function openCatEditor(){
+  _catEdit=getUserCategories().map(c=>({...c}));
+  gg('catEditorModal').style.display='flex';
+  renderCatEditor();
+}
+function closeCatEditor(){ gg('catEditorModal').style.display='none'; }
+function renderCatEditor(){
+  const body=gg('catEditorBody'); if(!body) return;
+  // group rows visually: groups then their children, then ungrouped
+  const groups=_catEdit.filter(c=>c.group);
+  const ungrouped=_catEdit.filter(c=>!c.group&&!c.parent);
+  let rows=[];
+  groups.forEach(g=>{ rows.push({c:g,indent:false,isGroup:true}); _catEdit.filter(ch=>ch.parent===g.id).forEach(ch=>rows.push({c:ch,indent:true})); });
+  ungrouped.forEach(c=>rows.push({c,indent:false}));
+  body.innerHTML=rows.map(r=>{
+    const i=_catEdit.indexOf(r.c);
+    return `<div class="ce-row" style="${r.indent?'padding-left:24px':''}">
+      <input type="color" value="${r.c.color||'#888888'}" onchange="catEditField(${i},'color',this.value)" class="ce-color">
+      ${r.isGroup?'<span class="ce-grp">GROUP</span>':r.indent?'<span class="ce-arrow">↳</span>':''}
+      <input type="text" value="${esc(r.c.label)}" onchange="catEditField(${i},'label',this.value)" class="ce-label">
+      <button class="ce-del" onclick="catEditDelete(${i})" title="Delete">✕</button>
+    </div>`;
+  }).join('');
+}
+function catEditField(i,field,val){ if(_catEdit[i]){ _catEdit[i][field]=val; } }
+function catEditDelete(i){ if(_catEdit[i]&&!confirm('Delete "'+_catEdit[i].label+'"?'))return; _catEdit.splice(i,1); renderCatEditor(); }
+function catEditAdd(){ _catEdit.push({id:'custom_'+Date.now(),label:'New Category',color:'#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0'),plaid:[]}); renderCatEditor(); }
+function catEditSave(){
+  saveUserCategories(_catEdit);
+  closeCatEditor();
+  showToast('Categories saved','success');
+  // re-render active page so category colors/labels update everywhere
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg&&APP.activePage!=='__settings__') renderCanvas(pg);
+  if(sbRichie)sbRichie.do('bounce');
+}
+function catEditReset(){ if(!confirm('Reset all categories to defaults?'))return; _catEdit=DEFAULT_CATEGORIES.map(c=>({...c})); renderCatEditor(); }
+
+/* ── FIRE / retirement model + interactive calculator widget ── */
+const FIRE_DEFAULTS={age:42,ret:65,saved:45000,contrib:1200,rate:7,inf:3};
+let _fireState=null;
+function fireState(){
+  if(_fireState) return _fireState;
+  try{ const s=JSON.parse(localStorage.getItem('mdf_fire')); if(s){ _fireState=s; return s; } }catch(e){}
+  _fireState=Object.assign({}, FIRE_DEFAULTS);
+  // seed current savings from real data if available
+  if(dataLoaded){ const inv=engNWAssets(); if(inv>0) _fireState.saved=Math.max(inv,FIRE_DEFAULTS.saved); }
+  return _fireState;
+}
+function fireSaveState(){ try{ localStorage.setItem('mdf_fire',JSON.stringify(_fireState)); }catch(e){} }
+// Core projection: compound growth with monthly contributions (ported calcGrowth logic)
+function fireProject(U){
+  const yrs=Math.max(U.ret-U.age,1), rate=U.rate/100, contrib=U.contrib*12;
+  const labels=[],bals=[]; let bal=U.saved;
+  for(let y=0;y<=yrs;y++){ labels.push(U.age+y); bals.push(Math.round(bal)); bal=bal*(1+rate)+contrib; }
+  const fb=bals[bals.length-1];
+  const real=fb/Math.pow(1+U.inf/100,yrs);
+  const monthly=fb*0.04/12; // 4% safe withdrawal rule
+  return {labels,bals,finalBal:fb,real,monthly,yrs};
+}
+function fireSlider(id,label,min,max,step,val,fmt){
+  return `<div class="fc-slider"><div class="fc-slider-hdr"><span>${label}</span><strong id="fcv_${id}">${fmt(val)}</strong></div>
+    <input type="range" id="fc_${id}" min="${min}" max="${max}" step="${step}" value="${val}" oninput="fireOnInput('${id}',this.value)"></div>`;
+}
+function fireWidgetBody(w){
+  const U=fireState();
+  return `<div class="fc-wrap">
+    <div class="fc-sliders">
+      ${fireSlider('age','Current age',18,70,1,U.age,v=>v)}
+      ${fireSlider('ret','Retire at',40,80,1,U.ret,v=>v)}
+      ${fireSlider('saved','Saved now',0,2000000,1000,U.saved,v=>fmtK(v))}
+      ${fireSlider('contrib','Monthly add',0,10000,50,U.contrib,v=>fmtK(v))}
+      ${fireSlider('rate','Return %',1,12,0.5,U.rate,v=>v+'%')}
+    </div>
+    <div class="fc-results">
+      <div class="fc-stat"><div class="fc-stat-val" id="fc_final">—</div><div class="fc-stat-lbl">at retirement</div></div>
+      <div class="fc-stat"><div class="fc-stat-val" id="fc_monthly" style="color:var(--green)">—</div><div class="fc-stat-lbl">/mo income (4% rule)</div></div>
+      <div style="height:120px;margin-top:6px"><canvas id="cv_${w.uid}"></canvas></div>
+      <div class="fc-note" id="fc_note"></div>
+    </div>
+  </div>`;
+}
+function fireOnInput(id,value){
+  const U=fireState(); U[id]= (id==='rate')? parseFloat(value): parseInt(value,10);
+  const fmtMap={age:v=>v,ret:v=>v,saved:v=>fmtK(v),contrib:v=>fmtK(v),rate:v=>v+'%'};
+  const lbl=gg('fcv_'+id); if(lbl) lbl.textContent=fmtMap[id](U[id]);
+  fireSaveState();
+  fireRefresh();
+}
+function fireRefresh(){
+  // find the active fire_calc widget canvas
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(!pg) return;
+  const w=(pg.widgets||[]).find(x=>x.type==='fire_calc'); if(!w) return;
+  const U=fireState(), proj=fireProject(U);
+  const fEl=gg('fc_final'); if(fEl) fEl.textContent=fmtM(proj.finalBal);
+  const mEl=gg('fc_monthly'); if(mEl) mEl.textContent=fmtK(proj.monthly)+'/mo';
+  const nEl=gg('fc_note'); if(nEl) nEl.innerHTML=`${fmtM(proj.real)} in today's dollars over ${proj.yrs} years.`;
+  buildChartWidget('cv_'+w.uid,'line',proj.labels,proj.bals,'#f0a540',{
+    datasets:[{data:proj.bals,borderColor:'#f0a540',backgroundColor:'rgba(240,165,64,0.12)',fill:true,tension:0.3,pointRadius:0,borderWidth:2}],
+    chartOptions:{scales:{x:{ticks:{color:'#8b8fa8',font:{size:9},maxTicksLimit:7},grid:{display:false}},y:{ticks:{color:'#8b8fa8',font:{size:9},callback:v=>fmtM(v)},grid:{color:'rgba(128,128,128,0.07)'}}}}
+  });
+}
+
+function buildSankey(cid){
+  const canvas=gg(cid); if(!canvas) return;
+  const parent=canvas.parentElement; if(!parent||parent.clientWidth<50){ setTimeout(()=>buildSankey(cid),200); return; }
+  const dpr=window.devicePixelRatio||1, W=parent.clientWidth-2, H=220;
+  canvas.width=W*dpr; canvas.height=H*dpr; canvas.style.width=W+'px'; canvas.style.height=H+'px';
+  const ctx=canvas.getContext('2d'); ctx.scale(dpr,dpr); ctx.clearRect(0,0,W,H);
+  const FM={weekly:52/12,biweekly:26/12,monthly:1,quarterly:1/3,annual:1/12,yearly:1/12};
+  const incNodes=incomeSources.map(s=>({label:s.name.split(' ').slice(0,2).join(' '),value:Math.round(s.amt*(FM[s.freq]||1)),color:'#3dda91'})).filter(n=>n.value>0);
+  const incTotal=incNodes.reduce((s,n)=>s+n.value,0)||1;
+  let spNodes;
+  if(dataLoaded && allTxns.length){ spNodes=engCategoryBreakdown(30).slice(0,7).map(c=>({label:c.label,value:Math.round(c.value),color:c.color})); }
+  else { const bc={}; bills.forEach(b=>{ if(b.pay>0) bc[b.cat||'Bills']=(bc[b.cat||'Bills']||0)+b.pay; }); spNodes=Object.entries(bc).sort((a,b)=>b[1]-a[1]).slice(0,7).map(([lbl,val])=>({label:lbl,value:Math.round(val),color:getCatColor(lbl)})); }
+  const spTotal=spNodes.reduce((s,n)=>s+n.value,0)||1;
+  if(!incNodes.length&&!spNodes.length){ ctx.fillStyle='#888';ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText('Add income & spending to see flow',W/2,H/2); return; }
+  const PAD=14,GAP=5,NW=12,LW=Math.min(110,W*0.16),LX=LW,RX=W-LW-NW,avail=H-PAD*2;
+  function layout(nodes,total,scale){ let y=PAD; return nodes.map(n=>{const h=Math.max(5,Math.round(n.value/total*scale));const r={...n,y,h};y+=h+GAP;return r;}); }
+  const iN=layout(incNodes,incTotal,avail-(Math.max(incNodes.length-1,0))*GAP);
+  const sN=layout(spNodes,spTotal,avail-(Math.max(spNodes.length-1,0))*GAP);
+  const iF=iN.map(n=>n.y), sF=sN.map(n=>n.y);
+  iN.forEach((src,si)=>{ sN.forEach((dst,di)=>{
+    const sfh=Math.max(1,Math.round(src.h*dst.value/spTotal)), dfh=Math.max(1,Math.round(dst.h*src.value/incTotal));
+    const x0=LX+NW,y0=iF[si],x1=RX,y1=sF[di]; iF[si]+=sfh; sF[di]+=dfh; const mx=(x0+x1)/2;
+    const g=ctx.createLinearGradient(x0,0,x1,0); g.addColorStop(0,(src.color||'#3dda91')+'88'); g.addColorStop(1,(dst.color||'#94a3b8')+'88');
+    ctx.beginPath(); ctx.moveTo(x0,y0); ctx.bezierCurveTo(mx,y0,mx,y1,x1,y1); ctx.lineTo(x1,y1+dfh); ctx.bezierCurveTo(mx,y1+dfh,mx,y0+sfh,x0,y0+sfh); ctx.closePath(); ctx.fillStyle=g; ctx.fill();
+  }); });
+  const textC=getComputedStyle(document.documentElement).getPropertyValue('--text').trim()||'#e4e6f0';
+  const mutC=getComputedStyle(document.documentElement).getPropertyValue('--muted').trim()||'#8b8fa8';
+  function drawNodes(nodes,total,isLeft){ const nx=isLeft?LX:RX; nodes.forEach(n=>{
+    ctx.fillStyle=n.color||'#3dda91'; ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(nx,n.y,NW,n.h,2);else ctx.rect(nx,n.y,NW,n.h); ctx.fill();
+    const lx=isLeft?LX-4:RX+NW+4, midY=n.y+n.h/2; ctx.textAlign=isLeft?'right':'left';
+    ctx.font='bold 10px sans-serif'; ctx.fillStyle=textC; const maxL=14, lbl=n.label.length>maxL?n.label.slice(0,maxL-1)+'\u2026':n.label; ctx.fillText(lbl,lx,midY-2);
+    const val=n.value>=1000?'$'+(n.value/1000).toFixed(1)+'K':'$'+n.value; ctx.font='9px monospace'; ctx.fillStyle=mutC; ctx.fillText(val+' \u00b7 '+Math.round(n.value/total*100)+'%',lx,midY+10);
+  }); }
+  drawNodes(iN,incTotal,true); drawNodes(sN,spTotal,false);
+  ctx.textAlign='left'; ctx.font='bold 9px sans-serif'; ctx.fillStyle=mutC; ctx.fillText('INCOME',LX,10); ctx.textAlign='right'; ctx.fillText('SPENDING',RX,10);
+}
+
 function renderWidgetBody(w){
   const def=WIDGET_BY_ID[w.type]; if(!def) return '';
   if(!widgetUnlocked(def)) return `<div class="wph-lock"><div class="wph-lock-icon">\U0001F512</div><div style="font-size:12.5px">Unlocks at level ${def.minLevel}</div></div>`;
@@ -1871,9 +2046,11 @@ function renderWidgetBody(w){
     case 'bills_list': { const up=engUpcomingBills().slice(0,5); if(up.length) return `<div class="wph">${up.map(b=>`<div class="wph-row"><span>${b.name}</span><span><b>${fmtK(b.pay)}</b> <span style="color:var(--muted);font-size:11px">· ${b.due}${b.due%10===1&&b.due!==11?'st':b.due%10===2&&b.due!==12?'nd':b.due%10===3&&b.due!==13?'rd':'th'}</span></span></div>`).join('')}</div>`; return `<div class="wph"><div class="wph-sub">No bills yet.</div></div>`; }
     case 'budget_doughnut': { if(dataLoaded){ const cats=engCategoryBreakdown(30).slice(0,6); const tot=cats.reduce((s,c)=>s+c.value,0); if(tot>0){ let acc=0; const stops=cats.map(c=>{ const a=acc/tot*100; acc+=c.value; const b=acc/tot*100; return `${c.color} ${a.toFixed(1)}% ${b.toFixed(1)}%`; }).join(','); return `<div class="wph" style="text-align:center"><div style="width:90px;height:90px;border-radius:50%;margin:6px auto;background:conic-gradient(${stops})"></div><div class="wph-sub">${cats.length} categories \u00b7 ${fmtK(tot)}</div></div>`; } } return `<div class="wph" style="text-align:center"><div style="width:90px;height:90px;border-radius:50%;margin:6px auto;background:conic-gradient(var(--green) 0 38%,var(--blue) 38% 62%,var(--amber) 62% 82%,var(--purple) 82% 100%)"></div><div class="wph-sub">4 categories \u00b7 sample</div></div>`; }
     case 'cashflow_chart': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Income vs spending${dataLoaded?' · last 6 mo':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
+    case 'sankey': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Money flow${dataLoaded?'':' · from your bills'}</div><div style="position:relative"><canvas id="cv_${w.uid}"></canvas></div></div>`;
     case 'net_worth_chart': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Net worth trend${dataLoaded?'':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
     case 'fire_progress': { const target=engMonthlyBills()*12*25; const cur=dataLoaded?Math.max(engNWAssets(),engNetBalance()):engNWAssets(); const pct=target>0?Math.min(100,Math.round(cur/target*100)):0; return `<div class="wph"><div class="wph-stat">${pct}%</div><div class="wph-sub">to FI (${fmtM(target)} target)</div><div class="xp-bar" style="margin-top:8px"><div class="xp-fill" style="width:${pct}%"></div></div></div>`; }
     case 'retirement_proj': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Projected growth</div><div style="height:140px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
+    case 'fire_calc': return fireWidgetBody(w);
     case 'debt_payoff': { const totDebt=engBillsDebt(); const totPay=engMonthlyBills(); const avgApr=bills.filter(b=>b.bal<0&&b.apr>0).reduce((s,b,_,a)=>s+b.apr/a.length,0)||5; const r=avgApr/100/12; const months=(totPay>totDebt*r)?Math.ceil(Math.log(totPay/(totPay-totDebt*r))/Math.log(1+r)):999; const yrs=Math.floor(months/12), mo=months%12; return `<div class="wph"><div class="wph-sub">Debt-free in (avalanche)</div><div class="wph-stat">${months>=999?'—':yrs+' yr '+mo+' mo'}</div><div class="wph-sub">${fmtM(totDebt)} at ${avgApr.toFixed(1)}% avg APR</div></div>`; }
     case 'zero_budget': { const income=engMonthlyIncome(); const assigned=zeroBuckets.reduce((s,z)=>s+z.amt,0)+engMonthlyBills(); const left=income-assigned; return `<div class="wph"><div class="wph-row"><span>Monthly income</span><b>${fmtK(income)}</b></div><div class="wph-row"><span>Assigned</span><b>${fmtK(assigned)}</b></div><div class="wph-row"><span>To budget</span><b style="color:${Math.abs(left)<1?'var(--green)':left>0?'var(--amber)':'var(--red)'}">${left>=0?'':'-'}${fmtK(left)} ${Math.abs(left)<1?'✓':'left'}</b></div></div>`; }
     default: return `<div class="wph"><div class="wph-sub">${def.name}</div></div>`;
@@ -1937,8 +2114,16 @@ function renderSettings(){
           <button class="toggle${APP.proMode?' on':''}" id="proToggle" onclick="toggleProMode()"><span class="toggle-knob"></span></button>
         </div>
       </div>
+      <div class="set-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
+          <div>
+            <div class="set-card-label" style="margin:0">🏷️ Spending Categories</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Customize the labels and colors used across your charts and budgets.</div>
+          </div>
+          <button class="btn" onclick="openCatEditor()">Edit categories</button>
+        </div>
+      </div>
     </div>`;
-  // persona options
   gg('setPersonaRow').innerHTML=Object.keys(RICHIE_PERSONAS).map(k=>{
     const pp=RICHIE_PERSONAS[k];
     return `<div class="persona-opt${k===APP.persona?' sel':''}" onclick="setPersona('${k}')" style="${k===APP.persona?'border-color:'+pp.accent:''}">
@@ -2250,5 +2435,22 @@ function start(){
 }
 window.addEventListener('load',start);
 </script>
+
+<!-- Category Editor Modal -->
+<div id="catEditorModal" class="ce-modal" style="display:none">
+  <div class="ce-card">
+    <div class="ce-head"><h3>🏷️ Edit Categories</h3><button class="ce-x" onclick="closeCatEditor()">✕</button></div>
+    <div class="ce-sub">Customize labels and colors. These drive your spending charts and budgets.</div>
+    <div id="catEditorBody" class="ce-body"></div>
+    <div class="ce-foot">
+      <button class="btn" onclick="catEditAdd()">+ Add category</button>
+      <button class="btn ghost" onclick="catEditReset()">Reset</button>
+      <div style="flex:1"></div>
+      <button class="btn" onclick="closeCatEditor()">Cancel</button>
+      <button class="btn primary" onclick="catEditSave()">Save</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
