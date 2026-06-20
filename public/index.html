@@ -1769,7 +1769,23 @@ function loadState(){
   try{
     const setup=JSON.parse(localStorage.getItem('richie_setup')||'null');
     const saved=JSON.parse(localStorage.getItem('richie_app')||'null');
-    if(saved){ APP=Object.assign(APP,saved); }
+    if(saved){
+      APP=Object.assign(APP,saved);
+      // Migration: heal worlds saved before widgets were seeded into bundle pages.
+      const hasAnyWidget=(APP.pages||[]).some(p=>p.widgets&&p.widgets.length>0);
+      if((APP.pages||[]).length && !hasAnyWidget){
+        const bundleKey=(setup&&setup.bundle)||'overview';
+        const fresh=seedPages(bundleKey);
+        // keep the user's page names/icons/colors, but fill widgets from the matching fresh page by index
+        APP.pages=APP.pages.map((p,i)=>({ ...p, widgets:(fresh[i]&&fresh[i].widgets)?fresh[i].widgets:(p.widgets||[]) }));
+        // if page count differs (user added/removed pages), top up any still-empty pages with overview defaults
+        if(!APP.pages.some(p=>p.widgets.length>0)){
+          APP.pages=seedPages(bundleKey);
+          APP.activePage=APP.pages[0]?APP.pages[0].id:APP.activePage;
+        }
+        saveState();
+      }
+    }
     else if(setup){
       APP.household=setup.householdName||APP.household;
       APP.profiles=setup.profiles&&setup.profiles.length?setup.profiles:APP.profiles;
@@ -1777,7 +1793,6 @@ function loadState(){
       APP.level=setup.level||1;
       APP.xp=setup.xp||0;
       APP.proMode=!!setup.proMode;
-      const bp=BUNDLE_PAGES[setup.bundle]||BUNDLE_PAGES.overview;
       APP.pages=seedPages(setup.bundle);
       APP.activePage=APP.pages[0]?APP.pages[0].id:null;
       saveState();
@@ -2209,6 +2224,16 @@ function renderSettings(){
       <div class="set-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
           <div>
+            <div class="set-card-label" style="margin:0">🔄 Reset my world</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Rebuild your pages and widgets from a fresh starter layout. Your login and bank stay connected.</div>
+          </div>
+          <button class="btn" onclick="resetWorld()">Reset pages</button>
+        </div>
+      </div>
+
+      <div class="set-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
+          <div>
             <div class="set-card-label" style="margin:0">🔐 Session</div>
             <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Sign out — you'll log back in and get a fresh SWOT next time.</div>
           </div>
@@ -2230,6 +2255,18 @@ function renderSettings(){
 
 function setPersona(key){ APP.persona=key; saveState(); applyAccent(); renderShell(); renderSettings(); if(sbRichie)sbRichie.do('bounce'); richieSay(RICHIE_PERSONAS[key].quips[0]); }
 function toggleProMode(){ APP.proMode=!APP.proMode; saveState(); gg('proToggle').classList.toggle('on',APP.proMode); renderSettings(); richieSay(APP.proMode?"Pro Mode ON. Everything's unlocked — go wild.":"Pro Mode off. Back to leveling up the fun way."); }
+function resetWorld(){
+  if(!confirm("Rebuild your pages and widgets from a fresh starter layout? Your custom page edits will be replaced (login & bank stay connected).")) return;
+  const setup=JSON.parse(localStorage.getItem('richie_setup')||'{}');
+  const bundleKey=setup.bundle||'overview';
+  APP.pages=seedPages(bundleKey);
+  APP.activePage=APP.pages[0]?APP.pages[0].id:null;
+  saveState();
+  renderShell();
+  switchPage(APP.activePage);
+  richieSay("Fresh start! Your pages are rebuilt and loaded with widgets. 🎉");
+  if(sbRichie)sbRichie.do('tada');
+}
 
 /* ═══════════════ PAGE CRUD ═══════════════ */
 let editingPageId=null, peIcon='💰', peColor='#2ecc8a';
