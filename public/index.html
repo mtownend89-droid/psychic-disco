@@ -1589,14 +1589,38 @@ let nwLiab=[
 /* ── Derived metrics from bills/income/net worth ── */
 const FREQ_TO_MONTHLY={weekly:52/12, biweekly:26/12, monthly:1, quarterly:1/3, annual:1/12, yearly:1/12};
 function engMonthlyIncome(){ return incomeSources.reduce((s,i)=>s+i.amt*(FREQ_TO_MONTHLY[i.freq]||1),0); }
-function engMonthlyBills(){ return bills.reduce((s,b)=>s+(b.pay||0),0); }
-function engBillsDebt(){ return bills.reduce((s,b)=>s+Math.abs(b.bal||0),0); }
+
+/* ── Unified bills/liabilities layer ──
+   When Plaid liabilities are loaded, derive bills from real card/mortgage data;
+   otherwise fall back to the manually-entered bills[] array. Same shape either way:
+   {name, note, pay (monthly), bal (negative), apr, due (day-of-month), cat, source} */
+function plaidHasLiab(){ return !!(plaidLiabilities && ((plaidLiabilities.credit_cards||[]).length || (plaidLiabilities.mortgages||[]).length)); }
+function _dueDay(dateStr){ if(!dateStr) return 1; const d=new Date(dateStr); return isNaN(d)?1:d.getDate(); }
+function engBills(){
+  if(!plaidHasLiab()) return bills;
+  const out=[];
+  (plaidLiabilities.credit_cards||[]).forEach(c=>{
+    out.push({ name:c.name||'Credit Card', note:c.institution||'', cat:'CC',
+      bal:-(Math.abs(c.current_balance||0)), apr:(c.apr!=null?c.apr:0),
+      min:(c.minimum_payment||0), pay:(c.minimum_payment||0),
+      due:_dueDay(c.next_payment_due_date), promo:'', paid:false, source:'plaid' });
+  });
+  (plaidLiabilities.mortgages||[]).forEach(m=>{
+    out.push({ name:m.name||'Mortgage', note:m.institution||'', cat:'HM',
+      bal:-(Math.abs(m.current_balance||0)), apr:(m.interest_rate!=null?m.interest_rate:0),
+      min:(m.minimum_payment||0), pay:(m.minimum_payment||0),
+      due:_dueDay(m.next_payment_due_date), promo:'', paid:false, source:'plaid' });
+  });
+  return out;
+}
+function engMonthlyBills(){ return engBills().reduce((s,b)=>s+(b.pay||0),0); }
+function engBillsDebt(){ return engBills().reduce((s,b)=>s+Math.abs(b.bal||0),0); }
 function engNWAssets(){ return nwAssets.reduce((s,a)=>s+(a.value||0),0); }
 function engNWLiab(){ return nwLiab.reduce((s,l)=>s+(l.value||0),0); }
 function engNetWorth(){ return engNWAssets()-engNWLiab(); }
 function engUpcomingBills(){
   const today=new Date().getDate();
-  return [...bills].filter(b=>b.pay>0).sort((a,b)=>{
+  return engBills().filter(b=>b.pay>0).sort((a,b)=>{
     const da=a.due<today?a.due+31:a.due, db=b.due<today?b.due+31:b.due; return da-db;
   });
 }
@@ -2128,7 +2152,7 @@ function buildSankey(cid){
   const incTotal=incNodes.reduce((s,n)=>s+n.value,0)||1;
   let spNodes;
   if(dataLoaded && allTxns.length){ spNodes=engCategoryBreakdown(30).slice(0,7).map(c=>({label:c.label,value:Math.round(c.value),color:c.color})); }
-  else { const bc={}; bills.forEach(b=>{ if(b.pay>0) bc[b.cat||'Bills']=(bc[b.cat||'Bills']||0)+b.pay; }); spNodes=Object.entries(bc).sort((a,b)=>b[1]-a[1]).slice(0,7).map(([lbl,val])=>({label:lbl,value:Math.round(val),color:getCatColor(lbl)})); }
+  else { const bc={}; engBills().forEach(b=>{ if(b.pay>0) bc[b.cat||'Bills']=(bc[b.cat||'Bills']||0)+b.pay; }); spNodes=Object.entries(bc).sort((a,b)=>b[1]-a[1]).slice(0,7).map(([lbl,val])=>({label:lbl,value:Math.round(val),color:getCatColor(lbl)})); }
   const spTotal=spNodes.reduce((s,n)=>s+n.value,0)||1;
   if(!incNodes.length&&!spNodes.length){ ctx.fillStyle='#888';ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText('Add income & spending to see flow',W/2,H/2); return; }
   const PAD=14,GAP=5,NW=12,LW=Math.min(110,W*0.16),LX=LW,RX=W-LW-NW,avail=H-PAD*2;
@@ -2173,7 +2197,7 @@ function renderWidgetBody(w){
     case 'fire_progress': { const target=engMonthlyBills()*12*25; const cur=dataLoaded?Math.max(engNWAssets(),engNetBalance()):engNWAssets(); const pct=target>0?Math.min(100,Math.round(cur/target*100)):0; return `<div class="wph"><div class="wph-stat">${pct}%</div><div class="wph-sub">to FI (${fmtM(target)} target)</div><div class="xp-bar" style="margin-top:8px"><div class="xp-fill" style="width:${pct}%"></div></div></div>`; }
     case 'retirement_proj': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Projected growth</div><div style="height:140px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
     case 'fire_calc': return fireWidgetBody(w);
-    case 'debt_payoff': { const totDebt=engBillsDebt(); const totPay=engMonthlyBills(); const avgApr=bills.filter(b=>b.bal<0&&b.apr>0).reduce((s,b,_,a)=>s+b.apr/a.length,0)||5; const r=avgApr/100/12; const months=(totPay>totDebt*r)?Math.ceil(Math.log(totPay/(totPay-totDebt*r))/Math.log(1+r)):999; const yrs=Math.floor(months/12), mo=months%12; return `<div class="wph"><div class="wph-sub">Debt-free in (avalanche)</div><div class="wph-stat">${months>=999?'—':yrs+' yr '+mo+' mo'}</div><div class="wph-sub">${fmtM(totDebt)} at ${avgApr.toFixed(1)}% avg APR</div></div>`; }
+    case 'debt_payoff': { const _b=engBills(); const totDebt=engBillsDebt(); const totPay=engMonthlyBills(); const avgApr=_b.filter(b=>b.bal<0&&b.apr>0).reduce((s,b,_,a)=>s+b.apr/a.length,0)||5; const r=avgApr/100/12; const months=(totPay>totDebt*r)?Math.ceil(Math.log(totPay/(totPay-totDebt*r))/Math.log(1+r)):999; const yrs=Math.floor(months/12), mo=months%12; return `<div class="wph"><div class="wph-sub">Debt-free in (avalanche)${plaidHasLiab()?' · live':''}</div><div class="wph-stat">${months>=999?'—':yrs+' yr '+mo+' mo'}</div><div class="wph-sub">${fmtM(totDebt)} at ${avgApr.toFixed(1)}% avg APR</div></div>`; }
     case 'zero_budget': { const income=engMonthlyIncome(); const assigned=zeroBuckets.reduce((s,z)=>s+z.amt,0)+engMonthlyBills(); const left=income-assigned; return `<div class="wph"><div class="wph-row"><span>Monthly income</span><b>${fmtK(income)}</b></div><div class="wph-row"><span>Assigned</span><b>${fmtK(assigned)}</b></div><div class="wph-row"><span>To budget</span><b style="color:${Math.abs(left)<1?'var(--green)':left>0?'var(--amber)':'var(--red)'}">${left>=0?'':'-'}${fmtK(left)} ${Math.abs(left)<1?'✓':'left'}</b></div></div>`; }
     default: return `<div class="wph"><div class="wph-sub">${def.name}</div></div>`;
   }
