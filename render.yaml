@@ -3,7 +3,7 @@ services:
     name: matt-dana-finance
     runtime: node
     buildCommand: npm install
-    startCommand: npm start
+    startCommand: node server/index.js
     envVars:
       - key: NODE_ENV
         value: production
