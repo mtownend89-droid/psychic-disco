@@ -1424,6 +1424,27 @@ canvas.chart-interactive{cursor:crosshair;}
 <script>
 const gg=id=>document.getElementById(id);
 
+/* ── Safe storage: falls back to in-memory when the browser blocks
+   localStorage/sessionStorage (e.g. Edge Tracking Prevention, private mode).
+   The whole app reads/writes through LS/SS so it never crashes on blocked storage. ── */
+const _memStore={};
+const _memSession={};
+function _makeSafe(real, mem){
+  return {
+    getItem(k){ try{ return real.getItem(k); }catch(e){ return (k in mem)?mem[k]:null; } },
+    setItem(k,v){ mem[k]=String(v); try{ real.setItem(k,v); }catch(e){} },
+    removeItem(k){ delete mem[k]; try{ real.removeItem(k); }catch(e){} },
+  };
+}
+let _lsReal=null, _ssReal=null;
+try{ _lsReal=window.localStorage; }catch(e){}
+try{ _ssReal=window.sessionStorage; }catch(e){}
+const LS=_makeSafe(_lsReal||{getItem(){return null},setItem(){},removeItem(){}}, _memStore);
+const SS=_makeSafe(_ssReal||{getItem(){return null},setItem(){},removeItem(){}}, _memSession);
+let _storageBlocked=false;
+try{ const _t='__mdf_test__'; (_lsReal||{setItem(){throw 0}}).setItem(_t,'1'); _lsReal.removeItem(_t); }
+catch(e){ _storageBlocked=true; }
+
 /* ═══════════════════════════════════════════════════════════════════
    ENGINE (ported from pre-Richie live app)
    Data layer + category model + metric calcs. Real Plaid-backed.
@@ -1457,10 +1478,10 @@ const DEFAULT_CATEGORIES=[
   {id:'income',label:'Income',color:'#3dda91',plaid:['TRANSFER_IN','INCOME','PAYROLL'],parent:'financial'},
   {id:'other',label:'Other',color:'#94a3b8',plaid:[]},
 ];
-function getUserCategories(){ try{ const s=JSON.parse(localStorage.getItem('mdf_categories')); return (s&&s.length)?s:DEFAULT_CATEGORIES.map(c=>({...c})); }catch(e){ return DEFAULT_CATEGORIES.map(c=>({...c})); } }
+function getUserCategories(){ try{ const s=JSON.parse(LS.getItem('mdf_categories')); return (s&&s.length)?s:DEFAULT_CATEGORIES.map(c=>({...c})); }catch(e){ return DEFAULT_CATEGORIES.map(c=>({...c})); } }
 function mapPlaidCategory(plaidPrimary){ const cats=getUserCategories(); const p=(plaidPrimary||'').toUpperCase().replace(/\s+/g,'_'); for(const cat of cats){ if(cat.plaid&&cat.plaid.some(k=>p.includes(k)||k.includes(p))) return cat.label; } return 'Other'; }
 function getCatColor(label){ const cats=getUserCategories(); const f=cats.find(c=>c.label===label); return f?f.color:'#94a3b8'; }
-const _catOverrides=JSON.parse(localStorage.getItem('mdf_cat_overrides')||'{}');
+const _catOverrides=JSON.parse(LS.getItem('mdf_cat_overrides')||'{}');
 function getTxnCategory(t){ const id=t.transaction_id||''; if(id&&_catOverrides[id])return _catOverrides[id]; const raw=(t.personal_finance_category&&t.personal_finance_category.primary)||(t.category&&t.category[0])||''; return mapPlaidCategory(raw); }
 
 /* ── Live data layer (Plaid-backed via server API) ── */
@@ -1635,7 +1656,7 @@ function buildChartWidget(canvasId, type, labels, values, colors, opts){
 
 
 /* ── Plaid connection (ported, adapted) ── */
-function authToken(){ return sessionStorage.getItem('mdf_token')||''; }
+function authToken(){ return SS.getItem('mdf_token')||''; }
 let _toastT=null;
 function showToast(msg,type){
   let el=gg('appToast');
@@ -1767,8 +1788,8 @@ const COLOR_CHOICES=['#2ecc8a','#f0a540','#5b8def','#38bdf8','#a78bfa','#f05c5c'
 
 function loadState(){
   try{
-    const setup=JSON.parse(localStorage.getItem('richie_setup')||'null');
-    const saved=JSON.parse(localStorage.getItem('richie_app')||'null');
+    const setup=JSON.parse(LS.getItem('richie_setup')||'null');
+    const saved=JSON.parse(LS.getItem('richie_app')||'null');
     if(saved){
       APP=Object.assign(APP,saved);
       // Migration: heal worlds saved before widgets were seeded into bundle pages.
@@ -1803,7 +1824,7 @@ function loadState(){
     }
   }catch(e){ console.warn('state load failed',e); }
 }
-function saveState(){ try{ localStorage.setItem('richie_app',JSON.stringify(APP)); }catch(e){} }
+function saveState(){ try{ LS.setItem('richie_app',JSON.stringify(APP)); }catch(e){} }
 
 /* ═══════════════ RENDER SHELL ═══════════════ */
 function applyAccent(){ const p=RICHIE_PERSONAS[APP.persona]; document.documentElement.style.setProperty('--green', p?p.accent:'#2ecc8a'); document.documentElement.style.setProperty('--richie-green', p?p.accent:'#2ecc8a'); }
@@ -1838,9 +1859,10 @@ function renderNav(){
 
 function switchPage(id){
   if(id==='__settings__'){ renderSettings(); APP.activePage='__settings__'; renderNav(); return; }
-  APP.activePage=id; saveState(); renderNav();
-  const pg=APP.pages.find(p=>p.id===id);
-  if(!pg) return;
+  let pg=APP.pages.find(p=>p.id===id);
+  if(!pg){ pg=APP.pages[0]; }   // stale/invalid id → fall back to first page
+  if(!pg){ renderNav(); return; } // genuinely no pages
+  APP.activePage=pg.id; saveState(); renderNav();
   gg('tbIcon').textContent=pg.icon;
   gg('tbTitle').textContent=pg.name;
   renderPage(pg);
@@ -1929,6 +1951,9 @@ function renderCanvas(pg){
   }
   const cards=pg.widgets.map((w,idx)=>{
     const def=WIDGET_BY_ID[w.type]||{name:'Widget',icon:'\u2753'};
+    let body;
+    try{ body=renderWidgetBody(w); }
+    catch(e){ console.warn('widget '+w.type+' failed:',e.message); body='<div class="wph"><div class="wph-sub">Couldn\'t load this widget.</div></div>'; }
     return `<div class="canvas-widget-card${w.span===2?' span-2':''}" draggable="true" data-uid="${w.uid}" data-idx="${idx}">
       <div class="canvas-widget-header">
         <div class="cwh-left"><span class="cwh-drag" title="Drag to reorder">\u283F</span><span>${def.icon}</span><span class="cwh-title">${def.name}</span></div>
@@ -1937,7 +1962,7 @@ function renderCanvas(pg){
           <button class="cwh-btn danger" onclick="removeWidget('${w.uid}')" title="Remove">\u2715</button>
         </div>
       </div>
-      <div class="canvas-widget-body">${renderWidgetBody(w)}</div>
+      <div class="canvas-widget-body">${body}</div>
     </div>`;
   }).join('');
   content.innerHTML=`<div class="canvas-page">
@@ -1946,8 +1971,8 @@ function renderCanvas(pg){
     </div>
     <div class="canvas-grid" id="canvasGrid">${cards}</div>
   </div>`;
-  wireDragDrop();
-  mountWidgetCharts(pg);
+  try{ wireDragDrop(); }catch(e){ console.warn('wireDragDrop:',e.message); }
+  try{ mountWidgetCharts(pg); }catch(e){ console.warn('mountWidgetCharts:',e.message); }
 }
 
 /* After the canvas HTML is in the DOM, instantiate any Chart.js widgets. */
@@ -1988,7 +2013,7 @@ function buildWidgetChart(w, cid){
 
 /* Sankey money-flow (ported, per-widget canvas) */
 /* ── Category editor (ported, simplified for sandbox) ── */
-function saveUserCategories(cats){ try{ localStorage.setItem('mdf_categories',JSON.stringify(cats)); }catch(e){} }
+function saveUserCategories(cats){ try{ LS.setItem('mdf_categories',JSON.stringify(cats)); }catch(e){} }
 let _catEdit=null;
 function openCatEditor(){
   _catEdit=getUserCategories().map(c=>({...c}));
@@ -2032,13 +2057,13 @@ const FIRE_DEFAULTS={age:42,ret:65,saved:45000,contrib:1200,rate:7,inf:3};
 let _fireState=null;
 function fireState(){
   if(_fireState) return _fireState;
-  try{ const s=JSON.parse(localStorage.getItem('mdf_fire')); if(s){ _fireState=s; return s; } }catch(e){}
+  try{ const s=JSON.parse(LS.getItem('mdf_fire')); if(s){ _fireState=s; return s; } }catch(e){}
   _fireState=Object.assign({}, FIRE_DEFAULTS);
   // seed current savings from real data if available
   if(dataLoaded){ const inv=engNWAssets(); if(inv>0) _fireState.saved=Math.max(inv,FIRE_DEFAULTS.saved); }
   return _fireState;
 }
-function fireSaveState(){ try{ localStorage.setItem('mdf_fire',JSON.stringify(_fireState)); }catch(e){} }
+function fireSaveState(){ try{ LS.setItem('mdf_fire',JSON.stringify(_fireState)); }catch(e){} }
 // Core projection: compound growth with monthly contributions (ported calcGrowth logic)
 function fireProject(U){
   const yrs=Math.max(U.ret-U.age,1), rate=U.rate/100, contrib=U.contrib*12;
@@ -2257,7 +2282,7 @@ function setPersona(key){ APP.persona=key; saveState(); applyAccent(); renderShe
 function toggleProMode(){ APP.proMode=!APP.proMode; saveState(); gg('proToggle').classList.toggle('on',APP.proMode); renderSettings(); richieSay(APP.proMode?"Pro Mode ON. Everything's unlocked — go wild.":"Pro Mode off. Back to leveling up the fun way."); }
 function resetWorld(){
   if(!confirm("Rebuild your pages and widgets from a fresh starter layout? Your custom page edits will be replaced (login & bank stay connected).")) return;
-  const setup=JSON.parse(localStorage.getItem('richie_setup')||'{}');
+  const setup=JSON.parse(LS.getItem('richie_setup')||'{}');
   const bundleKey=setup.bundle||'overview';
   APP.pages=seedPages(bundleKey);
   APP.activePage=APP.pages[0]?APP.pages[0].id:null;
@@ -2545,8 +2570,8 @@ function wizShake(id){const el=gg(id);if(!el)return;el.style.borderColor='#f05c5
 /* ═══════════════════════════════════════════════════════════════
    AUTH (server login) + WELCOME-BACK SWOT
 ═══════════════════════════════════════════════════════════════ */
-function setToken(t){ try{ sessionStorage.setItem('mdf_token',t||''); }catch(e){} }
-function clearToken(){ try{ sessionStorage.removeItem('mdf_token'); }catch(e){} }
+function setToken(t){ try{ SS.setItem('mdf_token',t||''); }catch(e){} }
+function clearToken(){ try{ SS.removeItem('mdf_token'); }catch(e){} }
 function isLoggedIn(){ return !!authToken(); }
 
 // Wrap fetch so every /api/ call carries the Bearer token automatically.
@@ -2647,7 +2672,7 @@ function runWelcomeBack(){
   const stars=gg('wbStars'); if(stars){ let s=''; for(let i=0;i<30;i++) s+=`<div class="ri-star" style="left:${Math.random()*100}%;top:${Math.random()*100}%;--dur:${2+Math.random()*3}s;--delay:${Math.random()*3}s"></div>`; stars.innerHTML=s; }
   const wb=new RichieEmoji(gg('wbRichie')); window._wbRichie=wb;
   wb.do('bounce');
-  const name=(JSON.parse(localStorage.getItem('richie_setup')||'{}').householdName)||(APP&&APP.household)||'friend';
+  const name=(JSON.parse(LS.getItem('richie_setup')||'{}').householdName)||(APP&&APP.household)||'friend';
   const swot=buildSWOT();
   const greet=`Welcome back! Here's your money SWOT — a quick read on where ${name} stands today.`;
   // typewriter greeting
@@ -2682,7 +2707,7 @@ function logout(){
 /* ═══════════════════════════════════════════════════════════════ */
 function wizFinish(){
   setupConfig.xp=(setupConfig.level-1)*20;
-  try{ localStorage.setItem('richie_setup',JSON.stringify(setupConfig)); localStorage.removeItem('richie_app'); }catch(e){}
+  try{ LS.setItem('richie_setup',JSON.stringify(setupConfig)); LS.removeItem('richie_app'); }catch(e){}
   gg('setupWizard').style.display='none';
   // After first-run setup, require login before entering (server auth + Plaid).
   showLogin("You're all set! Sign in to lock things down — Richie will greet you each time.");
@@ -2717,9 +2742,19 @@ function enterApp(){
     }
   });
 }
+function showStorageWarning(){
+  if(!_storageBlocked) return;
+  if(gg('storageWarn')) return;
+  const bar=document.createElement('div');
+  bar.id='storageWarn';
+  bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:4000;background:#3a2d12;color:#f0c674;font-size:12.5px;padding:9px 16px;text-align:center;border-bottom:1px solid rgba(240,165,64,0.3);line-height:1.5;';
+  bar.innerHTML="⚠️ Your browser is blocking storage (Tracking Prevention / private mode). The app works, but won't remember your setup between visits. To fix: click the shield icon in the address bar → turn Tracking Prevention <b>off for this site</b> → reload. <span style='cursor:pointer;text-decoration:underline;margin-left:8px' onclick=\"this.closest('#storageWarn').remove()\">Dismiss</span>";
+  document.body.appendChild(bar);
+}
 function start(){
+  showStorageWarning();
   let hasSetup=false;
-  try{ hasSetup=!!(localStorage.getItem('richie_setup')||localStorage.getItem('richie_app')); }catch(e){}
+  try{ hasSetup=!!(LS.getItem('richie_setup')||LS.getItem('richie_app')); }catch(e){}
   if(!hasSetup){ runIntro(); return; }            // brand new → intro → wizard → login
   if(isLoggedIn()){ enterApp(); }                 // already authenticated this session
   else { showLogin(); }                           // returning → login → welcome-back SWOT
