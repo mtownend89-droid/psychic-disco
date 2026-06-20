@@ -1623,8 +1623,8 @@ async function openLinkHandler(){
 }
 function updateConnectBtn(){
   const b=gg('sbConnectBtn'); if(!b) return;
-  if(dataLoaded||APP.plaidConnected){ b.innerHTML='\U0001F3E6 Bank connected'; b.style.opacity='0.7'; }
-  else { b.innerHTML='\U0001F517 Connect your bank'; b.style.opacity='1'; }
+  if(dataLoaded||APP.plaidConnected){ b.innerHTML='🏦 Bank connected'; b.style.opacity='0.7'; }
+  else { b.innerHTML='🔗 Connect your bank'; b.style.opacity='1'; }
 }
 
 
@@ -1669,13 +1669,40 @@ const LEVELS=[
 
 /* ═══════════════ BUNDLES → starter pages ═══════════════ */
 const BUNDLE_PAGES={
-  overview:[['Dashboard','💰','#2ecc8a'],['Budget','🎯','#f0a540'],['Net Worth','📈','#5b8def'],['Cash Flow','🌊','#38bdf8']],
-  budget:[['Budget & Bills','🎯','#f0a540'],['Zero Budget','🧮','#a78bfa'],['Income','💵','#2ecc8a']],
-  wealth:[['Net Worth','📈','#5b8def'],['FIRE','🔥','#f05c5c'],['Retirement','🏖️','#f0a540']],
-  debt:[['Bills','📋','#f0a540'],['Debt Payoff','🚨','#f05c5c'],['Fire Drill','🧯','#38bdf8']],
-  fire:[['FIRE','🔥','#f05c5c'],['Retirement','🏖️','#f0a540'],['Net Worth','📈','#5b8def']],
-  blank:[['Home','🏠','#2ecc8a']],
+  overview:[
+    ['Dashboard','💰','#2ecc8a',['net_worth_summary','cash_summary','spending_month','income_month','top_categories','budget_doughnut']],
+    ['Budget','🎯','#f0a540',['budget_doughnut','top_categories','spending_month','zero_budget']],
+    ['Net Worth','📈','#5b8def',['net_worth_summary','net_worth_chart','debt_summary']],
+    ['Cash Flow','🌊','#38bdf8',['cashflow_chart','sankey','income_month','spending_month']],
+  ],
+  budget:[
+    ['Budget & Bills','🎯','#f0a540',['budget_doughnut','bills_list','spending_month','top_categories']],
+    ['Zero Budget','🧮','#a78bfa',['zero_budget','income_month','top_categories']],
+    ['Income','💵','#2ecc8a',['income_month','cashflow_chart','sankey']],
+  ],
+  wealth:[
+    ['Net Worth','📈','#5b8def',['net_worth_summary','net_worth_chart','debt_summary','cash_summary']],
+    ['FIRE','🔥','#f05c5c',['fire_progress','fire_calc']],
+    ['Retirement','🏖️','#f0a540',['retirement_proj','fire_calc']],
+  ],
+  debt:[
+    ['Bills','📋','#f0a540',['bills_list','debt_summary','spending_month']],
+    ['Debt Payoff','🚨','#f05c5c',['debt_payoff','debt_summary','bills_list']],
+    ['Fire Drill','🧯','#38bdf8',['fire_progress','zero_budget','spending_month']],
+  ],
+  fire:[
+    ['FIRE','🔥','#f05c5c',['fire_progress','fire_calc']],
+    ['Retirement','🏖️','#f0a540',['retirement_proj','fire_calc']],
+    ['Net Worth','📈','#5b8def',['net_worth_summary','net_worth_chart']],
+  ],
+  blank:[['Home','🏠','#2ecc8a',[]]],
 };
+let _uidSeq=0;
+function makeWidget(type){ return {uid:'w'+Date.now()+'_'+(_uidSeq++),type:type,span:(WIDGET_BY_ID[type]&&WIDGET_BY_ID[type].span)||1}; }
+function seedPages(bundleKey){
+  const bp=BUNDLE_PAGES[bundleKey]||BUNDLE_PAGES.overview;
+  return bp.map((p,i)=>({ id:'p'+Date.now()+'_'+i, name:p[0], icon:p[1], color:p[2], widgets:(p[3]||[]).map(makeWidget) }));
+}
 
 /* ═══════════════ STATE ═══════════════ */
 let APP={ household:'My Finance World', profiles:[{name:'Me',avatar:'💰'}], persona:'coach', level:1, xp:0, proMode:false, pages:[], activePage:null };
@@ -1696,12 +1723,12 @@ function loadState(){
       APP.xp=setup.xp||0;
       APP.proMode=!!setup.proMode;
       const bp=BUNDLE_PAGES[setup.bundle]||BUNDLE_PAGES.overview;
-      APP.pages=bp.map((p,i)=>({id:'p'+Date.now()+'_'+i,name:p[0],icon:p[1],color:p[2],widgets:[]}));
+      APP.pages=seedPages(setup.bundle);
       APP.activePage=APP.pages[0]?APP.pages[0].id:null;
       saveState();
     } else {
       // no setup yet — seed a default world
-      APP.pages=BUNDLE_PAGES.overview.map((p,i)=>({id:'p'+Date.now()+'_'+i,name:p[0],icon:p[1],color:p[2],widgets:[]}));
+      APP.pages=seedPages('overview');
       APP.activePage=APP.pages[0].id;
     }
   }catch(e){ console.warn('state load failed',e); }
@@ -1759,22 +1786,22 @@ function renderPage(pg){
    (Plaid data, charts, calculations) get wired in Phase 3.
    minLevel gates a widget behind a knowledge level (Pro Mode unlocks all). */
 const WIDGET_CATALOG=[
-  {id:'net_worth_summary',name:'Net Worth',icon:'\U0001F4C8',cat:'Overview',span:1,minLevel:1,desc:'Total assets minus liabilities.'},
-  {id:'cash_summary',name:'Cash on Hand',icon:'\U0001F4B5',cat:'Overview',span:1,minLevel:1,desc:'Combined account balances.'},
-  {id:'spending_month',name:"This Month's Spending",icon:'\U0001F6D2',cat:'Overview',span:1,minLevel:1,desc:'Total spent this month.'},
-  {id:'income_month',name:"This Month's Income",icon:'\U0001F4B0',cat:'Overview',span:1,minLevel:1,desc:'Money in this month.'},
-  {id:'budget_doughnut',name:'Budget by Category',icon:'\U0001F3AF',cat:'Budget',span:1,minLevel:1,desc:'Spending split by category.'},
-  {id:'bills_list',name:'Upcoming Bills',icon:'\U0001F4CB',cat:'Budget',span:1,minLevel:1,desc:"What's due and when."},
-  {id:'zero_budget',name:'Zero-Based Budget',icon:'\U0001F9EE',cat:'Budget',span:2,minLevel:2,desc:'Give every dollar a job.'},
-  {id:'cashflow_chart',name:'Cash Flow',icon:'\U0001F30A',cat:'Cash Flow',span:2,minLevel:1,desc:'Income vs. spending over time.'},
-  {id:'sankey',name:'Money Flow (Sankey)',icon:'\U0001F500',cat:'Cash Flow',span:2,minLevel:2,desc:'Visualize income flowing to spending.'},
-  {id:'top_categories',name:'Top Categories',icon:'\U0001F4CA',cat:'Cash Flow',span:1,minLevel:1,desc:'Where your money goes most.'},
-  {id:'net_worth_chart',name:'Net Worth Trend',icon:'\U0001F4C8',cat:'Wealth',span:2,minLevel:2,desc:'Net worth over months.'},
-  {id:'fire_progress',name:'FIRE Progress',icon:'\U0001F525',cat:'Wealth',span:1,minLevel:3,desc:'Path to financial independence.'},
-  {id:'retirement_proj',name:'Retirement Projection',icon:'\U0001F3D6\uFE0F',cat:'Wealth',span:2,minLevel:3,desc:"Where you're headed."},
-  {id:'fire_calc',name:'FIRE Calculator',icon:'\U0001F9EE',cat:'Wealth',span:2,minLevel:3,desc:'Interactive retirement projection — adjust and watch it update.'},
-  {id:'debt_payoff',name:'Debt Payoff Planner',icon:'\U0001F6A8',cat:'Debt',span:2,minLevel:2,desc:'Snowball or avalanche.'},
-  {id:'debt_summary',name:'Total Debt',icon:'\U0001F4B3',cat:'Debt',span:1,minLevel:1,desc:'What you owe at a glance.'},
+  {id:'net_worth_summary',name:'Net Worth',icon:'📈',cat:'Overview',span:1,minLevel:1,desc:'Total assets minus liabilities.'},
+  {id:'cash_summary',name:'Cash on Hand',icon:'💵',cat:'Overview',span:1,minLevel:1,desc:'Combined account balances.'},
+  {id:'spending_month',name:"This Month's Spending",icon:'🛒',cat:'Overview',span:1,minLevel:1,desc:'Total spent this month.'},
+  {id:'income_month',name:"This Month's Income",icon:'💰',cat:'Overview',span:1,minLevel:1,desc:'Money in this month.'},
+  {id:'budget_doughnut',name:'Budget by Category',icon:'🎯',cat:'Budget',span:1,minLevel:1,desc:'Spending split by category.'},
+  {id:'bills_list',name:'Upcoming Bills',icon:'📋',cat:'Budget',span:1,minLevel:1,desc:"What's due and when."},
+  {id:'zero_budget',name:'Zero-Based Budget',icon:'🧮',cat:'Budget',span:2,minLevel:2,desc:'Give every dollar a job.'},
+  {id:'cashflow_chart',name:'Cash Flow',icon:'🌊',cat:'Cash Flow',span:2,minLevel:1,desc:'Income vs. spending over time.'},
+  {id:'sankey',name:'Money Flow (Sankey)',icon:'🔀',cat:'Cash Flow',span:2,minLevel:2,desc:'Visualize income flowing to spending.'},
+  {id:'top_categories',name:'Top Categories',icon:'📊',cat:'Cash Flow',span:1,minLevel:1,desc:'Where your money goes most.'},
+  {id:'net_worth_chart',name:'Net Worth Trend',icon:'📈',cat:'Wealth',span:2,minLevel:2,desc:'Net worth over months.'},
+  {id:'fire_progress',name:'FIRE Progress',icon:'🔥',cat:'Wealth',span:1,minLevel:3,desc:'Path to financial independence.'},
+  {id:'retirement_proj',name:'Retirement Projection',icon:'🏖\uFE0F',cat:'Wealth',span:2,minLevel:3,desc:"Where you're headed."},
+  {id:'fire_calc',name:'FIRE Calculator',icon:'🧮',cat:'Wealth',span:2,minLevel:3,desc:'Interactive retirement projection — adjust and watch it update.'},
+  {id:'debt_payoff',name:'Debt Payoff Planner',icon:'🚨',cat:'Debt',span:2,minLevel:2,desc:'Snowball or avalanche.'},
+  {id:'debt_summary',name:'Total Debt',icon:'💳',cat:'Debt',span:1,minLevel:1,desc:'What you owe at a glance.'},
 ];
 const WIDGET_BY_ID=Object.fromEntries(WIDGET_CATALOG.map(w=>[w.id,w]));
 function widgetUnlocked(w){ return APP.proMode || w.minLevel<=APP.level; }
@@ -1792,7 +1819,7 @@ function renderWidgetLibrary(){
       const locked=!widgetUnlocked(w);
       html+=`<div class="wd-item" onclick="addWidget('${w.id}')" style="${locked?'opacity:.55':''}">
         <div class="wd-item-icon">${w.icon}</div>
-        <div style="flex:1;min-width:0"><div class="wd-item-name">${w.name}${locked?' \U0001F512':''}</div>
+        <div style="flex:1;min-width:0"><div class="wd-item-name">${w.name}${locked?' 🔒':''}</div>
         <div class="wd-item-desc">${locked?'Unlocks at level '+w.minLevel+' (or Pro Mode)':w.desc}</div></div>
         <div class="wd-item-add">+</div></div>`;
     });
@@ -2034,7 +2061,7 @@ function buildSankey(cid){
 
 function renderWidgetBody(w){
   const def=WIDGET_BY_ID[w.type]; if(!def) return '';
-  if(!widgetUnlocked(def)) return `<div class="wph-lock"><div class="wph-lock-icon">\U0001F512</div><div style="font-size:12.5px">Unlocks at level ${def.minLevel}</div></div>`;
+  if(!widgetUnlocked(def)) return `<div class="wph-lock"><div class="wph-lock-icon">🔒</div><div style="font-size:12.5px">Unlocks at level ${def.minLevel}</div></div>`;
   const bars=n=>`<div class="wph-bars">${Array.from({length:n}).map(()=>`<div class="wph-bar" style="height:${30+Math.random()*70}%"></div>`).join('')}</div>`;
   switch(w.type){
     case 'net_worth_summary': { if(dataLoaded){ const nb=engNetBalance(); return `<div class="wph"><div class="wph-stat ${nb>=0?'':'red'}" style="${nb<0?'color:var(--red)':''}">${fmtK(nb)}</div><div class="wph-sub">net of ${allAccts.length} account${allAccts.length!==1?'s':''}</div></div>`; } return `<div class="wph"><div class="wph-stat">$142,580</div><div class="wph-sub" style="color:var(--green)">\u25B2 3.2% \u00b7 sample data</div></div>`; }
@@ -2238,7 +2265,7 @@ const RICHIE_STORY=[
 ];
 let riScene=0, riTyping=false, riTypeTimer=null, riFullText="";
 let riChar=null, wizChar=null, wizStep=1;
-let setupConfig={ persona:null, level:null, householdName:'', profiles:[{name:'',avatar:'\U0001F4B0'}], bundle:null, plaidConnected:false, xp:0, proMode:false };
+let setupConfig={ persona:null, level:null, householdName:'', profiles:[{name:'',avatar:'💰'}], bundle:null, plaidConnected:false, xp:0, proMode:false };
 
 function introApplyAccent(){ const p=setupConfig.persona&&RICHIE_PERSONAS[setupConfig.persona]; document.documentElement.style.setProperty('--green', p?p.accent:'#2ecc8a'); }
 
@@ -2318,12 +2345,12 @@ function riFinishIntro(){
 
 /* ── Wizard ── */
 const WIZ_BUNDLES=[
-  {id:'overview',icon:'\U0001F4B0',name:'Full Overview',desc:'The complete picture \u2014 everything in one place.',quip:'"Go big. I respect that."',pages:['Dashboard','Budget','Net Worth','Cash Flow']},
-  {id:'budget',icon:'\U0001F3AF',name:'Budget First',desc:'Master your monthly money flow and bills.',quip:'"Every dollar gets a job."',pages:['Budget & Bills','Zero Budget','Income']},
-  {id:'wealth',icon:'\U0001F4C8',name:'Wealth Builder',desc:'Track net worth and grow toward retirement.',quip:'"Future-you says thanks."',pages:['Net Worth','FIRE','Retirement']},
-  {id:'debt',icon:'\U0001F6A8',name:'Debt Destroyer',desc:'Crush debt with payoff plans and drills.',quip:'"Send that debt packing."',pages:['Bills','Debt Payoff','Fire Drill']},
-  {id:'fire',icon:'\U0001F525',name:'FIRE Path',desc:'Financial independence, mapped out.',quip:'"Retire early? My language."',pages:['FIRE','Retirement','Net Worth']},
-  {id:'blank',icon:'\U0001F3A8',name:'Blank Canvas',desc:'Start empty and build it your way.',quip:'"A true artist."',pages:['You build everything']},
+  {id:'overview',icon:'💰',name:'Full Overview',desc:'The complete picture \u2014 everything in one place.',quip:'"Go big. I respect that."',pages:['Dashboard','Budget','Net Worth','Cash Flow']},
+  {id:'budget',icon:'🎯',name:'Budget First',desc:'Master your monthly money flow and bills.',quip:'"Every dollar gets a job."',pages:['Budget & Bills','Zero Budget','Income']},
+  {id:'wealth',icon:'📈',name:'Wealth Builder',desc:'Track net worth and grow toward retirement.',quip:'"Future-you says thanks."',pages:['Net Worth','FIRE','Retirement']},
+  {id:'debt',icon:'🚨',name:'Debt Destroyer',desc:'Crush debt with payoff plans and drills.',quip:'"Send that debt packing."',pages:['Bills','Debt Payoff','Fire Drill']},
+  {id:'fire',icon:'🔥',name:'FIRE Path',desc:'Financial independence, mapped out.',quip:'"Retire early? My language."',pages:['FIRE','Retirement','Net Worth']},
+  {id:'blank',icon:'🎨',name:'Blank Canvas',desc:'Start empty and build it your way.',quip:'"A true artist."',pages:['You build everything']},
 ];
 const WIZ_TITLES={1:"Who are we building this for?",2:"Pick your starting point",3:"Connect your money",4:"Your world is ready"};
 const WIZ_QUIPS={1:"Don't worry, this is the easy part.",2:"Pick a starter pack, or go rogue with a blank canvas.",3:"Connect your bank so I can see real numbers. Or skip \u2014 I'm patient.",4:"Look at you. All set up and dangerous."};
@@ -2353,7 +2380,7 @@ function wizRenderBody(){
         <div class="bundle-card-pages">${bn.pages.map(p=>`<span class="bundle-page-chip">${p}</span>`).join('')}</div>
         <div class="bundle-card-quip" style="margin-top:8px">${bn.quip}</div></div>`).join('')}</div>`;
   } else if(wizStep===3){
-    b.innerHTML=`<div class="plaid-connect-card"><div class="plaid-connect-icon">\U0001F3E6</div>
+    b.innerHTML=`<div class="plaid-connect-card"><div class="plaid-connect-icon">🏦</div>
       <h3>${setupConfig.plaidConnected?'Bank connected \u2713':'Connect your accounts'}</h3>
       <p>Link your bank and cards through Plaid for live balances, transactions, and spending. Bank-level encryption, read-only.</p>
       <button class="btn primary" onclick="wizDoPlaid()" style="margin:0 auto">${setupConfig.plaidConnected?'Connected!':'Connect with Plaid'}</button></div>
@@ -2362,7 +2389,7 @@ function wizRenderBody(){
     const bundle=WIZ_BUNDLES.find(x=>x.id===setupConfig.bundle);
     const p=RICHIE_PERSONAS[setupConfig.persona]; const lv=LEVELS.find(l=>l.n===setupConfig.level);
     b.innerHTML=`<div class="wiz-success">
-      <span class="richie e-idle" id="wizSuccessChar" style="font-size:64px">\U0001F4B0</span>
+      <span class="richie e-idle" id="wizSuccessChar" style="font-size:64px">💰</span>
       <h2>You're all set, ${setupConfig.householdName||'friend'}!</h2>
       <p>Your <strong style="color:var(--green)">${bundle?bundle.name:'custom'}</strong> world is ready with ${bundle?bundle.pages.length:0} starter page${bundle&&bundle.pages.length!==1?'s':''}.</p>
       <div class="summary-row">
@@ -2381,9 +2408,9 @@ function wizRenderProfiles(){
     <input type="text" placeholder="Name (e.g. Alex)" value="${p.name}" oninput="setupConfig.profiles[${i}].name=this.value">
     ${setupConfig.profiles.length>1?`<button class="btn" onclick="wizRemoveProfile(${i})">\u2715</button>`:''}</div>`).join('');
 }
-function wizAddProfile(){if(setupConfig.profiles.length>=6)return;setupConfig.profiles.push({name:'',avatar:'\U0001F4B0'});wizRenderProfiles();}
+function wizAddProfile(){if(setupConfig.profiles.length>=6)return;setupConfig.profiles.push({name:'',avatar:'💰'});wizRenderProfiles();}
 function wizRemoveProfile(i){setupConfig.profiles.splice(i,1);wizRenderProfiles();}
-function wizCycleAvatar(i){const a=['\U0001F4B0','\U0001F60E','\U0001F9D1','\U0001F469','\U0001F9D4','\U0001F475','\U0001F98A','\U0001F43C','\U0001F911','\U0001F9D9'];const c=a.indexOf(setupConfig.profiles[i].avatar);setupConfig.profiles[i].avatar=a[(c+1)%a.length];wizRenderProfiles();}
+function wizCycleAvatar(i){const a=['💰','😎','🧑','👩','🧔','👵','🦊','🐼','🤑','🧙'];const c=a.indexOf(setupConfig.profiles[i].avatar);setupConfig.profiles[i].avatar=a[(c+1)%a.length];wizRenderProfiles();}
 function wizPickBundle(id){setupConfig.bundle=id;wizRenderBody();}
 function wizDoPlaid(){ if(typeof Plaid!=='undefined'){ openLinkHandler(); setTimeout(()=>{ if(serverAvailable===false){ setupConfig.plaidConnected=false; } },100); } else { setupConfig.plaidConnected=true; wizRenderBody(); } }
 function wizBack(){if(wizStep>1)wizGoTo(wizStep-1);}
