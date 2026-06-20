@@ -2,12 +2,12 @@
   "name": "matt-dana-finance",
   "version": "1.0.0",
   "description": "Matt & Dana personal finance app with Richie the money-bag assistant",
-  "main": "server.js",
+  "main": "server/index.js",
   "engines": {
     "node": ">=18"
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "node server/index.js"
   },
   "dependencies": {
     "express": "^4.19.2",
