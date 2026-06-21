@@ -549,6 +549,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .cwh-btn:hover{background:rgba(255,255,255,0.08);color:var(--text);}
 .cwh-btn.danger:hover{color:var(--red);}
 .canvas-widget-body{padding:14px;}
+/* ── Timeframe selector chips ── */
+.cwt-row{display:flex;gap:5px;padding:8px 14px 0;flex-wrap:wrap;}
+.cwt-chip{font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;transition:all .12s;}
+.cwt-chip:hover{border-color:var(--border2);color:var(--text);}
+.cwt-chip.active{background:var(--green-dim);border-color:var(--green);color:var(--green);}
 /* ── Widget detail drill-down ── */
 .canvas-widget-card.has-detail .canvas-widget-body:hover{background:rgba(255,255,255,0.015);}
 .wdt-modal{position:fixed;inset:0;z-index:2980;background:rgba(8,10,16,0.72);display:none;align-items:center;justify-content:center;padding:20px;animation:fade-in .2s ease;}
@@ -1619,6 +1624,13 @@ function engNetBalance(){ return allAccts.reduce((s,a)=>a.type==='credit'?s-((a.
 function engRecent(days){ const cut=new Date(Date.now()-days*86400000); return allTxns.filter(t=>new Date(t.date)>=cut); }
 function engSpend30(){ return engRecent(30).filter(t=>t.amount>0).reduce((s,t)=>s+t.amount,0); }
 function engIncome30(){ return engRecent(30).filter(t=>t.amount<0).reduce((s,t)=>s+Math.abs(t.amount),0); }
+// Generalized windowed spend/income (any day count)
+function engSpend(days){ return engRecent(days).filter(t=>t.amount>0).reduce((s,t)=>s+t.amount,0); }
+function engIncome(days){ return engRecent(days).filter(t=>t.amount<0).reduce((s,t)=>s+Math.abs(t.amount),0); }
+// Timeframe options: label, days, and a noun for "per period"
+const TIMEFRAMES=[{key:'1w',label:'1 wk',days:7},{key:'30d',label:'30 days',days:30},{key:'3m',label:'3 mo',days:90},{key:'1y',label:'1 yr',days:365}];
+function tfDays(key){ const t=TIMEFRAMES.find(x=>x.key===key); return t?t.days:30; }
+function tfLabel(key){ const t=TIMEFRAMES.find(x=>x.key===key); return t?t.label:'30 days'; }
 function engTotalDebt(){ return allAccts.filter(a=>a.type==='credit').reduce((s,a)=>s+Math.abs((a.balances&&a.balances.current)||0),0); }
 function engCategoryBreakdown(days){
   const rec=engRecent(days).filter(t=>t.amount>0); const byCat={};
@@ -2136,6 +2148,18 @@ function removeWidget(uid){
   pg.widgets=pg.widgets.filter(w=>w.uid!==uid); saveState(); renderCanvas(pg);
 }
 function toggleWidgetSpan(uid){ openWidgetEditor(uid); }
+// Time-relevant widgets that flex with the selected window
+const WIDGET_HAS_TF=['spending_month','income_month','top_categories','budget_doughnut','cashflow_chart','sankey'];
+function widgetHasTimeframe(type){ return WIDGET_HAS_TF.includes(type); }
+function setWidgetTf(uid,key){
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(!pg) return;
+  const w=pg.widgets.find(x=>x.uid===uid); if(!w) return;
+  w.tf=key; saveState();
+  // re-render just this card's chips + body for snappy feedback
+  renderCanvas(pg);
+}
+// Resolve a widget's window in days (default 30)
+function wDays(w){ return tfDays(w&&w.tf||'30d'); }
 
 function renderCanvas(pg){
   gg('tbIcon').textContent=pg.icon; gg('tbTitle').textContent=pg.name;
@@ -2155,8 +2179,12 @@ function renderCanvas(pg){
     try{ body=renderWidgetBody(w); }
     catch(e){ console.warn('widget '+w.type+' failed:',e.message); body='<div class="wph"><div class="wph-sub">Couldn\'t load this widget.</div></div>'; }
     const hasDetail=widgetHasDetail(w.type) && widgetUnlocked(def);
-    const detailBtn=hasDetail?`<button class="cwh-btn" onclick="event.stopPropagation();openWidgetDetail('${w.type}')" title="View details">\u24D8</button>`:'';
-    const bodyClick=hasDetail?` onclick="openWidgetDetail('${w.type}')" style="cursor:pointer"`:'';
+    const dDays=widgetHasTimeframe(w.type)?wDays(w):30;
+    const detailBtn=hasDetail?`<button class="cwh-btn" onclick="event.stopPropagation();openWidgetDetail('${w.type}',${dDays})" title="View details">\u24D8</button>`:'';
+    const bodyClick=hasDetail?` onclick="openWidgetDetail('${w.type}',${dDays})" style="cursor:pointer"`:'';
+    const hasTf=widgetHasTimeframe(w.type) && widgetUnlocked(def);
+    const tfCur=w.tf||'30d';
+    const tfRow=hasTf?`<div class="cwt-row">${TIMEFRAMES.map(t=>`<button class="cwt-chip${tfCur===t.key?' active':''}" onclick="event.stopPropagation();setWidgetTf('${w.uid}','${t.key}')">${t.label}</button>`).join('')}</div>`:'';
     return `<div class="canvas-widget-card${w.span===2?' span-2':''}${hasDetail?' has-detail':''}" draggable="true" data-uid="${w.uid}" data-idx="${idx}">
       <div class="canvas-widget-header">
         <div class="cwh-left"><span class="cwh-drag" title="Drag to reorder">\u283F</span><span>${def.icon}</span><span class="cwh-title">${def.name}</span></div>
@@ -2166,6 +2194,7 @@ function renderCanvas(pg){
           <button class="cwh-btn danger" onclick="event.stopPropagation();removeWidget('${w.uid}')" title="Remove">\u2715</button>
         </div>
       </div>
+      ${tfRow}
       <div class="canvas-widget-body"${bodyClick}>${body}</div>
     </div>`;
   }).join('');
@@ -2197,10 +2226,11 @@ function mountWidgetCharts(pg){
 }
 function buildWidgetChart(w, cid){
   const live=dataLoaded;
-  if(w.type==='sankey'){ buildSankey(cid); return; }
+  if(w.type==='sankey'){ buildSankey(cid, wDays(w)); return; }
   if(w.type==='fire_calc'){ fireRefresh(); return; }
   if(w.type==='cashflow_chart'){
-    const ser=live?engMonthlySeries(6):[{label:'Jan',spend:2800,income:5200},{label:'Feb',spend:3100,income:5200},{label:'Mar',spend:2950,income:5800},{label:'Apr',spend:3300,income:5200},{label:'May',spend:3050,income:5200},{label:'Jun',spend:3118,income:5400}];
+    const tf=w.tf||'30d'; const monthsBack={'1w':1,'30d':3,'3m':3,'1y':12}[tf]||3;
+    const ser=live?engMonthlySeries(monthsBack):[{label:'Jan',spend:2800,income:5200},{label:'Feb',spend:3100,income:5800},{label:'Mar',spend:3118,income:5400}].slice(-monthsBack);
     buildChartWidget(cid,'bar',ser.map(s=>s.label),null,null,{
       datasets:[
         {label:'Income',data:ser.map(s=>s.income),backgroundColor:'#2ecc8a',borderRadius:4,borderWidth:0},
@@ -2490,7 +2520,8 @@ function dpRenderOrder(){
   el.innerHTML=r.order.slice(0,8).map((n,i)=>`<div class="dp-ord"><span class="dp-ord-n">${i+1}</span><span>${esc(n)}</span></div>`).join('');
 }
 
-function buildSankey(cid){
+function buildSankey(cid, days){
+  days=days||30;
   const canvas=gg(cid); if(!canvas) return;
   const parent=canvas.parentElement; if(!parent||parent.clientWidth<50){ setTimeout(()=>buildSankey(cid),200); return; }
   const dpr=window.devicePixelRatio||1, W=parent.clientWidth-2, H=220;
@@ -2500,7 +2531,7 @@ function buildSankey(cid){
   const incNodes=incomeSources.map(s=>({label:s.name.split(' ').slice(0,2).join(' '),value:Math.round(s.amt*(FM[s.freq]||1)),color:'#3dda91'})).filter(n=>n.value>0);
   const incTotal=incNodes.reduce((s,n)=>s+n.value,0)||1;
   let spNodes;
-  if(dataLoaded && allTxns.length){ spNodes=engCategoryBreakdown(30).slice(0,7).map(c=>({label:c.label,value:Math.round(c.value),color:c.color})); }
+  if(dataLoaded && allTxns.length){ spNodes=engCategoryBreakdown(days).slice(0,7).map(c=>({label:c.label,value:Math.round(c.value),color:c.color})); }
   else { const bc={}; engBills().forEach(b=>{ if(b.pay>0) bc[b.cat||'Bills']=(bc[b.cat||'Bills']||0)+b.pay; }); spNodes=Object.entries(bc).sort((a,b)=>b[1]-a[1]).slice(0,7).map(([lbl,val])=>({label:lbl,value:Math.round(val),color:getCatColor(lbl)})); }
   const spTotal=spNodes.reduce((s,n)=>s+n.value,0)||1;
   if(!incNodes.length&&!spNodes.length){ ctx.fillStyle='#888';ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText('Add income & spending to see flow',W/2,H/2); return; }
@@ -2534,14 +2565,14 @@ function renderWidgetBody(w){
   switch(w.type){
     case 'net_worth_summary': { if(dataLoaded){ const nb=engNetBalance(); return `<div class="wph"><div class="wph-stat ${nb>=0?'':'red'}" style="${nb<0?'color:var(--red)':''}">${fmtK(nb)}</div><div class="wph-sub">net of ${allAccts.length} account${allAccts.length!==1?'s':''}</div></div>`; } return `<div class="wph"><div class="wph-stat">$142,580</div><div class="wph-sub" style="color:var(--green)">\u25B2 3.2% \u00b7 sample data</div></div>`; }
     case 'cash_summary': { if(dataLoaded){ const dep=allAccts.filter(a=>a.type==='depository'); const cash=dep.reduce((s,a)=>s+((a.balances&&(a.balances.available??a.balances.current))||0),0); return `<div class="wph"><div class="wph-stat">${fmtK(cash)}</div><div class="wph-sub">across ${dep.length||allAccts.length} account${(dep.length||allAccts.length)!==1?'s':''}</div></div>`; } return `<div class="wph"><div class="wph-stat">$8,240</div><div class="wph-sub">across 3 accounts \u00b7 sample</div></div>`; }
-    case 'spending_month': { if(dataLoaded){ const sp=engSpend30(); return `<div class="wph"><div class="wph-stat">${fmtK(sp)}</div><div class="wph-sub">last 30 days</div></div>`; } return `<div class="wph"><div class="wph-stat">$3,118</div><div class="wph-sub">last 30 days \u00b7 sample</div></div>`; }
-    case 'income_month': { if(dataLoaded){ const inc=engIncome30(); return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(inc)}</div><div class="wph-sub">last 30 days</div></div>`; } return `<div class="wph"><div class="wph-stat" style="color:var(--green)">$5,400</div><div class="wph-sub">last 30 days \u00b7 sample</div></div>`; }
+    case 'spending_month': { const days=wDays(w); if(dataLoaded){ const sp=engSpend(days); return `<div class="wph"><div class="wph-stat">${fmtK(sp)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div></div>`; } return `<div class="wph"><div class="wph-stat">${fmtK(Math.round(3118*days/30))}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')} \u00b7 sample</div></div>`; }
+    case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div></div>`; } return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')} \u00b7 sample</div></div>`; }
     case 'debt_summary': { if(dataLoaded){ const d=engTotalDebt(); return `<div class="wph"><div class="wph-stat" style="color:var(--red)">${fmtK(d)}</div><div class="wph-sub">across credit accounts</div></div>`; } return `<div class="wph"><div class="wph-stat" style="color:var(--red)">$12,430</div><div class="wph-sub">\u25BC sample data</div></div>`; }
-    case 'top_categories': { if(dataLoaded){ const cats=engCategoryBreakdown(30).slice(0,4); if(cats.length) return `<div class="wph">${cats.map(c=>`<div class="wph-row"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c.color};margin-right:7px"></span>${c.label}</span><b>${fmtK(c.value)}</b></div>`).join('')}</div>`; } return `<div class="wph">${[['Dining','612','#f5a623'],['Groceries','498','#3dda91'],['Transport','284','#b09afa']].map(r=>`<div class="wph-row"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${r[2]};margin-right:7px"></span>${r[0]}</span><b>$${r[1]}</b></div>`).join('')}</div>`; }
+    case 'top_categories': { const days=wDays(w); if(dataLoaded){ const cats=engCategoryBreakdown(days).slice(0,4); if(cats.length) return `<div class="wph">${cats.map(c=>`<div class="wph-row"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c.color};margin-right:7px"></span>${c.label}</span><b>${fmtK(c.value)}</b></div>`).join('')}</div>`; } return `<div class="wph">${[['Dining','612','#f5a623'],['Groceries','498','#3dda91'],['Transport','284','#b09afa']].map(r=>`<div class="wph-row"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${r[2]};margin-right:7px"></span>${r[0]}</span><b>$${r[1]}</b></div>`).join('')}</div>`; }
     case 'bills_list': { const up=engUpcomingBills().slice(0,5); if(up.length) return `<div class="wph">${up.map(b=>`<div class="wph-row"><span>${b.name}</span><span><b>${fmtK(b.pay)}</b> <span style="color:var(--muted);font-size:11px">· ${b.due}${b.due%10===1&&b.due!==11?'st':b.due%10===2&&b.due!==12?'nd':b.due%10===3&&b.due!==13?'rd':'th'}</span></span></div>`).join('')}</div>`; return `<div class="wph"><div class="wph-sub">No bills yet.</div></div>`; }
-    case 'budget_doughnut': { if(dataLoaded){ const cats=engCategoryBreakdown(30).slice(0,6); const tot=cats.reduce((s,c)=>s+c.value,0); if(tot>0){ let acc=0; const stops=cats.map(c=>{ const a=acc/tot*100; acc+=c.value; const b=acc/tot*100; return `${c.color} ${a.toFixed(1)}% ${b.toFixed(1)}%`; }).join(','); return `<div class="wph" style="text-align:center"><div style="width:90px;height:90px;border-radius:50%;margin:6px auto;background:conic-gradient(${stops})"></div><div class="wph-sub">${cats.length} categories \u00b7 ${fmtK(tot)}</div></div>`; } } return `<div class="wph" style="text-align:center"><div style="width:90px;height:90px;border-radius:50%;margin:6px auto;background:conic-gradient(var(--green) 0 38%,var(--blue) 38% 62%,var(--amber) 62% 82%,var(--purple) 82% 100%)"></div><div class="wph-sub">4 categories \u00b7 sample</div></div>`; }
-    case 'cashflow_chart': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Income vs spending${dataLoaded?' · last 6 mo':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
-    case 'sankey': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Money flow${dataLoaded?'':' · from your bills'}</div><div style="position:relative"><canvas id="cv_${w.uid}"></canvas></div></div>`;
+    case 'budget_doughnut': { const days=wDays(w); if(dataLoaded){ const cats=engCategoryBreakdown(days).slice(0,6); const tot=cats.reduce((s,c)=>s+c.value,0); if(tot>0){ let acc=0; const stops=cats.map(c=>{ const a=acc/tot*100; acc+=c.value; const b=acc/tot*100; return `${c.color} ${a.toFixed(1)}% ${b.toFixed(1)}%`; }).join(','); return `<div class="wph" style="text-align:center"><div style="width:90px;height:90px;border-radius:50%;margin:6px auto;background:conic-gradient(${stops})"></div><div class="wph-sub">${cats.length} categories \u00b7 ${fmtK(tot)}</div></div>`; } } return `<div class="wph" style="text-align:center"><div style="width:90px;height:90px;border-radius:50%;margin:6px auto;background:conic-gradient(var(--green) 0 38%,var(--blue) 38% 62%,var(--amber) 62% 82%,var(--purple) 82% 100%)"></div><div class="wph-sub">4 categories \u00b7 sample</div></div>`; }
+    case 'cashflow_chart': { const tf=w.tf||'30d'; const mb={'1w':1,'30d':3,'3m':3,'1y':12}[tf]||3; return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Income vs spending${dataLoaded?' · last '+mb+' mo':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`; }
+    case 'sankey': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Money flow${dataLoaded?' · last '+tfLabel(w.tf||'30d'):' · from your bills'}</div><div style="position:relative"><canvas id="cv_${w.uid}"></canvas></div></div>`;
     case 'net_worth_chart': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Net worth trend${dataLoaded?'':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
     case 'fire_progress': { const target=engMonthlyBills()*12*25; const cur=dataLoaded?Math.max(engNWAssets(),engNetBalance()):engNWAssets(); const pct=target>0?Math.min(100,Math.round(cur/target*100)):0; return `<div class="wph"><div class="wph-stat">${pct}%</div><div class="wph-sub">to FI (${fmtM(target)} target)</div><div class="xp-bar" style="margin-top:8px"><div class="xp-fill" style="width:${pct}%"></div></div></div>`; }
     case 'retirement_proj': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Projected growth</div><div style="height:140px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
@@ -2570,18 +2601,20 @@ function _detailRows(items, total){
       <span class="wdt-vals"><b>${fmtK(it.value)}</b><span class="wdt-pct">${pct}%</span></span></div>`;
   }).join('');
 }
-function widgetDetailContent(type){
+function widgetDetailContent(type, days){
   const live=dataLoaded;
+  days=days||30;
+  const dl=tfLabel(TIMEFRAMES.find(t=>t.days===days)?TIMEFRAMES.find(t=>t.days===days).key:'30d');
   switch(type){
     case 'spending_month': case 'budget_doughnut': case 'top_categories': {
-      const cats=live?engCategoryBreakdown(30):[{label:'Dining Out',value:612,color:'#f5a623'},{label:'Food & Groceries',value:498,color:'#3dda91'},{label:'Auto Payments',value:284,color:'#b09afa'},{label:'Subscriptions',value:142,color:'#22d3ee'}];
+      const cats=live?engCategoryBreakdown(days):[{label:'Dining Out',value:612,color:'#f5a623'},{label:'Food & Groceries',value:498,color:'#3dda91'},{label:'Auto Payments',value:284,color:'#b09afa'},{label:'Subscriptions',value:142,color:'#22d3ee'}];
       const tot=cats.reduce((s,c)=>s+c.value,0);
-      return { title:'Spending by category', sub:`${live?'Last 30 days':'Sample data'} · ${fmtK(tot)} total across ${cats.length} categories`,
+      return { title:'Spending by category', sub:`${live?'Last '+dl:'Sample data'} · ${fmtK(tot)} total across ${cats.length} categories`,
         body:`<div class="wdt-total">${fmtK(tot)}<span>total spend</span></div>${_detailRows(cats,tot)}` };
     }
     case 'income_month': {
-      if(live){ const rec=engRecent(30).filter(t=>t.amount<0); const byCat={}; rec.forEach(t=>{const c=getTxnCategory(t); byCat[c]=(byCat[c]||0)+Math.abs(t.amount);}); const items=Object.entries(byCat).map(([l,v])=>({label:l,value:v,color:getCatColor(l)})).sort((a,b)=>b.value-a.value); const tot=items.reduce((s,i)=>s+i.value,0);
-        return { title:'Income — last 30 days', sub:`${fmtK(tot)} across ${items.length} source${items.length!==1?'s':''}`, body:`<div class="wdt-total" style="color:var(--green)">${fmtK(tot)}<span>received</span></div>${_detailRows(items,tot)}` }; }
+      if(live){ const rec=engRecent(days).filter(t=>t.amount<0); const byCat={}; rec.forEach(t=>{const c=getTxnCategory(t); byCat[c]=(byCat[c]||0)+Math.abs(t.amount);}); const items=Object.entries(byCat).map(([l,v])=>({label:l,value:v,color:getCatColor(l)})).sort((a,b)=>b.value-a.value); const tot=items.reduce((s,i)=>s+i.value,0);
+        return { title:'Income — last '+dl, sub:`${fmtK(tot)} across ${items.length} source${items.length!==1?'s':''}`, body:`<div class="wdt-total" style="color:var(--green)">${fmtK(tot)}<span>received</span></div>${_detailRows(items,tot)}` }; }
       const items=incomeSources.map(s=>({label:s.name,value:Math.round(s.amt*(FREQ_TO_MONTHLY[s.freq]||1)),note:s.freq})); const tot=items.reduce((s,i)=>s+i.value,0);
       return { title:'Income sources', sub:`${fmtK(tot)}/mo from ${items.length} sources`, body:`<div class="wdt-total" style="color:var(--green)">${fmtK(tot)}<span>per month</span></div>${_detailRows(items,tot)}` };
     }
@@ -2614,7 +2647,7 @@ function widgetDetailContent(type){
     }
     case 'sankey': {
       const inc=incomeSources.map(s=>({label:s.name,value:Math.round(s.amt*(FREQ_TO_MONTHLY[s.freq]||1)),color:'#3dda91'})); const incT=inc.reduce((s,i)=>s+i.value,0);
-      const sp=live&&allTxns.length?engCategoryBreakdown(30):engBills().filter(b=>b.pay>0).map(b=>({label:b.name,value:b.pay,color:getCatColor(b.cat||'Other')})); const spT=sp.reduce((s,i)=>s+i.value,0);
+      const sp=live&&allTxns.length?engCategoryBreakdown(days):engBills().filter(b=>b.pay>0).map(b=>({label:b.name,value:b.pay,color:getCatColor(b.cat||'Other')})); const spT=sp.reduce((s,i)=>s+i.value,0);
       return { title:'Money flow detail', sub:`${fmtK(incT)} in → ${fmtK(spT)} out`, body:`<div class="wdt-section">Income in</div>${_detailRows(inc,incT)}<div class="wdt-section">Flowing out</div>${_detailRows(sp,spT)}` };
     }
     case 'zero_budget': {
@@ -2633,8 +2666,8 @@ function widgetDetailContent(type){
     default: return { title:WIDGET_BY_ID[type]?.name||'Details', sub:'', body:'<div class="wdt-row"><span class="wdt-label">No extra detail for this widget.</span></div>' };
   }
 }
-function openWidgetDetail(type){
-  const d=widgetDetailContent(type);
+function openWidgetDetail(type, days){
+  const d=widgetDetailContent(type, days);
   gg('wdtTitle').textContent=d.title;
   gg('wdtSub').textContent=d.sub||'';
   gg('wdtBody').innerHTML=d.body;
