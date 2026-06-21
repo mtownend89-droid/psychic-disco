@@ -350,7 +350,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
   color:var(--muted);cursor:pointer;
   font-size:13px;font-weight:400;border:none;
   background:none;width:100%;text-align:left;
-  transition:all 0.13s;position:relative;margin-bottom:2px;
+  transition:all 0.13s;position:relative;margin-bottom:1px;
 }
 .page-nav-btn:hover{color:var(--text);background:rgba(255,255,255,0.04);}
 .page-nav-btn.active{color:var(--text);font-weight:600;}
@@ -368,18 +368,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 }
 .page-nav-btn.active .pnb-icon{background:var(--page-color,var(--green));box-shadow:0 2px 8px rgba(0,0,0,0.2);}
 .pnb-label{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.pnb-actions{
-  opacity:0;transition:opacity 0.13s;
-  display:flex;gap:2px;
-}
+.pnb-actions{ opacity:1;display:flex;gap:1px;flex-shrink:0;margin-left:auto; }
 .page-nav-btn:hover .pnb-actions{opacity:1;}
-.pnb-act{
-  width:18px;height:18px;border-radius:4px;
-  background:none;border:none;color:var(--hint);
-  cursor:pointer;font-size:11px;
-  display:flex;align-items:center;justify-content:center;
-  transition:all 0.13s;
-}
+.pnb-act{ width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,0.04);border:none;color:var(--muted);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all 0.13s; }
+.pnb-act:hover{background:rgba(255,255,255,0.1);color:var(--text);}
 .pnb-act:hover{background:rgba(255,255,255,0.08);color:var(--muted);}
 /* Sidebar sections */
 .sb-section-divider{
@@ -405,11 +397,13 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .sb-uname{font-size:12.5px;font-weight:600;}
 .sb-ulabel{font-size:10px;color:var(--hint);}
 .sb-connect{
-  display:flex;align-items:center;gap:9px;padding:9px 10px;margin-top:6px;
+  display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;margin-top:6px;
   background:var(--green-dim);border:1px solid rgba(46,204,138,0.18);
-  border-radius:9px;color:var(--green);font-size:12.5px;font-weight:500;
+  border-radius:9px;color:var(--green);font-size:12.5px;font-weight:600;
   cursor:pointer;width:100%;transition:all 0.13s;font-family:var(--font);
 }
+.sb-connect:hover{background:rgba(46,204,138,0.22);}
+.sb-connect-count{font-size:10.5px;font-weight:500;color:var(--muted);background:rgba(255,255,255,0.06);padding:2px 7px;border-radius:20px;}
 .sb-connect:hover{background:rgba(46,204,138,0.16);}
 .sb-connect svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
 
@@ -815,6 +809,30 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .fc-stat-val{font-size:20px;font-weight:700;color:var(--text);}
 .fc-stat-lbl{font-size:11px;color:var(--muted);}
 .fc-note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:2px;}
+/* ── Cash Flow Planner ── */
+.cfp-wrap{padding:2px;}
+.cfp-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.cfp-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:12px;}
+@media(max-width:560px){.cfp-summary{grid-template-columns:repeat(2,1fr);}}
+.cfp-stat{background:var(--surface2);border-radius:9px;padding:9px 7px;text-align:center;}
+.cfp-stat-l{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+.cfp-stat-v{font-size:14px;font-weight:800;margin-top:2px;font-variant-numeric:tabular-nums;}
+.cfp-chart{background:var(--surface2);border-radius:10px;padding:8px;margin-bottom:10px;}
+.cfp-lowflag{font-size:12px;line-height:1.5;padding:10px 12px;border-radius:9px;margin-bottom:14px;}
+.cfp-lowflag.danger{background:rgba(240,92,92,0.12);color:#f6a6a6;border:1px solid rgba(240,92,92,0.25);}
+.cfp-lowflag.warn{background:rgba(240,165,64,0.12);color:#f0c674;border:1px solid rgba(240,165,64,0.25);}
+.cfp-lowflag.ok{background:rgba(46,204,138,0.1);color:#7fe0b0;border:1px solid rgba(46,204,138,0.22);}
+.cfp-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:4px 0 9px;}
+.cfp-events{display:flex;flex-direction:column;gap:5px;max-height:280px;overflow-y:auto;}
+.cfp-ev{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;background:var(--surface2);}
+.cfp-ev.income{border-left:3px solid var(--green);}
+.cfp-ev.bill{border-left:3px solid var(--red);}
+.cfp-ev-when{font-size:10.5px;color:var(--muted);width:48px;flex-shrink:0;}
+.cfp-ev-nm{flex:1;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cfp-ev-amt{font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums;}
+.cfp-ev-edit{display:flex;align-items:center;gap:2px;background:var(--surface3);border:1px solid var(--border);border-radius:7px;padding:0 7px;}
+.cfp-ev-edit span{color:var(--muted);font-size:11px;}
+.cfp-ev-edit input{width:58px;height:28px;background:none;border:none;color:var(--red);font-size:13px;font-weight:600;text-align:right;outline:none;font-variant-numeric:tabular-nums;}
 /* ── Profit & Loss widget ── */
 .pl-wrap{padding:2px;}
 .pl-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
@@ -952,6 +970,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .ce-del:hover{opacity:1;}
 .ce-foot{display:flex;align-items:center;gap:8px;padding:14px 20px;border-top:1px solid var(--border);}
 .wph-sub{font-size:11.5px;color:var(--muted);margin-top:2px;}
+.wph-inline{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:9px;border-top:1px solid var(--border);font-size:11.5px;color:var(--muted);}
+.wph-inline b{color:var(--text);font-weight:700;}
+.wph-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;}
 .wph-bars{display:flex;align-items:flex-end;gap:6px;height:70px;margin-top:10px;}
 .wph-bar{flex:1;border-radius:4px 4px 0 0;background:var(--green);opacity:0.8;}
 .wph-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:12.5px;}
@@ -1573,7 +1594,7 @@ canvas.chart-interactive{cursor:crosshair;}
 
     <div class="sb-footer">
       <div class="sb-section-divider"></div>
-      <button class="sb-connect" id="sbConnectBtn" onclick="openLinkHandler()">🔗 Connect your bank</button>
+      <button class="sb-connect" id="sbConnectBtn" onclick="openLinkHandler()">➕ Connect a bank</button>
       <button class="sb-utility-btn" onclick="switchPage('__settings__')">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         Settings
@@ -1969,6 +1990,50 @@ let nwLiab=[
 const FREQ_TO_MONTHLY={weekly:52/12, biweekly:26/12, monthly:1, quarterly:1/3, annual:1/12, yearly:1/12};
 function engMonthlyIncome(){ return incomeSources.reduce((s,i)=>s+i.amt*(FREQ_TO_MONTHLY[i.freq]||1),0); }
 
+/* ── Cash Flow Projection: build dated income/expense events forward N days,
+   then compute a running daily balance starting from current cash. ── */
+function engStartCash(){
+  if(dataLoaded){ return allAccts.filter(a=>a.type==='depository').reduce((s,a)=>s+((a.balances&&(a.balances.available??a.balances.current))||0),0); }
+  return nwAssets.filter(a=>a.cat==='Cash & Bank').reduce((s,a)=>s+(a.value||0),0);
+}
+// generate income events with real-ish cadence within the window
+function _incomeEvents(days){
+  const out=[]; const today=new Date(); today.setHours(12,0,0,0);
+  incomeSources.forEach((src)=>{
+    const monthly=src.amt*(FREQ_TO_MONTHLY[src.freq]||1);
+    if(src.freq==='weekly'){ for(let d=3; d<=days; d+=7) out.push({day:d, amt:src.amt, name:src.name, type:'income'}); }
+    else if(src.freq==='biweekly'){ for(let d=5; d<=days; d+=14) out.push({day:d, amt:src.amt, name:src.name, type:'income'}); }
+    else if(src.freq==='monthly'){ for(let d=1; d<=days; d+=30) out.push({day:d, amt:src.amt, name:src.name, type:'income'}); }
+    else if(src.freq==='quarterly'){ if(days>=20) out.push({day:20, amt:src.amt, name:src.name, type:'income'}); }
+    else { for(let d=15; d<=days; d+=30) out.push({day:d, amt:Math.round(monthly), name:src.name, type:'income'}); }
+  });
+  return out;
+}
+// bill events: place each unpaid bill on its due-day within the window (using expected pay)
+function _billEvents(days){
+  const out=[]; const todayDate=new Date().getDate();
+  engUpcomingBills().filter(b=>!b.paid && b.pay>0).forEach(b=>{
+    let d=b.due-todayDate; if(d<0) d+=30; // next occurrence this cycle
+    while(d<=days){ out.push({day:d, amt:-(b.pay), name:b.name, type:'bill', key:billKey(b)}); d+=30; }
+  });
+  return out;
+}
+function engCashFlowProjection(days){
+  const start=engStartCash();
+  const events=[..._incomeEvents(days), ..._billEvents(days)].sort((a,b)=>a.day-b.day);
+  let bal=start; const series=[{day:0, bal:start, label:'Today'}];
+  let low={day:0, bal:start}; const byDay={};
+  events.forEach(e=>{ byDay[e.day]=byDay[e.day]||[]; byDay[e.day].push(e); });
+  for(let d=1; d<=days; d++){
+    if(byDay[d]) byDay[d].forEach(e=>{ bal+=e.amt; });
+    series.push({day:d, bal});
+    if(bal<low.bal) low={day:d, bal};
+  }
+  const totalIn=events.filter(e=>e.amt>0).reduce((s,e)=>s+e.amt,0);
+  const totalOut=events.filter(e=>e.amt<0).reduce((s,e)=>s+Math.abs(e.amt),0);
+  return {start, end:bal, series, events, low, totalIn, totalOut, net:totalIn-totalOut, byDay, days};
+}
+
 /* ── Unified bills/liabilities layer ──
    When Plaid liabilities are loaded, derive bills from real card/mortgage data;
    otherwise fall back to the manually-entered bills[] array. Same shape either way:
@@ -2102,8 +2167,16 @@ async function openLinkHandler(){
 }
 function updateConnectBtn(){
   const b=gg('sbConnectBtn'); if(!b) return;
-  if(dataLoaded||APP.plaidConnected){ b.innerHTML='🏦 Bank connected'; b.style.opacity='0.7'; }
-  else { b.innerHTML='🔗 Connect your bank'; b.style.opacity='1'; }
+  // Count distinct connected institutions from loaded accounts
+  let n=0;
+  try{ if(dataLoaded && allAccts && allAccts.length){ n=new Set(allAccts.map(a=>a.institution||a.item_id||a.name)).size; } }catch(e){}
+  if(n>0){
+    b.innerHTML='\u2795 Connect another'+`<span class="sb-connect-count">${n} linked</span>`;
+    b.style.opacity='1';
+  } else {
+    b.innerHTML='\u2795 Connect a bank';
+    b.style.opacity='1';
+  }
 }
 
 
@@ -2321,6 +2394,7 @@ const WIDGET_CATALOG=[
   {id:'zero_budget',name:'Zero-Based Budget',icon:'🧮',cat:'Budget',span:2,minLevel:2,desc:'Give every dollar a job.'},
   {id:'cashflow_chart',name:'Cash Flow',icon:'🌊',cat:'Cash Flow',span:2,minLevel:1,desc:'Income vs. spending over time.'},
   {id:'pl_panel',name:'Profit & Loss',icon:'📊',cat:'Cash Flow',span:2,minLevel:1,desc:'Income, spending, net & savings rate by day/week/month.'},
+  {id:'cashflow_planner',name:'Cash Flow Planner',icon:'📅',cat:'Cash Flow',span:2,minLevel:1,desc:'Project your running balance forward — edit bills, see your low point before it hits.'},
   {id:'accounts_list',name:'All Accounts',icon:'🏦',cat:'Overview',span:2,minLevel:1,desc:'Every account with balances — tap to see transactions.'},
   {id:'sankey',name:'Money Flow (Sankey)',icon:'🔀',cat:'Cash Flow',span:2,minLevel:2,desc:'Visualize income flowing to spending.'},
   {id:'top_categories',name:'Top Categories',icon:'📊',cat:'Cash Flow',span:1,minLevel:1,desc:'Where your money goes most.'},
@@ -2625,6 +2699,7 @@ function mountWidgetCharts(pg){
       if(w.type==='fire_drill'){ fdSetScenario(_fd.scenario||'job'); }
       if(w.type==='debt_planner'){ dpRecalc(); dpRenderOrder(); }
       if(w.type==='pl_panel'){ plMount(w); }
+      if(w.type==='cashflow_planner'){ cfpMount(w); }
       if(w.type==='accounts_list'){ acctMount(w); }
     }catch(e){ /* ignore */ }
   });
@@ -2810,6 +2885,78 @@ function fdSetScenario(id){
   document.querySelectorAll('.fd-scen').forEach(el=>{ el.classList.toggle('active', el.getAttribute('onclick')&&el.getAttribute('onclick').includes("'"+id+"'")); });
   fdRefresh();
 }
+
+/* ═══ CASH FLOW PLANNER WIDGET ═══ */
+let _cfpRange={};  // per-widget projection window in days
+const CFP_RANGES=[{k:30,l:'30 days'},{k:60,l:'60 days'},{k:90,l:'90 days'}];
+function cfpWidgetBody(w){
+  const range=_cfpRange[w.uid]||30;
+  return `<div class="cfp-wrap">
+    <div class="cfp-toolbar">
+      <span class="pl-grp-label">Project</span>
+      <div class="pl-toggle">${CFP_RANGES.map(r=>`<button class="pl-gbtn${range===r.k?' active':''}" onclick="setCfpRange('${w.uid}',${r.k})">${r.l}</button>`).join('')}</div>
+    </div>
+    <div class="cfp-summary" id="cfpsum_${w.uid}"></div>
+    <div class="cfp-chart" id="cfpchart_${w.uid}"></div>
+    <div class="cfp-lowflag" id="cfplow_${w.uid}"></div>
+    <div class="cfp-section-label">Upcoming events <span class="ws-hint" style="margin:0">tap a bill to edit what you'll pay</span></div>
+    <div class="cfp-events" id="cfpev_${w.uid}"></div>
+  </div>`;
+}
+function setCfpRange(uid,k){ _cfpRange[uid]=k; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+function cfpMount(w){
+  const range=_cfpRange[w.uid]||30;
+  const p=engCashFlowProjection(range);
+  // summary stats
+  const sum=gg('cfpsum_'+w.uid);
+  if(sum){ sum.innerHTML=`
+    <div class="cfp-stat"><div class="cfp-stat-l">Starting cash</div><div class="cfp-stat-v">${fmtK(p.start)}</div></div>
+    <div class="cfp-stat"><div class="cfp-stat-l">Income in</div><div class="cfp-stat-v" style="color:var(--green)">+${fmtK(p.totalIn)}</div></div>
+    <div class="cfp-stat"><div class="cfp-stat-l">Bills out</div><div class="cfp-stat-v" style="color:var(--red)">-${fmtK(p.totalOut)}</div></div>
+    <div class="cfp-stat"><div class="cfp-stat-l">End balance</div><div class="cfp-stat-v" style="color:${p.end>=0?'var(--green)':'var(--red)'}">${fmtK(p.end)}</div></div>`;
+  }
+  // running balance line (mini SVG sparkline so it works everywhere, no Chart.js dependency)
+  const chart=gg('cfpchart_'+w.uid);
+  if(chart){
+    const s=p.series; const W=300, H=80, pad=4;
+    const min=Math.min(...s.map(x=>x.bal),0), max=Math.max(...s.map(x=>x.bal),1);
+    const rng=(max-min)||1;
+    const X=d=>pad+(d/p.days)*(W-pad*2);
+    const Y=b=>H-pad-((b-min)/rng)*(H-pad*2);
+    const zeroY=Y(0);
+    const pts=s.map(x=>`${X(x.day).toFixed(1)},${Y(x.bal).toFixed(1)}`).join(' ');
+    const area=`${pad},${H-pad} ${pts} ${X(p.days).toFixed(1)},${H-pad}`;
+    const lowX=X(p.low.day), lowY=Y(p.low.bal);
+    chart.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none">
+      <defs><linearGradient id="cfpg_${w.uid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--green)" stop-opacity="0.3"/><stop offset="100%" stop-color="var(--green)" stop-opacity="0"/></linearGradient></defs>
+      ${min<0?`<line x1="0" y1="${zeroY.toFixed(1)}" x2="${W}" y2="${zeroY.toFixed(1)}" stroke="var(--red)" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/>`:''}
+      <polygon points="${area}" fill="url(#cfpg_${w.uid})"/>
+      <polyline points="${pts}" fill="none" stroke="var(--green)" stroke-width="2" stroke-linejoin="round"/>
+      <circle cx="${lowX.toFixed(1)}" cy="${lowY.toFixed(1)}" r="3.5" fill="${p.low.bal<0?'var(--red)':'var(--amber)'}"/>
+    </svg>`;
+  }
+  // low-point flag
+  const low=gg('cfplow_'+w.uid);
+  if(low){
+    if(p.low.bal<0){ low.className='cfp-lowflag danger'; low.innerHTML=`⚠️ Projected shortfall: balance dips to <b>${fmtK(p.low.bal)}</b> on day ${p.low.day}. Adjust a bill below or move income.`; }
+    else if(p.low.bal<200){ low.className='cfp-lowflag warn'; low.innerHTML=`⚡ Tight: lowest balance is <b>${fmtK(p.low.bal)}</b> around day ${p.low.day}.`; }
+    else { low.className='cfp-lowflag ok'; low.innerHTML=`✅ Safe: your balance stays above <b>${fmtK(p.low.bal)}</b> (low point day ${p.low.day}).`; }
+  }
+  // editable upcoming events (bills editable, income shown)
+  const ev=gg('cfpev_'+w.uid);
+  if(ev){
+    const sorted=[...p.events].sort((a,b)=>a.day-b.day).slice(0,40);
+    ev.innerHTML=sorted.map(e=>{
+      const when=e.day===0?'today':'day '+e.day;
+      if(e.type==='income'){
+        return `<div class="cfp-ev income"><span class="cfp-ev-when">${when}</span><span class="cfp-ev-nm">${esc(e.name)}</span><span class="cfp-ev-amt" style="color:var(--green)">+${fmtK(e.amt)}</span></div>`;
+      }
+      const key=(e.key||'').replace(/'/g,"\\'");
+      return `<div class="cfp-ev bill"><span class="cfp-ev-when">${when}</span><span class="cfp-ev-nm">${esc(e.name)}</span><div class="cfp-ev-edit"><span>$</span><input type="number" value="${Math.round(Math.abs(e.amt))}" min="0" step="10" onclick="event.stopPropagation()" oninput="setBillPay('${key}',this.value)" onblur="cfpRefresh('${w.uid}')"></div></div>`;
+    }).join('')||'<div class="ws-hint">No upcoming events in this window.</div>';
+  }
+}
+function cfpRefresh(uid){ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 
 /* ═══ PROFIT & LOSS WIDGET ═══ */
 let _plGroup={};  // per-widget grouping (daily/weekly/monthly)
@@ -3075,11 +3222,11 @@ function renderWidgetBody(w){
   if(!widgetUnlocked(def)) return `<div class="wph-lock"><div class="wph-lock-icon">🔒</div><div style="font-size:12.5px">Unlocks at level ${def.minLevel}</div></div>`;
   const bars=n=>`<div class="wph-bars">${Array.from({length:n}).map(()=>`<div class="wph-bar" style="height:${30+Math.random()*70}%"></div>`).join('')}</div>`;
   switch(w.type){
-    case 'net_worth_summary': { if(dataLoaded){ const nb=engNetBalance(); return `<div class="wph"><div class="wph-stat ${nb>=0?'':'red'}" style="${nb<0?'color:var(--red)':''}">${fmtK(nb)}</div><div class="wph-sub">net of ${allAccts.length} account${allAccts.length!==1?'s':''}</div></div>`; } return `<div class="wph"><div class="wph-stat">$142,580</div><div class="wph-sub" style="color:var(--green)">\u25B2 3.2% \u00b7 sample data</div></div>`; }
-    case 'cash_summary': { if(dataLoaded){ const dep=allAccts.filter(a=>a.type==='depository'); const cash=dep.reduce((s,a)=>s+((a.balances&&(a.balances.available??a.balances.current))||0),0); return `<div class="wph"><div class="wph-stat">${fmtK(cash)}</div><div class="wph-sub">across ${dep.length||allAccts.length} account${(dep.length||allAccts.length)!==1?'s':''}</div></div>`; } return `<div class="wph"><div class="wph-stat">$8,240</div><div class="wph-sub">across 3 accounts \u00b7 sample</div></div>`; }
-    case 'spending_month': { const days=wDays(w); if(dataLoaded){ const sp=engSpend(days); return `<div class="wph"><div class="wph-stat">${fmtK(sp)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div></div>`; } return `<div class="wph"><div class="wph-stat">${fmtK(Math.round(3118*days/30))}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')} \u00b7 sample</div></div>`; }
-    case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div></div>`; } return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')} \u00b7 sample</div></div>`; }
-    case 'debt_summary': { if(dataLoaded){ const d=engTotalDebt(); return `<div class="wph"><div class="wph-stat" style="color:var(--red)">${fmtK(d)}</div><div class="wph-sub">across credit accounts</div></div>`; } return `<div class="wph"><div class="wph-stat" style="color:var(--red)">$12,430</div><div class="wph-sub">\u25BC sample data</div></div>`; }
+    case 'net_worth_summary': { const a=engNWAssets(), l=engNWLiab(); const nw=dataLoaded?(engNetBalance()+a-l):(a-l); return `<div class="wph"><div class="wph-stat ${nw>=0?'':'red'}" style="${nw<0?'color:var(--red)':''}">${fmtK(nw)}</div><div class="wph-sub">net worth</div><div class="wph-inline"><span style="color:var(--green)">Assets ${fmtK(a)}</span><b style="color:var(--red)">Debts ${fmtK(l)}</b></div></div>`; }
+    case 'cash_summary': { if(dataLoaded){ const dep=allAccts.filter(a=>a.type==='depository'); const cash=dep.reduce((s,a)=>s+((a.balances&&(a.balances.available??a.balances.current))||0),0); const big=dep.slice().sort((a,b)=>((b.balances&&(b.balances.available??b.balances.current))||0)-((a.balances&&(a.balances.available??a.balances.current))||0))[0]; return `<div class="wph"><div class="wph-stat">${fmtK(cash)}</div><div class="wph-sub">across ${dep.length||allAccts.length} account${(dep.length||allAccts.length)!==1?'s':''}</div>${big?`<div class="wph-inline"><span>${esc(big.name||'Largest')}</span><b>${fmtK((big.balances&&(big.balances.available??big.balances.current))||0)}</b></div>`:''}</div>`; } return `<div class="wph"><div class="wph-stat">$8,240</div><div class="wph-sub">across 3 accounts \u00b7 sample</div><div class="wph-inline"><span>Ally Savings</span><b>$8,030</b></div></div>`; }
+    case 'spending_month': { const days=wDays(w); if(dataLoaded){ const sp=engSpend(days); const cats=engCategoryBreakdown(days); const top=cats[0]; return `<div class="wph"><div class="wph-stat">${fmtK(sp)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${top?`<div class="wph-inline"><span><span class="wph-dot" style="background:${top.color}"></span>Top: ${top.label}</span><b>${fmtK(top.value)}</b></div>`:''}</div>`; } return `<div class="wph"><div class="wph-stat">${fmtK(Math.round(3118*days/30))}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')} \u00b7 sample</div><div class="wph-inline"><span><span class="wph-dot" style="background:#f5a623"></span>Top: Dining</span><b>$612</b></div></div>`; }
+    case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); const rec=engRecent(days).filter(t=>t.amount<0); const byC={}; rec.forEach(t=>{const c=getTxnCategory(t);byC[c]=(byC[c]||0)+Math.abs(t.amount);}); const top=Object.entries(byC).sort((a,b)=>b[1]-a[1])[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${top?`<div class="wph-inline"><span>Largest: ${top[0]}</span><b style="color:var(--green)">${fmtK(top[1])}</b></div>`:''}</div>`; } const top=incomeSources.slice().sort((a,b)=>b.amt*(FREQ_TO_MONTHLY[b.freq]||1)-a.amt*(FREQ_TO_MONTHLY[a.freq]||1))[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">${incomeSources.length} sources \u00b7 sample</div><div class="wph-inline"><span>Largest: ${top.name}</span><b style="color:var(--green)">${fmtK(Math.round(top.amt*(FREQ_TO_MONTHLY[top.freq]||1)))}/mo</b></div></div>`; }
+    case 'debt_summary': { const debts=engBills().filter(b=>b.bal<0); const d=debts.reduce((s,b)=>s+Math.abs(b.bal),0); const hi=debts.slice().sort((a,b)=>(b.apr||0)-(a.apr||0))[0]; if(dataLoaded||plaidHasLiab()){ return `<div class="wph"><div class="wph-stat" style="color:var(--red)">${fmtK(d)}</div><div class="wph-sub">across ${debts.length} balance${debts.length!==1?'s':''}</div>${hi&&hi.apr?`<div class="wph-inline"><span>Highest APR: ${esc(hi.name)}</span><b style="color:var(--amber)">${hi.apr.toFixed(1)}%</b></div>`:''}</div>`; } return `<div class="wph"><div class="wph-stat" style="color:var(--red)">${fmtK(d)}</div><div class="wph-sub">across ${debts.length} balances</div>${hi&&hi.apr?`<div class="wph-inline"><span>Highest APR: ${esc(hi.name)}</span><b style="color:var(--amber)">${hi.apr.toFixed(1)}%</b></div>`:''}</div>`; }
     case 'top_categories': case 'budget_doughnut': { const cfg=widgetConfig(w); const days=wDays(w);
       let cats = dataLoaded ? engCategoryBreakdownQ(days, cfg.query) : [{label:'Dining Out',value:612,color:'#f5a623'},{label:'Food & Groceries',value:498,color:'#3dda91'},{label:'Auto Payments',value:284,color:'#b09afa'},{label:'Subscriptions',value:142,color:'#22d3ee'},{label:'Travel',value:96,color:'#818cf8'},{label:'Medical',value:60,color:'#34d399'}];
       cats=cats.slice(0, cfg.topN||(w.type==='top_categories'?4:6));
@@ -3124,6 +3271,7 @@ function renderWidgetBody(w){
       </div>`; }
     case 'cashflow_chart': { const tf=w.tf||'30d'; const mb={'1w':1,'30d':3,'3m':3,'1y':12}[tf]||3; return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Income vs spending${dataLoaded?' · last '+mb+' mo':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`; }
     case 'pl_panel': return plWidgetBody(w);
+    case 'cashflow_planner': return cfpWidgetBody(w);
     case 'accounts_list': return acctWidgetBody(w);
     case 'sankey': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Money flow${dataLoaded?' · last '+tfLabel(w.tf||'30d'):' · from your bills'}</div><div style="position:relative"><canvas id="cv_${w.uid}"></canvas></div></div>`;
     case 'net_worth_chart': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Net worth trend${dataLoaded?'':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
