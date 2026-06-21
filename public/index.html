@@ -296,6 +296,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 /* ══════════════════════════════════════════════════════════════════════
    DYNAMIC SIDEBAR
 ══════════════════════════════════════════════════════════════════════ */
+#sidebarScrim{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:140;}
 #sidebar{
   width:var(--sidebar-w);min-height:100vh;
   background:var(--sidebar);border-right:1px solid var(--border);
@@ -878,6 +879,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .bill-pay span{color:var(--muted);font-size:12px;}
 .bill-pay input{width:62px;height:30px;background:none;border:none;color:var(--green);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;text-align:right;}
 .bill-pay-static{font-size:14px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;}
+.bill-paywrap{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;}
+.bill-paylabel{font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);}
+.bill-diff{font-size:10px;font-weight:600;}
+.bill-amts{display:flex;align-items:center;gap:8px;margin-top:3px;flex-wrap:wrap;}
+.bill-min{font-size:10.5px;color:var(--muted);}
+.bill-min b{color:var(--text);font-weight:600;}
+.bills-foot-amts{display:flex;align-items:center;gap:10px;}
+.bills-foot-min{font-size:11px;color:var(--muted);}
 .bills-foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1.5px solid var(--border2);font-size:12px;color:var(--muted);}
 .bills-foot b{color:var(--text);font-size:14px;}
 /* ── Playground: Fire Drill + Debt Planner ── */
@@ -1416,22 +1425,22 @@ canvas.chart-interactive{cursor:crosshair;}
 .wiz-step-tab.active{color:var(--green);border-bottom-color:var(--green);}
 /* Responsive */
 @media(max-width:900px){
-  #sidebar{transform:translateX(-100%);transition:transform .25s cubic-bezier(.4,0,.2,1);z-index:150;width:260px!important;box-shadow:4px 0 24px rgba(0,0,0,.4);}
+  #sidebar{transform:translateX(-100%);transition:transform .25s cubic-bezier(.4,0,.2,1);z-index:150;width:min(280px,82vw)!important;box-shadow:4px 0 24px rgba(0,0,0,.4);}
   #sidebar.open{transform:translateX(0);}
   #main{left:0!important;}
-  #bottomNav{display:flex!important;}
-  #page-content{padding-bottom:68px!important;}
+  #page-content{padding:16px!important;padding-bottom:calc(20px + env(safe-area-inset-bottom))!important;}
   .g2,.g3,.g-main-side,.dash-chart-grid{grid-template-columns:1fr!important;}
   .wgrid{grid-template-columns:1fr 1fr!important;}
   .page-hdr{flex-direction:column;gap:8px;}
   .settings-panel{width:100%!important;max-width:100vw!important;}
-  #hamburgerBtn{display:flex!important;}
+  #hamburger{display:flex!important;}
   .canvas-grid{grid-template-columns:1fr!important;}
   .canvas-widget-card.span-2{grid-column:auto!important;}
   #widgetLibrary{width:100%;}
+  #sidebarScrim.open{display:block;}
 }
 @media(max-width:480px){
-  #page-content{padding:12px!important;padding-bottom:68px!important;}
+  #page-content{padding:12px!important;padding-bottom:calc(16px + env(safe-area-inset-bottom))!important;}
   .wgrid{grid-template-columns:1fr!important;}
   .page-title{font-size:17px;}
   .wvalue{font-size:15px!important;}
@@ -1537,6 +1546,7 @@ canvas.chart-interactive{cursor:crosshair;}
      APP SHELL
 ══════════════════════════════════════════════════════════════════════ -->
 <div id="appShell" style="display:none">
+  <div id="sidebarScrim" onclick="toggleSidebar()"></div>
 
   <!-- SIDEBAR -->
   <aside id="sidebar">
@@ -1850,7 +1860,12 @@ function _billOverrides(){ APP.billOverrides=APP.billOverrides||{}; return APP.b
 function billKey(b){ return (b.name||'')+'|'+(b.cat||''); }
 function applyBillOverrides(list){
   const ov=_billOverrides();
-  return list.map(b=>{ const o=ov[billKey(b)]; if(o){ return {...b, paid:o.paid!==undefined?o.paid:b.paid, pay:o.pay!==undefined?o.pay:b.pay}; } return b; });
+  return list.map(b=>{
+    const o=ov[billKey(b)]||{};
+    const min=b.min!=null?b.min:b.pay;            // Plaid (or manual) minimum
+    const expected=o.pay!==undefined?o.pay:b.pay; // user's expected payment (defaults to bill's pay)
+    return {...b, min, pay:expected, expected, paid:o.paid!==undefined?o.paid:b.paid};
+  });
 }
 function toggleBillPaid(key){
   const ov=_billOverrides(); ov[key]=ov[key]||{}; ov[key].paid=!ov[key].paid; saveState();
@@ -2274,7 +2289,9 @@ function renderNav(){
     </button>`).join('') || '<div style="padding:14px;color:var(--hint);font-size:12px;text-align:center">No pages yet. Tap + to add one.</div>';
 }
 
+function closeSidebarMobile(){ if(window.innerWidth<=900){ gg('sidebar').classList.remove('open'); const sc=gg('sidebarScrim'); if(sc) sc.classList.remove('open'); } }
 function switchPage(id){
+  closeSidebarMobile();
   if(id==='__settings__'){ renderSettings(); APP.activePage='__settings__'; renderNav(); return; }
   let pg=APP.pages.find(p=>p.id===id);
   if(!pg){ pg=APP.pages[0]; }   // stale/invalid id → fall back to first page
@@ -3081,14 +3098,29 @@ function renderWidgetBody(w){
     }
     case 'bills_list': { const up=engUpcomingBills(); if(!up.length) return `<div class="wph"><div class="wph-sub">No bills yet.</div></div>`;
       const ord=(d)=>d+(d%10===1&&d!==11?'st':d%10===2&&d!==12?'nd':d%10===3&&d!==13?'rd':'th');
-      const editable=!plaidHasLiab();
-      return `<div class="bills-mgr">${up.map(b=>{ const key=billKey(b); const paid=b.paid;
+      const live=plaidHasLiab();
+      const totMin=up.filter(b=>!b.paid).reduce((s,b)=>s+(b.min||0),0);
+      const totPay=up.filter(b=>!b.paid).reduce((s,b)=>s+(b.pay||0),0);
+      return `<div class="bills-mgr">${up.map(b=>{ const key=billKey(b).replace(/'/g,"\\'"); const paid=b.paid; const diff=(b.pay||0)-(b.min||0);
         return `<div class="bill-row${paid?' paid':''}">
-          <button class="bill-check" onclick="event.stopPropagation();toggleBillPaid('${key.replace(/'/g,"\\'")}')" title="${paid?'Mark unpaid':'Mark paid'}">${paid?'✓':''}</button>
-          <div class="bill-info"><div class="bill-nm">${esc(b.name)}</div><div class="bill-sub">due ${ord(b.due)}${b.apr?` · ${b.apr.toFixed(1)}%`:''}${b.promo?` · ${esc(b.promo)}`:''}</div></div>
-          ${editable?`<div class="bill-pay"><span>$</span><input type="number" value="${Math.round(b.pay)}" min="0" step="10" onclick="event.stopPropagation()" oninput="setBillPay('${key.replace(/'/g,"\\'")}',this.value)" onblur="setBillPayCommit()"></div>`:`<div class="bill-pay-static">${fmtK(b.pay)}</div>`}
+          <button class="bill-check" onclick="event.stopPropagation();toggleBillPaid('${key}')" title="${paid?'Mark unpaid':'Mark paid'}">${paid?'\u2713':''}</button>
+          <div class="bill-info">
+            <div class="bill-nm">${esc(b.name)}</div>
+            <div class="bill-sub">due ${ord(b.due)}${b.apr?` \u00b7 ${b.apr.toFixed(1)}%`:''}${b.promo?` \u00b7 ${esc(b.promo)}`:''}</div>
+            <div class="bill-amts">
+              <span class="bill-min">Min <b>${fmtK(b.min)}</b>${live?' \u00b7 Plaid':''}</span>
+              ${Math.abs(diff)>=1?`<span class="bill-diff" style="color:${diff>0?'var(--amber)':'var(--green)'}">${diff>0?'+':''}${fmtK(diff)} vs min</span>`:''}
+            </div>
+          </div>
+          <div class="bill-paywrap">
+            <label class="bill-paylabel">You pay</label>
+            <div class="bill-pay"><span>$</span><input type="number" value="${Math.round(b.pay)}" min="0" step="10" onclick="event.stopPropagation()" oninput="setBillPay('${key}',this.value)" onblur="setBillPayCommit()"></div>
+          </div>
         </div>`; }).join('')}
-        <div class="bills-foot"><span>${up.filter(b=>!b.paid).length} unpaid · ${up.filter(b=>b.paid).length} paid</span><b>${fmtK(up.filter(b=>!b.paid).reduce((s,b)=>s+b.pay,0))} remaining</b></div>
+        <div class="bills-foot">
+          <span>${up.filter(b=>!b.paid).length} unpaid \u00b7 ${up.filter(b=>b.paid).length} paid</span>
+          <span class="bills-foot-amts">${live?`<span class="bills-foot-min">min ${fmtK(totMin)}</span>`:''}<b>${fmtK(totPay)} you pay</b></span>
+        </div>
       </div>`; }
     case 'cashflow_chart': { const tf=w.tf||'30d'; const mb={'1w':1,'30d':3,'3m':3,'1y':12}[tf]||3; return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Income vs spending${dataLoaded?' · last '+mb+' mo':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`; }
     case 'pl_panel': return plWidgetBody(w);
@@ -3408,7 +3440,7 @@ function richieMaybeLater(){
 }
 
 /* ═══════════════ SIDEBAR (mobile) ═══════════════ */
-function toggleSidebar(){ gg('sidebar').classList.toggle('open'); }
+function toggleSidebar(){ gg('sidebar').classList.toggle('open'); const sc=gg('sidebarScrim'); if(sc) sc.classList.toggle('open', gg('sidebar').classList.contains('open')); }
 function closeSidebar(){ gg('sidebar').classList.remove('open'); }
 function handleResize(){ gg('hamburger').style.display=window.innerWidth<=900?'flex':'none'; }
 
