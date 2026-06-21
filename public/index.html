@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Matt & Dana | Finance</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600;700&family=Nunito:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&family=Fira+Code:wght@400;500&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
@@ -57,8 +57,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
    RICHIE INTRO STORY
 ══════════════════════════════════════════════════════════════════════ */
 /* ═══ LOGIN + WELCOME-BACK ═══ */
-#loginScreen,#welcomeBack{position:fixed;inset:0;z-index:3100;background:#080a10;display:none;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:20px;animation:fade-in .5s ease;}
-.login-card{position:relative;z-index:2;background:rgba(22,25,32,0.85);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:34px 30px;width:min(380px,92vw);text-align:center;box-shadow:0 24px 70px rgba(0,0,0,0.5);}
+#loginScreen,#welcomeBack{position:fixed;inset:0;z-index:3100;background:#080a10;display:none;flex-direction:column;align-items:center;justify-content:center;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:24px 20px calc(24px + env(safe-area-inset-bottom));animation:fade-in .5s ease;}
+/* When content is taller than the viewport (iOS Safari), allow scroll instead of clipping the continue button */
+#welcomeBack{justify-content:flex-start;}
+@supports(height:100dvh){#loginScreen,#welcomeBack{min-height:100dvh;}}
+.login-card{position:relative;z-index:2;margin:auto;background:rgba(22,25,32,0.85);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:34px 30px;width:min(380px,92vw);text-align:center;box-shadow:0 24px 70px rgba(0,0,0,0.5);}
 .login-title{font-size:23px;margin:10px 0 6px;color:var(--text);}
 .login-sub{font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:20px;}
 .login-fields{display:flex;flex-direction:column;gap:11px;}
@@ -66,7 +69,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .login-fields input:focus{outline:none;border-color:var(--green);}
 .login-btn{height:44px;font-size:15px;margin-top:4px;}
 .login-err{color:#f05c5c;font-size:12.5px;min-height:16px;text-align:left;}
-.wb-inner{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;width:min(820px,94vw);}
+.wb-inner{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;width:min(820px,94vw);margin:auto;padding-bottom:20px;}
+#wbContinue{margin-bottom:8px;}
 .wb-swot{width:100%;grid-template-columns:1fr 1fr;gap:12px;margin-top:22px;}
 @media(max-width:620px){.wb-swot{grid-template-columns:1fr;}}
 .swot-cell{background:rgba(22,25,32,0.85);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:14px 16px;text-align:left;}
@@ -82,11 +86,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
   animation:fade-in 0.6s ease;
 }
 .ri-bg{
-  position:absolute;inset:0;
+  position:fixed;inset:0;
   background:radial-gradient(ellipse at 50% 65%,rgba(46,204,138,0.07) 0%,transparent 65%);
   pointer-events:none;
 }
-.ri-stars{position:absolute;inset:0;pointer-events:none;}
+.ri-stars{position:fixed;inset:0;pointer-events:none;}
 .ri-star{
   position:absolute;
   width:3px;height:3px;border-radius:50%;background:#fff;
@@ -717,6 +721,71 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .ww-size-box.half{width:46%;}
 .ww-size-box.full{width:92%;}
 .ww-size-name{font-size:13px;font-weight:600;color:var(--text);}
+/* ── Widget Studio (full-screen customizer) ── */
+#widgetStudio{position:fixed;inset:0;z-index:3050;background:var(--bg);display:none;flex-direction:column;animation:fade-in .2s ease;}
+@supports(height:100dvh){#widgetStudio{height:100dvh;}}
+.ws-top{display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.ws-top-left{display:flex;align-items:center;gap:12px;flex:1;min-width:0;}
+.ws-top h3{font-size:16px;margin:0;}
+.ws-sub{font-size:12px;color:var(--muted);margin:2px 0 0;}
+.ws-steprail{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;}
+.ws-railitem{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);padding:4px 10px;border-radius:20px;border:1px solid var(--border);white-space:nowrap;}
+.ws-railitem.active{color:var(--green);border-color:var(--green);background:var(--green-dim);}
+.ws-railitem.done{color:var(--text);opacity:.7;}
+.ws-railnum{width:16px;height:16px;border-radius:50%;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;}
+.ws-railitem.active .ws-railnum{background:var(--green);color:#08210f;}
+.ws-main{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:0;overflow:hidden;min-height:0;}
+.ws-panel{overflow-y:auto;padding:22px 26px;border-right:1px solid var(--border);}
+.ws-preview{background:var(--surface);display:flex;flex-direction:column;padding:22px 26px;overflow-y:auto;}
+.ws-preview-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:16px;}
+.ws-preview-stage{flex:1;display:flex;align-items:flex-start;justify-content:center;padding-top:10px;}
+.ws-foot{display:flex;align-items:center;gap:10px;padding:14px 20px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--border);flex-shrink:0;}
+.ws-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:18px 0 9px;}
+.ws-section-label:first-child{margin-top:0;}
+.ws-hint{font-size:11.5px;color:var(--hint);line-height:1.5;margin:4px 0 10px;}
+.ws-opt{border:1.5px solid var(--border);border-radius:11px;padding:12px 14px;cursor:pointer;margin-bottom:8px;transition:all .13s;}
+.ws-opt:hover{border-color:var(--border2);}
+.ws-opt.selected{border-color:var(--green);background:var(--green-dim);}
+.ws-opt-name{font-size:13.5px;font-weight:600;color:var(--text);}
+.ws-opt-desc{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.45;}
+.ws-chipwrap{display:flex;flex-wrap:wrap;gap:7px;}
+.ws-chip{font-size:12px;padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;transition:all .12s;}
+.ws-chip:hover{border-color:var(--border2);color:var(--text);}
+.ws-chip.active{background:var(--green-dim);border-color:var(--green);color:var(--green);}
+.ws-input{width:100%;height:38px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:0 12px;color:var(--text);font-size:13.5px;font-family:var(--font);outline:none;}
+.ws-input:focus{border-color:var(--green);}
+.ws-inline{display:flex;gap:10px;align-items:center;}
+.ws-inline .ws-input{flex:1;}
+.ws-seg{display:flex;gap:0;border:1px solid var(--border);border-radius:9px;overflow:hidden;width:fit-content;}
+.ws-segbtn{font-size:12.5px;padding:7px 14px;background:var(--surface2);color:var(--muted);border:none;cursor:pointer;border-right:1px solid var(--border);transition:all .12s;}
+.ws-segbtn:last-child{border-right:none;}
+.ws-segbtn:hover{color:var(--text);}
+.ws-segbtn.active{background:var(--green-dim);color:var(--green);}
+.ws-swatches{display:flex;flex-wrap:wrap;gap:9px;}
+.ws-swatch{width:30px;height:30px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .1s;}
+.ws-swatch:hover{transform:scale(1.12);}
+.ws-swatch.active{border-color:var(--text);box-shadow:0 0 0 2px var(--bg) inset;}
+.ws-summary{display:flex;flex-direction:column;gap:1px;}
+.ws-sumrow{display:flex;justify-content:space-between;font-size:13px;padding:9px 0;border-bottom:1px solid var(--border);}
+.ws-sumrow span:first-child{color:var(--muted);}
+.ws-sumrow span:last-child{color:var(--text);font-weight:600;text-align:right;}
+/* chart-style list/bar legend rendering inside widgets */
+.cwl-legend{display:flex;flex-direction:column;gap:6px;}
+.cwl-legend.cwl-right{margin-left:14px;}
+.cwl-item{display:flex;align-items:center;gap:8px;font-size:12px;}
+.cwl-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.cwl-label{flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cwl-amt{font-weight:600;color:var(--text);}
+.cwl-pct{color:var(--muted);font-size:11px;min-width:32px;text-align:right;}
+.cwl-badge{font-size:10px;color:var(--muted);}
+.cwl-barrow{margin-bottom:9px;}
+.cwl-barlabel{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;}
+.cwl-bartrack{height:8px;background:var(--surface3);border-radius:5px;overflow:hidden;}
+.cwl-barfill{height:100%;border-radius:5px;}
+.cwl-barval{font-weight:600;color:var(--text);}
+.wph-split{display:flex;align-items:center;justify-content:center;gap:10px;}
+.wph-stack{display:flex;flex-direction:column;}
+@media(max-width:760px){.ws-main{grid-template-columns:1fr;}.ws-preview{display:none;}.ws-steprail{display:none;}}
 .wd-cat{font-size:9.5px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:.12em;margin:14px 4px 6px;}
 .wd-item{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;background:var(--surface);border:1px solid var(--border);cursor:pointer;margin-bottom:7px;transition:all .14s;}
 .wd-item:hover{border-color:var(--green);background:var(--surface2);transform:translateX(-3px);}
@@ -1512,18 +1581,40 @@ canvas.chart-interactive{cursor:crosshair;}
       <button class="ww-back" id="wwBack" onclick="wwPrev()" style="display:none">←</button>
       <div>
         <h3 id="wwTitle">Add a widget</h3>
-        <p id="wdSubtitle">Step 1 of 3 · Pick a category</p>
+        <p id="wdSubtitle">Step 1 · Pick a category</p>
       </div>
     </div>
     <button class="rp-close" onclick="closeWidgetDrawer()">×</button>
   </div>
-  <div class="ww-steps" id="wwSteps">
-    <div class="ww-step-dot active" data-s="1"></div>
-    <div class="ww-step-dot" data-s="2"></div>
-    <div class="ww-step-dot" data-s="3"></div>
-  </div>
+  <div class="ww-steps" id="wwSteps"></div>
   <div class="wd-list" id="wdList"></div>
 </div>
+
+<!-- ═══ WIDGET STUDIO (full-screen, settings + live preview) ═══ -->
+<div id="widgetStudio" style="display:none">
+  <div class="ws-top">
+    <div class="ws-top-left">
+      <button class="ww-back" id="wsBack" onclick="wsPrev()">←</button>
+      <div><h3 id="wsTitle">Customize widget</h3><p id="wsSub" class="ws-sub"></p></div>
+    </div>
+    <div class="ws-steprail" id="wsRail"></div>
+    <button class="rp-close" onclick="closeStudio()">×</button>
+  </div>
+  <div class="ws-main">
+    <div class="ws-panel" id="wsPanel"></div>
+    <div class="ws-preview">
+      <div class="ws-preview-label">Live preview</div>
+      <div class="ws-preview-stage" id="wsPreview"></div>
+    </div>
+  </div>
+  <div class="ws-foot">
+    <button class="btn ghost" onclick="wsPrev()" id="wsPrevBtn">← Back</button>
+    <div style="flex:1"></div>
+    <button class="btn" onclick="closeStudio()">Cancel</button>
+    <button class="btn primary" id="wsNextBtn" onclick="wsNext()">Next →</button>
+  </div>
+</div>
+
 
 
 <script>
@@ -1637,6 +1728,20 @@ function engCategoryBreakdown(days){
   rec.forEach(t=>{ const c=getTxnCategory(t); byCat[c]=(byCat[c]||0)+t.amount; });
   return Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([label,value])=>({label,value,color:getCatColor(label)}));
 }
+// Query-aware breakdown: honors category include-list and amount filters from widget config
+function engCategoryBreakdownQ(days, query){
+  let rows=engCategoryBreakdown(days);
+  if(query){
+    if(query.categories&&query.categories.length){ rows=rows.filter(r=>query.categories.includes(r.label)); }
+    if(query.minAmt!=null){ rows=rows.filter(r=>r.value>=query.minAmt); }
+    if(query.maxAmt!=null){ rows=rows.filter(r=>r.value<=query.maxAmt); }
+  }
+  return rows;
+}
+// All known category labels (for the query builder UI)
+function allCategoryLabels(){ return getUserCategories().filter(c=>!c.group).map(c=>c.label); }
+// All account names (for the query builder UI)
+function allAccountNames(){ return dataLoaded?allAccts.map(a=>a.name||a.official_name||a.type):['Checking','Savings','Credit Card']; }
 
 /* ── Real financial data (ported from live app) ── */
 let bills=[
@@ -1915,6 +2020,31 @@ const BUNDLE_PAGES={
 };
 let _uidSeq=0;
 function makeWidget(type){ return {uid:'w'+Date.now()+'_'+(_uidSeq++),type:type,span:(WIDGET_BY_ID[type]&&WIDGET_BY_ID[type].span)||1}; }
+/* Default config for a widget — merged with whatever the widget has stored. */
+function widgetConfig(w){
+  const c=(w&&w.config)||{};
+  return {
+    title: c.title||'',                          // '' = use catalog name
+    source: c.source||'auto',                    // auto | live | manual | sample
+    tf: w&&w.tf || c.tf || '30d',
+    topN: c.topN||6,                             // for category lists/doughnuts
+    months: c.months||null,                      // for charts (null=auto from tf)
+    query: c.query||{ categories:[], accounts:[], minAmt:null, maxAmt:null },
+    legend: c.legend!==undefined?c.legend:true,
+    legendPos: c.legendPos||'bottom',            // right | bottom | none
+    chartStyle: c.chartStyle||'auto',            // auto | doughnut | bar | list
+    numFormat: c.numFormat||'k',                 // full | k | pct
+    accent: c.accent||'',                        // '' = category default
+    align: c.align||'center',                    // left | center
+    height: c.height||'auto',                    // auto | tall
+  };
+}
+// number formatter honoring per-widget preference
+function fmtCfg(n, cfg, total){
+  if(cfg&&cfg.numFormat==='full') return fmt2(n);
+  if(cfg&&cfg.numFormat==='pct'&&total) return Math.round(Math.abs(n)/total*100)+'%';
+  return fmtK(n);
+}
 function seedPages(bundleKey){
   const bp=BUNDLE_PAGES[bundleKey]||BUNDLE_PAGES.overview;
   return bp.map((p,i)=>({ id:'p'+Date.now()+'_'+i, name:p[0], icon:p[1], color:p[2], widgets:(p[3]||[]).map(makeWidget) }));
@@ -2052,29 +2182,21 @@ function closeWidgetDrawer(){ gg('widgetDrawer').classList.remove('open'); gg('d
 function openWidgetEditor(uid){
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(!pg) return;
   const w=pg.widgets.find(x=>x.uid===uid); if(!w) return;
-  const def=WIDGET_BY_ID[w.type]||{};
-  _ww={step:3, cat:def.cat||null, widgetId:w.type, span:w.span, editUid:uid};
-  gg('widgetDrawer').classList.add('open'); gg('drawerScrim').classList.add('open');
-  wwRender();
+  openStudio(w.type, uid);
 }
-function wwSteps(){ return _ww.editUid ? ['Resize'] : ['Pick a category','Pick a widget','Choose size']; }
+function wwSteps(){ return ['Pick a category','Pick a widget']; }
 function wwRender(){
   const steps=wwSteps(); const total=steps.length;
-  // step indicator
   const dotsWrap=gg('wwSteps');
   dotsWrap.innerHTML=steps.map((_,i)=>`<div class="ww-step-dot${(i+1)===_ww.step?' active':(i+1)<_ww.step?' done':''}"></div>`).join('');
-  gg('wwBack').style.display=(_ww.step>1 && !_ww.editUid)?'flex':'none';
-  const stepLabel=_ww.editUid?'Resize widget':`Step ${_ww.step} of ${total} · ${steps[_ww.step-1]}`;
-  gg('wdSubtitle').textContent=stepLabel;
-  gg('wwTitle').textContent=_ww.editUid?'Edit widget':'Add a widget';
+  gg('wwBack').style.display=(_ww.step>1)?'flex':'none';
+  gg('wdSubtitle').textContent=`Step ${_ww.step} of ${total} · ${steps[_ww.step-1]}`;
+  gg('wwTitle').textContent='Add a widget';
   const list=gg('wdList');
-  if(_ww.editUid){ list.innerHTML=wwSizeStep(); return; }
   if(_ww.step===1) list.innerHTML=wwCategoryStep();
   else if(_ww.step===2) list.innerHTML=wwWidgetStep();
-  else if(_ww.step===3) list.innerHTML=wwSizeStep();
 }
 function wwCategoryStep(){
-  // distinct categories with counts
   const cats={};
   WIDGET_CATALOG.forEach(w=>{ (cats[w.cat]=cats[w.cat]||[]).push(w); });
   const icons={'Overview':'📊','Budget':'🎯','Cash Flow':'🌊','Wealth':'📈','Debt':'🚨','Playground':'🎮'};
@@ -2100,46 +2222,167 @@ function wwWidgetStep(){
   }).join('');
 }
 function wwLocked(lvl){ richieSay(`That one unlocks at level ${lvl}. Keep hitting goals \u2014 or flip on Pro Mode in Settings.`); }
-function wwPickWidget(wid){ _ww.widgetId=wid; const def=WIDGET_BY_ID[wid]; _ww.span=def.span||1; _ww.step=3; wwRender(); }
-function wwSizeStep(){
-  const def=WIDGET_BY_ID[_ww.widgetId]||{}; const span=_ww.span||def.span||1;
-  return `<div class="ww-preview">
-      <div class="ww-card-icon" style="font-size:34px">${def.icon||'🧩'}</div>
-      <div class="ww-card-name" style="font-size:16px;margin-top:6px">${def.name||'Widget'}</div>
-      <div class="ww-card-desc" style="margin-top:4px">${def.desc||''}</div>
-    </div>
-    <div class="ww-section-label">How wide should it be?</div>
-    <div class="ww-size-grid">
-      <div class="ww-size-opt${span===1?' selected':''}" onclick="wwSetSize(1)">
-        <div class="ww-size-vis"><div class="ww-size-box half"></div></div>
-        <div class="ww-size-name">Half width</div><div class="ww-card-desc">Compact · fits beside another</div>
-      </div>
-      <div class="ww-size-opt${span===2?' selected':''}" onclick="wwSetSize(2)">
-        <div class="ww-size-vis"><div class="ww-size-box full"></div></div>
-        <div class="ww-size-name">Full width</div><div class="ww-card-desc">Spans the whole row</div>
-      </div>
-    </div>
-    <button class="btn primary" style="width:100%;margin-top:18px" onclick="wwFinish()">${_ww.editUid?'Save changes':'Add to page'} ✓</button>`;
+function wwPickWidget(wid){
+  // hand off to the full Widget Studio for detailed config
+  closeWidgetDrawer();
+  openStudio(wid, null);
 }
-function wwSetSize(s){ _ww.span=s; wwRender(); }
 function wwPrev(){ if(_ww.step>1){ _ww.step--; wwRender(); } }
-function wwFinish(){
-  const pg=APP.pages.find(p=>p.id===APP.activePage); if(!pg){ closeWidgetDrawer(); return; }
-  if(_ww.editUid){
-    const w=pg.widgets.find(x=>x.uid===_ww.editUid);
-    if(w){ w.span=_ww.span; saveState(); renderCanvas(pg); }
-    closeWidgetDrawer();
+
+/* ═══════════════════════════════════════════════════════════════
+   WIDGET STUDIO — full customization (data query, display, layout)
+═══════════════════════════════════════════════════════════════ */
+let _ws=null;
+const WS_STEPS=['Data & query','Display','Size & layout','Confirm'];
+function openStudio(type, editUid){
+  const def=WIDGET_BY_ID[type]; if(!def) return;
+  let base;
+  if(editUid){ const pg=APP.pages.find(p=>p.id===APP.activePage); const w=pg&&pg.widgets.find(x=>x.uid===editUid); base=w?JSON.parse(JSON.stringify(w)):null; }
+  if(!base){ base={uid:editUid||('w'+Date.now()+Math.floor(Math.random()*999)), type:type, span:def.span||1, tf:'30d', config:{}}; }
+  if(!base.config) base.config={};
+  _ws={ step:1, type:type, editUid:editUid, w:base };
+  gg('widgetStudio').style.display='flex';
+  wsRender();
+}
+function closeStudio(){ gg('widgetStudio').style.display='none'; _ws=null; }
+function wsApplicableSteps(){
+  // Some widgets (interactive ones) only get title/size — skip data/display query
+  const dataCapable=['spending_month','income_month','top_categories','budget_doughnut','cashflow_chart','sankey','net_worth_chart','debt_summary','debt_payoff','bills_list','cash_summary','net_worth_summary','zero_budget','fire_progress'].includes(_ws.type);
+  return dataCapable?WS_STEPS:['Display','Size & layout','Confirm'];
+}
+function wsRender(){
+  const steps=wsApplicableSteps(); const cur=_ws.step;
+  gg('wsRail').innerHTML=steps.map((s,i)=>`<div class="ws-railitem${(i+1)===cur?' active':(i+1)<cur?' done':''}"><span class="ws-railnum">${i+1}</span>${s}</div>`).join('');
+  gg('wsTitle').textContent=(_ws.editUid?'Edit: ':'New: ')+(WIDGET_BY_ID[_ws.type].name);
+  gg('wsSub').textContent=`Step ${cur} of ${steps.length} · ${steps[cur-1]}`;
+  gg('wsPrevBtn').style.visibility=cur>1?'visible':'hidden';
+  gg('wsNextBtn').textContent=(cur===steps.length)?(_ws.editUid?'Save changes ✓':'Add to page ✓'):'Next →';
+  const panel=gg('wsPanel'); const stepName=steps[cur-1];
+  if(stepName==='Data & query') panel.innerHTML=wsDataStep();
+  else if(stepName==='Display') panel.innerHTML=wsDisplayStep();
+  else if(stepName==='Size & layout') panel.innerHTML=wsLayoutStep();
+  else if(stepName==='Confirm') panel.innerHTML=wsConfirmStep();
+  wsRenderPreview();
+}
+function wsCfg(){ _ws.w.config=_ws.w.config||{}; return _ws.w.config; }
+function wsSet(key,val){ wsCfg()[key]=val; wsRenderPreview(); }
+function wsSetTf(key){ _ws.w.tf=key; wsCfg().tf=key; wsRender(); }
+function wsRenderPreview(){
+  const stage=gg('wsPreview'); if(!stage) return;
+  const def=WIDGET_BY_ID[_ws.type];
+  let body; try{ body=renderWidgetBody(_ws.w); }catch(e){ body='<div class="wph"><div class="wph-sub">preview error</div></div>'; }
+  const cfg=widgetConfig(_ws.w);
+  stage.innerHTML=`<div class="canvas-widget-card ${_ws.w.span===2?'span-2':''}" style="max-width:${_ws.w.span===2?'100%':'280px'};margin:0 auto">
+    <div class="canvas-widget-header"><div class="cwh-left"><span>${def.icon}</span><span class="cwh-title">${cfg.title||def.name}</span></div></div>
+    <div class="canvas-widget-body" style="${cfg.height==='tall'?'min-height:220px':''}">${body}</div>
+  </div>`;
+  // mount chart-type previews
+  setTimeout(()=>{ try{ if(['cashflow_chart','net_worth_chart','retirement_proj','sankey','fire_calc'].includes(_ws.type)) buildWidgetChart(_ws.w,'cv_'+_ws.w.uid); }catch(e){} },30);
+}
+// ── Step: Data & query ──
+function wsDataStep(){
+  const c=widgetConfig(_ws.w);
+  const tfChips=TIMEFRAMES.map(t=>`<button class="ws-chip${(_ws.w.tf||'30d')===t.key?' active':''}" onclick="wsSetTf('${t.key}')">${t.label}</button>`).join('');
+  const srcOpts=[['auto','Auto','Live data if connected, else sample'],['live','Live (Plaid)','Only your connected accounts'],['manual','Manual','Your entered bills & income'],['sample','Sample','Demo numbers']];
+  const srcHtml=srcOpts.map(o=>`<div class="ws-opt${c.source===o[0]?' selected':''}" onclick="wsSet('source','${o[0]}');wsRender()"><div class="ws-opt-name">${o[1]}</div><div class="ws-opt-desc">${o[2]}</div></div>`).join('');
+  // query builder — categories (for spend/category widgets) and accounts
+  const isCat=['spending_month','top_categories','budget_doughnut','sankey'].includes(_ws.type);
+  let queryHtml='';
+  if(isCat){
+    const labels=allCategoryLabels(); const sel=(c.query.categories||[]);
+    queryHtml=`<div class="ws-section-label">Include categories <span class="ws-hint">(none = all)</span></div>
+      <div class="ws-chipwrap">${labels.map(l=>`<button class="ws-chip${sel.includes(l)?' active':''}" onclick="wsToggleQuery('categories','${l.replace(/'/g,"\\'")}')">${l}</button>`).join('')}</div>
+      <div class="ws-section-label">Amount filter</div>
+      <div class="ws-inline"><label>Min $<input type="number" value="${c.query.minAmt||''}" oninput="wsQueryNum('minAmt',this.value)"></label>
+      <label>Max $<input type="number" value="${c.query.maxAmt||''}" oninput="wsQueryNum('maxAmt',this.value)"></label></div>`;
+  } else {
+    const accts=allAccountNames(); const sel=(c.query.accounts||[]);
+    queryHtml=`<div class="ws-section-label">Include accounts <span class="ws-hint">(none = all)</span></div>
+      <div class="ws-chipwrap">${accts.map(a=>`<button class="ws-chip${sel.includes(a)?' active':''}" onclick="wsToggleQuery('accounts','${a.replace(/'/g,"\\'")}')">${a}</button>`).join('')}</div>`;
+  }
+  const topN=['top_categories','budget_doughnut','sankey'].includes(_ws.type)?`<div class="ws-section-label">Show top <b>${c.topN}</b> items</div><input type="range" min="2" max="12" value="${c.topN}" style="width:100%;accent-color:var(--green)" oninput="wsSet('topN',+this.value);gg('wsTopnLbl')&&(gg('wsTopnLbl').textContent=this.value)">`:'';
+  return `<div class="ws-section-label">Date range</div><div class="ws-chipwrap">${tfChips}</div>
+    <div class="ws-section-label">Data source</div>${srcHtml}
+    ${topN}
+    ${queryHtml}`;
+}
+function wsToggleQuery(kind,val){
+  const q=wsCfg().query=wsCfg().query||{categories:[],accounts:[]};
+  q[kind]=q[kind]||[];
+  const i=q[kind].indexOf(val);
+  if(i>=0) q[kind].splice(i,1); else q[kind].push(val);
+  wsRender();
+}
+function wsQueryNum(key,val){ const q=wsCfg().query=wsCfg().query||{}; q[key]=val===''?null:+val; wsRenderPreview(); }
+// ── Step: Display ──
+function wsDisplayStep(){
+  const c=widgetConfig(_ws.w);
+  const styles=[['auto','Auto'],['list','List'],['bar','Bars'],['doughnut','Doughnut']];
+  const isCat=['spending_month','top_categories','budget_doughnut'].includes(_ws.type);
+  const accents=['','#2ecc8a','#5b8def','#f0a540','#f05c5c','#a78bfa','#38bdf8','#f472b6'];
+  return `<div class="ws-section-label">Custom title <span class="ws-hint">(blank = default)</span></div>
+    <input type="text" class="ws-input" value="${(c.title||'').replace(/"/g,'&quot;')}" placeholder="${WIDGET_BY_ID[_ws.type].name}" oninput="wsSet('title',this.value)">
+    <div class="ws-section-label">Number format</div>
+    <div class="ws-seg">${[['k','$1.2K'],['full','$1,234'],['pct','%']].map(f=>`<button class="ws-segbtn${c.numFormat===f[0]?' active':''}" onclick="wsSet('numFormat','${f[0]}');wsRender()">${f[1]}</button>`).join('')}</div>
+    ${isCat?`<div class="ws-section-label">Chart style</div><div class="ws-seg">${styles.map(s=>`<button class="ws-segbtn${c.chartStyle===s[0]?' active':''}" onclick="wsSet('chartStyle','${s[0]}');wsRender()">${s[1]}</button>`).join('')}</div>`:''}
+    <div class="ws-section-label">Legend</div>
+    <div class="ws-seg">${[['bottom','Bottom'],['right','Right'],['none','Off']].map(p=>`<button class="ws-segbtn${(c.legend===false?'none':c.legendPos)===p[0]?' active':''}" onclick="wsSetLegend('${p[0]}');wsRender()">${p[1]}</button>`).join('')}</div>
+    <div class="ws-section-label">Accent color</div>
+    <div class="ws-swatches">${accents.map(a=>`<button class="ws-swatch${(c.accent||'')===a?' active':''}" style="background:${a||'transparent'};${a?'':'border:1px dashed var(--border2)'}" onclick="wsSet('accent','${a}');wsRender()" title="${a||'Default'}">${a?'':'A'}</button>`).join('')}</div>`;
+}
+function wsSetLegend(pos){ const c=wsCfg(); if(pos==='none'){ c.legend=false; } else { c.legend=true; c.legendPos=pos; } wsRenderPreview(); }
+// ── Step: Size & layout ──
+function wsLayoutStep(){
+  const c=widgetConfig(_ws.w);
+  return `<div class="ws-section-label">Width</div>
+    <div class="ww-size-grid">
+      <div class="ww-size-opt${_ws.w.span===1?' selected':''}" onclick="wsSetSpan(1)"><div class="ww-size-vis"><div class="ww-size-box half"></div></div><div class="ww-size-name">Half width</div></div>
+      <div class="ww-size-opt${_ws.w.span===2?' selected':''}" onclick="wsSetSpan(2)"><div class="ww-size-vis"><div class="ww-size-box full"></div></div><div class="ww-size-name">Full width</div></div>
+    </div>
+    <div class="ws-section-label">Height</div>
+    <div class="ws-seg">${[['auto','Auto'],['tall','Tall']].map(h=>`<button class="ws-segbtn${c.height===h[0]?' active':''}" onclick="wsSet('height','${h[0]}');wsRender()">${h[1]}</button>`).join('')}</div>
+    <div class="ws-section-label">Content alignment</div>
+    <div class="ws-seg">${[['left','Left'],['center','Center']].map(a=>`<button class="ws-segbtn${c.align===a[0]?' active':''}" onclick="wsSet('align','${a[0]}');wsRender()">${a[1]}</button>`).join('')}</div>`;
+}
+function wsSetSpan(s){ _ws.w.span=s; wsRender(); }
+// ── Step: Confirm ──
+function wsConfirmStep(){
+  const c=widgetConfig(_ws.w); const def=WIDGET_BY_ID[_ws.type];
+  const rows=[
+    ['Widget',def.name],['Title',c.title||'(default)'],['Date range',tfLabel(_ws.w.tf||'30d')],
+    ['Source',c.source],['Top N',['top_categories','budget_doughnut','sankey'].includes(_ws.type)?c.topN:'—'],
+    ['Categories',(c.query.categories&&c.query.categories.length)?c.query.categories.join(', '):'all'],
+    ['Accounts',(c.query.accounts&&c.query.accounts.length)?c.query.accounts.join(', '):'all'],
+    ['Number format',c.numFormat],['Chart style',c.chartStyle],['Legend',c.legend===false?'off':c.legendPos],
+    ['Accent',c.accent||'default'],['Width',_ws.w.span===2?'full':'half'],['Height',c.height],['Align',c.align],
+  ];
+  return `<div class="ws-section-label">Review your widget</div>
+    <div class="ws-summary">${rows.map(r=>`<div class="ws-sumrow"><span>${r[0]}</span><b>${esc(String(r[1]))}</b></div>`).join('')}</div>
+    <p class="ww-card-desc" style="margin-top:12px">Looks good? ${_ws.editUid?'Save your changes':'Add it to the page'} with the button below.</p>`;
+}
+function wsPrev(){ if(_ws.step>1){ _ws.step--; wsRender(); } }
+function wsNext(){
+  const steps=wsApplicableSteps();
+  if(_ws.step<steps.length){ _ws.step++; wsRender(); return; }
+  wsCommit();
+}
+function wsCommit(){
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(!pg){ closeStudio(); return; }
+  const typeName=WIDGET_BY_ID[_ws.type]?WIDGET_BY_ID[_ws.type].name:'Widget';
+  if(_ws.editUid){
+    const idx=pg.widgets.findIndex(x=>x.uid===_ws.editUid);
+    if(idx>=0) pg.widgets[idx]=_ws.w;
+    saveState(); renderCanvas(pg); closeStudio();
     if(sbRichie)sbRichie.do('nod');
+    richieSay(`Updated ${typeName}! Your changes are live.`);
     return;
   }
-  const def=WIDGET_BY_ID[_ww.widgetId];
-  if(!def||!widgetUnlocked(def)){ closeWidgetDrawer(); return; }
-  pg.widgets.push({uid:'w'+Date.now()+Math.floor(Math.random()*999),type:_ww.widgetId,span:_ww.span||def.span});
+  pg.widgets.push(_ws.w);
   saveState(); renderCanvas(pg);
   awardXp(3,'Widget added!');
-  closeWidgetDrawer();
+  closeStudio();
   if(sbRichie)sbRichie.do('bounce');
-  richieSay(`Added ${def.name}! Drag it by the handle to reorder, or tap the resize icon anytime.`);
+  richieSay(`Added ${typeName}! Tap the ✎ icon on any widget to customize it again.`);
 }
 function removeWidget(uid){
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(!pg) return;
@@ -2187,10 +2430,10 @@ function renderCanvas(pg){
     const tfRow=hasTf?`<div class="cwt-row">${TIMEFRAMES.map(t=>`<button class="cwt-chip${tfCur===t.key?' active':''}" onclick="event.stopPropagation();setWidgetTf('${w.uid}','${t.key}')">${t.label}</button>`).join('')}</div>`:'';
     return `<div class="canvas-widget-card${w.span===2?' span-2':''}${hasDetail?' has-detail':''}" draggable="true" data-uid="${w.uid}" data-idx="${idx}">
       <div class="canvas-widget-header">
-        <div class="cwh-left"><span class="cwh-drag" title="Drag to reorder">\u283F</span><span>${def.icon}</span><span class="cwh-title">${def.name}</span></div>
+        <div class="cwh-left"><span class="cwh-drag" title="Drag to reorder">\u283F</span><span>${def.icon}</span><span class="cwh-title">${(w.config&&w.config.title)||def.name}</span></div>
         <div class="cwh-actions">
           ${detailBtn}
-          <button class="cwh-btn" onclick="event.stopPropagation();toggleWidgetSpan('${w.uid}')" title="Resize">${w.span===2?'\u25E7':'\u25AD'}</button>
+          <button class="cwh-btn" onclick="event.stopPropagation();toggleWidgetSpan('${w.uid}')" title="Edit widget">\u270E</button>
           <button class="cwh-btn danger" onclick="event.stopPropagation();removeWidget('${w.uid}')" title="Remove">\u2715</button>
         </div>
       </div>
@@ -2568,9 +2811,23 @@ function renderWidgetBody(w){
     case 'spending_month': { const days=wDays(w); if(dataLoaded){ const sp=engSpend(days); return `<div class="wph"><div class="wph-stat">${fmtK(sp)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div></div>`; } return `<div class="wph"><div class="wph-stat">${fmtK(Math.round(3118*days/30))}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')} \u00b7 sample</div></div>`; }
     case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div></div>`; } return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')} \u00b7 sample</div></div>`; }
     case 'debt_summary': { if(dataLoaded){ const d=engTotalDebt(); return `<div class="wph"><div class="wph-stat" style="color:var(--red)">${fmtK(d)}</div><div class="wph-sub">across credit accounts</div></div>`; } return `<div class="wph"><div class="wph-stat" style="color:var(--red)">$12,430</div><div class="wph-sub">\u25BC sample data</div></div>`; }
-    case 'top_categories': { const days=wDays(w); if(dataLoaded){ const cats=engCategoryBreakdown(days).slice(0,4); if(cats.length) return `<div class="wph">${cats.map(c=>`<div class="wph-row"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c.color};margin-right:7px"></span>${c.label}</span><b>${fmtK(c.value)}</b></div>`).join('')}</div>`; } return `<div class="wph">${[['Dining','612','#f5a623'],['Groceries','498','#3dda91'],['Transport','284','#b09afa']].map(r=>`<div class="wph-row"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${r[2]};margin-right:7px"></span>${r[0]}</span><b>$${r[1]}</b></div>`).join('')}</div>`; }
+    case 'top_categories': case 'budget_doughnut': { const cfg=widgetConfig(w); const days=wDays(w);
+      let cats = dataLoaded ? engCategoryBreakdownQ(days, cfg.query) : [{label:'Dining Out',value:612,color:'#f5a623'},{label:'Food & Groceries',value:498,color:'#3dda91'},{label:'Auto Payments',value:284,color:'#b09afa'},{label:'Subscriptions',value:142,color:'#22d3ee'},{label:'Travel',value:96,color:'#818cf8'},{label:'Medical',value:60,color:'#34d399'}];
+      cats=cats.slice(0, cfg.topN||(w.type==='top_categories'?4:6));
+      const tot=cats.reduce((s,c)=>s+c.value,0);
+      const style = cfg.chartStyle==='auto' ? (w.type==='budget_doughnut'?'doughnut':'list') : cfg.chartStyle;
+      const legendHtml = (cfg.legend&&cfg.legendPos!=='none') ? `<div class="cwl-legend cwl-${cfg.legendPos}">${cats.map(c=>`<div class="cwl-item"><span class="cwl-dot" style="background:${cfg.accent||c.color}"></span><span class="cwl-label">${c.label}</span><span class="cwl-amt">${fmtCfg(c.value,cfg,tot)}</span></div>`).join('')}</div>` : '';
+      if(style==='doughnut'){
+        let acc=0; const stops=tot>0?cats.map(c=>{ const a=acc/tot*100; acc+=c.value; const b=acc/tot*100; return `${cfg.accent||c.color} ${a.toFixed(1)}% ${b.toFixed(1)}%`; }).join(','):'var(--surface3) 0 100%';
+        return `<div class="wph" style="text-align:${cfg.align}"><div style="width:90px;height:90px;border-radius:50%;margin:6px auto;background:conic-gradient(${stops})"></div>${legendHtml||`<div class="wph-sub">${cats.length} categories \u00b7 ${fmtCfg(tot,cfg)}</div>`}</div>`;
+      }
+      if(style==='bar'){
+        const mx=Math.max(...cats.map(c=>c.value),1);
+        return `<div class="wph">${cats.map(c=>`<div class="cwl-barrow"><div class="cwl-barlabel">${c.label}</div><div class="cwl-bartrack"><div class="cwl-barfill" style="width:${Math.round(c.value/mx*100)}%;background:${cfg.accent||c.color}"></div></div><div class="cwl-barval">${fmtCfg(c.value,cfg,tot)}</div></div>`).join('')}</div>`;
+      }
+      return `<div class="wph">${cats.map(c=>`<div class="wph-row"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${cfg.accent||c.color};margin-right:7px"></span>${c.label}</span><b>${fmtCfg(c.value,cfg,tot)}</b></div>`).join('')}</div>`;
+    }
     case 'bills_list': { const up=engUpcomingBills().slice(0,5); if(up.length) return `<div class="wph">${up.map(b=>`<div class="wph-row"><span>${b.name}</span><span><b>${fmtK(b.pay)}</b> <span style="color:var(--muted);font-size:11px">· ${b.due}${b.due%10===1&&b.due!==11?'st':b.due%10===2&&b.due!==12?'nd':b.due%10===3&&b.due!==13?'rd':'th'}</span></span></div>`).join('')}</div>`; return `<div class="wph"><div class="wph-sub">No bills yet.</div></div>`; }
-    case 'budget_doughnut': { const days=wDays(w); if(dataLoaded){ const cats=engCategoryBreakdown(days).slice(0,6); const tot=cats.reduce((s,c)=>s+c.value,0); if(tot>0){ let acc=0; const stops=cats.map(c=>{ const a=acc/tot*100; acc+=c.value; const b=acc/tot*100; return `${c.color} ${a.toFixed(1)}% ${b.toFixed(1)}%`; }).join(','); return `<div class="wph" style="text-align:center"><div style="width:90px;height:90px;border-radius:50%;margin:6px auto;background:conic-gradient(${stops})"></div><div class="wph-sub">${cats.length} categories \u00b7 ${fmtK(tot)}</div></div>`; } } return `<div class="wph" style="text-align:center"><div style="width:90px;height:90px;border-radius:50%;margin:6px auto;background:conic-gradient(var(--green) 0 38%,var(--blue) 38% 62%,var(--amber) 62% 82%,var(--purple) 82% 100%)"></div><div class="wph-sub">4 categories \u00b7 sample</div></div>`; }
     case 'cashflow_chart': { const tf=w.tf||'30d'; const mb={'1w':1,'30d':3,'3m':3,'1y':12}[tf]||3; return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Income vs spending${dataLoaded?' · last '+mb+' mo':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`; }
     case 'sankey': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Money flow${dataLoaded?' · last '+tfLabel(w.tf||'30d'):' · from your bills'}</div><div style="position:relative"><canvas id="cv_${w.uid}"></canvas></div></div>`;
     case 'net_worth_chart': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Net worth trend${dataLoaded?'':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
