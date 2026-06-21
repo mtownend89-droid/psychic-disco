@@ -814,6 +814,72 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .fc-stat-val{font-size:20px;font-weight:700;color:var(--text);}
 .fc-stat-lbl{font-size:11px;color:var(--muted);}
 .fc-note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:2px;}
+/* ── Profit & Loss widget ── */
+.pl-wrap{padding:2px;}
+.pl-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+.pl-grp-label{font-size:11px;color:var(--muted);font-weight:600;}
+.pl-toggle{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.pl-gbtn{font-size:11.5px;padding:5px 11px;background:var(--surface2);color:var(--muted);border:none;border-right:1px solid var(--border);cursor:pointer;}
+.pl-gbtn:last-child{border-right:none;}
+.pl-gbtn.active{background:var(--green-dim);color:var(--green);}
+.pl-netbadge{margin-left:auto;font-size:12.5px;font-weight:700;}
+.pl-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;}
+@media(max-width:560px){.pl-strip{grid-template-columns:repeat(2,1fr);}}
+.pl-stat{background:var(--surface2);border-radius:10px;padding:10px 8px;text-align:center;}
+.pl-stat-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+.pl-stat-v{font-size:16px;font-weight:800;margin-top:3px;}
+.pl-bars{display:flex;align-items:flex-end;gap:4px;height:64px;padding:8px 0;border-bottom:1px solid var(--border);overflow-x:auto;}
+.pl-bar-col{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;min-width:24px;justify-content:flex-end;height:100%;}
+.pl-bar{width:70%;min-height:2px;border-radius:3px 3px 0 0;}
+.pl-bar.pos{background:var(--green);}
+.pl-bar.neg{background:var(--red);}
+.pl-bar-x{font-size:8.5px;color:var(--muted);white-space:nowrap;}
+.pl-extra{margin-top:10px;}
+.pl-xrow{display:flex;justify-content:space-between;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--border);}
+.pl-xrow:last-child{border-bottom:none;}
+/* ── All Accounts widget ── */
+.acct-wrap{padding:2px;}
+.acct-summary{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin-bottom:10px;}
+.acct-net{font-weight:700;}
+.acct-typetotals{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+.acct-tt{background:var(--surface2);border-radius:9px;padding:8px;text-align:center;font-size:11px;}
+.acct-tt span{display:block;color:var(--muted);margin-bottom:3px;}
+.acct-tt b{font-size:13px;}
+.acct-chip{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:11px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;margin-bottom:7px;transition:border-color .12s;}
+.acct-chip:hover{border-color:var(--border2);}
+.acct-chip.open{border-color:var(--green);border-bottom-left-radius:0;border-bottom-right-radius:0;margin-bottom:0;}
+.acct-ic{font-size:20px;flex-shrink:0;}
+.acct-meta{flex:1;min-width:0;}
+.acct-nm{font-size:13.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.acct-sub{font-size:11px;color:var(--muted);}
+.acct-bal{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;}
+.acct-arr{font-size:9px;color:var(--muted);}
+.acct-txns{background:var(--surface);border:1px solid var(--green);border-top:none;border-radius:0 0 11px 11px;padding:10px 12px;margin-bottom:7px;}
+.acct-txn-head{font-size:11.5px;color:var(--muted);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.acct-txn-row{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);}
+.acct-txn-row:last-child{border-bottom:none;}
+.acct-txn-nm{font-size:12.5px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.acct-txn-cat{font-size:10.5px;color:var(--muted);}
+.acct-txn-amt{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;}
+.acct-txn-dt{font-size:10px;color:var(--muted);}
+.acct-empty{font-size:12px;color:var(--muted);padding:8px 0;text-align:center;}
+/* ── Bills manager ── */
+.bills-mgr{padding:2px;}
+.bill-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);}
+.bill-row:last-of-type{border-bottom:none;}
+.bill-row.paid .bill-nm{text-decoration:line-through;opacity:.5;}
+.bill-row.paid .bill-sub{opacity:.5;}
+.bill-check{width:24px;height:24px;border-radius:7px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--green);font-size:13px;font-weight:800;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .12s;}
+.bill-row.paid .bill-check{background:var(--green-dim);border-color:var(--green);}
+.bill-info{flex:1;min-width:0;}
+.bill-nm{font-size:13.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.bill-sub{font-size:11px;color:var(--muted);}
+.bill-pay{display:flex;align-items:center;gap:2px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0 8px;}
+.bill-pay span{color:var(--muted);font-size:12px;}
+.bill-pay input{width:62px;height:30px;background:none;border:none;color:var(--green);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;text-align:right;}
+.bill-pay-static{font-size:14px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;}
+.bills-foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1.5px solid var(--border2);font-size:12px;color:var(--muted);}
+.bills-foot b{color:var(--text);font-size:14px;}
 /* ── Playground: Fire Drill + Debt Planner ── */
 .fd-wrap{padding:2px;}
 .fd-scen-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-bottom:12px;}
@@ -1713,6 +1779,87 @@ async function loadEngineData(){
 /* ── Metric computations (ported formulas) ── */
 function engNetBalance(){ return allAccts.reduce((s,a)=>a.type==='credit'?s-((a.balances&&a.balances.current)??0):s+((a.balances&&a.balances.current)??0),0); }
 function engRecent(days){ const cut=new Date(Date.now()-days*86400000); return allTxns.filter(t=>new Date(t.date)>=cut); }
+
+/* ── P&L engine: group income vs spending by day/week/month with full stats ── */
+function engPLBuckets(days, group){
+  const rec=engRecent(days);
+  const buckets={};
+  rec.forEach(t=>{
+    const d=new Date(t.date+'T12:00:00'); let key;
+    if(group==='monthly') key=d.toLocaleDateString('en-US',{month:'short',year:'2-digit'});
+    else if(group==='weekly'){ const wk=new Date(d); wk.setDate(d.getDate()-d.getDay()); key=wk.toISOString().slice(5,10); }
+    else key=d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    if(!buckets[key]) buckets[key]={key,inc:0,spend:0,n:0,order:d.getTime()};
+    if(t.amount<0) buckets[key].inc+=Math.abs(t.amount); else buckets[key].spend+=t.amount;
+    buckets[key].n++;
+  });
+  return Object.values(buckets).sort((a,b)=>a.order-b.order);
+}
+function engPLStats(days, group){
+  const b=engPLBuckets(days, group);
+  const totalInc=b.reduce((s,x)=>s+x.inc,0);
+  const totalSpend=b.reduce((s,x)=>s+x.spend,0);
+  const net=totalInc-totalSpend;
+  const sr=totalInc>0?Math.round(net/totalInc*100):0;
+  const nets=b.map(x=>x.inc-x.spend);
+  const best=b.length?b[nets.indexOf(Math.max(...nets))]:null;
+  const worst=b.length?b[nets.indexOf(Math.min(...nets))]:null;
+  const txnCount=b.reduce((s,x)=>s+x.n,0);
+  const avgNet=b.length?Math.round(net/b.length):0;
+  return {buckets:b,totalInc,totalSpend,net,sr,best,worst,txnCount,avgNet,periods:b.length};
+}
+// Sample P&L when no live data
+function engPLSample(group){
+  const labels=group==='monthly'?['Mar','Apr','May','Jun']:group==='weekly'?['05-01','05-08','05-15','05-22']:['Jun 1','Jun 8','Jun 15','Jun 21'];
+  const data=[[5400,3100],[5200,3600],[5800,2900],[5400,3118]];
+  return labels.map((l,i)=>({key:l,inc:data[i][0],spend:data[i][1],n:12+i,order:i}));
+}
+
+/* ── Accounts engine: list with type icons + per-account 30d net ── */
+function _acctIcon(a){ if(a.type==='credit')return '💳'; if(a.subtype==='savings')return '🏦'; if(a.subtype==='checking')return '🏧'; if(a.type==='investment')return '📈'; return '💰'; }
+function engAccounts(){
+  if(!dataLoaded||!allAccts.length){
+    return [
+      {name:'Chase Checking',type:'depository',subtype:'checking',bal:5240,institution:'Chase',id:'s1'},
+      {name:'Ally Savings',type:'depository',subtype:'savings',bal:8030,institution:'Ally',id:'s2'},
+      {name:'Fidelity 401k',type:'investment',subtype:'401k',bal:142800,institution:'Fidelity',id:'s3'},
+      {name:'Sapphire Card',type:'credit',subtype:'credit card',bal:-2400,institution:'Chase',id:'s4'},
+    ];
+  }
+  return allAccts.map((a,i)=>({
+    name:(a.name||a.official_name||a.type), type:a.type, subtype:a.subtype,
+    bal:(a.type==='credit'?-(Math.abs(a.balances.current||0)):(a.balances.current??a.balances.available??0)),
+    institution:a.institution||'', id:a.account_id||('a'+i), _acct:a
+  }));
+}
+function engAcctNet30(acct){
+  if(!dataLoaded||!acct._acct) return null;
+  const cut=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+  const txns=allTxns.filter(t=>t.account_id===acct.id&&t.date>=cut);
+  const net=txns.reduce((s,t)=>s+(t.amount>0?-t.amount:Math.abs(t.amount)),0);
+  return {net, count:txns.length, txns:txns.slice(0,25)};
+}
+function engAcctTypeTotals(){
+  const accts=engAccounts(); const t={cash:0,investment:0,credit:0};
+  accts.forEach(a=>{ if(a.type==='credit')t.credit+=Math.abs(a.bal); else if(a.type==='investment')t.investment+=a.bal; else t.cash+=a.bal; });
+  return t;
+}
+
+/* ── Bill management: mark paid / set custom payment (persists to APP) ── */
+function _billOverrides(){ APP.billOverrides=APP.billOverrides||{}; return APP.billOverrides; }
+function billKey(b){ return (b.name||'')+'|'+(b.cat||''); }
+function applyBillOverrides(list){
+  const ov=_billOverrides();
+  return list.map(b=>{ const o=ov[billKey(b)]; if(o){ return {...b, paid:o.paid!==undefined?o.paid:b.paid, pay:o.pay!==undefined?o.pay:b.pay}; } return b; });
+}
+function toggleBillPaid(key){
+  const ov=_billOverrides(); ov[key]=ov[key]||{}; ov[key].paid=!ov[key].paid; saveState();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+}
+function setBillPay(key,val){
+  const ov=_billOverrides(); ov[key]=ov[key]||{}; const n=parseFloat(val); if(!isNaN(n)&&n>=0) ov[key].pay=n; saveState();
+}
+function setBillPayCommit(){ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function engSpend30(){ return engRecent(30).filter(t=>t.amount>0).reduce((s,t)=>s+t.amount,0); }
 function engIncome30(){ return engRecent(30).filter(t=>t.amount<0).reduce((s,t)=>s+Math.abs(t.amount),0); }
 // Generalized windowed spend/income (any day count)
@@ -1814,7 +1961,7 @@ function engMonthlyIncome(){ return incomeSources.reduce((s,i)=>s+i.amt*(FREQ_TO
 function plaidHasLiab(){ return !!(plaidLiabilities && ((plaidLiabilities.credit_cards||[]).length || (plaidLiabilities.mortgages||[]).length)); }
 function _dueDay(dateStr){ if(!dateStr) return 1; const d=new Date(dateStr); return isNaN(d)?1:d.getDate(); }
 function engBills(){
-  if(!plaidHasLiab()) return bills;
+  if(!plaidHasLiab()) return applyBillOverrides(bills);
   const out=[];
   (plaidLiabilities.credit_cards||[]).forEach(c=>{
     out.push({ name:c.name||'Credit Card', note:c.institution||'', cat:'CC',
@@ -1828,7 +1975,7 @@ function engBills(){
       min:(m.minimum_payment||0), pay:(m.minimum_payment||0),
       due:_dueDay(m.next_payment_due_date), promo:'', paid:false, source:'plaid' });
   });
-  return out;
+  return applyBillOverrides(out);
 }
 function engMonthlyBills(){ return engBills().reduce((s,b)=>s+(b.pay||0),0); }
 function engBillsDebt(){ return engBills().reduce((s,b)=>s+Math.abs(b.bal||0),0); }
@@ -2156,6 +2303,8 @@ const WIDGET_CATALOG=[
   {id:'bills_list',name:'Upcoming Bills',icon:'📋',cat:'Budget',span:1,minLevel:1,desc:"What's due and when."},
   {id:'zero_budget',name:'Zero-Based Budget',icon:'🧮',cat:'Budget',span:2,minLevel:2,desc:'Give every dollar a job.'},
   {id:'cashflow_chart',name:'Cash Flow',icon:'🌊',cat:'Cash Flow',span:2,minLevel:1,desc:'Income vs. spending over time.'},
+  {id:'pl_panel',name:'Profit & Loss',icon:'📊',cat:'Cash Flow',span:2,minLevel:1,desc:'Income, spending, net & savings rate by day/week/month.'},
+  {id:'accounts_list',name:'All Accounts',icon:'🏦',cat:'Overview',span:2,minLevel:1,desc:'Every account with balances — tap to see transactions.'},
   {id:'sankey',name:'Money Flow (Sankey)',icon:'🔀',cat:'Cash Flow',span:2,minLevel:2,desc:'Visualize income flowing to spending.'},
   {id:'top_categories',name:'Top Categories',icon:'📊',cat:'Cash Flow',span:1,minLevel:1,desc:'Where your money goes most.'},
   {id:'net_worth_chart',name:'Net Worth Trend',icon:'📈',cat:'Wealth',span:2,minLevel:2,desc:'Net worth over months.'},
@@ -2458,6 +2607,8 @@ function mountWidgetCharts(pg){
     try{
       if(w.type==='fire_drill'){ fdSetScenario(_fd.scenario||'job'); }
       if(w.type==='debt_planner'){ dpRecalc(); dpRenderOrder(); }
+      if(w.type==='pl_panel'){ plMount(w); }
+      if(w.type==='accounts_list'){ acctMount(w); }
     }catch(e){ /* ignore */ }
   });
   if(typeof Chart==='undefined') return;
@@ -2642,6 +2793,107 @@ function fdSetScenario(id){
   document.querySelectorAll('.fd-scen').forEach(el=>{ el.classList.toggle('active', el.getAttribute('onclick')&&el.getAttribute('onclick').includes("'"+id+"'")); });
   fdRefresh();
 }
+
+/* ═══ PROFIT & LOSS WIDGET ═══ */
+let _plGroup={};  // per-widget grouping (daily/weekly/monthly)
+function plWidgetBody(w){
+  const group=_plGroup[w.uid]||'daily';
+  const days=wDays(w);
+  return `<div class="pl-wrap">
+    <div class="pl-toolbar">
+      <span class="pl-grp-label">Group by</span>
+      <div class="pl-toggle">
+        ${['daily','weekly','monthly'].map(g=>`<button class="pl-gbtn${group===g?' active':''}" onclick="setPLGroup('${w.uid}','${g}')">${g[0].toUpperCase()+g.slice(1)}</button>`).join('')}
+      </div>
+      <span class="pl-netbadge" id="plnet_${w.uid}"></span>
+    </div>
+    <div class="pl-strip" id="plstrip_${w.uid}"></div>
+    <div class="pl-detail" id="pldet_${w.uid}"></div>
+  </div>`;
+}
+function setPLGroup(uid,g){ _plGroup[uid]=g; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+function plMount(w){
+  const group=_plGroup[w.uid]||'daily';
+  const days=wDays(w);
+  const s=dataLoaded?engPLStats(days,group):(function(){ const b=engPLSample(group); const ti=b.reduce((x,y)=>x+y.inc,0),ts=b.reduce((x,y)=>x+y.spend,0); const nets=b.map(x=>x.inc-x.spend); return {buckets:b,totalInc:ti,totalSpend:ts,net:ti-ts,sr:ti>0?Math.round((ti-ts)/ti*100):0,best:b[nets.indexOf(Math.max(...nets))],worst:b[nets.indexOf(Math.min(...nets))],txnCount:b.reduce((x,y)=>x+y.n,0),avgNet:Math.round((ti-ts)/b.length),periods:b.length}; })();
+  const badge=gg('plnet_'+w.uid);
+  if(badge){ badge.textContent='Net '+(s.net>=0?'+':'-')+fmtK(Math.abs(s.net)); badge.style.color=s.net>=0?'var(--green)':'var(--red)'; }
+  const strip=gg('plstrip_'+w.uid);
+  if(strip){
+    const stats=[
+      {l:'Income',v:fmtK(s.totalInc),c:'var(--green)'},
+      {l:'Spending',v:fmtK(s.totalSpend),c:'var(--red)'},
+      {l:'Net',v:(s.net>=0?'+':'-')+fmtK(Math.abs(s.net)),c:s.net>=0?'var(--green)':'var(--red)'},
+      {l:'Savings Rate',v:s.sr+'%',c:'var(--blue)'},
+    ];
+    strip.innerHTML=stats.map(x=>`<div class="pl-stat"><div class="pl-stat-l">${x.l}</div><div class="pl-stat-v" style="color:${x.c}">${x.v}</div></div>`).join('');
+  }
+  const det=gg('pldet_'+w.uid);
+  if(det){
+    // mini bar chart of net per period + detail rows
+    const b=s.buckets, mx=Math.max(...b.map(x=>Math.abs(x.inc-x.spend)),1);
+    const bars=b.map(x=>{ const n=x.inc-x.spend; const h=Math.round(Math.abs(n)/mx*46); return `<div class="pl-bar-col" title="${x.key}: ${n>=0?'+':'-'}${fmtK(Math.abs(n))}"><div class="pl-bar ${n>=0?'pos':'neg'}" style="height:${h}px"></div><div class="pl-bar-x">${x.key}</div></div>`; }).join('');
+    det.innerHTML=`<div class="pl-bars">${bars}</div>
+      <div class="pl-extra">
+        <div class="pl-xrow"><span>Avg net / period</span><b style="color:${s.avgNet>=0?'var(--green)':'var(--red)'}">${s.avgNet>=0?'+':'-'}${fmtK(Math.abs(s.avgNet))}</b></div>
+        <div class="pl-xrow"><span>Best period</span><b style="color:var(--green)">${s.best?s.best.key+' · +'+fmtK(s.best.inc-s.best.spend):'—'}</b></div>
+        <div class="pl-xrow"><span>Worst period</span><b style="color:var(--red)">${s.worst?s.worst.key+' · '+(s.worst.inc-s.worst.spend>=0?'+':'-')+fmtK(Math.abs(s.worst.inc-s.worst.spend)):'—'}</b></div>
+        <div class="pl-xrow"><span>Transactions</span><b>${s.txnCount} over ${s.periods} period${s.periods!==1?'s':''}</b></div>
+      </div>`;
+  }
+}
+
+/* ═══ ALL ACCOUNTS WIDGET ═══ */
+let _acctOpen={};  // per-widget expanded account id
+function acctWidgetBody(w){
+  const accts=engAccounts();
+  const tot=accts.reduce((s,a)=>s+a.bal,0);
+  const tt=engAcctTypeTotals();
+  const rows=accts.map((a,i)=>{
+    const col=a.bal<0?'var(--red)':'var(--green)';
+    const balStr=(a.bal<0?'-':'+')+fmtK(Math.abs(a.bal));
+    const open=_acctOpen[w.uid]===a.id;
+    return `<div class="acct-chip${open?' open':''}" onclick="toggleAcct('${w.uid}','${a.id}')">
+        <span class="acct-ic">${_acctIcon(a)}</span>
+        <div class="acct-meta"><div class="acct-nm">${esc(a.name)}</div><div class="acct-sub">${esc(a.institution||a.subtype||a.type)}</div></div>
+        <div class="acct-bal" style="color:${col}">${balStr}</div>
+        <span class="acct-arr">${open?'▲':'▼'}</span>
+      </div>${open?`<div class="acct-txns" id="acdt_${w.uid}"></div>`:''}`;
+  }).join('');
+  return `<div class="acct-wrap">
+    <div class="acct-summary">
+      <span>${accts.length} account${accts.length!==1?'s':''}</span>
+      <span class="acct-net" style="color:${tot>=0?'var(--green)':'var(--red)'}">${tot>=0?'+':'-'}${fmtK(Math.abs(tot))} net</span>
+    </div>
+    <div class="acct-typetotals">
+      <div class="acct-tt"><span>💵 Cash</span><b>${fmtK(tt.cash)}</b></div>
+      <div class="acct-tt"><span>📈 Invest</span><b>${fmtK(tt.investment)}</b></div>
+      <div class="acct-tt"><span>💳 Debt</span><b style="color:var(--red)">${fmtK(tt.credit)}</b></div>
+    </div>
+    ${rows}
+  </div>`;
+}
+function toggleAcct(uid,id){
+  _acctOpen[uid]=(_acctOpen[uid]===id)?null:id;
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+}
+function acctMount(w){
+  const id=_acctOpen[w.uid]; if(!id) return;
+  const el=gg('acdt_'+w.uid); if(!el) return;
+  const acct=engAccounts().find(a=>a.id===id); if(!acct){ el.innerHTML=''; return; }
+  const info=engAcctNet30(acct);
+  if(!info){ el.innerHTML='<div class="acct-empty">Connect your bank to see transactions for this account.</div>'; return; }
+  const net=info.net;
+  let html=`<div class="acct-txn-head">${info.count} txns · last 30d · net <b style="color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'+':'-'}${fmt2(Math.abs(net))}</b></div>`;
+  if(!info.txns.length){ html+='<div class="acct-empty">No transactions in last 30 days.</div>'; }
+  else{
+    html+=info.txns.map(t=>{ const pos=t.amount>0; const col=pos?'var(--red)':'var(--green)'; const amt=(pos?'-':'+')+fmt2(Math.abs(t.amount)); const cat=getTxnCategory(t); const name=t.merchant_name||t.name||''; const dt=new Date(t.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      return `<div class="acct-txn-row"><div style="flex:1;overflow:hidden"><div class="acct-txn-nm">${esc(name)}</div><div class="acct-txn-cat">${esc(cat)}</div></div><div style="text-align:right;flex-shrink:0"><div class="acct-txn-amt" style="color:${col}">${amt}</div><div class="acct-txn-dt">${dt}</div></div></div>`;
+    }).join('');
+  }
+  el.innerHTML=html;
+}
+
 function fdWidgetBody(w){
   if(!_fd.scenario) _fd.scenario='job';
   const cards=Object.entries(FD_SCENARIOS).map(([id,sc])=>`<div class="fd-scen${_fd.scenario===id?' active':''}" onclick="fdSetScenario('${id}')">
@@ -2827,8 +3079,20 @@ function renderWidgetBody(w){
       }
       return `<div class="wph">${cats.map(c=>`<div class="wph-row"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${cfg.accent||c.color};margin-right:7px"></span>${c.label}</span><b>${fmtCfg(c.value,cfg,tot)}</b></div>`).join('')}</div>`;
     }
-    case 'bills_list': { const up=engUpcomingBills().slice(0,5); if(up.length) return `<div class="wph">${up.map(b=>`<div class="wph-row"><span>${b.name}</span><span><b>${fmtK(b.pay)}</b> <span style="color:var(--muted);font-size:11px">· ${b.due}${b.due%10===1&&b.due!==11?'st':b.due%10===2&&b.due!==12?'nd':b.due%10===3&&b.due!==13?'rd':'th'}</span></span></div>`).join('')}</div>`; return `<div class="wph"><div class="wph-sub">No bills yet.</div></div>`; }
+    case 'bills_list': { const up=engUpcomingBills(); if(!up.length) return `<div class="wph"><div class="wph-sub">No bills yet.</div></div>`;
+      const ord=(d)=>d+(d%10===1&&d!==11?'st':d%10===2&&d!==12?'nd':d%10===3&&d!==13?'rd':'th');
+      const editable=!plaidHasLiab();
+      return `<div class="bills-mgr">${up.map(b=>{ const key=billKey(b); const paid=b.paid;
+        return `<div class="bill-row${paid?' paid':''}">
+          <button class="bill-check" onclick="event.stopPropagation();toggleBillPaid('${key.replace(/'/g,"\\'")}')" title="${paid?'Mark unpaid':'Mark paid'}">${paid?'✓':''}</button>
+          <div class="bill-info"><div class="bill-nm">${esc(b.name)}</div><div class="bill-sub">due ${ord(b.due)}${b.apr?` · ${b.apr.toFixed(1)}%`:''}${b.promo?` · ${esc(b.promo)}`:''}</div></div>
+          ${editable?`<div class="bill-pay"><span>$</span><input type="number" value="${Math.round(b.pay)}" min="0" step="10" onclick="event.stopPropagation()" oninput="setBillPay('${key.replace(/'/g,"\\'")}',this.value)" onblur="setBillPayCommit()"></div>`:`<div class="bill-pay-static">${fmtK(b.pay)}</div>`}
+        </div>`; }).join('')}
+        <div class="bills-foot"><span>${up.filter(b=>!b.paid).length} unpaid · ${up.filter(b=>b.paid).length} paid</span><b>${fmtK(up.filter(b=>!b.paid).reduce((s,b)=>s+b.pay,0))} remaining</b></div>
+      </div>`; }
     case 'cashflow_chart': { const tf=w.tf||'30d'; const mb={'1w':1,'30d':3,'3m':3,'1y':12}[tf]||3; return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Income vs spending${dataLoaded?' · last '+mb+' mo':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`; }
+    case 'pl_panel': return plWidgetBody(w);
+    case 'accounts_list': return acctWidgetBody(w);
     case 'sankey': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Money flow${dataLoaded?' · last '+tfLabel(w.tf||'30d'):' · from your bills'}</div><div style="position:relative"><canvas id="cv_${w.uid}"></canvas></div></div>`;
     case 'net_worth_chart': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Net worth trend${dataLoaded?'':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
     case 'fire_progress': { const target=engMonthlyBills()*12*25; const cur=dataLoaded?Math.max(engNWAssets(),engNetBalance()):engNWAssets(); const pct=target>0?Math.min(100,Math.round(cur/target*100)):0; return `<div class="wph"><div class="wph-stat">${pct}%</div><div class="wph-sub">to FI (${fmtM(target)} target)</div><div class="xp-bar" style="margin-top:8px"><div class="xp-fill" style="width:${pct}%"></div></div></div>`; }
