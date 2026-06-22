@@ -824,6 +824,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .cfp-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:4px 0 9px;}
 .cfp-events{display:flex;flex-direction:column;gap:5px;max-height:280px;overflow-y:auto;}
 .cfp-ev{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;background:var(--surface2);}
+.cfp-ev-header{display:flex;align-items:center;gap:10px;padding:4px 10px;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--hint);font-weight:700;}
+.cfp-ev-amt-h{margin-left:auto;}
+.cfp-ev-run-h,.cfp-ev-run{width:74px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums;}
+.cfp-ev-run{font-weight:700;font-size:13px;border-left:1px solid var(--border);padding-left:10px;}
+.cfp-ev-start{display:flex;align-items:center;gap:10px;padding:6px 10px;font-size:12px;color:var(--muted);border-bottom:1px dashed var(--border);margin-bottom:2px;}
+.cfp-ev-start .cfp-ev-nm{flex:1;}
 .cfp-ev.income{border-left:3px solid var(--green);}
 .cfp-ev.bill{border-left:3px solid var(--red);}
 .cfp-ev-when{font-size:10.5px;color:var(--muted);width:48px;flex-shrink:0;}
@@ -904,6 +910,28 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .bill-min b{color:var(--text);font-weight:600;}
 .bills-foot-amts{display:flex;align-items:center;gap:10px;}
 .bills-foot-min{font-size:11px;color:var(--muted);}
+.bills-tf{display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;width:fit-content;margin-bottom:12px;}
+.bills-tf-btn{font-size:11.5px;padding:6px 13px;background:var(--surface2);color:var(--muted);border:none;border-right:1px solid var(--border);cursor:pointer;font-family:var(--font);}
+.bills-tf-btn:last-child{border-right:none;}
+.bills-tf-btn.active{background:var(--green-dim);color:var(--green);}
+/* ── Zero-Based Budget ── */
+.zb-wrap{padding:2px;}
+.zb-head{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px;}
+.zb-hstat{background:var(--surface2);border-radius:9px;padding:9px 11px;display:flex;flex-direction:column;gap:2px;}
+.zb-hstat span{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;}
+.zb-hstat b{font-size:15px;}
+.zb-tobudget{grid-column:1/-1;flex-direction:row;align-items:center;justify-content:space-between;border:1px solid var(--border2);}
+.zb-bar{height:6px;background:var(--surface3);border-radius:4px;overflow:hidden;margin-bottom:14px;}
+.zb-bar-fill{height:100%;border-radius:4px;transition:width .2s,background .2s;}
+.zb-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:4px 0 10px;}
+.zb-buckets{display:flex;flex-direction:column;gap:13px;}
+.zb-bucket{}
+.zb-bk-top{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px;}
+.zb-bk-nm{color:var(--text);}
+.zb-bk-amt{color:var(--green);font-weight:700;font-variant-numeric:tabular-nums;}
+.zb-slider{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:4px;background:var(--surface3);outline:none;cursor:pointer;}
+.zb-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:var(--green);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.3);}
+.zb-slider::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--green);cursor:pointer;border:none;}
 /* ── Manual editor form + add buttons ── */
 .manual-add-btn{width:100%;margin-top:10px;padding:9px;border-radius:9px;background:var(--surface2);border:1px dashed var(--border2);color:var(--muted);font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .13s;}
 .manual-add-btn:hover{border-color:var(--green);color:var(--green);background:var(--green-dim);}
@@ -2438,14 +2466,14 @@ function renderShell(){
 function renderNav(){
   const nav=gg('sbNav');
   nav.innerHTML=APP.pages.map(pg=>`
-    <button class="page-nav-btn${pg.id===APP.activePage?' active':''}" style="--page-color:${pg.color}" onclick="switchPage('${pg.id}')">
+    <div class="page-nav-btn${pg.id===APP.activePage?' active':''}" style="--page-color:${pg.color}" onclick="switchPage('${pg.id}')" role="button" tabindex="0">
       <span class="pnb-icon" style="${pg.id===APP.activePage?'background:'+pg.color:''}">${pg.icon}</span>
       <span class="pnb-label">${pg.name}</span>
       <span class="pnb-actions">
-        <button class="pnb-act" onclick="event.stopPropagation();openPageEditor('${pg.id}')" title="Edit">✎</button>
-        <button class="pnb-act" onclick="event.stopPropagation();deletePage('${pg.id}')" title="Delete">🗑</button>
+        <span class="pnb-act" onclick="event.stopPropagation();openPageEditor('${pg.id}')" title="Edit" role="button">✎</span>
+        <span class="pnb-act" onclick="event.stopPropagation();deletePage('${pg.id}')" title="Delete" role="button">🗑</span>
       </span>
-    </button>`).join('') || '<div style="padding:14px;color:var(--hint);font-size:12px;text-align:center">No pages yet. Tap + to add one.</div>';
+    </div>`).join('') || '<div style="padding:14px;color:var(--hint);font-size:12px;text-align:center">No pages yet. Tap + to add one.</div>';
 }
 
 function closeSidebarMobile(){ if(window.innerWidth<=900){ gg('sidebar').classList.remove('open'); const sc=gg('sidebarScrim'); if(sc) sc.classList.remove('open'); } }
@@ -2972,6 +3000,109 @@ function fdSetScenario(id){
   fdRefresh();
 }
 
+/* ═══ ZERO-BASED BUDGET WIDGET (interactive sliders) ═══ */
+function _zbBuckets(){
+  // persist user-adjusted buckets in APP; seed from defaults once
+  if(!APP.zeroBuckets){ APP.zeroBuckets=zeroBuckets.map(b=>({...b})); }
+  return APP.zeroBuckets;
+}
+function zbWidgetBody(w){
+  const income=engMonthlyIncome();
+  const bills=engMonthlyBills();
+  const buckets=_zbBuckets();
+  const assigned=buckets.reduce((s,z)=>s+z.amt,0)+bills;
+  const left=income-assigned;
+  const afterBills=Math.max(0, income-bills);
+  const leftColor=Math.abs(left)<1?'var(--green)':left>0?'var(--amber)':'var(--red)';
+  return `<div class="zb-wrap">
+    <div class="zb-head">
+      <div class="zb-hstat"><span>Monthly income</span><b>${fmtK(income)}</b></div>
+      <div class="zb-hstat"><span>Bills (fixed)</span><b style="color:var(--red)">${fmtK(bills)}</b></div>
+      <div class="zb-hstat"><span>Assigned to envelopes</span><b>${fmtK(buckets.reduce((s,z)=>s+z.amt,0))}</b></div>
+      <div class="zb-hstat zb-tobudget"><span>To budget</span><b style="color:${leftColor}">${left>=0?'':'-'}${fmtK(Math.abs(left))} ${Math.abs(left)<1?'✓ balanced':left>0?'left':'over'}</b></div>
+    </div>
+    <div class="zb-bar"><div class="zb-bar-fill" style="width:${Math.min(100,Math.round(assigned/Math.max(income,1)*100))}%;background:${left<0?'var(--red)':'var(--green)'}"></div></div>
+    <div class="zb-section-label">Adjust your envelopes <span class="ws-hint" style="margin:0">drag a slider — "to budget" updates live</span></div>
+    <div class="zb-buckets">
+      ${buckets.map((b,i)=>`<div class="zb-bucket">
+        <div class="zb-bk-top"><span class="zb-bk-nm">${esc(b.name)}</span><span class="zb-bk-amt">${fmtK(b.amt)}</span></div>
+        <input type="range" class="zb-slider" min="0" max="${Math.max(1500, Math.ceil(afterBills/100)*100)}" step="10" value="${b.amt}" oninput="zbSet(${i},this.value,'${w.uid}')" onchange="zbCommit('${w.uid}')">
+      </div>`).join('')}
+    </div>
+    <button class="manual-add-btn" onclick="event.stopPropagation();zbAddBucket('${w.uid}')">\u2795 Add an envelope</button>
+  </div>`;
+}
+function zbSet(i,val,uid){
+  const b=_zbBuckets(); b[i].amt=parseInt(val)||0;
+  // live-update the labels without full re-render (keeps slider grab smooth)
+  const income=engMonthlyIncome(), bills=engMonthlyBills();
+  const assigned=b.reduce((s,z)=>s+z.amt,0)+bills; const left=income-assigned;
+  const card=document.querySelector(`[data-uid="${uid}"]`)||document;
+  const amtEls=card.querySelectorAll('.zb-bk-amt');
+  if(amtEls[i]) amtEls[i].textContent=fmtK(b[i].amt);
+  const tb=card.querySelector('.zb-tobudget b');
+  if(tb){ tb.textContent=(left>=0?'':'-')+fmtK(Math.abs(left))+' '+(Math.abs(left)<1?'✓ balanced':left>0?'left':'over'); tb.style.color=Math.abs(left)<1?'var(--green)':left>0?'var(--amber)':'var(--red)'; }
+  const bar=card.querySelector('.zb-bar-fill');
+  if(bar){ bar.style.width=Math.min(100,Math.round(assigned/Math.max(income,1)*100))+'%'; bar.style.background=left<0?'var(--red)':'var(--green)'; }
+}
+function zbCommit(uid){ saveState(); }
+function zbAddBucket(uid){
+  const name=prompt('Envelope name (e.g. Hobbies, Pet, Gifts):'); if(!name) return;
+  _zbBuckets().push({name:name.trim(), amt:0}); saveState();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+}
+
+/* ═══ BILLS WIDGET (all bills, timeframe selector) ═══ */
+let _billsTf={};  // per-widget: 'month' | 'week' | 'day'
+function billsWidgetBody(w){
+  const tf=_billsTf[w.uid]||'month';
+  const factor={month:1, week:12/52, day:1/30.44}[tf];
+  const unit={month:'/mo', week:'/wk', day:'/day'}[tf];
+  const all=engBills().filter(b=>b.pay>0);
+  if(!all.length) return `<div class="wph"><div class="wph-sub">No bills yet.</div><button class="manual-add-btn" onclick="event.stopPropagation();openManualBill()">\u2795 Add a bill</button></div>`;
+  const ord=(d)=>d+(d%10===1&&d!==11?'st':d%10===2&&d!==12?'nd':d%10===3&&d!==13?'rd':'th');
+  const live=plaidHasLiab();
+  const today=new Date().getDate();
+  // stable sort: unpaid first (by due date), then paid (by due date) — paid stay visible, sink to bottom
+  const sorted=[...all].sort((a,b)=>{
+    if(!!a.paid!==!!b.paid) return a.paid?1:-1;
+    const da=a.due<today?a.due+31:a.due, db=b.due<today?b.due+31:b.due; return da-db;
+  });
+  const totMin=all.filter(b=>!b.paid).reduce((s,b)=>s+(b.min||0),0)*factor;
+  const totPay=all.filter(b=>!b.paid).reduce((s,b)=>s+(b.pay||0),0)*factor;
+  const rows=sorted.map(b=>{ const key=billKey(b).replace(/'/g,"\\'"); const paid=b.paid; const diff=(b.pay||0)-(b.min||0);
+    const dispPay=tf==='month'?Math.round(b.pay):(b.pay*factor).toFixed(tf==='day'?2:0);
+    return `<div class="bill-row${paid?' paid':''}">
+      <button class="bill-check" onclick="event.stopPropagation();toggleBillPaid('${key}')" title="${paid?'Mark unpaid':'Mark paid'}">${paid?'\u2713':''}</button>
+      <div class="bill-info">
+        <div class="bill-nm">${esc(b.name)}${b.manual?`<span class="bill-edit" role="button" onclick="event.stopPropagation();openManualBill(${(APP.manualBills||[]).findIndex(x=>x.name===b.name&&x.cat===b.cat)})" title="Edit">\u270E</span>`:''}</div>
+        <div class="bill-sub">due ${ord(b.due)}${b.apr?` \u00b7 ${b.apr.toFixed(1)}%`:''}${b.promo?` \u00b7 ${esc(b.promo)}`:''}</div>
+        <div class="bill-amts">
+          <span class="bill-min">Min <b>${fmtK(b.min)}</b>${live&&!b.manual?' \u00b7 Plaid':''}</span>
+          ${Math.abs(diff)>=1?`<span class="bill-diff" style="color:${diff>0?'var(--amber)':'var(--green)'}">${diff>0?'+':''}${fmtK(diff)} vs min</span>`:''}
+        </div>
+      </div>
+      <div class="bill-paywrap">
+        <label class="bill-paylabel">You pay${tf!=='month'?' '+unit:''}</label>
+        ${tf==='month'
+          ? `<div class="bill-pay"><span>$</span><input type="number" value="${dispPay}" min="0" step="10" onclick="event.stopPropagation()" oninput="setBillPay('${key}',this.value)" onblur="setBillPayCommit()"></div>`
+          : `<div class="bill-pay-static">${fmtK(b.pay*factor)}</div>`}
+      </div>
+    </div>`; }).join('');
+  return `<div class="bills-mgr">
+    <div class="bills-tf">
+      ${[['month','Monthly'],['week','Weekly'],['day','Daily']].map(t=>`<button class="bills-tf-btn${tf===t[0]?' active':''}" onclick="event.stopPropagation();setBillsTf('${w.uid}','${t[0]}')">${t[1]}</button>`).join('')}
+    </div>
+    ${rows}
+    <div class="bills-foot">
+      <span>${all.filter(b=>!b.paid).length} unpaid \u00b7 ${all.filter(b=>b.paid).length} paid</span>
+      <span class="bills-foot-amts">${live?`<span class="bills-foot-min">min ${fmtK(totMin)}</span>`:''}<b>${fmtK(totPay)}${unit} you pay</b></span>
+    </div>
+    <button class="manual-add-btn" onclick="event.stopPropagation();openManualBill()">\u2795 Add a bill</button>
+  </div>`;
+}
+function setBillsTf(uid,tf){ _billsTf[uid]=tf; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+
 /* ═══ CASH FLOW PLANNER WIDGET ═══ */
 let _cfpRange={};  // per-widget projection window in days
 const CFP_RANGES=[{k:7,l:'1 wk'},{k:30,l:'30 days'},{k:60,l:'60 days'},{k:90,l:'90 days'}];
@@ -3032,14 +3163,23 @@ function cfpMount(w){
   const ev=gg('cfpev_'+w.uid);
   if(ev){
     const sorted=[...p.events].sort((a,b)=>a.day-b.day).slice(0,40);
-    ev.innerHTML=sorted.map(e=>{
+    let run=p.start;
+    const rows=sorted.map(e=>{
       const when=e.day===0?'today':'day '+e.day;
+      run+=e.amt;  // running balance after this event (checkbook register)
+      const runColor=run<0?'var(--red)':run<200?'var(--amber)':'var(--text)';
+      const runBadge=`<span class="cfp-ev-run" style="color:${runColor}">${run<0?'-':''}${fmtK(Math.abs(run))}</span>`;
       if(e.type==='income'){
-        return `<div class="cfp-ev income"><span class="cfp-ev-when">${when}</span><span class="cfp-ev-nm">${esc(e.name)}</span><span class="cfp-ev-amt" style="color:var(--green)">+${fmtK(e.amt)}</span></div>`;
+        return `<div class="cfp-ev income"><span class="cfp-ev-when">${when}</span><span class="cfp-ev-nm">${esc(e.name)}</span><span class="cfp-ev-amt" style="color:var(--green)">+${fmtK(e.amt)}</span>${runBadge}</div>`;
       }
       const key=(e.key||'').replace(/'/g,"\\'");
-      return `<div class="cfp-ev bill"><span class="cfp-ev-when">${when}</span><span class="cfp-ev-nm">${esc(e.name)}</span><div class="cfp-ev-edit"><span>$</span><input type="number" value="${Math.round(Math.abs(e.amt))}" min="0" step="10" onclick="event.stopPropagation()" oninput="setBillPay('${key}',this.value)" onblur="cfpRefresh('${w.uid}')"></div></div>`;
-    }).join('')||'<div class="ws-hint">No upcoming events in this window.</div>';
+      return `<div class="cfp-ev bill"><span class="cfp-ev-when">${when}</span><span class="cfp-ev-nm">${esc(e.name)}</span><div class="cfp-ev-edit"><span>$</span><input type="number" value="${Math.round(Math.abs(e.amt))}" min="0" step="10" onclick="event.stopPropagation()" oninput="setBillPay('${key}',this.value)" onblur="cfpRefresh('${w.uid}')"></div>${runBadge}</div>`;
+    }).join('');
+    ev.innerHTML=rows
+      ? `<div class="cfp-ev-header"><span class="cfp-ev-when">When</span><span class="cfp-ev-nm">Transaction</span><span class="cfp-ev-amt-h">Amount</span><span class="cfp-ev-run-h">Balance</span></div>
+         <div class="cfp-ev-start"><span></span><span class="cfp-ev-nm">Starting balance</span><span></span><span class="cfp-ev-run">${fmtK(p.start)}</span></div>
+         ${rows}`
+      : '<div class="ws-hint">No upcoming events in this window.</div>';
   }
 }
 function cfpRefresh(uid){ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
@@ -3330,33 +3470,7 @@ function renderWidgetBody(w){
       }
       return `<div class="wph">${cats.map(c=>`<div class="wph-row"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${cfg.accent||c.color};margin-right:7px"></span>${c.label}</span><b>${fmtCfg(c.value,cfg,tot)}</b></div>`).join('')}</div>`;
     }
-    case 'bills_list': { const up=engUpcomingBills(); if(!up.length) return `<div class="wph"><div class="wph-sub">No bills yet.</div></div>`;
-      const ord=(d)=>d+(d%10===1&&d!==11?'st':d%10===2&&d!==12?'nd':d%10===3&&d!==13?'rd':'th');
-      const live=plaidHasLiab();
-      const totMin=up.filter(b=>!b.paid).reduce((s,b)=>s+(b.min||0),0);
-      const totPay=up.filter(b=>!b.paid).reduce((s,b)=>s+(b.pay||0),0);
-      return `<div class="bills-mgr">${up.map(b=>{ const key=billKey(b).replace(/'/g,"\\'"); const paid=b.paid; const diff=(b.pay||0)-(b.min||0);
-        return `<div class="bill-row${paid?' paid':''}">
-          <button class="bill-check" onclick="event.stopPropagation();toggleBillPaid('${key}')" title="${paid?'Mark unpaid':'Mark paid'}">${paid?'\u2713':''}</button>
-          <div class="bill-info">
-            <div class="bill-nm">${esc(b.name)}${b.manual?`<button class="bill-edit" onclick="event.stopPropagation();openManualBill(${(APP.manualBills||[]).indexOf((APP.manualBills||[]).find(x=>x.name===b.name&&x.cat===b.cat))})" title="Edit">\u270E</button>`:''}</div>
-            <div class="bill-sub">due ${ord(b.due)}${b.apr?` \u00b7 ${b.apr.toFixed(1)}%`:''}${b.promo?` \u00b7 ${esc(b.promo)}`:''}</div>
-            <div class="bill-amts">
-              <span class="bill-min">Min <b>${fmtK(b.min)}</b>${live?' \u00b7 Plaid':''}</span>
-              ${Math.abs(diff)>=1?`<span class="bill-diff" style="color:${diff>0?'var(--amber)':'var(--green)'}">${diff>0?'+':''}${fmtK(diff)} vs min</span>`:''}
-            </div>
-          </div>
-          <div class="bill-paywrap">
-            <label class="bill-paylabel">You pay</label>
-            <div class="bill-pay"><span>$</span><input type="number" value="${Math.round(b.pay)}" min="0" step="10" onclick="event.stopPropagation()" oninput="setBillPay('${key}',this.value)" onblur="setBillPayCommit()"></div>
-          </div>
-        </div>`; }).join('')}
-        <div class="bills-foot">
-          <span>${up.filter(b=>!b.paid).length} unpaid \u00b7 ${up.filter(b=>b.paid).length} paid</span>
-          <span class="bills-foot-amts">${live?`<span class="bills-foot-min">min ${fmtK(totMin)}</span>`:''}<b>${fmtK(totPay)} you pay</b></span>
-        </div>
-        <button class="manual-add-btn" onclick="event.stopPropagation();openManualBill()">➕ Add a bill</button>
-      </div>`; }
+    case 'bills_list': { return billsWidgetBody(w); }
     case 'cashflow_chart': { const tf=w.tf||'30d'; const mb={'1w':1,'30d':3,'3m':3,'1y':12}[tf]||3; return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Income vs spending${dataLoaded?' · last '+mb+' mo':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`; }
     case 'pl_panel': return plWidgetBody(w);
     case 'cashflow_planner': return cfpWidgetBody(w);
@@ -3367,7 +3481,7 @@ function renderWidgetBody(w){
     case 'retirement_proj': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Projected growth</div><div style="height:140px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
     case 'fire_calc': return fireWidgetBody(w);
     case 'debt_payoff': { const _b=engBills(); const totDebt=engBillsDebt(); const totPay=engMonthlyBills(); const avgApr=_b.filter(b=>b.bal<0&&b.apr>0).reduce((s,b,_,a)=>s+b.apr/a.length,0)||5; const r=avgApr/100/12; const months=(totPay>totDebt*r)?Math.ceil(Math.log(totPay/(totPay-totDebt*r))/Math.log(1+r)):999; const yrs=Math.floor(months/12), mo=months%12; return `<div class="wph"><div class="wph-sub">Debt-free in (avalanche)${plaidHasLiab()?' · live':''}</div><div class="wph-stat">${months>=999?'—':yrs+' yr '+mo+' mo'}</div><div class="wph-sub">${fmtM(totDebt)} at ${avgApr.toFixed(1)}% avg APR</div></div>`; }
-    case 'zero_budget': { const income=engMonthlyIncome(); const assigned=zeroBuckets.reduce((s,z)=>s+z.amt,0)+engMonthlyBills(); const left=income-assigned; return `<div class="wph"><div class="wph-row"><span>Monthly income</span><b>${fmtK(income)}</b></div><div class="wph-row"><span>Assigned</span><b>${fmtK(assigned)}</b></div><div class="wph-row"><span>To budget</span><b style="color:${Math.abs(left)<1?'var(--green)':left>0?'var(--amber)':'var(--red)'}">${left>=0?'':'-'}${fmtK(left)} ${Math.abs(left)<1?'✓':'left'}</b></div></div>`; }
+    case 'zero_budget': return zbWidgetBody(w);
     case 'fire_drill': return fdWidgetBody(w);
     case 'debt_planner': return dpWidgetBody(w);
     default: return `<div class="wph"><div class="wph-sub">${def.name}</div></div>`;
