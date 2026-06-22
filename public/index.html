@@ -320,7 +320,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
   overflow-y:auto;-webkit-overflow-scrolling:touch;
 }
 .sb-logo{
-  padding:18px 16px 14px;
+  padding:calc(18px + env(safe-area-inset-top)) 16px 14px;
   border-bottom:1px solid var(--border);
   display:flex;align-items:center;gap:11px;
 }
@@ -430,9 +430,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
   display:flex;flex-direction:column;overflow:hidden;
 }
 #topbar{
-  height:54px;background:var(--sidebar);border-bottom:1px solid var(--border);
+  height:calc(54px + env(safe-area-inset-top));
+  padding-top:env(safe-area-inset-top);
+  background:var(--sidebar);border-bottom:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;
-  padding:0 28px;flex-shrink:0;z-index:120;position:relative;
+  padding-left:28px;padding-right:28px;flex-shrink:0;z-index:120;position:relative;
 }
 .topbar-left{display:flex;align-items:center;gap:12px;}
 .topbar-page-icon{font-size:18px;line-height:1;}
