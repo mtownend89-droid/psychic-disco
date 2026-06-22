@@ -820,6 +820,55 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .fc-stat-val{font-size:20px;font-weight:700;color:var(--text);}
 .fc-stat-lbl{font-size:11px;color:var(--muted);}
 .fc-note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:2px;}
+/* ── Financial Goals ── */
+.goals-wrap{padding:2px;}
+.goals-empty{text-align:center;padding:24px 12px;}
+.goals-empty-icon{font-size:38px;}
+.goals-empty-title{font-size:15px;font-weight:700;margin-top:8px;}
+.goals-empty-sub{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5;max-width:300px;margin-left:auto;margin-right:auto;}
+.goal-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:13px 14px;margin-bottom:9px;}
+.goal-card.done{opacity:.7;border-color:var(--green);}
+.goal-top{display:flex;align-items:center;gap:10px;margin-bottom:9px;}
+.goal-icon{font-size:22px;flex-shrink:0;}
+.goal-meta{flex:1;min-width:0;}
+.goal-name{font-size:13.5px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.goal-sub{font-size:11px;color:var(--muted);}
+.goal-actions{display:flex;align-items:center;gap:4px;flex-shrink:0;}
+.goal-mini{width:26px;height:26px;border-radius:7px;background:rgba(255,255,255,0.05);border:none;color:var(--muted);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;}
+.goal-mini:hover{background:rgba(255,255,255,0.12);color:var(--text);}
+.goal-mini.danger:hover{background:rgba(240,92,92,0.18);color:#f06c6c;}
+.goal-badge{font-size:11px;color:var(--green);font-weight:700;}
+.goal-bar{height:9px;background:var(--surface3);border-radius:5px;overflow:hidden;}
+.goal-bar-fill{height:100%;border-radius:5px;transition:width .4s cubic-bezier(.4,0,.2,1);}
+.goal-foot{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--muted);margin-top:6px;}
+.goal-pct{font-weight:700;color:var(--text);font-size:12.5px;}
+.goals-done-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--green);margin:10px 0 8px;}
+.goals-actions{display:flex;gap:8px;margin-top:10px;}
+.goals-actions .manual-add-btn{margin-top:0;}
+.goals-preset-btn{padding:9px;border-radius:9px;background:var(--green-dim);border:1px solid rgba(46,204,138,0.25);color:var(--green);font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--font);white-space:nowrap;}
+.goals-preset-btn:hover{background:rgba(46,204,138,0.22);}
+/* presets grid */
+.goal-preset-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+@media(max-width:560px){.goal-preset-grid{grid-template-columns:1fr;}}
+.goal-preset-card{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:13px;border-radius:11px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;text-align:left;font-family:var(--font);transition:all .13s;}
+.goal-preset-card:hover{border-color:var(--green);}
+.goal-preset-card.added{opacity:.55;cursor:default;}
+.gpc-icon{font-size:22px;}
+.gpc-name{font-size:13px;font-weight:700;color:var(--text);}
+.gpc-blurb{font-size:11px;color:var(--muted);line-height:1.4;}
+.gpc-add{font-size:11px;color:var(--green);font-weight:600;margin-top:3px;}
+.gpc-added{font-size:11px;color:var(--muted);font-weight:600;margin-top:3px;}
+/* wizard */
+.goal-metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;}
+.goal-metric-opt{display:flex;flex-direction:column;align-items:center;gap:5px;padding:14px 8px;border-radius:11px;background:var(--surface2);border:1.5px solid var(--border);cursor:pointer;font-size:11.5px;color:var(--text);font-family:var(--font);text-align:center;transition:all .13s;}
+.goal-metric-opt.sel{border-color:var(--green);background:var(--green-dim);}
+.goal-icon-grid{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px;}
+.goal-icon-opt{width:40px;height:40px;border-radius:10px;background:var(--surface2);border:1.5px solid var(--border);font-size:20px;cursor:pointer;}
+.goal-icon-opt.sel{border-color:var(--green);background:var(--green-dim);}
+.goal-wiz-review{background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:12px;}
+.goal-wiz-review .grow{display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--border);}
+.goal-wiz-review .grow:last-child{border-bottom:none;}
+.goal-wiz-review .grow span{color:var(--muted);}
 /* ── Cash Flow Planner ── */
 .cfp-wrap{padding:2px;}
 .cfp-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
@@ -1857,6 +1906,7 @@ async function loadEngineData(){
   const [a,b]=await Promise.all([loadAccounts(),loadTransactions()]);
   loadLiabilities(); // fire-and-forget; enriches SWOT/debt when available
   dataLoaded=(a||b)&&(allAccts.length>0||allTxns.length>0);
+  try{ if(typeof checkGoalCompletion==='function') checkGoalCompletion(); }catch(e){}
   return dataLoaded;
 }
 
@@ -2185,6 +2235,85 @@ function engBills(){
 }
 function engMonthlyBills(){ return engBills().reduce((s,b)=>s+(b.pay||0),0); }
 function engBillsDebt(){ return engBills().reduce((s,b)=>s+Math.abs(b.bal||0),0); }
+
+/* ═══════════════ FINANCIAL GOALS ═══════════════
+   Each goal links to a live metric so progress tracks automatically. */
+const GOAL_METRICS={
+  savings:    {label:'Total savings/cash', icon:'💰', dir:'up',   get:()=>Math.max(engStartCash(), engNWAssets()), unit:'$'},
+  networth:   {label:'Net worth',          icon:'📈', dir:'up',   get:()=>dataLoaded?engNetBalance()+engNWAssets()-engNWLiab():engNetWorth(), unit:'$'},
+  debt:       {label:'Total debt',         icon:'💳', dir:'down', get:()=>engBillsDebt()||engTotalDebt(), unit:'$'},
+  emergency:  {label:'Emergency fund',     icon:'🛟', dir:'up',   get:()=>{ const b=(APP.zeroBuckets||zeroBuckets).find(x=>/emer/i.test(x.name)); return b?b.amt:0; }, unit:'$'},
+  savingsrate:{label:'Monthly savings rate',icon:'📊',dir:'up',   get:()=>{ const inc=engMonthlyIncome(); const sp=dataLoaded?engSpend30():engMonthlyBills(); return inc>0?Math.round((inc-sp)/inc*100):0; }, unit:'%'},
+  custom:     {label:'Custom (manual)',    icon:'🎯', dir:'up',   get:()=>null, unit:'$'},
+};
+// Preset goals the user can activate with one tap
+const GOAL_PRESETS=[
+  {key:'ef1k',   name:'Starter emergency fund', metric:'emergency', target:1000,  icon:'🛟', blurb:'Your first $1,000 safety net.'},
+  {key:'ef3mo',  name:'3-month emergency fund', metric:'emergency', target:null,  icon:'🛟', blurb:'Three months of expenses saved.', auto:'3mo'},
+  {key:'debtfree',name:'Become debt-free',      metric:'debt',      target:0,     icon:'🚀', blurb:'Pay every balance down to zero.'},
+  {key:'cc0',    name:'Kill credit-card debt',  metric:'debt',      target:0,     icon:'✂️', blurb:'Wipe out high-interest card balances.'},
+  {key:'save10k',name:'Save $10,000',           metric:'savings',   target:10000, icon:'💰', blurb:'Build a solid cash cushion.'},
+  {key:'nw100k', name:'$100K net worth',        metric:'networth',  target:100000,icon:'💎', blurb:'Cross the six-figure milestone.'},
+  {key:'sr20',   name:'Save 20% of income',     metric:'savingsrate',target:20,   icon:'📊', blurb:'Hit a 20% monthly savings rate.'},
+  {key:'fire25', name:'Reach Coast FIRE',       metric:'networth',  target:null,  icon:'🔥', blurb:'25× your annual expenses invested.', auto:'fire'},
+];
+function _goals(){ if(!APP.goals) APP.goals=[]; return APP.goals; }
+function goalAutoTarget(kind){
+  if(kind==='3mo') return Math.round(engMonthlyBills()*3)||3000;
+  if(kind==='fire') return Math.round(engMonthlyBills()*12*25)||500000;
+  return 0;
+}
+function goalProgress(g){
+  const m=GOAL_METRICS[g.metric]; if(!m) return {pct:0,current:0,target:g.target||0};
+  let current = g.metric==='custom' ? (g.current||0) : m.get();
+  const start = g.start!=null?g.start:0;
+  const target = g.target||0;
+  let pct;
+  if(m.dir==='down'){ // debt: progress = how much paid off from start toward target
+    const total=(start-target)||1; pct=Math.max(0,Math.min(100,Math.round((start-current)/total*100)));
+  } else {
+    const total=(target-start)||1; pct=Math.max(0,Math.min(100,Math.round((current-start)/total*100)));
+  }
+  const done = m.dir==='down' ? current<=target : current>=target;
+  return {pct:done?100:pct, current, target, done, dir:m.dir, unit:m.unit};
+}
+function goalFmt(v,unit){ return unit==='%'?Math.round(v)+'%':fmtK(v); }
+function addGoal(g){
+  g.id='g'+Date.now()+Math.floor(Math.random()*99);
+  const m=GOAL_METRICS[g.metric];
+  g.start = g.metric==='custom' ? 0 : (m?m.get():0);
+  g.created=Date.now(); g.completed=false;
+  _goals().push(g); saveState();
+  awardXp(25,'New goal set: '+g.name+'!');
+  if(sbRichie)sbRichie.do('bounce');
+  setTimeout(()=>richieGoalHint(g),600);
+}
+function removeGoal(id){ APP.goals=_goals().filter(g=>g.id!==id); saveState(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+function checkGoalCompletion(){
+  let any=false;
+  _goals().forEach(g=>{
+    if(g.completed) return;
+    const p=goalProgress(g);
+    if(p.done){ g.completed=true; g.completedAt=Date.now(); any=true;
+      awardXp(50,'🎉 GOAL COMPLETE: '+g.name+'!');
+      if(sbRichie)sbRichie.do('tada');
+      richieSay(`🎉 You did it \u2014 "${g.name}" is complete! That's a real milestone. +50 XP. What's next?`);
+    }
+  });
+  if(any) saveState();
+}
+// Richie coaching: contextual hint per goal
+function richieGoalHint(g){
+  const p=goalProgress(g); const m=GOAL_METRICS[g.metric];
+  let hint;
+  if(p.done){ hint=`"${g.name}" is already in the bag! 🎉`; }
+  else if(g.metric==='debt'){ const left=p.current-p.target; hint=`To crush "${g.name}", throw every extra dollar at your highest-APR balance. ${fmtK(left)} to go \u2014 even $50 extra a month moves the needle.`; }
+  else if(g.metric==='emergency'){ hint=`Building "${g.name}"? Automate it \u2014 set aside a fixed amount each payday before you can spend it. You're ${p.pct}% there.`; }
+  else if(g.metric==='savings'||g.metric==='networth'){ const left=p.target-p.current; hint=`"${g.name}" is ${p.pct}% done \u2014 ${fmtK(left)} to go. Trim one recurring expense and redirect it here; small leaks sink big ships.`; }
+  else if(g.metric==='savingsrate'){ hint=`Want a ${p.target}% savings rate? Look at your top spending category and shave 10% off it. You're at ${p.current}% now.`; }
+  else { hint=`Keep chipping away at "${g.name}" \u2014 ${p.pct}% there. Update your progress as you go!`; }
+  richieSay(hint);
+}
 function engNWAssets(){ return nwAssets.reduce((s,a)=>s+(a.value||0),0); }
 function engNWLiab(){ return nwLiab.reduce((s,l)=>s+(l.value||0),0); }
 function engNetWorth(){ return engNWAssets()-engNWLiab(); }
@@ -2546,6 +2675,7 @@ const WIDGET_CATALOG=[
   {id:'cashflow_chart',name:'Cash Flow',icon:'🌊',cat:'Cash Flow',span:2,minLevel:1,desc:'Income vs. spending over time.'},
   {id:'pl_panel',name:'Profit & Loss',icon:'📊',cat:'Cash Flow',span:2,minLevel:1,desc:'Income, spending, net & savings rate by day/week/month.'},
   {id:'cashflow_planner',name:'Cash Flow Planner',icon:'📅',cat:'Cash Flow',span:2,minLevel:1,desc:'Project your running balance forward — edit bills, see your low point before it hits.'},
+  {id:'goals',name:'Financial Goals',icon:'🎯',cat:'Overview',span:2,minLevel:1,desc:'Set goals, track progress automatically, and let Richie coach you to the finish.'},
   {id:'accounts_list',name:'All Accounts',icon:'🏦',cat:'Overview',span:2,minLevel:1,desc:'Every account with balances — tap to see transactions.'},
   {id:'sankey',name:'Money Flow (Sankey)',icon:'🔀',cat:'Cash Flow',span:2,minLevel:2,desc:'Visualize income flowing to spending.'},
   {id:'top_categories',name:'Top Categories',icon:'📊',cat:'Cash Flow',span:1,minLevel:1,desc:'Where your money goes most.'},
@@ -3167,6 +3297,142 @@ function billsWidgetBody(w){
 }
 function setBillsTf(uid,tf){ _billsTf[uid]=tf; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 
+/* ═══ FINANCIAL GOALS WIDGET ═══ */
+function goalsWidgetBody(w){
+  checkGoalCompletion();
+  const goals=_goals();
+  const active=goals.filter(g=>!g.completed);
+  const done=goals.filter(g=>g.completed);
+  let html='<div class="goals-wrap">';
+  if(!goals.length){
+    html+=`<div class="goals-empty">
+      <div class="goals-empty-icon">🎯</div>
+      <div class="goals-empty-title">No goals yet</div>
+      <div class="goals-empty-sub">Pick a preset or build your own — Richie will track your progress and cheer you on.</div>
+    </div>`;
+  } else {
+    html+=active.map(g=>goalCard(g)).join('');
+    if(done.length){
+      html+=`<div class="goals-done-label">✓ Completed (${done.length})</div>`;
+      html+=done.map(g=>goalCard(g)).join('');
+    }
+  }
+  html+=`<div class="goals-actions">
+    <button class="manual-add-btn" onclick="event.stopPropagation();openGoalWizard()">\u2795 Add a goal</button>
+    <button class="goals-preset-btn" onclick="event.stopPropagation();openGoalPresets()">⚡ Quick goals</button>
+  </div>`;
+  html+='</div>';
+  return html;
+}
+function goalCard(g){
+  const p=goalProgress(g); const m=GOAL_METRICS[g.metric]||{};
+  const icon=g.icon||m.icon||'🎯';
+  const barColor=p.done?'var(--green)':p.pct>=66?'var(--green)':p.pct>=33?'var(--amber)':'var(--blue)';
+  const curStr=goalFmt(p.current,p.unit), tgtStr=goalFmt(p.target,p.unit);
+  return `<div class="goal-card${p.done?' done':''}">
+    <div class="goal-top">
+      <span class="goal-icon">${icon}</span>
+      <div class="goal-meta"><div class="goal-name">${esc(g.name)}</div><div class="goal-sub">${m.label||'Custom'}${g.deadline?` · by ${esc(g.deadline)}`:''}</div></div>
+      <div class="goal-actions">
+        ${p.done?'<span class="goal-badge">Done 🎉</span>':`<button class="goal-mini" onclick="event.stopPropagation();richieGoalHint(_goalById('${g.id}'))" title="Get a hint">💡</button>`}
+        ${g.metric==='custom'&&!p.done?`<button class="goal-mini" onclick="event.stopPropagation();goalUpdateCustom('${g.id}')" title="Update progress">✎</button>`:''}
+        <button class="goal-mini danger" onclick="event.stopPropagation();removeGoal('${g.id}')" title="Remove">\u2715</button>
+      </div>
+    </div>
+    <div class="goal-bar"><div class="goal-bar-fill" style="width:${p.pct}%;background:${barColor}"></div></div>
+    <div class="goal-foot"><span>${curStr} ${p.dir==='down'?'remaining':'saved'}</span><span class="goal-pct">${p.pct}%</span><span>target ${tgtStr}</span></div>
+  </div>`;
+}
+function _goalById(id){ return _goals().find(g=>g.id===id); }
+function goalUpdateCustom(id){
+  const g=_goalById(id); if(!g) return;
+  const v=prompt(`Update progress for "${g.name}" (current amount):`, g.current||0);
+  if(v===null) return; const n=parseFloat(v); if(!isNaN(n)){ g.current=n; saveState(); checkGoalCompletion(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+}
+
+/* ── Goal presets (one-tap activation) ── */
+function openGoalPresets(){
+  gg('manualModal').style.display='flex';
+  gg('manualTitle').textContent='Quick goals';
+  gg('manualSub').textContent='Tap one to activate it instantly — Richie tracks the rest.';
+  const existing=_goals().map(g=>g.presetKey);
+  gg('manualBody').innerHTML=`<div class="goal-preset-grid">${GOAL_PRESETS.map(p=>{
+    const added=existing.includes(p.key);
+    return `<button class="goal-preset-card${added?' added':''}" ${added?'disabled':''} onclick="activatePreset('${p.key}')">
+      <span class="gpc-icon">${p.icon}</span>
+      <span class="gpc-name">${p.name}</span>
+      <span class="gpc-blurb">${p.blurb}</span>
+      ${added?'<span class="gpc-added">✓ Active</span>':'<span class="gpc-add">+ Activate</span>'}
+    </button>`;
+  }).join('')}</div>`;
+}
+function activatePreset(key){
+  const p=GOAL_PRESETS.find(x=>x.key===key); if(!p) return;
+  const target = p.target!=null ? p.target : goalAutoTarget(p.auto);
+  addGoal({name:p.name, metric:p.metric, target, icon:p.icon, presetKey:p.key});
+  closeManual();
+  const pg=APP.pages.find(pp=>pp.id===APP.activePage); if(pg)renderCanvas(pg);
+}
+
+/* ── Goal wizard (custom goal, 3 steps) ── */
+let _goalWiz={step:1, data:{}};
+function openGoalWizard(){
+  _goalWiz={step:1, data:{metric:'savings', name:'', target:'', icon:'🎯', deadline:''}};
+  gg('manualModal').style.display='flex';
+  goalWizRender();
+}
+function goalWizRender(){
+  const d=_goalWiz.data; const step=_goalWiz.step;
+  gg('manualTitle').textContent='New goal';
+  gg('manualSub').textContent=`Step ${step} of 3`;
+  const body=gg('manualBody');
+  if(step===1){
+    body.innerHTML=`<div class="mf-label">What kind of goal?</div>
+      <div class="goal-metric-grid">${Object.entries(GOAL_METRICS).map(([k,m])=>`<button class="goal-metric-opt${d.metric===k?' sel':''}" onclick="goalWizSet('metric','${k}')"><span style="font-size:22px">${m.icon}</span><span>${m.label}</span></button>`).join('')}</div>
+      <div class="mf-actions"><span></span><button class="btn primary" onclick="goalWizNext()">Next →</button></div>`;
+  } else if(step===2){
+    const m=GOAL_METRICS[d.metric];
+    const suggest = d.metric==='emergency'?goalAutoTarget('3mo'):d.metric==='networth'?100000:d.metric==='savings'?10000:d.metric==='savingsrate'?20:d.metric==='debt'?0:1000;
+    body.innerHTML=`<div class="mf-label">Name your goal</div>
+      <input class="mf-in" id="gwName" value="${esc(d.name||m.label)}" placeholder="e.g. ${m.label}">
+      <div class="mf-label">Target ${m.unit==='%'?'(%)':'amount ($)'}</div>
+      <input class="mf-in" id="gwTarget" type="number" value="${d.target||suggest}" placeholder="${suggest}">
+      <div class="mf-label">Target date (optional)</div>
+      <input class="mf-in" id="gwDeadline" value="${esc(d.deadline||'')}" placeholder="e.g. Dec 2026">
+      ${m.dir==='down'?`<div class="ws-hint">Tracks downward from your current ${m.label.toLowerCase()} (${goalFmt(m.get(),m.unit)}) to your target.</div>`:`<div class="ws-hint">Tracks from your current ${m.label.toLowerCase()} (${goalFmt(m.get()||0,m.unit)}) up to your target.</div>`}
+      <div class="mf-actions"><button class="btn" onclick="goalWizBack()">← Back</button><button class="btn primary" onclick="goalWizNext()">Next →</button></div>`;
+  } else {
+    const m=GOAL_METRICS[d.metric];
+    const icons=['🎯','💰','🛟','🚀','💎','🔥','✂️','🏖️','📈','🏠','🚗','🎓','💍','✈️'];
+    body.innerHTML=`<div class="mf-label">Pick an icon</div>
+      <div class="goal-icon-grid">${icons.map(ic=>`<button class="goal-icon-opt${d.icon===ic?' sel':''}" onclick="goalWizSet('icon','${ic}')">${ic}</button>`).join('')}</div>
+      <div class="goal-wiz-review">
+        <div class="grow"><span>Goal</span><b>${esc(d.name||m.label)}</b></div>
+        <div class="grow"><span>Tracks</span><b>${m.label}</b></div>
+        <div class="grow"><span>Target</span><b>${goalFmt(parseFloat(d.target)||0,m.unit)}</b></div>
+        ${d.deadline?`<div class="grow"><span>By</span><b>${esc(d.deadline)}</b></div>`:''}
+      </div>
+      <div class="ws-hint">Creating a goal earns +25 XP. Completing it earns +50 XP. 🎉</div>
+      <div class="mf-actions"><button class="btn" onclick="goalWizBack()">← Back</button><button class="btn primary" onclick="goalWizFinish()">Create goal ✓</button></div>`;
+  }
+}
+function goalWizSet(k,v){ _goalWiz.data[k]=v; goalWizRender(); }
+function goalWizNext(){
+  if(_goalWiz.step===2){
+    _goalWiz.data.name=(gg('gwName').value||'').trim()||GOAL_METRICS[_goalWiz.data.metric].label;
+    _goalWiz.data.target=gg('gwTarget').value;
+    _goalWiz.data.deadline=(gg('gwDeadline').value||'').trim();
+  }
+  _goalWiz.step=Math.min(3,_goalWiz.step+1); goalWizRender();
+}
+function goalWizBack(){ _goalWiz.step=Math.max(1,_goalWiz.step-1); goalWizRender(); }
+function goalWizFinish(){
+  const d=_goalWiz.data;
+  addGoal({name:d.name, metric:d.metric, target:parseFloat(d.target)||0, icon:d.icon, deadline:d.deadline});
+  closeManual();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+}
+
 /* ═══ CASH FLOW PLANNER WIDGET ═══ */
 let _cfpRange={};  // per-widget projection window in days
 const CFP_RANGES=[{k:7,l:'1 wk'},{k:30,l:'30 days'},{k:60,l:'60 days'},{k:90,l:'90 days'}];
@@ -3557,6 +3823,7 @@ function renderWidgetBody(w){
     case 'cashflow_chart': { const tf=w.tf||'30d'; const mb={'1w':1,'30d':3,'3m':3,'1y':12}[tf]||3; return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Income vs spending${dataLoaded?' · last '+mb+' mo':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`; }
     case 'pl_panel': return plWidgetBody(w);
     case 'cashflow_planner': return cfpWidgetBody(w);
+    case 'goals': return goalsWidgetBody(w);
     case 'accounts_list': return acctWidgetBody(w);
     case 'sankey': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Money flow${dataLoaded?' · last '+tfLabel(w.tf||'30d'):' · from your bills'}</div><div style="position:relative"><canvas id="cv_${w.uid}"></canvas></div></div>`;
     case 'net_worth_chart': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Net worth trend${dataLoaded?'':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
