@@ -241,6 +241,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 /* Bundle cards */
 .bundle-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px;}
 @media(max-width:600px){.bundle-grid{grid-template-columns:1fr;}}
+.goal-pick-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+@media(max-width:560px){.goal-pick-grid{grid-template-columns:1fr;}}
+.goal-pick-card{position:relative;padding:14px;border-radius:12px;background:var(--surface2);border:1.5px solid var(--border);cursor:pointer;transition:all .14s;}
+.goal-pick-card:hover{border-color:var(--border2);}
+.goal-pick-card.selected{border-color:var(--green);background:var(--green-dim);}
+.goal-pick-card.dim{opacity:.4;pointer-events:none;}
+.goal-pick-icon{font-size:26px;}
+.goal-pick-name{font-size:14px;font-weight:700;color:var(--text);margin-top:6px;}
+.goal-pick-blurb{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.4;}
+.wiz-goal-list{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:14px 0;}
+.wiz-goal-chip{background:var(--green-dim);color:var(--green);border:1px solid rgba(46,204,138,0.25);border-radius:20px;padding:7px 14px;font-size:13px;font-weight:600;}
 .bundle-card{
   background:var(--surface);border:2px solid rgba(255,255,255,0.06);
   border-radius:var(--radius);padding:16px 18px;
@@ -2258,6 +2269,37 @@ const GOAL_PRESETS=[
   {key:'fire25', name:'Reach Coast FIRE',       metric:'networth',  target:null,  icon:'🔥', blurb:'25× your annual expenses invested.', auto:'fire'},
 ];
 function _goals(){ if(!APP.goals) APP.goals=[]; return APP.goals; }
+
+/* ═══ GOAL → WIDGETS → PAGE mapping (the goals-first brain) ═══
+   Each preset goal knows: which widgets help achieve it, what page to build,
+   and how Richie should teach the path. */
+const GOAL_PLANS={
+  emergency:{ page:{name:'Emergency Fund',icon:'🛟',color:'#38bdf8'},
+    widgets:['goals','cash_summary','zero_budget','cashflow_planner','bills_list'],
+    coach:"An emergency fund is your financial seatbelt. Here's the play: I've set up a Cash on Hand tracker, your Zero-Based Budget to carve out savings, and the Cash Flow Planner so you can see exactly how much you can set aside each payday. Automate a transfer the day you get paid — pay your future self first.",
+    teach:["Set aside a fixed amount every payday — before you spend.","Keep it in a separate savings account so it's out of sight.","Start with $1,000, then build to 3 months of expenses."] },
+  debt:{ page:{name:'Debt Freedom',icon:'🚀',color:'#f05c5c'},
+    widgets:['goals','debt_summary','debt_payoff','bills_list','cashflow_planner'],
+    coach:"Let's get you debt-free. I've laid out your Total Debt, the Debt Payoff Planner (try avalanche — it kills the highest interest first), your Bills so you can pay above the minimum, and the Cash Flow Planner to find extra dollars. Every extra payment is a guaranteed return equal to your interest rate.",
+    teach:["Always pay more than the minimum — even $25 extra compounds.","Attack the highest-APR balance first (avalanche method).","Funnel any windfall straight to debt, not lifestyle."] },
+  savings:{ page:{name:'Savings Builder',icon:'💰',color:'#2ecc8a'},
+    widgets:['goals','cash_summary','zero_budget','pl_panel','top_categories'],
+    coach:"Building savings is about widening the gap between what you earn and what you spend. I've given you Cash on Hand, your Zero-Based Budget, a Profit & Loss panel to watch your surplus, and your Top Categories so you can spot where to trim. Find one expense to cut and redirect it here.",
+    teach:["Automate savings so it happens without willpower.","Review your top spending category monthly and trim 10%.","Treat savings like a non-negotiable bill."] },
+  networth:{ page:{name:'Wealth Builder',icon:'💎',color:'#5b8def'},
+    widgets:['goals','net_worth_summary','net_worth_chart','debt_summary','pl_panel'],
+    coach:"Net worth is the real scoreboard — assets minus debts. I've set up your Net Worth snapshot and trend chart so you can watch it climb, plus debt and P&L so you see both levers. Grow assets, shrink debts, and let time + compounding do the heavy lifting.",
+    teach:["Net worth = what you own minus what you owe. Grow the gap.","Invest consistently — time in the market beats timing it.","Track the trend monthly; direction matters more than any single number."] },
+  savingsrate:{ page:{name:'Savings Rate',icon:'📊',color:'#a78bfa'},
+    widgets:['goals','pl_panel','zero_budget','top_categories','cashflow_chart'],
+    coach:"Your savings rate is the single best predictor of financial freedom. I've set up your Profit & Loss to track income vs spending, the budget to plan it, and Top Categories to find the leaks. Push the rate up a few points at a time — every percent buys you future freedom.",
+    teach:["Savings rate = (income − spending) ÷ income. Aim to raise it steadily.","Increasing income helps, but cutting waste is faster to control.","A 20% rate is solid; 30%+ is wealth-building territory."] },
+  custom:{ page:{name:'My Goal',icon:'🎯',color:'#2ecc8a'},
+    widgets:['goals','cash_summary','zero_budget','pl_panel'],
+    coach:"Custom goal locked in. I've given you the core tracking tools — your Goals tracker, cash position, budget, and P&L. Update your progress as you go and I'll keep cheering you on.",
+    teach:["Break a big goal into monthly milestones.","Track progress regularly so you stay motivated.","Celebrate small wins along the way."] },
+};
+function goalPlanFor(metric){ return GOAL_PLANS[metric]||GOAL_PLANS.custom; }
 function goalAutoTarget(kind){
   if(kind==='3mo') return Math.round(engMonthlyBills()*3)||3000;
   if(kind==='fire') return Math.round(engMonthlyBills()*12*25)||500000;
@@ -2564,6 +2606,31 @@ function seedPages(bundleKey){
   const bp=BUNDLE_PAGES[bundleKey]||BUNDLE_PAGES.overview;
   return bp.map((p,i)=>({ id:'p'+Date.now()+'_'+i, name:p[0], icon:p[1], color:p[2], widgets:(p[3]||[]).map(makeWidget) }));
 }
+/* Build the whole app around chosen goals: a Goals home page + one focused
+   page per goal, each carrying the widgets that help achieve it. */
+function seedPagesFromGoals(chosenGoals){
+  const pages=[];
+  const ts=Date.now();
+  // 1) Goals home page — the command center
+  pages.push({ id:'p'+ts+'_home', name:'My Goals', icon:'🎯', color:'#2ecc8a',
+    widgets:['goals','net_worth_summary','cash_summary'].map(makeWidget) });
+  // 2) one focused page per goal (dedup by metric so 2 debt goals share one page)
+  const seenMetric={};
+  chosenGoals.forEach((g,gi)=>{
+    const plan=goalPlanFor(g.metric);
+    if(seenMetric[g.metric]) return;  // already built a page for this metric
+    seenMetric[g.metric]=true;
+    pages.push({ id:'p'+ts+'_g'+gi, name:plan.page.name, icon:plan.page.icon, color:plan.page.color,
+      goalMetric:g.metric,   // tag the page so Richie can coach it
+      widgets:plan.widgets.map(makeWidget) });
+  });
+  return pages;
+}
+function goalWidgetsUnion(chosenGoals){
+  const set=new Set(['goals']);
+  chosenGoals.forEach(g=>goalPlanFor(g.metric).widgets.forEach(w=>set.add(w)));
+  return [...set];
+}
 
 /* ═══════════════ STATE ═══════════════ */
 let APP={ household:'My Finance World', profiles:[{name:'Me',avatar:'💰'}], persona:'coach', level:1, xp:0, proMode:false, pages:[], activePage:null };
@@ -2599,7 +2666,21 @@ function loadState(){
       APP.level=setup.level||1;
       APP.xp=setup.xp||0;
       APP.proMode=!!setup.proMode;
-      APP.pages=seedPages(setup.bundle);
+      if(setup.chosenGoals && setup.chosenGoals.length){
+        // GOALS-FIRST: create goal objects + build pages around them
+        APP.goals=[];
+        setup.chosenGoals.forEach(cg=>{
+          const m=GOAL_METRICS[cg.metric];
+          const target=cg.target!=null?cg.target:(cg.auto?goalAutoTarget(cg.auto):0);
+          APP.goals.push({ id:'g'+Date.now()+Math.floor(Math.random()*9999), name:cg.name, metric:cg.metric,
+            target, icon:cg.icon, start:(cg.metric!=='custom'&&m)?m.get():0, current:0, created:Date.now(), completed:false, presetKey:cg.key });
+        });
+        APP.pages=seedPagesFromGoals(setup.chosenGoals);
+        APP._goalsFirst=true;            // flag so Richie runs the goal walkthrough
+        APP._coachQueue=APP.pages.filter(p=>p.goalMetric).map(p=>p.id);
+      } else {
+        APP.pages=seedPages(setup.bundle);
+      }
       APP.activePage=APP.pages[0]?APP.pages[0].id:null;
       saveState();
     } else {
@@ -2658,6 +2739,24 @@ function switchPage(id){
 
 function renderPage(pg){
   renderCanvas(pg);
+  // Proactive coaching: when visiting a goal page (not during the guided tour), Richie offers a contextual nudge
+  if(pg.goalMetric && !_tourQueue.length && !APP._goalsFirst){ maybeCoachPage(pg); }
+}
+let _lastCoachPage=null, _lastCoachTime=0;
+function maybeCoachPage(pg){
+  const now=Date.now();
+  // don't nag: skip if we coached this same page in the last 90s
+  if(_lastCoachPage===pg.id && (now-_lastCoachTime)<90000) return;
+  _lastCoachPage=pg.id; _lastCoachTime=now;
+  const goal=_goals().find(g=>g.metric===pg.goalMetric && !g.completed);
+  setTimeout(()=>{
+    if(goal){ const p=goalProgress(goal);
+      if(p.pct>=100){ richieSay(`"${goal.name}" looks complete — nice work! 🎉`); }
+      else { const plan=goalPlanFor(pg.goalMetric); const tip=plan.teach[Math.floor(Math.random()*plan.teach.length)];
+        richieSay(`You're ${p.pct}% toward "${goal.name}". Tip: ${tip}`); }
+      if(sbRichie)sbRichie.do('wiggle');
+    }
+  }, 900);
 }
 
 /* ═══════════════ WIDGET LIBRARY ═══════════════
@@ -4166,7 +4265,7 @@ const RICHIE_STORY=[
 ];
 let riScene=0, riTyping=false, riTypeTimer=null, riFullText="";
 let riChar=null, wizChar=null, wizStep=1;
-let setupConfig={ persona:null, level:null, householdName:'', profiles:[{name:'',avatar:'💰'}], bundle:null, plaidConnected:false, xp:0, proMode:false };
+let setupConfig={ persona:null, level:null, householdName:'', profiles:[{name:'',avatar:'💰'}], bundle:null, chosenGoals:[], plaidConnected:false, xp:0, proMode:false };
 
 function introApplyAccent(){ const p=setupConfig.persona&&RICHIE_PERSONAS[setupConfig.persona]; document.documentElement.style.setProperty('--green', p?p.accent:'#2ecc8a'); }
 
@@ -4254,8 +4353,8 @@ const WIZ_BUNDLES=[
   {id:'playground',icon:'🎮',name:'The Playground',desc:'Stress-test scenarios and plan debt payoff interactively.',quip:'"Let\'s run the what-ifs."',pages:['Playground','Net Worth']},
   {id:'blank',icon:'🎨',name:'Blank Canvas',desc:'Start empty and build it your way.',quip:'"A true artist."',pages:['You build everything']},
 ];
-const WIZ_TITLES={1:"Who are we building this for?",2:"Pick your starting point",3:"Your world is ready"};
-const WIZ_QUIPS={1:"Don't worry, this is the easy part.",2:"Pick a starter pack, or go rogue with a blank canvas.",3:"Look at you. All set up and dangerous."};
+const WIZ_TITLES={1:"Who are we building this for?",2:"What are your top 3 money goals?",3:"Your plan is ready"};
+const WIZ_QUIPS={1:"Don't worry, this is the easy part.",2:"Pick 3 — I'll build your whole app around achieving them.",3:"Look at you. A plan and a coach. Let's go."};
 function startWizard(){ gg('setupWizard').style.display='flex'; if(!wizChar) wizChar=new RichieEmoji(gg('wizRichie')); wizChar.do('bounce'); wizGoTo(1); }
 function wizGoTo(step){
   wizStep=step;
@@ -4275,25 +4374,32 @@ function wizRenderBody(){
       <button class="btn" onclick="wizAddProfile()" style="margin-top:6px">+ Add a person</button></div>`;
     wizRenderProfiles();
   } else if(wizStep===2){
-    b.innerHTML=`<div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6">Each bundle drops a few ready-made pages into your world. Add, remove, or rename anything later.</div>
-      <div class="bundle-grid">${WIZ_BUNDLES.map(bn=>`<div class="bundle-card${setupConfig.bundle===bn.id?' selected':''}" onclick="wizPickBundle('${bn.id}')">
-        <div class="bundle-check">\u2713</div><div class="bundle-card-icon">${bn.icon}</div>
-        <div class="bundle-card-name">${bn.name}</div><div class="bundle-card-desc">${bn.desc}</div>
-        <div class="bundle-card-pages">${bn.pages.map(p=>`<span class="bundle-page-chip">${p}</span>`).join('')}</div>
-        <div class="bundle-card-quip" style="margin-top:8px">${bn.quip}</div></div>`).join('')}</div>`;
+    const chosen=setupConfig.chosenGoals||[];
+    b.innerHTML=`<div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6">Choose up to 3 goals. I'll build pages with exactly the right widgets to track each one — and coach you the whole way. <b style="color:var(--green)">${chosen.length}/3 chosen</b></div>
+      <div class="goal-pick-grid">${GOAL_PRESETS.map(g=>{
+        const sel=chosen.some(c=>c.key===g.key);
+        const dim=!sel&&chosen.length>=3;
+        return `<div class="goal-pick-card${sel?' selected':''}${dim?' dim':''}" onclick="${dim?'':`wizToggleGoal('${g.key}')`}">
+          <div class="bundle-check">\u2713</div>
+          <div class="goal-pick-icon">${g.icon}</div>
+          <div class="goal-pick-name">${g.name}</div>
+          <div class="goal-pick-blurb">${g.blurb}</div>
+        </div>`;
+      }).join('')}</div>
+      <div style="margin-top:14px"><button class="btn" onclick="wizCustomGoalPrompt()" style="width:100%">\u2795 Add a custom goal instead</button></div>`;
   } else if(wizStep===3){
-    const bundle=WIZ_BUNDLES.find(x=>x.id===setupConfig.bundle);
+    const chosen=setupConfig.chosenGoals||[];
     const p=RICHIE_PERSONAS[setupConfig.persona]; const lv=LEVELS.find(l=>l.n===setupConfig.level);
     b.innerHTML=`<div class="wiz-success">
       <span class="richie e-idle" id="wizSuccessChar" style="font-size:64px">💰</span>
-      <h2>You're all set, ${setupConfig.householdName||'friend'}!</h2>
-      <p>Your <strong style="color:var(--green)">${bundle?bundle.name:'custom'}</strong> world is ready with ${bundle?bundle.pages.length:0} starter page${bundle&&bundle.pages.length!==1?'s':''}.</p>
+      <h2>Your plan is ready, ${setupConfig.householdName||'friend'}!</h2>
+      <p>I've built your app around <strong style="color:var(--green)">${chosen.length} goal${chosen.length!==1?'s':''}</strong> — a Goals home page plus a focused page with the right widgets for each.</p>
+      <div class="wiz-goal-list">${chosen.map(g=>`<div class="wiz-goal-chip">${g.icon} ${g.name}</div>`).join('')||'<div style="color:var(--muted);font-size:13px">No goals picked — I will start you with a Goals page you can fill in.</div>'}</div>
       <div class="summary-row">
         <div class="summary-chip">Guide: <b>${p?p.icon+' '+p.name:'\u2014'}</b></div>
         <div class="summary-chip">Level: <b>${lv?lv.icon+' '+lv.name:'\u2014'}</b></div>
       </div>
-      <p style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:4px">Next: sign in to secure your world. Once you're in, I'll help you connect your bank. \u{1F3E6}</p>
-      <p style="font-size:13px;color:var(--green);font-style:italic">"${p?p.quips[0].replace(/"/g,''):'Let us make some money moves.'}"</p></div>`;
+      <p style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:4px">Next: sign in to secure your plan. Once you're in, I'll connect your bank and walk you through each goal. \u{1F3E6}</p></div>`;
     setTimeout(()=>{ const el=gg('wizSuccessChar'); if(el){ const sc=new RichieEmoji(el); sc.do('celebrate'); } },120);
   }
 }
@@ -4308,10 +4414,26 @@ function wizAddProfile(){if(setupConfig.profiles.length>=6)return;setupConfig.pr
 function wizRemoveProfile(i){setupConfig.profiles.splice(i,1);wizRenderProfiles();}
 function wizCycleAvatar(i){const a=['💰','😎','🧑','👩','🧔','👵','🦊','🐼','🤑','🧙'];const c=a.indexOf(setupConfig.profiles[i].avatar);setupConfig.profiles[i].avatar=a[(c+1)%a.length];wizRenderProfiles();}
 function wizPickBundle(id){setupConfig.bundle=id;wizRenderBody();}
+function wizToggleGoal(key){
+  const g=GOAL_PRESETS.find(x=>x.key===key); if(!g) return;
+  setupConfig.chosenGoals=setupConfig.chosenGoals||[];
+  const i=setupConfig.chosenGoals.findIndex(c=>c.key===key);
+  if(i>=0){ setupConfig.chosenGoals.splice(i,1); }
+  else { if(setupConfig.chosenGoals.length>=3) return; setupConfig.chosenGoals.push({key:g.key,name:g.name,metric:g.metric,target:g.target,icon:g.icon,auto:g.auto}); }
+  wizRenderBody();
+}
+function wizCustomGoalPrompt(){
+  if((setupConfig.chosenGoals||[]).length>=3){ alert("Richie says: you've picked 3 already! Remove one to add a custom goal."); return; }
+  const name=prompt("Name your custom goal (e.g. 'Save for a house'):"); if(!name) return;
+  const amt=prompt("Target amount ($):","5000"); const target=parseFloat(amt)||0;
+  setupConfig.chosenGoals=setupConfig.chosenGoals||[];
+  setupConfig.chosenGoals.push({key:'custom'+Date.now(),name:name.trim(),metric:'custom',target,icon:'🎯'});
+  wizRenderBody();
+}
 function wizBack(){if(wizStep>1)wizGoTo(wizStep-1);}
 function wizNext(){
   if(wizStep===1){ if(!setupConfig.householdName.trim()){wizShake('wizHousehold');return;} if(!setupConfig.profiles.some(p=>p.name.trim())){alert("Richie says: give me at least one name!");return;} }
-  if(wizStep===2){ if(!setupConfig.bundle){alert("Richie says: pick a starter (Blank Canvas counts!)");return;} }
+  if(wizStep===2){ if(!(setupConfig.chosenGoals||[]).length){alert("Richie says: pick at least one goal — that's what I'll build your app around!");return;} }
   if(wizStep===3){ wizFinish(); return; }
   wizGoTo(wizStep+1);
 }
@@ -4490,7 +4612,44 @@ function enterApp(){
       setTimeout(()=>richieGuideConnect(), 1400);
     }
   });
+  // Goals-first: Richie walks the user through their goal plan on first entry
+  if(APP._goalsFirst){ setTimeout(()=>startGoalWalkthrough(), 1800); }
 }
+/* Richie's goal-plan walkthrough: greets, explains the plan, offers a tour of each goal page. */
+function startGoalWalkthrough(){
+  APP._goalsFirst=false; saveState();
+  const goals=_goals();
+  const names=goals.map(g=>g.icon+' '+g.name).join(', ');
+  gg('richieAssistant').style.display='block';
+  const pn=gg('richiePanel'); if(pn)pn.classList.add('open');
+  richieSay(`Welcome! I built your whole app around your goals: ${names}. Each goal has its own page with exactly the widgets you need. Tap "Show me" and I'll walk you through the first one.`);
+  const a=gg('rpAction');
+  if(a){ a.innerHTML=`<button class="btn primary" onclick="goalTourStart()" style="width:100%;margin-top:8px">Show me my plan →</button>
+    <button class="btn" onclick="goalTourSkip()" style="width:100%;margin-top:6px">I'll explore on my own</button>`; }
+}
+let _tourQueue=[];
+function goalTourStart(){
+  _tourQueue=(APP.pages||[]).filter(p=>p.goalMetric).map(p=>p.id);
+  goalTourNext();
+}
+function goalTourNext(){
+  const a=gg('rpAction'); if(a)a.innerHTML='';
+  if(!_tourQueue.length){
+    richieSay("That's your plan! Connect your bank so I can track real progress, and tap any goal's 💡 anytime you want a hint. Let's make some moves. 💪");
+    return;
+  }
+  const pid=_tourQueue.shift();
+  const pg=APP.pages.find(p=>p.id===pid); if(!pg){ goalTourNext(); return; }
+  switchPage(pid);
+  const plan=goalPlanFor(pg.goalMetric);
+  setTimeout(()=>{
+    richieSay(plan.coach);
+    const a2=gg('rpAction');
+    if(a2){ a2.innerHTML=`<button class="btn primary" onclick="goalTourNext()" style="width:100%;margin-top:8px">${_tourQueue.length?'Next goal →':'Got it!'}</button>`; }
+    if(sbRichie)sbRichie.do('bounce');
+  }, 500);
+}
+function goalTourSkip(){ const a=gg('rpAction'); if(a)a.innerHTML=''; richieSay("No problem — explore away. I'm always one tap away if you want coaching on any goal. 🎯"); }
 function showStorageWarning(){
   if(!_storageBlocked) return;
   if(gg('storageWarn')) return;
