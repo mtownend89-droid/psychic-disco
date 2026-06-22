@@ -345,12 +345,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .sb-nav{flex:1;overflow-y:auto;padding:4px 8px 8px;}
 /* Page nav buttons */
 .page-nav-btn{
-  display:flex;align-items:center;gap:10px;
-  padding:8px 10px;border-radius:9px;
+  display:flex;align-items:center;gap:9px;
+  padding:6px 8px;border-radius:8px;
   color:var(--muted);cursor:pointer;
   font-size:13px;font-weight:400;border:none;
   background:none;width:100%;text-align:left;
-  transition:all 0.13s;position:relative;margin-bottom:1px;
+  transition:all 0.13s;position:relative;margin-bottom:0;
 }
 .page-nav-btn:hover{color:var(--text);background:rgba(255,255,255,0.04);}
 .page-nav-btn.active{color:var(--text);font-weight:600;}
@@ -360,16 +360,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
   left:-8px;
 }
 .pnb-icon{
-  width:28px;height:28px;border-radius:8px;
+  width:26px;height:26px;border-radius:7px;
   display:flex;align-items:center;justify-content:center;
-  font-size:14px;flex-shrink:0;
+  font-size:13px;flex-shrink:0;
   background:rgba(255,255,255,0.05);
   transition:all 0.15s;
 }
 .page-nav-btn.active .pnb-icon{background:var(--page-color,var(--green));box-shadow:0 2px 8px rgba(0,0,0,0.2);}
 .pnb-label{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.pnb-actions{ opacity:1;display:flex;gap:1px;flex-shrink:0;margin-left:auto; }
-.page-nav-btn:hover .pnb-actions{opacity:1;}
+.pnb-actions{ display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:auto; }
 .pnb-act{ width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,0.04);border:none;color:var(--muted);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all 0.13s; }
 .pnb-act:hover{background:rgba(255,255,255,0.1);color:var(--text);}
 .pnb-act:hover{background:rgba(255,255,255,0.08);color:var(--muted);}
@@ -905,6 +904,20 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .bill-min b{color:var(--text);font-weight:600;}
 .bills-foot-amts{display:flex;align-items:center;gap:10px;}
 .bills-foot-min{font-size:11px;color:var(--muted);}
+/* ── Manual editor form + add buttons ── */
+.manual-add-btn{width:100%;margin-top:10px;padding:9px;border-radius:9px;background:var(--surface2);border:1px dashed var(--border2);color:var(--muted);font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .13s;}
+.manual-add-btn:hover{border-color:var(--green);color:var(--green);background:var(--green-dim);}
+.bill-edit{background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:0 0 0 6px;opacity:.6;}
+.bill-edit:hover{opacity:1;color:var(--green);}
+.mf-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:12px 0 5px;}
+.mf-in{width:100%;height:40px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:0 12px;color:var(--text);font-size:14px;font-family:var(--font);outline:none;}
+.mf-in:focus{border-color:var(--green);}
+select.mf-in{appearance:none;cursor:pointer;}
+.mf-row{display:flex;gap:10px;}
+.mf-row>div{flex:1;min-width:0;}
+.mf-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:20px;}
+.danger-btn{background:rgba(240,92,92,0.1)!important;border:1px solid rgba(240,92,92,0.3)!important;color:#f06c6c!important;}
+.danger-btn:hover{background:rgba(240,92,92,0.18)!important;}
 .bills-foot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1.5px solid var(--border2);font-size:12px;color:var(--muted);}
 .bills-foot b{color:var(--text);font-size:14px;}
 /* ── Playground: Fire Drill + Debt Planner ── */
@@ -1849,19 +1862,20 @@ function engPLSample(group){
 /* ── Accounts engine: list with type icons + per-account 30d net ── */
 function _acctIcon(a){ if(a.type==='credit')return '💳'; if(a.subtype==='savings')return '🏦'; if(a.subtype==='checking')return '🏧'; if(a.type==='investment')return '📈'; return '💰'; }
 function engAccounts(){
+  const manual=(APP.manualAccounts||[]).map(a=>({...a, manual:true}));
   if(!dataLoaded||!allAccts.length){
     return [
       {name:'Chase Checking',type:'depository',subtype:'checking',bal:5240,institution:'Chase',id:'s1'},
       {name:'Ally Savings',type:'depository',subtype:'savings',bal:8030,institution:'Ally',id:'s2'},
       {name:'Fidelity 401k',type:'investment',subtype:'401k',bal:142800,institution:'Fidelity',id:'s3'},
       {name:'Sapphire Card',type:'credit',subtype:'credit card',bal:-2400,institution:'Chase',id:'s4'},
-    ];
+    ].concat(manual);
   }
   return allAccts.map((a,i)=>({
     name:(a.name||a.official_name||a.type), type:a.type, subtype:a.subtype,
     bal:(a.type==='credit'?-(Math.abs(a.balances.current||0)):(a.balances.current??a.balances.available??0)),
     institution:a.institution||'', id:a.account_id||('a'+i), _acct:a
-  }));
+  })).concat(manual);
 }
 function engAcctNet30(acct){
   if(!dataLoaded||!acct._acct) return null;
@@ -1896,6 +1910,77 @@ function setBillPay(key,val){
   const ov=_billOverrides(); ov[key]=ov[key]||{}; const n=parseFloat(val); if(!isNaN(n)&&n>=0) ov[key].pay=n; saveState();
 }
 function setBillPayCommit(){ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+
+/* ── Manual bills & accounts editor (items not linked to Plaid) ── */
+let _manualEdit={kind:'bill', idx:null};
+function openManualBill(idx){ _manualEdit={kind:'bill', idx:(idx==null?null:idx)}; gg('manualModal').style.display='flex'; manualRender(); }
+function openManualAccount(idx){ _manualEdit={kind:'account', idx:(idx==null?null:idx)}; gg('manualModal').style.display='flex'; manualRender(); }
+function closeManual(){ gg('manualModal').style.display='none'; }
+function manualRender(){
+  const k=_manualEdit.kind, editing=_manualEdit.idx!=null;
+  gg('manualTitle').textContent=(editing?'Edit ':'Add ')+(k==='bill'?'a bill':'an account');
+  gg('manualSub').textContent=k==='bill'?'A bill or recurring payment you manage manually.':'An account or balance not linked to a bank.';
+  const body=gg('manualBody');
+  if(k==='bill'){
+    const b=editing?(APP.manualBills||[])[_manualEdit.idx]:{name:'',pay:'',min:'',bal:'',apr:'',due:1,cat:'OTHER',note:''};
+    body.innerHTML=`
+      <label class="mf-label">Name</label><input class="mf-in" id="mfName" value="${esc(b.name||'')}" placeholder="e.g. Car insurance">
+      <div class="mf-row">
+        <div><label class="mf-label">You pay / mo</label><input class="mf-in" id="mfPay" type="number" value="${b.pay||''}" placeholder="0"></div>
+        <div><label class="mf-label">Minimum (optional)</label><input class="mf-in" id="mfMin" type="number" value="${b.min||''}" placeholder="same as pay"></div>
+      </div>
+      <div class="mf-row">
+        <div><label class="mf-label">Balance owed (optional)</label><input class="mf-in" id="mfBal" type="number" value="${b.bal?Math.abs(b.bal):''}" placeholder="0 = just a bill"></div>
+        <div><label class="mf-label">APR % (optional)</label><input class="mf-in" id="mfApr" type="number" value="${b.apr||''}" placeholder="0"></div>
+      </div>
+      <div class="mf-row">
+        <div><label class="mf-label">Due day (1–31)</label><input class="mf-in" id="mfDue" type="number" min="1" max="31" value="${b.due||1}"></div>
+        <div><label class="mf-label">Category</label><select class="mf-in" id="mfCat">${['OTHER','CC','LOAN','HM','SUB','UTIL','INS','AUTO'].map(c=>`<option value="${c}"${b.cat===c?' selected':''}>${c}</option>`).join('')}</select></div>
+      </div>
+      <div class="mf-actions">
+        ${editing?`<button class="btn danger-btn" onclick="deleteManualBill(${_manualEdit.idx})">Delete</button>`:'<span></span>'}
+        <button class="btn primary" onclick="saveManualBill()">${editing?'Save':'Add bill'}</button>
+      </div>`;
+  } else {
+    const a=editing?(APP.manualAccounts||[])[_manualEdit.idx]:{name:'',bal:'',type:'depository',subtype:'checking',institution:''};
+    body.innerHTML=`
+      <label class="mf-label">Account name</label><input class="mf-in" id="mfName" value="${esc(a.name||'')}" placeholder="e.g. Cash envelope, Crypto wallet">
+      <div class="mf-row">
+        <div><label class="mf-label">Balance</label><input class="mf-in" id="mfBal" type="number" value="${a.bal||''}" placeholder="0"></div>
+        <div><label class="mf-label">Type</label><select class="mf-in" id="mfType" onchange="document.getElementById('mfNeg').style.display=this.value==='credit'?'block':'none'">${[['depository','Cash / Bank'],['investment','Investment'],['credit','Credit / Debt'],['other','Other asset']].map(t=>`<option value="${t[0]}"${a.type===t[0]?' selected':''}>${t[1]}</option>`).join('')}</select></div>
+      </div>
+      <div id="mfNeg" style="display:${a.type==='credit'?'block':'none'};font-size:11.5px;color:var(--muted);margin-bottom:8px">Credit/debt balances are counted as money owed.</div>
+      <label class="mf-label">Institution (optional)</label><input class="mf-in" id="mfInst" value="${esc(a.institution||'')}" placeholder="e.g. Local Credit Union">
+      <div class="mf-actions">
+        ${editing?`<button class="btn danger-btn" onclick="deleteManualAccount(${_manualEdit.idx})">Delete</button>`:'<span></span>'}
+        <button class="btn primary" onclick="saveManualAccount()">${editing?'Save':'Add account'}</button>
+      </div>`;
+  }
+}
+function _num(id){ const v=parseFloat(gg(id)?.value); return isNaN(v)?0:v; }
+function saveManualBill(){
+  const name=(gg('mfName').value||'').trim(); if(!name){ gg('mfName').focus(); return; }
+  const pay=_num('mfPay'), min=gg('mfMin').value?_num('mfMin'):pay, bal=_num('mfBal'), apr=_num('mfApr'), due=Math.max(1,Math.min(31,_num('mfDue')||1));
+  const cat=gg('mfCat').value;
+  const item={name, pay, min, bal:bal?-Math.abs(bal):0, apr, due, cat, note:'manual', paid:false};
+  APP.manualBills=APP.manualBills||[];
+  if(_manualEdit.idx!=null) APP.manualBills[_manualEdit.idx]=item; else APP.manualBills.push(item);
+  saveState(); closeManual(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+  if(sbRichie)sbRichie.do('nod');
+}
+function deleteManualBill(idx){ if(!confirm('Delete this bill?'))return; APP.manualBills.splice(idx,1); saveState(); closeManual(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+function saveManualAccount(){
+  const name=(gg('mfName').value||'').trim(); if(!name){ gg('mfName').focus(); return; }
+  const type=gg('mfType').value; let bal=_num('mfBal');
+  if(type==='credit') bal=-Math.abs(bal);
+  const subtype={depository:'checking',investment:'investment',credit:'credit card',other:'other'}[type];
+  const item={name, bal, type, subtype, institution:(gg('mfInst').value||'').trim(), id:'m'+Date.now()};
+  APP.manualAccounts=APP.manualAccounts||[];
+  if(_manualEdit.idx!=null) APP.manualAccounts[_manualEdit.idx]=item; else APP.manualAccounts.push(item);
+  saveState(); closeManual(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+  if(sbRichie)sbRichie.do('nod');
+}
+function deleteManualAccount(idx){ if(!confirm('Delete this account?'))return; APP.manualAccounts.splice(idx,1); saveState(); closeManual(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function engSpend30(){ return engRecent(30).filter(t=>t.amount>0).reduce((s,t)=>s+t.amount,0); }
 function engIncome30(){ return engRecent(30).filter(t=>t.amount<0).reduce((s,t)=>s+Math.abs(t.amount),0); }
 // Generalized windowed spend/income (any day count)
@@ -2041,7 +2126,8 @@ function engCashFlowProjection(days){
 function plaidHasLiab(){ return !!(plaidLiabilities && ((plaidLiabilities.credit_cards||[]).length || (plaidLiabilities.mortgages||[]).length)); }
 function _dueDay(dateStr){ if(!dateStr) return 1; const d=new Date(dateStr); return isNaN(d)?1:d.getDate(); }
 function engBills(){
-  if(!plaidHasLiab()) return applyBillOverrides(bills);
+  const manual=(APP.manualBills||[]).map(b=>({...b, manual:true, min:b.min!=null?b.min:b.pay}));
+  if(!plaidHasLiab()) return applyBillOverrides(bills.concat(manual));
   const out=[];
   (plaidLiabilities.credit_cards||[]).forEach(c=>{
     out.push({ name:c.name||'Credit Card', note:c.institution||'', cat:'CC',
@@ -2055,7 +2141,7 @@ function engBills(){
       min:(m.minimum_payment||0), pay:(m.minimum_payment||0),
       due:_dueDay(m.next_payment_due_date), promo:'', paid:false, source:'plaid' });
   });
-  return applyBillOverrides(out);
+  return applyBillOverrides(out.concat(manual));
 }
 function engMonthlyBills(){ return engBills().reduce((s,b)=>s+(b.pay||0),0); }
 function engBillsDebt(){ return engBills().reduce((s,b)=>s+Math.abs(b.bal||0),0); }
@@ -2888,7 +2974,7 @@ function fdSetScenario(id){
 
 /* ═══ CASH FLOW PLANNER WIDGET ═══ */
 let _cfpRange={};  // per-widget projection window in days
-const CFP_RANGES=[{k:30,l:'30 days'},{k:60,l:'60 days'},{k:90,l:'90 days'}];
+const CFP_RANGES=[{k:7,l:'1 wk'},{k:30,l:'30 days'},{k:60,l:'60 days'},{k:90,l:'90 days'}];
 function cfpWidgetBody(w){
   const range=_cfpRange[w.uid]||30;
   return `<div class="cfp-wrap">
@@ -3019,7 +3105,7 @@ function acctWidgetBody(w){
     const open=_acctOpen[w.uid]===a.id;
     return `<div class="acct-chip${open?' open':''}" onclick="toggleAcct('${w.uid}','${a.id}')">
         <span class="acct-ic">${_acctIcon(a)}</span>
-        <div class="acct-meta"><div class="acct-nm">${esc(a.name)}</div><div class="acct-sub">${esc(a.institution||a.subtype||a.type)}</div></div>
+        <div class="acct-meta"><div class="acct-nm">${esc(a.name)}${a.manual?`<button class="bill-edit" onclick="event.stopPropagation();openManualAccount(${(APP.manualAccounts||[]).findIndex(x=>x.id===a.id)})" title="Edit">\u270E</button>`:''}</div><div class="acct-sub">${esc(a.institution||a.subtype||a.type)}${a.manual?' · manual':''}</div></div>
         <div class="acct-bal" style="color:${col}">${balStr}</div>
         <span class="acct-arr">${open?'▲':'▼'}</span>
       </div>${open?`<div class="acct-txns" id="acdt_${w.uid}"></div>`:''}`;
@@ -3035,6 +3121,7 @@ function acctWidgetBody(w){
       <div class="acct-tt"><span>💳 Debt</span><b style="color:var(--red)">${fmtK(tt.credit)}</b></div>
     </div>
     ${rows}
+    <button class="manual-add-btn" onclick="event.stopPropagation();openManualAccount()">➕ Add an account</button>
   </div>`;
 }
 function toggleAcct(uid,id){
@@ -3252,7 +3339,7 @@ function renderWidgetBody(w){
         return `<div class="bill-row${paid?' paid':''}">
           <button class="bill-check" onclick="event.stopPropagation();toggleBillPaid('${key}')" title="${paid?'Mark unpaid':'Mark paid'}">${paid?'\u2713':''}</button>
           <div class="bill-info">
-            <div class="bill-nm">${esc(b.name)}</div>
+            <div class="bill-nm">${esc(b.name)}${b.manual?`<button class="bill-edit" onclick="event.stopPropagation();openManualBill(${(APP.manualBills||[]).indexOf((APP.manualBills||[]).find(x=>x.name===b.name&&x.cat===b.cat))})" title="Edit">\u270E</button>`:''}</div>
             <div class="bill-sub">due ${ord(b.due)}${b.apr?` \u00b7 ${b.apr.toFixed(1)}%`:''}${b.promo?` \u00b7 ${esc(b.promo)}`:''}</div>
             <div class="bill-amts">
               <span class="bill-min">Min <b>${fmtK(b.min)}</b>${live?' \u00b7 Plaid':''}</span>
@@ -3268,6 +3355,7 @@ function renderWidgetBody(w){
           <span>${up.filter(b=>!b.paid).length} unpaid \u00b7 ${up.filter(b=>b.paid).length} paid</span>
           <span class="bills-foot-amts">${live?`<span class="bills-foot-min">min ${fmtK(totMin)}</span>`:''}<b>${fmtK(totPay)} you pay</b></span>
         </div>
+        <button class="manual-add-btn" onclick="event.stopPropagation();openManualBill()">➕ Add a bill</button>
       </div>`; }
     case 'cashflow_chart': { const tf=w.tf||'30d'; const mb={'1w':1,'30d':3,'3m':3,'1y':12}[tf]||3; return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Income vs spending${dataLoaded?' · last '+mb+' mo':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`; }
     case 'pl_panel': return plWidgetBody(w);
@@ -3958,6 +4046,17 @@ function start(){
 }
 window.addEventListener('load',start);
 </script>
+
+<!-- Manual Bill / Account Editor Modal -->
+<div id="manualModal" class="wdt-modal" style="display:none" onclick="if(event.target===this)closeManual()">
+  <div class="wdt-card">
+    <div class="wdt-head">
+      <div><h3 id="manualTitle">Add a bill</h3><p class="wdt-sub" id="manualSub">Not linked to a bank — you manage it manually.</p></div>
+      <button class="wdt-x" onclick="closeManual()">×</button>
+    </div>
+    <div class="wdt-body-wrap" id="manualBody"></div>
+  </div>
+</div>
 
 <!-- Widget Detail Modal -->
 <div id="widgetDetailModal" class="wdt-modal" style="display:none" onclick="if(event.target===this)closeWidgetDetail()">
