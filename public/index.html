@@ -840,6 +840,100 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .fc-stat-val{font-size:20px;font-weight:700;color:var(--text);}
 .fc-stat-lbl{font-size:11px;color:var(--muted);}
 .fc-note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:2px;}
+/* ── Goal deadline pace ── */
+.goal-pace{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);margin-top:7px;padding-top:7px;border-top:1px solid var(--border);}
+.goal-pace-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+/* ── Category Heatmap ── */
+.hm-wrap{padding:2px;}
+.hm-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;}
+.hm-grid{display:flex;flex-direction:column;gap:3px;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.hm-row{display:flex;gap:3px;align-items:center;min-width:max-content;}
+.hm-cat{width:108px;flex-shrink:0;font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:5px;}
+.hm-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.hm-cell{width:46px;height:30px;flex-shrink:0;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text);}
+.hm-head .hm-cell{height:auto;background:none!important;}
+.hm-mlabel,.hm-avg-h{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.02em;}
+.hm-v{font-weight:600;text-shadow:0 1px 2px rgba(0,0,0,.4);}
+.hm-avg{background:var(--surface2)!important;font-weight:700;color:var(--muted);}
+.hm-avg-h{font-weight:700;}
+/* ── Savings Buckets ── */
+.sb-wrap{padding:2px;}
+.sb-header{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin-bottom:11px;}
+.sb-bucket{padding:11px 2px;border-bottom:1px solid var(--border);}
+.sb-bucket:last-of-type{border-bottom:none;}
+.sb-top{display:flex;align-items:center;gap:10px;}
+.sb-icon{font-size:22px;flex-shrink:0;}
+.sb-meta{flex:1;min-width:0;}
+.sb-nm{font-size:13.5px;font-weight:700;color:var(--text);}
+.sb-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.sb-amt{text-align:right;flex-shrink:0;}
+.sb-bal{font-size:14px;font-weight:700;color:var(--green);}
+.sb-tgt{font-size:10.5px;color:var(--muted);}
+.sb-actions{flex-shrink:0;}
+.sb-bar{height:7px;background:var(--surface3);border-radius:4px;overflow:hidden;margin-top:8px;}
+.sb-bar-fill{height:100%;border-radius:4px;transition:width .4s;}
+/* ── Budget vs Actual ── */
+.ba-wrap{padding:2px;}
+.ba-toolbar{margin-bottom:11px;}
+.ba-summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;}
+.ba-sumcell{background:var(--surface2);border-radius:9px;padding:9px;text-align:center;}
+.ba-suml{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;}
+.ba-sumv{font-size:15px;font-weight:700;margin-top:2px;}
+.ba-row{padding:9px 2px;}
+.ba-top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;}
+.ba-nm{font-weight:600;color:var(--text);}
+.ba-diff{font-weight:700;font-variant-numeric:tabular-nums;}
+.ba-bar{position:relative;height:8px;background:var(--surface3);border-radius:4px;overflow:visible;}
+.ba-bar-fill{height:100%;border-radius:4px;}
+.ba-bar-mark{position:absolute;top:-2px;bottom:-2px;right:0;width:0;border-left:2px solid var(--muted);opacity:.5;}
+.ba-sub{font-size:10.5px;color:var(--muted);margin-top:4px;}
+/* ── Income editor ── */
+.cfp-income-btn{margin-left:auto;font-size:11.5px;padding:5px 11px;border-radius:8px;background:var(--green-dim);border:1px solid rgba(46,204,138,0.25);color:var(--green);font-weight:600;cursor:pointer;font-family:var(--font);}
+.cfp-income-btn:hover{background:rgba(46,204,138,0.22);}
+.inc-total{font-size:13px;color:var(--muted);margin-bottom:12px;}
+.inc-list{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+.inc-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:10px;}
+.inc-main{flex:1;min-width:0;}
+.inc-nm{font-size:13.5px;font-weight:700;color:var(--text);}
+.inc-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.inc-actions{display:flex;gap:4px;flex-shrink:0;}
+/* ── 0% Promo Tracker ── */
+.promo-wrap{padding:2px;}
+.promo-alert{background:rgba(240,92,92,0.12);border:1px solid rgba(240,92,92,0.3);border-radius:9px;padding:9px 12px;font-size:12.5px;color:#f0846c;font-weight:600;margin-bottom:11px;}
+.promo-row{display:flex;gap:12px;align-items:flex-start;padding:11px 2px;border-bottom:1px solid var(--border);}
+.promo-row:last-child{border-bottom:none;}
+.promo-main{flex:1;min-width:0;}
+.promo-nm{font-size:13.5px;font-weight:700;color:var(--text);}
+.promo-tag{font-size:10.5px;font-weight:600;color:var(--green);background:var(--green-dim);border-radius:5px;padding:1px 6px;margin-left:5px;}
+.promo-sub{font-size:11.5px;color:var(--muted);margin:3px 0 6px;}
+.promo-bar{height:5px;background:var(--surface3);border-radius:3px;overflow:hidden;}
+.promo-bar-fill{height:100%;border-radius:3px;transition:width .3s;}
+.promo-side{text-align:right;flex-shrink:0;min-width:96px;}
+.promo-days{font-size:12.5px;font-weight:700;}
+.promo-warn{font-size:10.5px;color:var(--muted);margin-top:3px;}
+/* ── Credit Utilization + DTI ── */
+.cu-wrap{padding:2px;}
+.cu-top{display:flex;gap:16px;align-items:center;margin-bottom:14px;}
+@media(max-width:480px){.cu-top{flex-direction:column;}}
+.cu-gauge{flex-shrink:0;}
+.cu-gauge-ring{width:120px;height:120px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.cu-gauge-hole{width:88px;height:88px;border-radius:50%;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.cu-gauge-pct{font-size:24px;font-weight:800;line-height:1;}
+.cu-gauge-cap{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:3px;}
+.cu-summary{flex:1;min-width:0;}
+.cu-line{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;}
+.cu-line span{color:var(--muted);}
+.cu-dti{margin-top:9px;padding-top:9px;border-top:1px solid var(--border);}
+.cu-dti-top{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px;}
+.cu-dti-top span{color:var(--muted);}
+.cu-dti-bar,.cu-card-bar{position:relative;height:7px;background:var(--surface3);border-radius:4px;overflow:visible;}
+.cu-dti-fill,.cu-card-fill{height:100%;border-radius:4px;}
+.cu-dti-mark{position:absolute;top:-2px;bottom:-2px;left:36%;width:0;border-left:2px dotted var(--muted);}
+.cu-card-mark{position:absolute;top:-2px;bottom:-2px;left:30%;width:0;border-left:2px dotted var(--muted);}
+.cu-cards-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:4px 0 10px;}
+.cu-cards{display:flex;flex-direction:column;gap:11px;}
+.cu-card-top{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px;}
+.cu-card-sub{font-size:10.5px;color:var(--muted);margin-top:3px;}
 /* ── Financial Goals ── */
 .goals-wrap{padding:2px;}
 .goals-empty{text-align:center;padding:24px 12px;}
@@ -1928,6 +2022,7 @@ async function loadEngineData(){
   loadLiabilities(); // fire-and-forget; enriches SWOT/debt when available
   dataLoaded=(a||b)&&(allAccts.length>0||allTxns.length>0);
   try{ if(typeof checkGoalCompletion==='function') checkGoalCompletion(); }catch(e){}
+  try{ if(typeof maybeWarnPromos==='function') maybeWarnPromos(); }catch(e){}
   return dataLoaded;
 }
 
@@ -2048,6 +2143,10 @@ function manualRender(){
         <div><label class="mf-label">Due day (1–31)</label><input class="mf-in" id="mfDue" type="number" min="1" max="31" value="${b.due||1}"></div>
         <div><label class="mf-label">Category</label><select class="mf-in" id="mfCat">${['OTHER','CC','LOAN','HM','SUB','UTIL','INS','AUTO'].map(c=>`<option value="${c}"${b.cat===c?' selected':''}>${c}</option>`).join('')}</select></div>
       </div>
+      <div class="mf-row">
+        <div><label class="mf-label">0% promo ends (optional)</label><input class="mf-in" id="mfPromoEnd" type="date" value="${b.promoEnd||''}"></div>
+        <div><label class="mf-label">Credit limit (optional)</label><input class="mf-in" id="mfLimit" type="number" value="${b.limit||''}" placeholder="for utilization"></div>
+      </div>
       <div class="mf-actions">
         ${editing?`<button class="btn danger-btn" onclick="deleteManualBill(${_manualEdit.idx})">Delete</button>`:'<span></span>'}
         <button class="btn primary" onclick="saveManualBill()">${editing?'Save':'Add bill'}</button>
@@ -2068,12 +2167,107 @@ function manualRender(){
       </div>`;
   }
 }
+/* ═══ INCOME STREAM EDITOR (multi-cadence paychecks) ═══ */
+function _incomeList(){
+  if(!APP.incomeSources || !APP.incomeSources.length){
+    APP.incomeSources = incomeSources.map(s=>({...s}));
+  }
+  return APP.incomeSources;
+}
+function openIncomeEditor(){
+  _incomeList();
+  gg('manualModal').style.display='flex';
+  gg('manualTitle').textContent='Income streams';
+  gg('manualSub').textContent='Set each paycheck and its cadence — biweekly streams naturally land 3× in some months.';
+  incomeEditorRender();
+}
+function incomeEditorRender(){
+  const list=_incomeList();
+  const mo=engMonthlyIncome();
+  const freqLabel={weekly:'Weekly',biweekly:'Every 2 weeks',monthly:'Monthly',quarterly:'Quarterly',annual:'Annual'};
+  const rows=list.map((s,i)=>{
+    const perMo=Math.round(s.amt*(FREQ_TO_MONTHLY[s.freq]||1));
+    return `<div class="inc-row">
+      <div class="inc-main">
+        <div class="inc-nm">${esc(s.name)}</div>
+        <div class="inc-sub">${fmtK(s.amt)} · ${freqLabel[s.freq]||s.freq}${s.anchor?` · next ${new Date(s.anchor+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})}`:s.day?` · day ${s.day}`:''} → ${fmtK(perMo)}/mo</div>
+      </div>
+      <div class="inc-actions">
+        <button class="goal-mini" onclick="editIncome(${i})" title="Edit">✎</button>
+        <button class="goal-mini danger" onclick="deleteIncome(${i})" title="Remove">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+  gg('manualBody').innerHTML=`
+    <div class="inc-total">Total estimated income <b style="color:var(--green)">${fmtK(mo)}/mo</b></div>
+    <div class="inc-list">${rows||'<div class="ws-hint">No income streams yet.</div>'}</div>
+    <button class="manual-add-btn" onclick="editIncome(-1)">➕ Add an income stream</button>`;
+}
+let _incEdit=null;
+function editIncome(i){
+  _incEdit=i;
+  const list=_incomeList();
+  const s = i>=0 ? list[i] : {name:'',amt:'',freq:'biweekly',anchor:'',day:1};
+  const freqOpts=[['weekly','Weekly'],['biweekly','Every 2 weeks'],['monthly','Monthly'],['quarterly','Quarterly'],['annual','Annual']];
+  gg('manualTitle').textContent = i>=0?'Edit income':'Add income';
+  gg('manualSub').textContent='How much, how often, and when the next one lands.';
+  gg('manualBody').innerHTML=`
+    <label class="mf-label">Name</label>
+    <input class="mf-in" id="incName" value="${esc(s.name||'')}" placeholder="e.g. Matt Paycheck">
+    <div class="mf-row">
+      <div><label class="mf-label">Amount per check</label><input class="mf-in" id="incAmt" type="number" value="${s.amt||''}" placeholder="0"></div>
+      <div><label class="mf-label">Frequency</label><select class="mf-in" id="incFreq" onchange="incFreqChange()">${freqOpts.map(o=>`<option value="${o[0]}"${s.freq===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select></div>
+    </div>
+    <div id="incAnchorWrap">
+      <label class="mf-label" id="incAnchorLabel">Next payday</label>
+      <input class="mf-in" id="incAnchor" type="date" value="${s.anchor||''}">
+      <div class="ws-hint" id="incAnchorHint">Biweekly/weekly: pick any real payday — I'll project the rest forward, including 3-paycheck months.</div>
+    </div>
+    <div id="incDayWrap" style="display:none">
+      <label class="mf-label">Day of month (1–31)</label>
+      <input class="mf-in" id="incDay" type="number" min="1" max="31" value="${s.day||1}">
+    </div>
+    <div class="mf-actions">
+      ${i>=0?`<button class="btn danger-btn" onclick="deleteIncome(${i})">Delete</button>`:'<span></span>'}
+      <button class="btn primary" onclick="saveIncome()">${i>=0?'Save':'Add'}</button>
+    </div>`;
+  incFreqChange();
+}
+function incFreqChange(){
+  const f=gg('incFreq').value;
+  const isMonthly = f==='monthly';
+  gg('incDayWrap').style.display = isMonthly?'block':'none';
+  gg('incAnchorWrap').style.display = isMonthly?'none':'block';
+  const lbl=gg('incAnchorLabel'), hint=gg('incAnchorHint');
+  if(f==='quarterly'){ if(lbl)lbl.textContent='Next payment date'; if(hint)hint.textContent='I\'ll repeat this every 3 months.'; }
+  else if(lbl){ lbl.textContent='Next payday'; if(hint)hint.textContent='Pick any real payday — I\'ll project the rest forward, including 3-paycheck months.'; }
+}
+function saveIncome(){
+  const name=(gg('incName').value||'').trim(); if(!name){ gg('incName').focus(); return; }
+  const amt=_num('incAmt'); const freq=gg('incFreq').value;
+  const item={name, amt, freq};
+  if(freq==='monthly'){ item.day=Math.max(1,Math.min(31,_num('incDay')||1)); }
+  else { const a=gg('incAnchor').value; if(a) item.anchor=a; }
+  const list=_incomeList();
+  if(_incEdit>=0) list[_incEdit]=item; else list.push(item);
+  saveState(); incomeEditorRender();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+  if(sbRichie)sbRichie.do('nod');
+}
+function deleteIncome(i){
+  if(!confirm('Remove this income stream?')) return;
+  _incomeList().splice(i,1); saveState(); incomeEditorRender();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+}
+
 function _num(id){ const v=parseFloat(gg(id)?.value); return isNaN(v)?0:v; }
 function saveManualBill(){
   const name=(gg('mfName').value||'').trim(); if(!name){ gg('mfName').focus(); return; }
   const pay=_num('mfPay'), min=gg('mfMin').value?_num('mfMin'):pay, bal=_num('mfBal'), apr=_num('mfApr'), due=Math.max(1,Math.min(31,_num('mfDue')||1));
   const cat=gg('mfCat').value;
-  const item={name, pay, min, bal:bal?-Math.abs(bal):0, apr, due, cat, note:'manual', paid:false};
+  const promoEnd=(gg('mfPromoEnd')&&gg('mfPromoEnd').value)||'';
+  const limit=gg('mfLimit')?_num('mfLimit'):0;
+  const item={name, pay, min, bal:bal?-Math.abs(bal):0, apr, due, cat, promoEnd, limit, promo:promoEnd?'0% APR':'', note:'manual', paid:false};
   APP.manualBills=APP.manualBills||[];
   if(_manualEdit.idx!=null) APP.manualBills[_manualEdit.idx]=item; else APP.manualBills.push(item);
   saveState(); closeManual(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
@@ -2122,41 +2316,93 @@ function allCategoryLabels(){ return getUserCategories().filter(c=>!c.group).map
 // All account names (for the query builder UI)
 function allAccountNames(){ return dataLoaded?allAccts.map(a=>a.name||a.official_name||a.type):['Checking','Savings','Credit Card']; }
 
+/* ═══ SAVINGS BUCKETS / SINKING FUNDS ═══ */
+function _savingsBuckets(){
+  if(!APP.savingsBuckets) APP.savingsBuckets=savingsBuckets.map(b=>({...b}));
+  return APP.savingsBuckets;
+}
+function engSavingsBuckets(){
+  return _savingsBuckets().map(b=>{
+    const pct = b.target>0 ? Math.max(0,Math.min(100, b.balance/b.target*100)) : (b.balance>0?100:0);
+    const remaining = Math.max(0, (b.target||0)-b.balance);
+    const monthsToGoal = (b.monthly>0 && remaining>0) ? Math.ceil(remaining/b.monthly) : (remaining<=0?0:Infinity);
+    return {...b, pct, remaining, monthsToGoal, done: b.target>0 && b.balance>=b.target};
+  });
+}
+function engSavingsTotal(){ return _savingsBuckets().reduce((s,b)=>s+(b.balance||0),0); }
+
+/* ═══ BUDGET vs ACTUAL ═══
+   Compares each zero-based budget envelope against actual spending in that category
+   over the selected window. Falls back to sample data when no live txns. */
+function engBudgetVsActual(days){
+  days = days||30;
+  const buckets = (APP.zeroBuckets||zeroBuckets);
+  // actual spend by category label (live txns) or sample
+  let actualByCat={};
+  if(dataLoaded){
+    engCategoryBreakdown(days).forEach(r=>{ actualByCat[r.label.toLowerCase()]=r.value; });
+  } else {
+    // representative sample actuals so the widget is meaningful pre-Plaid
+    const sample={groceries:412,'dining out':286,gas:233,medical:178,clothing:64,entertainment:121,savings:500,'emergency fund':200,misc:92};
+    actualByCat=sample;
+  }
+  // scale monthly budget to the window
+  const scale = days/30;
+  const rows = buckets.map(b=>{
+    const budget = (b.amt||0)*scale;
+    const actual = actualByCat[(b.name||'').toLowerCase()] || 0;
+    const diff = budget - actual;            // positive = under budget (good)
+    const pct = budget>0 ? Math.min(150, actual/budget*100) : (actual>0?150:0);
+    return { name:b.name, budget, actual, diff, pct, over: actual>budget };
+  });
+  const totBudget=rows.reduce((s,r)=>s+r.budget,0);
+  const totActual=rows.reduce((s,r)=>s+r.actual,0);
+  return { rows, totBudget, totActual, totDiff: totBudget-totActual, days };
+}
+
 /* ── Real financial data (ported from live app) ── */
 let bills=[
-  {cat:'HM',name:"M&T Mortgage",note:'Mortgage',apr:2.625,due:5,bal:-292452.38,min:2638.46,pay:2638.46,promo:'',paid:false},
-  {cat:'LOAN',name:'Navy HELOC',note:'Navy Federal',apr:7.75,due:1,bal:-45427.90,min:454.28,pay:461.64,promo:'',paid:false},
-  {cat:'LOAN',name:'Windows Loan',note:'0% Promo',apr:0,due:12,bal:-11339.55,min:315.00,pay:315.00,promo:'0% 3yr',paid:false},
-  {cat:'CAR',name:'Dana Auto',note:'Capitol 1',apr:7.86,due:15,bal:-6430.19,min:300.61,pay:300.61,promo:'',paid:false},
-  {cat:'CAR',name:'Matt Auto',note:'Wells Fargo',apr:5.14,due:28,bal:-11865.37,min:451.50,pay:451.50,promo:'',paid:false},
-  {cat:'CAR',name:'State Farm Ins',note:'Insurance',apr:0,due:15,bal:0,min:265.93,pay:265.93,promo:'',paid:false},
-  {cat:'PH',name:'T-Mobile',note:'Phone',apr:0,due:1,bal:0,min:274.94,pay:274.94,promo:'',paid:false},
-  {cat:'HM',name:'Lake Worth Utilities',note:'Utilities',apr:0,due:10,bal:0,min:321.00,pay:321.00,promo:'',paid:false},
-  {cat:'TV',name:'Xfinity',note:'Cable',apr:0,due:29,bal:0,min:319.66,pay:319.66,promo:'',paid:false},
-  {cat:'CC',name:'Amex Blue Cash',note:'AMEX',apr:24.49,due:3,bal:-1134.61,min:53.41,pay:256.00,promo:'0% 15mo',paid:false},
-  {cat:'CC',name:'Savor',note:'Capitol 1',apr:29.49,due:3,bal:-678.59,min:29.00,pay:100.00,promo:'3% Food',paid:false},
-  {cat:'CC',name:'Chase Freedom',note:'Chase',apr:0,due:3,bal:-803.71,min:40.00,pay:100.00,promo:'3% Food',paid:false},
-  {cat:'CC',name:'Wells Fargo Reflect',note:'Wells Fargo',apr:0,due:12,bal:-2908.35,min:73.00,pay:287.93,promo:'0% thru 5/27',paid:false},
-  {cat:'CC',name:'Best Buy CC',note:'CITI',apr:28.74,due:12,bal:-434.10,min:29.00,pay:92.61,promo:'0% thru 9/26',paid:false},
-  {cat:'CC',name:'Home Depot',note:'CITI',apr:29.99,due:6,bal:-903.68,min:29.00,pay:82.15,promo:'0% thru 4/27',paid:false},
-  {cat:'CC',name:'Harbor Freight',note:'Synchrony',apr:0,due:20,bal:-238.15,min:44.00,pay:44.00,promo:'0% thru 10/26',paid:false},
-  {cat:'CC',name:'Amazon CC',note:'Synchrony',apr:29.74,due:8,bal:-585.57,min:81.00,pay:100.00,promo:'',paid:false},
-  {cat:'CC',name:'Costco CC',note:'CITI',apr:18.74,due:28,bal:-152.70,min:29.00,pay:152.70,promo:'',paid:false},
-  {cat:'CC',name:'Double Cash Back',note:'CITI',apr:26.49,due:16,bal:-21.69,min:29.00,pay:21.69,promo:'',paid:false},
-  {cat:'CC',name:'Hilton Honors',note:'AMEX',apr:28.49,due:2,bal:-1268.93,min:29.00,pay:29.00,promo:'HH Points',paid:false},
-  {cat:'CC',name:'Platinum',note:'Capitol 1',apr:28.74,due:14,bal:-118.14,min:29.00,pay:150.00,promo:'',paid:false},
-  {cat:'FAM',name:'Ana Mom',note:'Family',apr:0,due:30,bal:-2500,min:204.99,pay:204.99,promo:'',paid:false},
+  {cat:'HM',name:"M&T Mortgage",note:'Mortgage',apr:2.625,due:5,bal:-292452.38,min:2638.46,pay:2638.46,promo:'',promoEnd:'',limit:0,paid:false},
+  {cat:'LOAN',name:'Navy HELOC',note:'Navy Federal',apr:7.75,due:1,bal:-45427.90,min:454.28,pay:461.64,promo:'',promoEnd:'',limit:0,paid:false},
+  {cat:'LOAN',name:'Windows Loan',note:'0% Promo',apr:0,due:12,bal:-11339.55,min:315.00,pay:315.00,promo:'0% 3yr',promoEnd:'2027-12-01',limit:0,paid:false},
+  {cat:'CAR',name:'Dana Auto',note:'Capitol 1',apr:7.86,due:15,bal:-6430.19,min:300.61,pay:300.61,promo:'',promoEnd:'',limit:0,paid:false},
+  {cat:'CAR',name:'Matt Auto',note:'Wells Fargo',apr:5.14,due:28,bal:-11865.37,min:451.50,pay:451.50,promo:'',promoEnd:'',limit:0,paid:false},
+  {cat:'CAR',name:'State Farm Ins',note:'Insurance',apr:0,due:15,bal:0,min:265.93,pay:265.93,promo:'',promoEnd:'',limit:0,paid:false},
+  {cat:'PH',name:'T-Mobile',note:'Phone',apr:0,due:1,bal:0,min:274.94,pay:274.94,promo:'',promoEnd:'',limit:0,paid:false},
+  {cat:'HM',name:'Lake Worth Utilities',note:'Utilities',apr:0,due:10,bal:0,min:321.00,pay:321.00,promo:'',promoEnd:'',limit:0,paid:false},
+  {cat:'TV',name:'Xfinity',note:'Cable',apr:0,due:29,bal:0,min:319.66,pay:319.66,promo:'',promoEnd:'',limit:0,paid:false},
+  {cat:'CC',name:'Amex Blue Cash',note:'AMEX',apr:24.49,due:3,bal:-1134.61,min:53.41,pay:256.00,promo:'0% APR',promoEnd:'2026-08-01',limit:15000,paid:false},
+  {cat:'CC',name:'Savor',note:'Capitol 1',apr:29.49,due:3,bal:-678.59,min:29.00,pay:100.00,promo:'3% Food',promoEnd:'',limit:10000,paid:false},
+  {cat:'CC',name:'Chase Freedom',note:'Chase',apr:0,due:3,bal:-803.71,min:40.00,pay:100.00,promo:'3% Food',promoEnd:'',limit:8000,paid:false},
+  {cat:'CC',name:'Wells Fargo Reflect',note:'Wells Fargo',apr:0,due:12,bal:-2908.35,min:73.00,pay:287.93,promo:'0% APR',promoEnd:'2027-05-01',limit:12000,paid:false},
+  {cat:'CC',name:'Best Buy CC',note:'CITI',apr:28.74,due:12,bal:-434.10,min:29.00,pay:92.61,promo:'0% APR',promoEnd:'2026-09-17',limit:5000,paid:false},
+  {cat:'CC',name:'Home Depot',note:'CITI',apr:29.99,due:6,bal:-903.68,min:29.00,pay:82.15,promo:'0% APR',promoEnd:'2027-04-01',limit:7500,paid:false},
+  {cat:'CC',name:'Harbor Freight',note:'Synchrony',apr:0,due:20,bal:-238.15,min:44.00,pay:44.00,promo:'0% APR',promoEnd:'2026-10-01',limit:3000,paid:false},
+  {cat:'CC',name:'Amazon CC',note:'Synchrony',apr:29.74,due:8,bal:-585.57,min:81.00,pay:100.00,promo:'',promoEnd:'',limit:10000,paid:false},
+  {cat:'CC',name:'Costco CC',note:'CITI',apr:18.74,due:28,bal:-152.70,min:29.00,pay:152.70,promo:'',promoEnd:'',limit:16000,paid:false},
+  {cat:'CC',name:'Double Cash Back',note:'CITI',apr:26.49,due:16,bal:-21.69,min:29.00,pay:21.69,promo:'',promoEnd:'',limit:9000,paid:false},
+  {cat:'CC',name:'Hilton Honors',note:'AMEX',apr:28.49,due:2,bal:-1268.93,min:29.00,pay:29.00,promo:'HH Points',promoEnd:'',limit:20000,paid:false},
+  {cat:'CC',name:'Platinum',note:'Capitol 1',apr:28.74,due:14,bal:-118.14,min:29.00,pay:150.00,promo:'',promoEnd:'',limit:6000,paid:false},
+  {cat:'FAM',name:'Ana Mom',note:'Family',apr:0,due:30,bal:-2500,min:204.99,pay:204.99,promo:'',promoEnd:'',limit:0,paid:false},
 ];
 let incomeSources=[
-  {name:'Matt Paycheck',freq:'biweekly',amt:2088.50},
-  {name:'Dana Paycheck',freq:'weekly',amt:788.01},
-  {name:'Auto Allowance',freq:'monthly',amt:1650.00},
-  {name:'Quarterly Bonus',freq:'quarterly',amt:3594.23},
+  {name:'Matt Paycheck',freq:'biweekly',amt:2088.50,anchor:'2026-01-09'},
+  {name:'Dana Paycheck',freq:'weekly',amt:788.01,anchor:'2026-01-02'},
+  {name:'Auto Allowance',freq:'monthly',amt:1650.00,day:1},
+  {name:'Quarterly Bonus',freq:'quarterly',amt:3594.23,anchor:'2026-03-15'},
 ];
 let zeroBuckets=[
   {name:'Groceries',amt:350},{name:'Dining out',amt:200},{name:'Gas',amt:300},
   {name:'Medical',amt:150},{name:'Clothing',amt:100},{name:'Entertainment',amt:100},
   {name:'Savings',amt:500},{name:'Emergency fund',amt:200},{name:'Misc',amt:100},
+];
+// Sinking funds / savings buckets — each a named fund with a balance, target, and
+// optional monthly contribution. Mirrors the workbook's Savings Accounts sheet.
+let savingsBuckets=[
+  {name:'Reserve / Opportunity',icon:'🛟',balance:4978.96,target:30000,monthly:100,note:'Amex HYSA'},
+  {name:'Home Improvement',icon:'🔨',balance:16492.05,target:30000,monthly:0,note:'Amex HYSA'},
+  {name:'Event / Family',icon:'🎉',balance:2200,target:3000,monthly:100,note:'Amex HYSA'},
+  {name:'Medical',icon:'🏥',balance:300,target:3000,monthly:0,note:'Amex HYSA'},
 ];
 let nwAssets=[
   {cat:'Cash & Bank',name:'Checking accounts',value:0,note:'From Plaid',plaid:true},
@@ -2184,7 +2430,7 @@ let nwLiab=[
 
 /* ── Derived metrics from bills/income/net worth ── */
 const FREQ_TO_MONTHLY={weekly:52/12, biweekly:26/12, monthly:1, quarterly:1/3, annual:1/12, yearly:1/12};
-function engMonthlyIncome(){ return incomeSources.reduce((s,i)=>s+i.amt*(FREQ_TO_MONTHLY[i.freq]||1),0); }
+function engMonthlyIncome(){ return (APP&&APP.incomeSources&&APP.incomeSources.length?APP.incomeSources:incomeSources).reduce((s,i)=>s+i.amt*(FREQ_TO_MONTHLY[i.freq]||1),0); }
 
 /* ── Cash Flow Projection: build dated income/expense events forward N days,
    then compute a running daily balance starting from current cash. ── */
@@ -2192,16 +2438,56 @@ function engStartCash(){
   if(dataLoaded){ return allAccts.filter(a=>a.type==='depository').reduce((s,a)=>s+((a.balances&&(a.balances.available??a.balances.current))||0),0); }
   return nwAssets.filter(a=>a.cat==='Cash & Bank').reduce((s,a)=>s+(a.value||0),0);
 }
-// generate income events with real-ish cadence within the window
+// Allow user to override income source amounts/cadence (persisted in APP)
+function _effectiveIncomeSources(){
+  if(APP.incomeSources && APP.incomeSources.length) return APP.incomeSources;
+  return incomeSources;
+}
+// generate income events with REAL date-anchored cadence within the window.
+// Walking actual calendar dates makes biweekly streams naturally land 3x in some
+// months ("3rd paycheck"), and puts monthly/quarterly income on real days.
 function _incomeEvents(days){
-  const out=[]; const today=new Date(); today.setHours(12,0,0,0);
-  incomeSources.forEach((src)=>{
+  const out=[]; const today=new Date(); today.setHours(0,0,0,0);
+  const horizon=new Date(today); horizon.setDate(horizon.getDate()+days);
+  const dayOffset=(d)=>Math.round((d-today)/86400000);
+  _effectiveIncomeSources().forEach((src)=>{
+    if(src.amt<=0) return;
     const monthly=src.amt*(FREQ_TO_MONTHLY[src.freq]||1);
-    if(src.freq==='weekly'){ for(let d=3; d<=days; d+=7) out.push({day:d, amt:src.amt, name:src.name, type:'income'}); }
-    else if(src.freq==='biweekly'){ for(let d=5; d<=days; d+=14) out.push({day:d, amt:src.amt, name:src.name, type:'income'}); }
-    else if(src.freq==='monthly'){ for(let d=1; d<=days; d+=30) out.push({day:d, amt:src.amt, name:src.name, type:'income'}); }
-    else if(src.freq==='quarterly'){ if(days>=20) out.push({day:20, amt:src.amt, name:src.name, type:'income'}); }
-    else { for(let d=15; d<=days; d+=30) out.push({day:d, amt:Math.round(monthly), name:src.name, type:'income'}); }
+    if(src.freq==='weekly' || src.freq==='biweekly'){
+      const step=src.freq==='weekly'?7:14;
+      // start from anchor, roll forward to the first occurrence >= today
+      let cur = src.anchor ? new Date(src.anchor+'T00:00:00') : new Date(today.getTime()+ (src.freq==='weekly'?3:5)*86400000);
+      if(isNaN(cur)) cur=new Date(today);
+      // fast-forward / rewind to near today
+      while(cur < today) cur.setDate(cur.getDate()+step);
+      while(cur >= today && (cur-today)/86400000 >= step) cur.setDate(cur.getDate()-step);
+      if(cur<today) cur.setDate(cur.getDate()+step);
+      while(cur<=horizon){
+        const off=dayOffset(cur);
+        if(off>=1 && off<=days) out.push({day:off, amt:src.amt, name:src.name, type:'income', freq:src.freq});
+        cur.setDate(cur.getDate()+step);
+      }
+    } else if(src.freq==='monthly'){
+      const dom=src.day||1;
+      let cur=new Date(today.getFullYear(), today.getMonth(), dom);
+      if(cur<today) cur=new Date(today.getFullYear(), today.getMonth()+1, dom);
+      while(cur<=horizon){
+        const off=dayOffset(cur);
+        if(off>=1 && off<=days) out.push({day:off, amt:src.amt, name:src.name, type:'income', freq:'monthly'});
+        cur=new Date(cur.getFullYear(), cur.getMonth()+1, dom);
+      }
+    } else if(src.freq==='quarterly'){
+      let cur = src.anchor ? new Date(src.anchor+'T00:00:00') : new Date(today.getFullYear(), today.getMonth(), 15);
+      if(isNaN(cur)) cur=new Date(today.getFullYear(),today.getMonth(),15);
+      while(cur < today) cur.setMonth(cur.getMonth()+3);
+      while(cur<=horizon){
+        const off=dayOffset(cur);
+        if(off>=1 && off<=days) out.push({day:off, amt:src.amt, name:src.name, type:'income', freq:'quarterly'});
+        cur.setMonth(cur.getMonth()+3);
+      }
+    } else { // annual / fallback: spread monthly
+      for(let d=15; d<=days; d+=30) out.push({day:d, amt:Math.round(monthly), name:src.name, type:'income', freq:src.freq});
+    }
   });
   return out;
 }
@@ -2257,6 +2543,89 @@ function engBills(){
 function engMonthlyBills(){ return engBills().reduce((s,b)=>s+(b.pay||0),0); }
 function engBillsDebt(){ return engBills().reduce((s,b)=>s+Math.abs(b.bal||0),0); }
 
+/* ═══ 0%-PROMO EXPIRATION TRACKING ═══
+   Finds bills with a promo end date and computes days remaining + the APR you'd
+   start paying once it expires. This is the "rate jump" early-warning system. */
+function _parsePromoEnd(s){
+  if(!s) return null;
+  // accept YYYY-MM-DD or MM/DD/YY(YY)
+  let d=null;
+  if(/^\d{4}-\d{1,2}-\d{1,2}$/.test(s)){ const [y,m,dd]=s.split('-').map(Number); d=new Date(y,m-1,dd); }
+  else if(/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(s)){ let [m,dd,y]=s.split('/').map(Number); if(y<100)y+=2000; d=new Date(y,m-1,dd); }
+  return (d&&!isNaN(d))?d:null;
+}
+function engPromos(){
+  const today=new Date(); today.setHours(0,0,0,0);
+  const out=[];
+  engBills().forEach(b=>{
+    const end=_parsePromoEnd(b.promoEnd);
+    if(!end) return;
+    const days=Math.round((end-today)/86400000);
+    out.push({
+      name:b.name, note:b.note||'', promo:b.promo||'0% promo',
+      end, days, bal:Math.abs(b.bal||0), apr:(b.apr||0),
+      // monthly cost once the promo expires, at the standard APR on the remaining balance
+      monthlyAfter: Math.abs(b.bal||0)*((b.apr||0)/100)/12,
+      // at current pay, will it be cleared before the promo ends?
+      payoffMonths: (b.pay>0 && Math.abs(b.bal||0)>0) ? Math.ceil(Math.abs(b.bal||0)/b.pay) : Infinity,
+    });
+  });
+  return out.sort((a,b)=>a.days-b.days);
+}
+function engPromoAlerts(withinDays){
+  withinDays = withinDays||60;
+  return engPromos().filter(p=>p.bal>0.5 && p.days<=withinDays && p.days> -3650);
+}
+
+/* ═══ CREDIT UTILIZATION + DEBT-TO-INCOME ═══ */
+function engCreditUtil(){
+  const cards=engBills().filter(b=>b.cat==='CC' && (b.limit||0)>0);
+  const limit=cards.reduce((s,c)=>s+(c.limit||0),0);
+  const used=cards.reduce((s,c)=>s+Math.abs(c.bal||0),0);
+  const pct=limit>0?(used/limit*100):0;
+  return { limit, used, pct, cards: cards.map(c=>({
+    name:c.name, used:Math.abs(c.bal||0), limit:c.limit||0,
+    pct:(c.limit>0?Math.abs(c.bal||0)/c.limit*100:0)
+  })).sort((a,b)=>b.pct-a.pct) };
+}
+function engDTI(){
+  // monthly debt obligations (minimums on actual debt) vs gross monthly income
+  const debtPay=engBills().filter(b=>Math.abs(b.bal||0)>0).reduce((s,b)=>s+(b.min||0),0);
+  const income=engMonthlyIncome();
+  return { ratio: income>0?(debtPay/income):0, debtPay, income };
+}
+
+/* ═══ MONTHS-TO-PAYOFF (with interest) ═══
+   Amortizes a balance at the given APR and monthly payment. Returns months and
+   total interest. Flags when the payment can't cover interest (never pays off). */
+function payoffMonths(balance, apr, pay){
+  balance=Math.abs(balance||0); pay=Math.abs(pay||0);
+  if(balance<=0) return {months:0, interest:0, neverPaysOff:false, paidOff:true};
+  if(pay<=0) return {months:Infinity, interest:0, neverPaysOff:true};
+  const r=(apr||0)/100/12;
+  if(r<=0){ const m=Math.ceil(balance/pay); return {months:m, interest:0, neverPaysOff:false}; }
+  const minPay=balance*r;
+  if(pay<=minPay+0.01) return {months:Infinity, interest:Infinity, neverPaysOff:true}; // payment ≤ interest
+  // n = -ln(1 - r*B/P) / ln(1+r)
+  const n=-Math.log(1 - r*balance/pay)/Math.log(1+r);
+  const months=Math.ceil(n);
+  const interest=Math.max(0, pay*months - balance);
+  return {months, interest:Math.round(interest), neverPaysOff:false};
+}
+function fmtMonths(m){
+  if(m===0) return 'paid off';
+  if(!isFinite(m)) return 'never';
+  if(m<12) return m+' mo';
+  const y=Math.floor(m/12), mo=m%12;
+  return mo?`${y}y ${mo}m`:`${y}y`;
+}
+function _billPayoffLabel(b){
+  if(!(Math.abs(b.bal||0)>0 && (b.pay||b.min)>0)) return '';
+  const po=payoffMonths(b.bal, b.apr, b.pay||b.min);
+  if(po.neverPaysOff) return ' \u00b7 <span style="color:var(--red)">pay \u2264 interest</span>';
+  return ' \u00b7 '+fmtMonths(po.months)+' to clear';
+}
+
 /* ═══════════════ FINANCIAL GOALS ═══════════════
    Each goal links to a live metric so progress tracks automatically. */
 const GOAL_METRICS={
@@ -2285,24 +2654,24 @@ function _goals(){ if(!APP.goals) APP.goals=[]; return APP.goals; }
    and how Richie should teach the path. */
 const GOAL_PLANS={
   emergency:{ page:{name:'Emergency Fund',icon:'🛟',color:'#38bdf8'},
-    widgets:['goals','cash_summary','zero_budget','cashflow_planner','bills_list'],
-    coach:"An emergency fund is your financial seatbelt. Here's the play: I've set up a Cash on Hand tracker, your Zero-Based Budget to carve out savings, and the Cash Flow Planner so you can see exactly how much you can set aside each payday. Automate a transfer the day you get paid — pay your future self first.",
+    widgets:['goals','savings_buckets','cash_summary','zero_budget','cashflow_planner','bills_list'],
+    coach:"An emergency fund is your financial seatbelt. I've set up Savings Buckets so you can grow it as its own sinking fund, a Cash on Hand tracker, your Zero-Based Budget to carve out savings, and the Cash Flow Planner to see what you can set aside each payday. Automate a transfer the day you get paid — pay your future self first.",
     teach:["Set aside a fixed amount every payday — before you spend.","Keep it in a separate savings account so it's out of sight.","Start with $1,000, then build to 3 months of expenses."] },
   debt:{ page:{name:'Debt Freedom',icon:'🚀',color:'#f05c5c'},
-    widgets:['goals','debt_summary','debt_payoff','bills_list','cashflow_planner'],
-    coach:"Let's get you debt-free. I've laid out your Total Debt, the Debt Payoff Planner (try avalanche — it kills the highest interest first), your Bills so you can pay above the minimum, and the Cash Flow Planner to find extra dollars. Every extra payment is a guaranteed return equal to your interest rate.",
-    teach:["Always pay more than the minimum — even $25 extra compounds.","Attack the highest-APR balance first (avalanche method).","Funnel any windfall straight to debt, not lifestyle."] },
+    widgets:['goals','debt_summary','credit_util','promo_tracker','debt_payoff','bills_list','cashflow_planner'],
+    coach:"Let's get you debt-free. I've laid out your Total Debt, your Credit Utilization gauge, a 0%-Promo Tracker so no intro rate sneaks up on you, the Debt Payoff Planner (try avalanche — it kills the highest interest first), your Bills, and the Cash Flow Planner to find extra dollars. Every extra payment is a guaranteed return equal to your interest rate.",
+    teach:["Always pay more than the minimum — even $25 extra compounds.","Attack the highest-APR balance first (avalanche method).","Pay off 0% promos before they expire — the rate jump is brutal.","Keep utilization under 30% (under 10% is ideal) to protect your score."] },
   savings:{ page:{name:'Savings Builder',icon:'💰',color:'#2ecc8a'},
-    widgets:['goals','cash_summary','zero_budget','pl_panel','top_categories'],
-    coach:"Building savings is about widening the gap between what you earn and what you spend. I've given you Cash on Hand, your Zero-Based Budget, a Profit & Loss panel to watch your surplus, and your Top Categories so you can spot where to trim. Find one expense to cut and redirect it here.",
+    widgets:['goals','savings_buckets','budget_actual','zero_budget','pl_panel','top_categories'],
+    coach:"Building savings is about widening the gap between what you earn and what you spend. I've set up Savings Buckets to fund your goals, Budget vs Actual to see where you're drifting, your Zero-Based Budget, a Profit & Loss panel, and Top Categories to spot what to trim. Find one expense to cut and redirect it into a bucket.",
     teach:["Automate savings so it happens without willpower.","Review your top spending category monthly and trim 10%.","Treat savings like a non-negotiable bill."] },
   networth:{ page:{name:'Wealth Builder',icon:'💎',color:'#5b8def'},
     widgets:['goals','net_worth_summary','net_worth_chart','debt_summary','pl_panel'],
     coach:"Net worth is the real scoreboard — assets minus debts. I've set up your Net Worth snapshot and trend chart so you can watch it climb, plus debt and P&L so you see both levers. Grow assets, shrink debts, and let time + compounding do the heavy lifting.",
     teach:["Net worth = what you own minus what you owe. Grow the gap.","Invest consistently — time in the market beats timing it.","Track the trend monthly; direction matters more than any single number."] },
   savingsrate:{ page:{name:'Savings Rate',icon:'📊',color:'#a78bfa'},
-    widgets:['goals','pl_panel','zero_budget','top_categories','cashflow_chart'],
-    coach:"Your savings rate is the single best predictor of financial freedom. I've set up your Profit & Loss to track income vs spending, the budget to plan it, and Top Categories to find the leaks. Push the rate up a few points at a time — every percent buys you future freedom.",
+    widgets:['goals','pl_panel','budget_actual','zero_budget','top_categories','cashflow_chart'],
+    coach:"Your savings rate is the single best predictor of financial freedom. I've set up your Profit & Loss, Budget vs Actual to catch overspending, the budget to plan it, and Top Categories to find the leaks. Push the rate up a few points at a time — every percent buys you future freedom.",
     teach:["Savings rate = (income − spending) ÷ income. Aim to raise it steadily.","Increasing income helps, but cutting waste is faster to control.","A 20% rate is solid; 30%+ is wealth-building territory."] },
   custom:{ page:{name:'My Goal',icon:'🎯',color:'#2ecc8a'},
     widgets:['goals','cash_summary','zero_budget','pl_panel'],
@@ -2327,7 +2696,36 @@ function goalProgress(g){
     const total=(target-start)||1; pct=Math.max(0,Math.min(100,Math.round((current-start)/total*100)));
   }
   const done = m.dir==='down' ? current<=target : current>=target;
-  return {pct:done?100:pct, current, target, done, dir:m.dir, unit:m.unit};
+  // Deadline pacing: how much remains, time left, and whether on track
+  let pace=null;
+  const dl=_parseGoalDeadline(g.deadline);
+  if(dl && !done){
+    const today=new Date(); today.setHours(0,0,0,0);
+    const daysLeft=Math.round((dl-today)/86400000);
+    const monthsLeft=Math.max(0, daysLeft/30.44);
+    const remaining = m.dir==='down' ? Math.max(0,current-target) : Math.max(0,target-current);
+    const perMonthNeeded = monthsLeft>0.1 ? remaining/monthsLeft : remaining;
+    // progress expected by now vs actual (are we ahead or behind schedule?)
+    const totalSpan = m.dir==='down' ? (start-target) : (target-start);
+    const createdD = g.created?new Date(g.created):today;
+    const totalDays = Math.max(1,(dl-createdD)/86400000);
+    const elapsedFrac = Math.max(0,Math.min(1,(today-createdD)/86400000/totalDays));
+    const expectedPct = Math.round(elapsedFrac*100);
+    pace={daysLeft, monthsLeft:Math.round(monthsLeft*10)/10, remaining, perMonthNeeded, expectedPct, onTrack: pct>=expectedPct-5, deadline:dl};
+  }
+  return {pct:done?100:pct, current, target, done, dir:m.dir, unit:m.unit, pace};
+}
+// parse a goal deadline that may be 'YYYY-MM-DD', 'Dec 2026', 'Dec 2026', or '12/2026'
+function _parseGoalDeadline(s){
+  if(!s) return null;
+  s=String(s).trim();
+  if(/^\d{4}-\d{1,2}-\d{1,2}$/.test(s)){ const [y,m,d]=s.split('-').map(Number); const dt=new Date(y,m-1,d); return isNaN(dt)?null:dt; }
+  const mons={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+  const mm=s.toLowerCase().match(/([a-z]{3})[a-z]*\.?\s+(\d{4})/);
+  if(mm && mons[mm[1]]!=null){ return new Date(+mm[2], mons[mm[1]]+1, 0); } // end of that month
+  const slash=s.match(/^(\d{1,2})\/(\d{4})$/);
+  if(slash){ return new Date(+slash[2], +slash[1], 0); }
+  const d=new Date(s); return isNaN(d)?null:d;
 }
 function goalFmt(v,unit){ return unit==='%'?Math.round(v)+'%':fmtK(v); }
 function addGoal(g){
@@ -2354,17 +2752,45 @@ function checkGoalCompletion(){
   });
   if(any) saveState();
 }
-// Richie coaching: contextual hint per goal
+// Cadenced action plans per goal type (mirrors the workbook's Daily/Weekly/Monthly/Quarterly columns)
+const GOAL_CADENCE={
+  debt:       {daily:'Track today\'s spending — every dollar not spent is a dollar toward debt.', weekly:'Review your highest-APR balance and send any spare cash its way.', monthly:'Make one extra payment above the minimum on your top-APR card.', quarterly:'Aim for one full month under budget and throw the surplus at debt.'},
+  emergency:  {daily:'Skip one impulse buy and note it — that\'s your fund growing.', weekly:'Confirm your automatic transfer to savings went through.', monthly:'Move $100 (or more) into the fund the day you get paid.', quarterly:'Check for any surplus and top up the fund.'},
+  savings:    {daily:'Log your spending — awareness is half the battle.', weekly:'Spot one category running hot and rein it in.', monthly:'Sweep your leftover cash into savings before it disappears.', quarterly:'Rebalance your budget and bump your savings target.'},
+  savingsrate:{daily:'Track expenses so nothing slips through.', weekly:'Pick one category to trim 10% this week.', monthly:'Recompute your rate — did it tick up?', quarterly:'Look for an income bump or a recurring cost to cut.'},
+  networth:   {daily:'Avoid new debt — protect the scoreboard.', weekly:'Check your accounts; note any drift.', monthly:'Invest consistently — automate the contribution.', quarterly:'Rebalance and review your asset mix.'},
+  custom:     {daily:'Small consistent action beats big sporadic effort.', weekly:'Check your progress and adjust.', monthly:'Make a meaningful contribution toward this goal.', quarterly:'Step back and reassess the plan.'},
+};
+// Richie coaching: contextual hint per goal, now deadline + pace aware
 function richieGoalHint(g){
+  if(!g) return;
   const p=goalProgress(g); const m=GOAL_METRICS[g.metric];
   let hint;
-  if(p.done){ hint=`"${g.name}" is already in the bag! 🎉`; }
-  else if(g.metric==='debt'){ const left=p.current-p.target; hint=`To crush "${g.name}", throw every extra dollar at your highest-APR balance. ${fmtK(left)} to go \u2014 even $50 extra a month moves the needle.`; }
+  if(p.done){ hint=`"${g.name}" is already in the bag! 🎉`; richieSay(hint); return; }
+  // deadline-aware framing first
+  if(p.pace){
+    const pc=p.pace;
+    if(pc.daysLeft<0){ hint=`"${g.name}" is past its deadline, but it's not too late — ${fmtK(pc.remaining)} to go. Want to set a new target date?`; }
+    else if(!pc.onTrack){
+      const need = m.unit==='%' ? 'pick up the pace' : `you'd need about ${fmtK(pc.perMonthNeeded)}/mo`;
+      hint=`Heads up — "${g.name}" is running behind schedule. To hit it by ${pc.deadline.toLocaleDateString('en-US',{month:'short',year:'numeric'})}, ${need}. ${(GOAL_CADENCE[g.metric]||GOAL_CADENCE.custom).monthly}`;
+    } else {
+      hint=`Nice — "${g.name}" is on track for ${pc.deadline.toLocaleDateString('en-US',{month:'short',year:'numeric'})} (${p.pct}% done). Keep it up: ${(GOAL_CADENCE[g.metric]||GOAL_CADENCE.custom).weekly}`;
+    }
+    richieSay(hint); return;
+  }
+  // no deadline — fall back to metric-specific coaching
+  if(g.metric==='debt'){ const left=p.current-p.target; hint=`To crush "${g.name}", throw every extra dollar at your highest-APR balance. ${fmtK(left)} to go \u2014 even $50 extra a month moves the needle.`; }
   else if(g.metric==='emergency'){ hint=`Building "${g.name}"? Automate it \u2014 set aside a fixed amount each payday before you can spend it. You're ${p.pct}% there.`; }
   else if(g.metric==='savings'||g.metric==='networth'){ const left=p.target-p.current; hint=`"${g.name}" is ${p.pct}% done \u2014 ${fmtK(left)} to go. Trim one recurring expense and redirect it here; small leaks sink big ships.`; }
   else if(g.metric==='savingsrate'){ hint=`Want a ${p.target}% savings rate? Look at your top spending category and shave 10% off it. You're at ${p.current}% now.`; }
   else { hint=`Keep chipping away at "${g.name}" \u2014 ${p.pct}% there. Update your progress as you go!`; }
   richieSay(hint);
+}
+// A cadence-specific nudge Richie can give (used by proactive coaching)
+function goalCadenceNudge(g, cadence){
+  const plan=GOAL_CADENCE[g.metric]||GOAL_CADENCE.custom;
+  return plan[cadence]||plan.weekly;
 }
 function engNWAssets(){ return nwAssets.reduce((s,a)=>s+(a.value||0),0); }
 function engNWLiab(){ return nwLiab.reduce((s,l)=>s+(l.value||0),0); }
@@ -2387,6 +2813,49 @@ function engMonthlySeries(months){
     out.push({label:lbl,spend:Math.round(spend),income:Math.round(income)});
   }
   return out;
+}
+
+/* ═══ CATEGORY × MONTH HEATMAP ═══
+   Returns {months:[labels], cats:[{label, color, vals:[per-month], total, avg}], max}
+   Live from txns when available, otherwise a representative sample grid. */
+function engCategoryMonthGrid(months){
+  months=months||6;
+  const now=new Date();
+  const monthLabels=[]; const monthBounds=[];
+  for(let m=months-1;m>=0;m--){
+    const d=new Date(now.getFullYear(),now.getMonth()-m,1);
+    const next=new Date(now.getFullYear(),now.getMonth()-m+1,1);
+    monthLabels.push(d.toLocaleString('en-US',{month:'short'}));
+    monthBounds.push([d,next]);
+  }
+  const catMap={};  // label -> vals[]
+  if(dataLoaded && allTxns.length){
+    allTxns.forEach(t=>{
+      if(t.amount<=0) return; // spending only
+      const td=new Date(t.date);
+      const mi=monthBounds.findIndex(([a,b])=>td>=a&&td<b);
+      if(mi<0) return;
+      const c=getTxnCategory(t);
+      if(!catMap[c]) catMap[c]=new Array(months).fill(0);
+      catMap[c][mi]+=t.amount;
+    });
+  } else {
+    // sample seasonal grid (rows roughly matching real categories)
+    const seed={
+      'Groceries':[820,393,488,560,420,510],'Dining out':[270,248,886,1070,420,360],
+      'Auto':[1025,1040,1048,1068,1018,990],'House':[2905,5538,321,2952,2932,2994],
+      'Medical':[680,1078,748,1619,663,540],'Gas':[161,186,249,517,160,240],
+      'Subscription':[124,126,343,623,110,98],'Utilities':[319,319,320,320,309,300],
+    };
+    Object.entries(seed).forEach(([k,v])=>{ catMap[k]=v.slice(-months); });
+  }
+  let max=0;
+  const cats=Object.entries(catMap).map(([label,vals])=>{
+    const total=vals.reduce((s,v)=>s+v,0);
+    vals.forEach(v=>{ if(v>max)max=v; });
+    return {label, color:getCatColor(label), vals:vals.map(v=>Math.round(v)), total:Math.round(total), avg:Math.round(total/months)};
+  }).filter(c=>c.total>0).sort((a,b)=>b.total-a.total);
+  return {months:monthLabels, cats, max:max||1};
 }
 
 /* ── Chart.js utilities (ported buildChartWidget / buildChartLegend) ── */
@@ -2762,8 +3231,15 @@ function maybeCoachPage(pg){
   setTimeout(()=>{
     if(goal){ const p=goalProgress(goal);
       if(p.pct>=100){ richieSay(`"${goal.name}" looks complete — nice work! 🎉`); }
-      else { const plan=goalPlanFor(pg.goalMetric); const tip=plan.teach[Math.floor(Math.random()*plan.teach.length)];
-        richieSay(`You're ${p.pct}% toward "${goal.name}". Tip: ${tip}`); }
+      else if(p.pace && !p.pace.onTrack){
+        // behind a deadline → urgent, pace-aware nudge
+        richieSay(`"${goal.name}" is ${p.pct}% done but behind pace for ${p.pace.deadline.toLocaleDateString('en-US',{month:'short',year:'numeric'})}. ${goalCadenceNudge(goal,'monthly')}`);
+      } else {
+        // rotate through cadence nudges so it feels like an ongoing plan
+        const cadences=['daily','weekly','monthly','quarterly'];
+        const cad=cadences[Math.floor(Math.random()*cadences.length)];
+        richieSay(`You're ${p.pct}% toward "${goal.name}". ${cad.charAt(0).toUpperCase()+cad.slice(1)} move: ${goalCadenceNudge(goal,cad)}`);
+      }
       if(sbRichie)sbRichie.do('wiggle');
     }
   }, 900);
@@ -2781,6 +3257,8 @@ const WIDGET_CATALOG=[
   {id:'budget_doughnut',name:'Budget by Category',icon:'🎯',cat:'Budget',span:1,minLevel:1,desc:'Spending split by category.'},
   {id:'bills_list',name:'Upcoming Bills',icon:'📋',cat:'Budget',span:1,minLevel:1,desc:"What's due and when."},
   {id:'zero_budget',name:'Zero-Based Budget',icon:'🧮',cat:'Budget',span:2,minLevel:2,desc:'Give every dollar a job.'},
+  {id:'budget_actual',name:'Budget vs Actual',icon:'⚖️',cat:'Budget',span:2,minLevel:1,desc:'Compare what you planned to spend against what you actually spent, per category.'},
+  {id:'savings_buckets',name:'Savings Buckets',icon:'🪣',cat:'Overview',span:2,minLevel:1,desc:'Sinking funds — Reserve, Home, Family, Medical — each with its own goal and progress.'},
   {id:'cashflow_chart',name:'Cash Flow',icon:'🌊',cat:'Cash Flow',span:2,minLevel:1,desc:'Income vs. spending over time.'},
   {id:'pl_panel',name:'Profit & Loss',icon:'📊',cat:'Cash Flow',span:2,minLevel:1,desc:'Income, spending, net & savings rate by day/week/month.'},
   {id:'cashflow_planner',name:'Cash Flow Planner',icon:'📅',cat:'Cash Flow',span:2,minLevel:1,desc:'Project your running balance forward — edit bills, see your low point before it hits.'},
@@ -2788,12 +3266,15 @@ const WIDGET_CATALOG=[
   {id:'accounts_list',name:'All Accounts',icon:'🏦',cat:'Overview',span:2,minLevel:1,desc:'Every account with balances — tap to see transactions.'},
   {id:'sankey',name:'Money Flow (Sankey)',icon:'🔀',cat:'Cash Flow',span:2,minLevel:2,desc:'Visualize income flowing to spending.'},
   {id:'top_categories',name:'Top Categories',icon:'📊',cat:'Cash Flow',span:1,minLevel:1,desc:'Where your money goes most.'},
+  {id:'category_heatmap',name:'Category Heatmap',icon:'🗓️',cat:'Cash Flow',span:2,minLevel:2,desc:'Spending by category across months — spot seasonal patterns at a glance.'},
   {id:'net_worth_chart',name:'Net Worth Trend',icon:'📈',cat:'Wealth',span:2,minLevel:2,desc:'Net worth over months.'},
   {id:'fire_progress',name:'FIRE Progress',icon:'🔥',cat:'Wealth',span:1,minLevel:3,desc:'Path to financial independence.'},
   {id:'retirement_proj',name:'Retirement Projection',icon:'🏖\uFE0F',cat:'Wealth',span:2,minLevel:3,desc:"Where you're headed."},
   {id:'fire_calc',name:'FIRE Calculator',icon:'🧮',cat:'Wealth',span:2,minLevel:3,desc:'Interactive retirement projection — adjust and watch it update.'},
   {id:'debt_payoff',name:'Debt Payoff Planner',icon:'🚨',cat:'Debt',span:2,minLevel:2,desc:'Snowball or avalanche.'},
   {id:'debt_summary',name:'Total Debt',icon:'💳',cat:'Debt',span:1,minLevel:1,desc:'What you owe at a glance.'},
+  {id:'promo_tracker',name:'0% Promo Tracker',icon:'⏳',cat:'Debt',span:2,minLevel:1,desc:'Track 0%-APR promo expirations so you pay them off before the rate jumps.'},
+  {id:'credit_util',name:'Credit Utilization',icon:'📊',cat:'Debt',span:2,minLevel:1,desc:'Utilization gauge + debt-to-income — the two numbers lenders watch.'},
   {id:'fire_drill',name:'Fire Drill Simulator',icon:'🧯',cat:'Playground',span:2,minLevel:2,desc:'Stress-test your finances against job loss, disasters & more.'},
   {id:'debt_planner',name:'Debt Payoff Lab',icon:'🏔️',cat:'Playground',span:2,minLevel:2,desc:'Interactive avalanche vs. snowball with extra-payment slider.'},
 ];
@@ -3379,7 +3860,7 @@ function billsWidgetBody(w){
       <button class="bill-check" onclick="event.stopPropagation();toggleBillPaid('${key}')" title="${paid?'Mark unpaid':'Mark paid'}">${paid?'\u2713':''}</button>
       <div class="bill-info">
         <div class="bill-nm">${esc(b.name)}${b.manual?`<span class="bill-edit" role="button" onclick="event.stopPropagation();openManualBill(${(APP.manualBills||[]).findIndex(x=>x.name===b.name&&x.cat===b.cat)})" title="Edit">\u270E</span>`:''}</div>
-        <div class="bill-sub">due ${ord(b.due)}${b.apr?` \u00b7 ${b.apr.toFixed(1)}%`:''}${b.promo?` \u00b7 ${esc(b.promo)}`:''}</div>
+        <div class="bill-sub">due ${ord(b.due)}${b.apr?` \u00b7 ${b.apr.toFixed(1)}%`:''}${b.promo?` \u00b7 ${esc(b.promo)}`:''}${_billPayoffLabel(b)}</div>
         <div class="bill-amts">
           <span class="bill-min">Min <b>${fmtK(b.min)}</b>${live&&!b.manual?' \u00b7 Plaid':''}</span>
           ${Math.abs(diff)>=1?`<span class="bill-diff" style="color:${diff>0?'var(--amber)':'var(--green)'}">${diff>0?'+':''}${fmtK(diff)} vs min</span>`:''}
@@ -3405,6 +3886,220 @@ function billsWidgetBody(w){
   </div>`;
 }
 function setBillsTf(uid,tf){ _billsTf[uid]=tf; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+
+/* ═══ 0% PROMO TRACKER WIDGET ═══ */
+function promoTrackerBody(w){
+  const promos=engPromos().filter(p=>p.bal>0.5);
+  if(!promos.length) return `<div class="wph"><div class="wph-sub">No active 0%/intro-rate promos with a balance. 🎉</div><div class="ws-hint" style="margin-top:6px">Add a promo end date to a bill (edit a manual bill) and it'll show up here.</div></div>`;
+  const fmtDate=(d)=>d.toLocaleDateString('en-US',{month:'short',year:'numeric'});
+  const rows=promos.map(p=>{
+    // urgency tier
+    const tier = p.days<0?'expired' : p.days<=45?'urgent' : p.days<=120?'soon' : 'ok';
+    const color = tier==='expired'?'var(--red)' : tier==='urgent'?'var(--red)' : tier==='soon'?'var(--amber)' : 'var(--green)';
+    const willClear = p.payoffMonths*30 <= p.days;  // cleared before promo ends at current pay?
+    const daysLabel = p.days<0?`expired ${Math.abs(p.days)}d ago` : p.days===0?'expires today' : `${p.days} days left`;
+    return `<div class="promo-row">
+      <div class="promo-main">
+        <div class="promo-nm">${esc(p.name)} <span class="promo-tag">${esc(p.promo)}</span></div>
+        <div class="promo-sub">ends ${fmtDate(p.end)} \u00b7 ${fmtK(p.bal)} balance \u00b7 jumps to <b style="color:var(--amber)">${p.apr.toFixed(2)}%</b></div>
+        <div class="promo-bar"><div class="promo-bar-fill" style="width:${Math.max(3,Math.min(100,100-(p.days/365*100)))}%;background:${color}"></div></div>
+      </div>
+      <div class="promo-side">
+        <div class="promo-days" style="color:${color}">${daysLabel}</div>
+        ${p.bal>0?`<div class="promo-warn">${willClear?'<span style=\"color:var(--green)\">on track ✓</span>':'+'+fmtK(p.monthlyAfter)+'/mo if not paid'}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  const urgent=promos.filter(p=>p.days<=45&&p.days>-3650&&p.bal>0.5);
+  const head = urgent.length?`<div class="promo-alert">⚠️ ${urgent.length} promo${urgent.length>1?'s':''} expiring within 45 days — pay these down first.</div>`:'';
+  return `<div class="promo-wrap">${head}${rows}</div>`;
+}
+
+/* Richie proactively warns when a 0% promo is expiring soon (once per session per promo). */
+let _promoWarned=false;
+function maybeWarnPromos(){
+  if(_promoWarned) return;
+  const alerts=engPromoAlerts(45).filter(p=>p.bal>0.5);
+  if(!alerts.length) return;
+  _promoWarned=true;
+  const soonest=alerts[0];
+  const more=alerts.length>1?` (and ${alerts.length-1} more)`:'';
+  const when = soonest.days<0?'has already expired':soonest.days===0?'expires today':`expires in ${soonest.days} days`;
+  setTimeout(()=>{
+    if(typeof richieSay==='function'){
+      richieSay(`⏳ Heads up — your ${soonest.name} 0% promo ${when}${more}. There's ${fmtK(soonest.bal)} on it that would start accruing ${soonest.apr.toFixed(1)}% APR. Want to prioritize paying it down before then?`);
+      if(typeof sbRichie!=='undefined'&&sbRichie)sbRichie.do('alert');
+    }
+  }, 1600);
+}
+
+/* ═══ CREDIT UTILIZATION + DTI WIDGET ═══ */
+function creditUtilBody(w){
+  const u=engCreditUtil();
+  const dti=engDTI();
+  if(u.limit<=0) return `<div class="wph"><div class="wph-sub">No credit limits set yet.</div><div class="ws-hint" style="margin-top:6px">Add credit limits to your cards and I'll show your utilization here.</div></div>`;
+  // utilization color: <10% green, <30% amber-green, <50% amber, else red
+  const uPct=u.pct;
+  const uColor = uPct<10?'var(--green)' : uPct<30?'#7bc96f' : uPct<50?'var(--amber)' : 'var(--red)';
+  const uLabel = uPct<10?'Excellent' : uPct<30?'Good' : uPct<50?'Fair — aim under 30%' : 'High — pay down to under 30%';
+  // semicircular-ish gauge via conic gradient
+  const gauge=`<div class="cu-gauge">
+    <div class="cu-gauge-ring" style="background:conic-gradient(${uColor} 0% ${Math.min(100,uPct)}%, var(--surface3) ${Math.min(100,uPct)}% 100%)">
+      <div class="cu-gauge-hole"><div class="cu-gauge-pct" style="color:${uColor}">${uPct.toFixed(1)}%</div><div class="cu-gauge-cap">utilization</div></div>
+    </div>
+  </div>`;
+  // 30% reference marker line in the per-card bars
+  const cardBars=u.cards.map(c=>{
+    const cc = c.pct<30?'var(--green)':c.pct<50?'var(--amber)':'var(--red)';
+    return `<div class="cu-card">
+      <div class="cu-card-top"><span>${esc(c.name)}</span><span style="color:${cc}">${c.pct.toFixed(0)}%</span></div>
+      <div class="cu-card-bar"><div class="cu-card-fill" style="width:${Math.min(100,c.pct)}%;background:${cc}"></div><div class="cu-card-mark" title="30% threshold"></div></div>
+      <div class="cu-card-sub">${fmtK(c.used)} of ${fmtK(c.limit)}</div>
+    </div>`;
+  }).join('');
+  const dtiPct=dti.ratio*100;
+  const dtiColor = dtiPct<36?'var(--green)' : dtiPct<43?'var(--amber)' : 'var(--red)';
+  const dtiLabel = dtiPct<36?'Healthy' : dtiPct<43?'Manageable' : 'High';
+  return `<div class="cu-wrap">
+    <div class="cu-top">
+      ${gauge}
+      <div class="cu-summary">
+        <div class="cu-line"><span>Used</span><b>${fmtK(u.used)}</b></div>
+        <div class="cu-line"><span>Total limit</span><b>${fmtK(u.limit)}</b></div>
+        <div class="cu-line"><span>Status</span><b style="color:${uColor}">${uLabel}</b></div>
+        <div class="cu-dti">
+          <div class="cu-dti-top"><span>Debt-to-income</span><b style="color:${dtiColor}">${dtiPct.toFixed(0)}% \u00b7 ${dtiLabel}</b></div>
+          <div class="cu-dti-bar"><div class="cu-dti-fill" style="width:${Math.min(100,dtiPct)}%;background:${dtiColor}"></div><div class="cu-dti-mark" title="36% guideline"></div></div>
+          <div class="cu-card-sub">${fmtK(dti.debtPay)}/mo debt payments vs ${fmtK(dti.income)}/mo income</div>
+        </div>
+      </div>
+    </div>
+    <div class="cu-cards-label">Per-card utilization <span class="ws-hint" style="margin:0">(dotted line = 30%)</span></div>
+    <div class="cu-cards">${cardBars}</div>
+  </div>`;
+}
+
+/* ═══ SAVINGS BUCKETS / SINKING FUNDS WIDGET ═══ */
+function savingsBucketsBody(w){
+  const buckets=engSavingsBuckets();
+  const total=engSavingsTotal();
+  if(!buckets.length) return `<div class="wph"><div class="wph-sub">No savings buckets yet.</div><button class="manual-add-btn" onclick="event.stopPropagation();editBucket(-1)">➕ Add a bucket</button></div>`;
+  const rows=buckets.map((b,i)=>{
+    const color=b.done?'var(--green)':b.pct>=66?'var(--green)':b.pct>=33?'var(--amber)':'var(--blue)';
+    const sub = b.done ? 'Funded! 🎉'
+      : b.target>0 ? `${fmtK(b.remaining)} to go${b.monthly>0&&b.monthsToGoal!==Infinity?` · ~${b.monthsToGoal} mo at ${fmtK(b.monthly)}/mo`:''}`
+      : 'No target set';
+    return `<div class="sb-bucket">
+      <div class="sb-top">
+        <span class="sb-icon">${b.icon||'🪣'}</span>
+        <div class="sb-meta"><div class="sb-nm">${esc(b.name)}</div><div class="sb-sub">${sub}</div></div>
+        <div class="sb-amt"><div class="sb-bal">${fmtK(b.balance)}</div>${b.target>0?`<div class="sb-tgt">of ${fmtK(b.target)}</div>`:''}</div>
+        <div class="sb-actions"><button class="goal-mini" onclick="event.stopPropagation();editBucket(${i})" title="Edit">✎</button></div>
+      </div>
+      ${b.target>0?`<div class="sb-bar"><div class="sb-bar-fill" style="width:${b.pct}%;background:${color}"></div></div>`:''}
+    </div>`;
+  }).join('');
+  return `<div class="sb-wrap">
+    <div class="sb-header"><span>${buckets.length} funds</span><b style="color:var(--green)">${fmtK(total)} saved</b></div>
+    ${rows}
+    <button class="manual-add-btn" onclick="event.stopPropagation();editBucket(-1)">➕ Add a bucket</button>
+  </div>`;
+}
+let _bucketEdit=null;
+function editBucket(i){
+  _bucketEdit=i;
+  const list=_savingsBuckets();
+  const b = i>=0 ? list[i] : {name:'',icon:'🪣',balance:'',target:'',monthly:'',note:''};
+  const icons=['🪣','🛟','🔨','🎉','🏥','✈️','🚗','🏠','🎓','💍','🎁','🐾'];
+  gg('manualModal').style.display='flex';
+  gg('manualTitle').textContent = i>=0?'Edit bucket':'Add savings bucket';
+  gg('manualSub').textContent='A sinking fund with its own balance and goal.';
+  gg('manualBody').innerHTML=`
+    <label class="mf-label">Name</label>
+    <input class="mf-in" id="bkName" value="${esc(b.name||'')}" placeholder="e.g. Reserve / Opportunity">
+    <label class="mf-label">Icon</label>
+    <div class="goal-icon-grid">${icons.map(ic=>`<button class="goal-icon-opt${b.icon===ic?' sel':''}" onclick="document.querySelectorAll('.goal-icon-opt').forEach(e=>e.classList.remove('sel'));this.classList.add('sel');window._bkIcon='${ic}'">${ic}</button>`).join('')}</div>
+    <div class="mf-row">
+      <div><label class="mf-label">Current balance</label><input class="mf-in" id="bkBal" type="number" value="${b.balance||''}" placeholder="0"></div>
+      <div><label class="mf-label">Goal target</label><input class="mf-in" id="bkTgt" type="number" value="${b.target||''}" placeholder="0"></div>
+    </div>
+    <label class="mf-label">Monthly contribution (optional)</label>
+    <input class="mf-in" id="bkMo" type="number" value="${b.monthly||''}" placeholder="0">
+    <div class="mf-actions">
+      ${i>=0?`<button class="btn danger-btn" onclick="deleteBucket(${i})">Delete</button>`:'<span></span>'}
+      <button class="btn primary" onclick="saveBucket()">${i>=0?'Save':'Add'}</button>
+    </div>`;
+  window._bkIcon=b.icon||'🪣';
+}
+function saveBucket(){
+  const name=(gg('bkName').value||'').trim(); if(!name){ gg('bkName').focus(); return; }
+  const item={name, icon:window._bkIcon||'🪣', balance:_num('bkBal'), target:_num('bkTgt'), monthly:_num('bkMo'), note:''};
+  const list=_savingsBuckets();
+  if(_bucketEdit>=0) list[_bucketEdit]=item; else list.push(item);
+  saveState(); closeManual();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+  if(sbRichie)sbRichie.do('nod');
+}
+function deleteBucket(i){ if(!confirm('Delete this bucket?'))return; _savingsBuckets().splice(i,1); saveState(); closeManual(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+
+/* ═══ BUDGET vs ACTUAL WIDGET ═══ */
+let _baTf={};
+function budgetActualBody(w){
+  const tf=_baTf[w.uid]||30;
+  const d=engBudgetVsActual(tf);
+  if(!d.rows.length) return `<div class="wph"><div class="wph-sub">Set up your Zero-Based Budget first, then this compares it to actual spending.</div></div>`;
+  const tfLbl={7:'1 wk',30:'This month',90:'3 mo'};
+  const rows=d.rows.map(r=>{
+    const barColor = r.over?'var(--red)':r.pct>=85?'var(--amber)':'var(--green)';
+    const diffColor = r.diff>=0?'var(--green)':'var(--red)';
+    return `<div class="ba-row">
+      <div class="ba-top"><span class="ba-nm">${esc(r.name)}</span><span class="ba-diff" style="color:${diffColor}">${r.diff>=0?'+':'-'}${fmtK(Math.abs(r.diff))}</span></div>
+      <div class="ba-bar"><div class="ba-bar-fill" style="width:${Math.min(100,r.pct)}%;background:${barColor}"></div><div class="ba-bar-mark" title="budget"></div></div>
+      <div class="ba-sub">${fmtK(r.actual)} spent of ${fmtK(r.budget)} ${r.over?'· <b style="color:var(--red)">over</b>':'budget'}</div>
+    </div>`;
+  }).join('');
+  const totColor=d.totDiff>=0?'var(--green)':'var(--red)';
+  return `<div class="ba-wrap">
+    <div class="ba-toolbar">
+      <div class="pl-toggle">${[7,30,90].map(k=>`<button class="pl-gbtn${tf===k?' active':''}" onclick="setBaTf('${w.uid}',${k})">${tfLbl[k]}</button>`).join('')}</div>
+    </div>
+    <div class="ba-summary">
+      <div class="ba-sumcell"><div class="ba-suml">Budgeted</div><div class="ba-sumv">${fmtK(d.totBudget)}</div></div>
+      <div class="ba-sumcell"><div class="ba-suml">Actual</div><div class="ba-sumv">${fmtK(d.totActual)}</div></div>
+      <div class="ba-sumcell"><div class="ba-suml">Difference</div><div class="ba-sumv" style="color:${totColor}">${d.totDiff>=0?'+':'-'}${fmtK(Math.abs(d.totDiff))}</div></div>
+    </div>
+    ${dataLoaded?'':'<div class="ws-hint" style="margin:0 0 10px">Sample actuals — connect a bank for real spending.</div>'}
+    ${rows}
+  </div>`;
+}
+function setBaTf(uid,k){ _baTf[uid]=k; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+
+/* ═══ CATEGORY HEATMAP WIDGET ═══ */
+let _hmMonths={};
+function categoryHeatmapBody(w){
+  const months=_hmMonths[w.uid]||6;
+  const g=engCategoryMonthGrid(months);
+  if(!g.cats.length) return `<div class="wph"><div class="wph-sub">No spending data yet to chart.</div></div>`;
+  const cats=g.cats.slice(0,10); // top 10 by total
+  // heat color: scale 0..max → light to intense green/amber/red
+  const heat=(v)=>{
+    if(v<=0) return 'var(--surface3)';
+    const t=Math.min(1, v/g.max);
+    // interpolate: low=cool teal, mid=amber, high=red
+    if(t<0.5){ const k=t/0.5; return `rgba(46,204,138,${0.15+k*0.55})`; }
+    const k=(t-0.5)/0.5; return `rgba(${Math.round(240)}, ${Math.round(165-k*73)}, ${Math.round(64)}, ${0.55+k*0.4})`;
+  };
+  const head=`<div class="hm-row hm-head"><div class="hm-cat"></div>${g.months.map(mo=>`<div class="hm-cell hm-mlabel">${mo}</div>`).join('')}<div class="hm-cell hm-avg-h">avg</div></div>`;
+  const rows=cats.map(c=>{
+    const cells=c.vals.map(v=>`<div class="hm-cell" style="background:${heat(v)}" title="${c.label}: ${fmtK(v)}">${v>0?`<span class="hm-v">${v>=1000?(v/1000).toFixed(1)+'k':Math.round(v)}</span>`:''}</div>`).join('');
+    return `<div class="hm-row"><div class="hm-cat" title="${esc(c.label)}"><span class="hm-dot" style="background:${c.color}"></span>${esc(c.label)}</div>${cells}<div class="hm-cell hm-avg">${fmtK(c.avg)}</div></div>`;
+  }).join('');
+  return `<div class="hm-wrap">
+    <div class="hm-toolbar"><div class="pl-toggle">${[3,6,12].map(k=>`<button class="pl-gbtn${months===k?' active':''}" onclick="setHmMonths('${w.uid}',${k})">${k} mo</button>`).join('')}</div>${dataLoaded?'':'<span class="ws-hint" style="margin:0">sample data</span>'}</div>
+    <div class="hm-grid">${head}${rows}</div>
+  </div>`;
+}
+function setHmMonths(uid,k){ _hmMonths[uid]=k; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 
 /* ═══ FINANCIAL GOALS WIDGET ═══ */
 function goalsWidgetBody(w){
@@ -3438,6 +4133,17 @@ function goalCard(g){
   const icon=g.icon||m.icon||'🎯';
   const barColor=p.done?'var(--green)':p.pct>=66?'var(--green)':p.pct>=33?'var(--amber)':'var(--blue)';
   const curStr=goalFmt(p.current,p.unit), tgtStr=goalFmt(p.target,p.unit);
+  // deadline pacing chip
+  let paceRow='';
+  if(p.pace && !p.done){
+    const pc=p.pace;
+    const trackColor=pc.onTrack?'var(--green)':'var(--amber)';
+    const trackTxt=pc.onTrack?'on track':'behind pace';
+    const dlStr=pc.deadline.toLocaleDateString('en-US',{month:'short',year:'numeric'});
+    const need = p.unit==='%' ? '' : ` · need ${fmtK(pc.perMonthNeeded)}/mo`;
+    const timeLeft = pc.daysLeft<0?'overdue' : pc.monthsLeft<1.5?`${pc.daysLeft}d left` : `${Math.round(pc.monthsLeft)} mo left`;
+    paceRow=`<div class="goal-pace"><span class="goal-pace-dot" style="background:${trackColor}"></span><span style="color:${trackColor}">${trackTxt}</span> · by ${dlStr} · ${timeLeft}${need}</div>`;
+  }
   return `<div class="goal-card${p.done?' done':''}">
     <div class="goal-top">
       <span class="goal-icon">${icon}</span>
@@ -3450,6 +4156,7 @@ function goalCard(g){
     </div>
     <div class="goal-bar"><div class="goal-bar-fill" style="width:${p.pct}%;background:${barColor}"></div></div>
     <div class="goal-foot"><span>${curStr} ${p.dir==='down'?'remaining':'saved'}</span><span class="goal-pct">${p.pct}%</span><span>target ${tgtStr}</span></div>
+    ${paceRow}
   </div>`;
 }
 function _goalById(id){ return _goals().find(g=>g.id===id); }
@@ -3507,7 +4214,7 @@ function goalWizRender(){
       <div class="mf-label">Target ${m.unit==='%'?'(%)':'amount ($)'}</div>
       <input class="mf-in" id="gwTarget" type="number" value="${d.target||suggest}" placeholder="${suggest}">
       <div class="mf-label">Target date (optional)</div>
-      <input class="mf-in" id="gwDeadline" value="${esc(d.deadline||'')}" placeholder="e.g. Dec 2026">
+      <input class="mf-in" id="gwDeadline" type="date" value="${esc(d.deadline||'')}">
       ${m.dir==='down'?`<div class="ws-hint">Tracks downward from your current ${m.label.toLowerCase()} (${goalFmt(m.get(),m.unit)}) to your target.</div>`:`<div class="ws-hint">Tracks from your current ${m.label.toLowerCase()} (${goalFmt(m.get()||0,m.unit)}) up to your target.</div>`}
       <div class="mf-actions"><button class="btn" onclick="goalWizBack()">← Back</button><button class="btn primary" onclick="goalWizNext()">Next →</button></div>`;
   } else {
@@ -3551,6 +4258,7 @@ function cfpWidgetBody(w){
     <div class="cfp-toolbar">
       <span class="pl-grp-label">Project</span>
       <div class="pl-toggle">${CFP_RANGES.map(r=>`<button class="pl-gbtn${range===r.k?' active':''}" onclick="setCfpRange('${w.uid}',${r.k})">${r.l}</button>`).join('')}</div>
+      <button class="cfp-income-btn" onclick="event.stopPropagation();openIncomeEditor()">💵 Income</button>
     </div>
     <div class="cfp-summary" id="cfpsum_${w.uid}"></div>
     <div class="cfp-chart" id="cfpchart_${w.uid}"></div>
@@ -3893,6 +4601,7 @@ function renderWidgetBody(w){
     case 'spending_month': { const days=wDays(w); if(dataLoaded){ const sp=engSpend(days); const cats=engCategoryBreakdown(days); const top=cats[0]; return `<div class="wph"><div class="wph-stat">${fmtK(sp)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${top?`<div class="wph-inline"><span><span class="wph-dot" style="background:${top.color}"></span>Top: ${top.label}</span><b>${fmtK(top.value)}</b></div>`:''}</div>`; } return `<div class="wph"><div class="wph-stat">${fmtK(Math.round(3118*days/30))}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')} \u00b7 sample</div><div class="wph-inline"><span><span class="wph-dot" style="background:#f5a623"></span>Top: Dining</span><b>$612</b></div></div>`; }
     case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); const rec=engRecent(days).filter(t=>t.amount<0); const byC={}; rec.forEach(t=>{const c=getTxnCategory(t);byC[c]=(byC[c]||0)+Math.abs(t.amount);}); const top=Object.entries(byC).sort((a,b)=>b[1]-a[1])[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${top?`<div class="wph-inline"><span>Largest: ${top[0]}</span><b style="color:var(--green)">${fmtK(top[1])}</b></div>`:''}</div>`; } const top=incomeSources.slice().sort((a,b)=>b.amt*(FREQ_TO_MONTHLY[b.freq]||1)-a.amt*(FREQ_TO_MONTHLY[a.freq]||1))[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">${incomeSources.length} sources \u00b7 sample</div><div class="wph-inline"><span>Largest: ${top.name}</span><b style="color:var(--green)">${fmtK(Math.round(top.amt*(FREQ_TO_MONTHLY[top.freq]||1)))}/mo</b></div></div>`; }
     case 'debt_summary': { const debts=engBills().filter(b=>b.bal<0); const d=debts.reduce((s,b)=>s+Math.abs(b.bal),0); const hi=debts.slice().sort((a,b)=>(b.apr||0)-(a.apr||0))[0]; if(dataLoaded||plaidHasLiab()){ return `<div class="wph"><div class="wph-stat" style="color:var(--red)">${fmtK(d)}</div><div class="wph-sub">across ${debts.length} balance${debts.length!==1?'s':''}</div>${hi&&hi.apr?`<div class="wph-inline"><span>Highest APR: ${esc(hi.name)}</span><b style="color:var(--amber)">${hi.apr.toFixed(1)}%</b></div>`:''}</div>`; } return `<div class="wph"><div class="wph-stat" style="color:var(--red)">${fmtK(d)}</div><div class="wph-sub">across ${debts.length} balances</div>${hi&&hi.apr?`<div class="wph-inline"><span>Highest APR: ${esc(hi.name)}</span><b style="color:var(--amber)">${hi.apr.toFixed(1)}%</b></div>`:''}</div>`; }
+    case 'category_heatmap': return categoryHeatmapBody(w);
     case 'top_categories': case 'budget_doughnut': { const cfg=widgetConfig(w); const days=wDays(w);
       let cats = dataLoaded ? engCategoryBreakdownQ(days, cfg.query) : [{label:'Dining Out',value:612,color:'#f5a623'},{label:'Food & Groceries',value:498,color:'#3dda91'},{label:'Auto Payments',value:284,color:'#b09afa'},{label:'Subscriptions',value:142,color:'#22d3ee'},{label:'Travel',value:96,color:'#818cf8'},{label:'Medical',value:60,color:'#34d399'}];
       // sort
@@ -3941,6 +4650,8 @@ function renderWidgetBody(w){
     case 'fire_calc': return fireWidgetBody(w);
     case 'debt_payoff': { const _b=engBills(); const totDebt=engBillsDebt(); const totPay=engMonthlyBills(); const avgApr=_b.filter(b=>b.bal<0&&b.apr>0).reduce((s,b,_,a)=>s+b.apr/a.length,0)||5; const r=avgApr/100/12; const months=(totPay>totDebt*r)?Math.ceil(Math.log(totPay/(totPay-totDebt*r))/Math.log(1+r)):999; const yrs=Math.floor(months/12), mo=months%12; return `<div class="wph"><div class="wph-sub">Debt-free in (avalanche)${plaidHasLiab()?' · live':''}</div><div class="wph-stat">${months>=999?'—':yrs+' yr '+mo+' mo'}</div><div class="wph-sub">${fmtM(totDebt)} at ${avgApr.toFixed(1)}% avg APR</div></div>`; }
     case 'zero_budget': return zbWidgetBody(w);
+    case 'budget_actual': return budgetActualBody(w);
+    case 'savings_buckets': return savingsBucketsBody(w);
     case 'fire_drill': return fdWidgetBody(w);
     case 'debt_planner': return dpWidgetBody(w);
     default: return `<div class="wph"><div class="wph-sub">${def.name}</div></div>`;
@@ -3991,10 +4702,22 @@ function widgetDetailContent(type, days){
       const tot=dep.reduce((s,a)=>s+a.value,0);
       return { title:'Cash accounts', sub:`${fmtK(tot)} across ${dep.length} account${dep.length!==1?'s':''}`, body:`<div class="wdt-total">${fmtK(tot)}<span>available cash</span></div>${_detailRows(dep,tot)}` };
     }
+    case 'promo_tracker': return promoTrackerBody(w);
+    case 'credit_util': return creditUtilBody(w);
     case 'debt_summary': case 'debt_payoff': {
-      const debts=engBills().filter(b=>b.bal<0).map(b=>({label:b.name,value:Math.abs(b.bal),note:(b.apr?b.apr.toFixed(2)+'% APR':'')+(b.note?' · '+b.note:'')})).sort((a,b)=>b.value-a.value);
-      const tot=debts.reduce((s,d)=>s+d.value,0);
-      return { title:'Debt breakdown', sub:`${fmtK(tot)} across ${debts.length} balance${debts.length!==1?'s':''}${plaidHasLiab()?' · live from Plaid':''}`, body:`<div class="wdt-total" style="color:var(--red)">${fmtK(tot)}<span>total debt</span></div>${_detailRows(debts,tot)}` };
+      const debtBills=engBills().filter(b=>b.bal<0).sort((a,b)=>Math.abs(b.bal)-Math.abs(a.bal));
+      const tot=debtBills.reduce((s,d)=>s+Math.abs(d.bal),0);
+      const totMin=debtBills.reduce((s,d)=>s+(d.min||0),0);
+      const rows=debtBills.map(b=>{
+        const po=payoffMonths(b.bal, b.apr, b.pay||b.min);
+        const poStr = po.paidOff?'paid' : po.neverPaysOff?'<b style="color:var(--red)">payment ≤ interest</b>' : `${fmtMonths(po.months)}${po.interest>0?` · ${fmtK(po.interest)} int`:''}`;
+        return `<div class="wdt-row"><span class="wdt-label">${esc(b.name)}<br><span style="font-size:10.5px;color:var(--muted)">${b.apr?b.apr.toFixed(2)+'% · ':''}pay ${fmtK(b.pay||b.min)}/mo → ${poStr}</span></span><b style="color:var(--red)">${fmtK(Math.abs(b.bal))}</b></div>`;
+      }).join('');
+      // overall payoff at current total payment
+      const blended = tot>0 ? debtBills.reduce((s,b)=>s+Math.abs(b.bal)*(b.apr||0),0)/tot : 0;
+      const totPay=debtBills.reduce((s,d)=>s+(d.pay||d.min||0),0);
+      const overall=payoffMonths(tot, blended, totPay);
+      return { title:'Debt breakdown', sub:`${fmtK(tot)} across ${debtBills.length} balance${debtBills.length!==1?'s':''}${plaidHasLiab()?' · live from Plaid':''}`, body:`<div class="wdt-total" style="color:var(--red)">${fmtK(tot)}<span>total debt · ${overall.neverPaysOff?'increase payments to make progress':'clear in ~'+fmtMonths(overall.months)+' at current pace'}</span></div>${rows}` };
     }
     case 'bills_list': {
       const bl=engUpcomingBills().map(b=>({label:b.name,value:b.pay,note:`due ${b.due}${b.due%10===1&&b.due!==11?'st':b.due%10===2&&b.due!==12?'nd':b.due%10===3&&b.due!==13?'rd':'th'}`+(b.apr?` · ${b.apr.toFixed(1)}%`:'')}));
