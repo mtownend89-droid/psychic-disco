@@ -888,6 +888,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .ba-bar-mark{position:absolute;top:-2px;bottom:-2px;right:0;width:0;border-left:2px solid var(--muted);opacity:.5;}
 .ba-sub{font-size:10.5px;color:var(--muted);margin-top:4px;}
 /* ── Income editor ── */
+.wx-export{font-size:11px;padding:5px 10px;border-radius:8px;background:var(--surface3);border:1px solid var(--border);color:var(--muted);font-weight:600;cursor:pointer;font-family:var(--font);white-space:nowrap;}
+.wx-export:hover{background:var(--surface2);color:var(--text);}
 .cfp-income-btn{margin-left:auto;font-size:11.5px;padding:5px 11px;border-radius:8px;background:var(--green-dim);border:1px solid rgba(46,204,138,0.25);color:var(--green);font-weight:600;cursor:pointer;font-family:var(--font);}
 .cfp-income-btn:hover{background:rgba(46,204,138,0.22);}
 .inc-total{font-size:13px;color:var(--muted);margin-bottom:12px;}
@@ -911,6 +913,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .promo-side{text-align:right;flex-shrink:0;min-width:96px;}
 .promo-days{font-size:12.5px;font-weight:700;}
 .promo-warn{font-size:10.5px;color:var(--muted);margin-top:3px;}
+.promo-edit{margin-top:5px;font-size:10px;padding:2px 8px;border-radius:6px;background:var(--surface3);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-family:var(--font);}
+.promo-add-wrap{margin-top:12px;padding-top:11px;border-top:1px solid var(--border);}
+.promo-add-chips{display:flex;flex-wrap:wrap;gap:6px;}
+.promo-add-chip{font-size:11px;padding:5px 10px;border-radius:8px;background:var(--green-dim);border:1px solid rgba(46,204,138,0.25);color:var(--green);cursor:pointer;font-family:var(--font);}
+.promo-add-chip:hover{background:rgba(46,204,138,0.2);}
 /* ── Credit Utilization + DTI ── */
 .cu-wrap{padding:2px;}
 .cu-top{display:flex;gap:16px;align-items:center;margin-bottom:14px;}
@@ -2524,24 +2531,181 @@ function plaidHasLiab(){ return !!(plaidLiabilities && ((plaidLiabilities.credit
 function _dueDay(dateStr){ if(!dateStr) return 1; const d=new Date(dateStr); return isNaN(d)?1:d.getDate(); }
 function engBills(){
   const manual=(APP.manualBills||[]).map(b=>({...b, manual:true, min:b.min!=null?b.min:b.pay}));
-  if(!plaidHasLiab()) return applyBillOverrides(bills.concat(manual));
+  if(!plaidHasLiab()) return _applyCardData(applyBillOverrides(bills.concat(manual)));
+  // Build a lookup of live account credit limits by account_id (Plaid puts limit on the account)
+  const limitById={};
+  (allAccts||[]).forEach(a=>{ if(a&&a.account_id&&a.balances&&a.balances.limit!=null) limitById[a.account_id]=a.balances.limit; });
   const out=[];
   (plaidLiabilities.credit_cards||[]).forEach(c=>{
     out.push({ name:c.name||'Credit Card', note:c.institution||'', cat:'CC',
       bal:-(Math.abs(c.current_balance||0)), apr:(c.apr!=null?c.apr:0),
       min:(c.minimum_payment||0), pay:(c.minimum_payment||0),
-      due:_dueDay(c.next_payment_due_date), promo:'', paid:false, source:'plaid' });
+      limit:(c.limit!=null?c.limit:(limitById[c.account_id]||0)),  // live credit limit from Plaid
+      due:_dueDay(c.next_payment_due_date), promo:'', promoEnd:'', paid:false, source:'plaid' });
   });
   (plaidLiabilities.mortgages||[]).forEach(m=>{
     out.push({ name:m.name||'Mortgage', note:m.institution||'', cat:'HM',
       bal:-(Math.abs(m.current_balance||0)), apr:(m.interest_rate!=null?m.interest_rate:0),
-      min:(m.minimum_payment||0), pay:(m.minimum_payment||0),
-      due:_dueDay(m.next_payment_due_date), promo:'', paid:false, source:'plaid' });
+      min:(m.minimum_payment||0), pay:(m.minimum_payment||0), limit:0,
+      due:_dueDay(m.next_payment_due_date), promo:'', promoEnd:'', paid:false, source:'plaid' });
   });
-  return applyBillOverrides(out.concat(manual));
+  return _applyCardData(applyBillOverrides(out.concat(manual)));
+}
+// Persistent overlay so promo end dates / credit limits the user enters survive even
+// when bills are coming live from Plaid (Plaid can't know your 0% promo end date).
+function _cardKey(name){ return (name||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
+function _applyCardData(list){
+  const data=APP.cardData||{};
+  return list.map(b=>{
+    const d=data[_cardKey(b.name)];
+    if(!d) return b;
+    const merged={...b};
+    if(d.promoEnd) { merged.promoEnd=d.promoEnd; if(!merged.promo) merged.promo='0% APR'; }
+    if(d.limit!=null && d.limit>0 && !(merged.limit>0)) merged.limit=d.limit;
+    if(d.apr!=null && d.apr>0 && !(merged.apr>0)) merged.apr=d.apr;
+    return merged;
+  });
+}
+function setCardData(name, fields){
+  if(!APP.cardData) APP.cardData={};
+  APP.cardData[_cardKey(name)]=Object.assign(APP.cardData[_cardKey(name)]||{}, fields);
+  saveState();
 }
 function engMonthlyBills(){ return engBills().reduce((s,b)=>s+(b.pay||0),0); }
 function engBillsDebt(){ return engBills().reduce((s,b)=>s+Math.abs(b.bal||0),0); }
+
+/* ═══════════════ EXCEL EXPORT ═══════════════
+   Builds a multi-sheet workbook mirroring the source spreadsheet, using whatever
+   data is live (Plaid) or seeded. Uses SheetJS (window.XLSX, loaded via CDN). */
+function _xlsxSheet(rows){ return XLSX.utils.aoa_to_sheet(rows); }
+function exportToExcel(){
+  if(typeof XLSX==='undefined'){ alert('Spreadsheet library still loading — try again in a moment.'); return; }
+  const wb=XLSX.utils.book_new();
+  const today=new Date();
+  const money=(n)=>Math.round((n||0)*100)/100;
+
+  // 1) Bills & Debt (with payoff times)
+  (()=>{
+    const rows=[['Bills & Debt','','','','','','','Generated',today.toLocaleDateString()],
+      ['Category','Name','Note','APR %','Balance','Min Pay','You Pay','Due Day','Months to Payoff','Total Interest','Promo Ends']];
+    engBills().sort((a,b)=>Math.abs(b.bal||0)-Math.abs(a.bal||0)).forEach(b=>{
+      const po=payoffMonths(b.bal,b.apr,b.pay||b.min);
+      rows.push([b.cat||'',b.name||'',b.note||'',b.apr||0,money(b.bal),money(b.min),money(b.pay),b.due||'',
+        po.paidOff?'paid':po.neverPaysOff?'never (pay ≤ interest)':po.months, po.neverPaysOff?'':money(po.interest), b.promoEnd||'']);
+    });
+    rows.push([]);
+    rows.push(['Total debt',engBillsDebt()? -engBillsDebt():0]);
+    rows.push(['Monthly bills total',money(engMonthlyBills())]);
+    XLSX.utils.book_append_sheet(wb,_xlsxSheet(rows),'Bills & Debt');
+  })();
+
+  // 2) Cash Flow Projection (90-day weekly-ish ledger)
+  (()=>{
+    const p=engCashFlowProjection(90);
+    const rows=[['Cash Flow Projection (next 90 days)'],['Starting cash',money(p.start)],[],
+      ['Day','Date','Event','Amount','Running Balance']];
+    let bal=p.start;
+    const byDay=p.byDay||{};
+    for(let d=1; d<=p.days; d++){
+      if(byDay[d]){ byDay[d].forEach(e=>{ bal+=e.amt; const dt=new Date(today.getTime()+d*86400000);
+        rows.push([d, dt.toLocaleDateString(), e.name, money(e.amt), money(bal)]); }); }
+    }
+    rows.push([]);
+    rows.push(['Income in (90d)',money(p.totalIn)]);
+    rows.push(['Bills out (90d)',money(-p.totalOut)]);
+    rows.push(['Projected end balance',money(p.end)]);
+    rows.push(['Lowest point',money(p.low.bal),'on day',p.low.day]);
+    XLSX.utils.book_append_sheet(wb,_xlsxSheet(rows),'Cash Flow');
+  })();
+
+  // 3) Income streams
+  (()=>{
+    const rows=[['Income Streams'],['Name','Amount','Frequency','Next/Day','Monthly Equivalent']];
+    _effectiveIncomeSources().forEach(s=>{
+      rows.push([s.name,money(s.amt),s.freq,(s.anchor||s.day||''),money(s.amt*(FREQ_TO_MONTHLY[s.freq]||1))]);
+    });
+    rows.push([]); rows.push(['Total monthly income',money(engMonthlyIncome())]);
+    XLSX.utils.book_append_sheet(wb,_xlsxSheet(rows),'Income');
+  })();
+
+  // 4) Budget vs Actual
+  (()=>{
+    const d=engBudgetVsActual(30);
+    const rows=[['Budget vs Actual (this month)'],['Category','Budgeted','Actual','Difference','% of budget']];
+    d.rows.forEach(r=>rows.push([r.name,money(r.budget),money(r.actual),money(r.diff),Math.round(r.pct)+'%']));
+    rows.push([]); rows.push(['Totals',money(d.totBudget),money(d.totActual),money(d.totDiff)]);
+    XLSX.utils.book_append_sheet(wb,_xlsxSheet(rows),'Budget vs Actual');
+  })();
+
+  // 5) Category Heatmap (category × month grid)
+  (()=>{
+    const g=engCategoryMonthGrid(12);
+    const rows=[['Category Spending by Month'],['Category',...g.months,'Average']];
+    g.cats.forEach(c=>rows.push([c.label,...c.vals.map(money),money(c.avg)]));
+    XLSX.utils.book_append_sheet(wb,_xlsxSheet(rows),'Category Heatmap');
+  })();
+
+  // 6) Savings Buckets
+  (()=>{
+    const rows=[['Savings Buckets / Sinking Funds'],['Fund','Balance','Target','% Funded','Remaining','Monthly','Months to Goal']];
+    engSavingsBuckets().forEach(b=>rows.push([b.name,money(b.balance),money(b.target),Math.round(b.pct)+'%',money(b.remaining),money(b.monthly),b.done?'funded':(b.monthsToGoal===Infinity?'—':b.monthsToGoal)]));
+    rows.push([]); rows.push(['Total saved',money(engSavingsTotal())]);
+    XLSX.utils.book_append_sheet(wb,_xlsxSheet(rows),'Savings Buckets');
+  })();
+
+  // 7) Credit & Utilization
+  (()=>{
+    const u=engCreditUtil(); const dti=engDTI();
+    const rows=[['Credit & Utilization'],['Card','Used','Limit','Utilization %']];
+    u.cards.forEach(c=>rows.push([c.name,money(c.used),money(c.limit),Math.round(c.pct)+'%']));
+    rows.push([]);
+    rows.push(['Total used',money(u.used)]);
+    rows.push(['Total limit',money(u.limit)]);
+    rows.push(['Overall utilization',Math.round(u.pct)+'%']);
+    rows.push([]);
+    rows.push(['Debt-to-income',Math.round(dti.ratio*100)+'%']);
+    rows.push(['Monthly debt payments',money(dti.debtPay)]);
+    rows.push(['Monthly income',money(dti.income)]);
+    XLSX.utils.book_append_sheet(wb,_xlsxSheet(rows),'Credit & Utilization');
+  })();
+
+  // 8) Promos
+  (()=>{
+    const rows=[['0% Promo Tracker'],['Card','Promo','Ends','Days Left','Balance','APR After','Monthly Cost After']];
+    engPromos().forEach(p=>rows.push([p.name,p.promo,p.end.toLocaleDateString(),p.days,money(p.bal),(p.apr||0)+'%',money(p.monthlyAfter)]));
+    if(engPromos().length===0) rows.push(['No active promos','','','','','','']);
+    XLSX.utils.book_append_sheet(wb,_xlsxSheet(rows),'Promos');
+  })();
+
+  // 9) Goals
+  (()=>{
+    const rows=[['Financial Goals'],['Goal','Metric','Current','Target','% Done','Deadline','On Track','Need/Month']];
+    _goals().forEach(g=>{ const pr=goalProgress(g);
+      rows.push([g.name,g.metric,money(pr.current),money(pr.target),pr.pct+'%',g.deadline||'',
+        pr.pace?(pr.pace.onTrack?'yes':'behind'):'', pr.pace?money(pr.pace.perMonthNeeded):'']);
+    });
+    if(_goals().length===0) rows.push(['No goals set','','','','','','','']);
+    XLSX.utils.book_append_sheet(wb,_xlsxSheet(rows),'Goals');
+  })();
+
+  // 10) Net Worth
+  (()=>{
+    const rows=[['Net Worth'],['ASSETS','','LIABILITIES','']];
+    const a=nwAssets.filter(x=>x.value>0), l=nwLiab;
+    const n=Math.max(a.length,l.length);
+    for(let i=0;i<n;i++){ rows.push([a[i]?a[i].name:'',a[i]?money(a[i].value):'',l[i]?l[i].name:'',l[i]?money(l[i].value):'']); }
+    rows.push([]);
+    const at=dataLoaded?engNetBalance()+engNWAssets():engNWAssets();
+    rows.push(['Total assets',money(at),'Total liabilities',money(engNWLiab())]);
+    rows.push(['NET WORTH',money(at-engNWLiab())]);
+    XLSX.utils.book_append_sheet(wb,_xlsxSheet(rows),'Net Worth');
+  })();
+
+  const stamp=today.toISOString().slice(0,10);
+  XLSX.writeFile(wb, `Richie_Finances_${stamp}.xlsx`);
+  if(typeof richieSay==='function') richieSay('📊 Exported your full workbook! Check your downloads — every sheet is in there.');
+  if(typeof sbRichie!=='undefined'&&sbRichie) sbRichie.do('tada');
+}
 
 /* ═══ 0%-PROMO EXPIRATION TRACKING ═══
    Finds bills with a promo end date and computes days remaining + the APR you'd
@@ -3890,29 +4054,71 @@ function setBillsTf(uid,tf){ _billsTf[uid]=tf; const pg=APP.pages.find(p=>p.id==
 /* ═══ 0% PROMO TRACKER WIDGET ═══ */
 function promoTrackerBody(w){
   const promos=engPromos().filter(p=>p.bal>0.5);
-  if(!promos.length) return `<div class="wph"><div class="wph-sub">No active 0%/intro-rate promos with a balance. 🎉</div><div class="ws-hint" style="margin-top:6px">Add a promo end date to a bill (edit a manual bill) and it'll show up here.</div></div>`;
   const fmtDate=(d)=>d.toLocaleDateString('en-US',{month:'short',year:'numeric'});
-  const rows=promos.map(p=>{
-    // urgency tier
-    const tier = p.days<0?'expired' : p.days<=45?'urgent' : p.days<=120?'soon' : 'ok';
-    const color = tier==='expired'?'var(--red)' : tier==='urgent'?'var(--red)' : tier==='soon'?'var(--amber)' : 'var(--green)';
-    const willClear = p.payoffMonths*30 <= p.days;  // cleared before promo ends at current pay?
-    const daysLabel = p.days<0?`expired ${Math.abs(p.days)}d ago` : p.days===0?'expires today' : `${p.days} days left`;
-    return `<div class="promo-row">
-      <div class="promo-main">
-        <div class="promo-nm">${esc(p.name)} <span class="promo-tag">${esc(p.promo)}</span></div>
-        <div class="promo-sub">ends ${fmtDate(p.end)} \u00b7 ${fmtK(p.bal)} balance \u00b7 jumps to <b style="color:var(--amber)">${p.apr.toFixed(2)}%</b></div>
-        <div class="promo-bar"><div class="promo-bar-fill" style="width:${Math.max(3,Math.min(100,100-(p.days/365*100)))}%;background:${color}"></div></div>
-      </div>
-      <div class="promo-side">
-        <div class="promo-days" style="color:${color}">${daysLabel}</div>
-        ${p.bal>0?`<div class="promo-warn">${willClear?'<span style=\"color:var(--green)\">on track ✓</span>':'+'+fmtK(p.monthlyAfter)+'/mo if not paid'}</div>`:''}
-      </div>
-    </div>`;
-  }).join('');
+  let rows='';
+  if(promos.length){
+    rows=promos.map(p=>{
+      const tier = p.days<0?'expired' : p.days<=45?'urgent' : p.days<=120?'soon' : 'ok';
+      const color = tier==='expired'?'var(--red)' : tier==='urgent'?'var(--red)' : tier==='soon'?'var(--amber)' : 'var(--green)';
+      const willClear = p.payoffMonths*30 <= p.days;
+      const daysLabel = p.days<0?`expired ${Math.abs(p.days)}d ago` : p.days===0?'expires today' : `${p.days} days left`;
+      return `<div class="promo-row">
+        <div class="promo-main">
+          <div class="promo-nm">${esc(p.name)} <span class="promo-tag">${esc(p.promo)}</span></div>
+          <div class="promo-sub">ends ${fmtDate(p.end)} \u00b7 ${fmtK(p.bal)} balance \u00b7 jumps to <b style="color:var(--amber)">${p.apr.toFixed(2)}%</b></div>
+          <div class="promo-bar"><div class="promo-bar-fill" style="width:${Math.max(3,Math.min(100,100-(p.days/365*100)))}%;background:${color}"></div></div>
+        </div>
+        <div class="promo-side">
+          <div class="promo-days" style="color:${color}">${daysLabel}</div>
+          ${p.bal>0?`<div class="promo-warn">${willClear?'<span style="color:var(--green)">on track ✓</span>':'+'+fmtK(p.monthlyAfter)+'/mo if not paid'}</div>`:''}
+          <button class="promo-edit" onclick="event.stopPropagation();openPromoEditor('${esc(p.name).replace(/'/g,"\\\\'")}')">edit</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
   const urgent=promos.filter(p=>p.days<=45&&p.days>-3650&&p.bal>0.5);
   const head = urgent.length?`<div class="promo-alert">⚠️ ${urgent.length} promo${urgent.length>1?'s':''} expiring within 45 days — pay these down first.</div>`:'';
-  return `<div class="promo-wrap">${head}${rows}</div>`;
+  // Cards WITHOUT a promo date — let the user attach one (works for live Plaid cards too)
+  const noPromo=engBills().filter(b=>b.cat==='CC' && Math.abs(b.bal||0)>0.5 && !b.promoEnd);
+  let addSection='';
+  if(noPromo.length){
+    const opts=noPromo.map(b=>`<button class="promo-add-chip" onclick="event.stopPropagation();openPromoEditor('${esc(b.name).replace(/'/g,"\\\\'")}')">+ ${esc(b.name)}</button>`).join('');
+    addSection=`<div class="promo-add-wrap"><div class="ws-hint" style="margin:0 0 6px">Attach a 0% promo end date to a card${plaidHasLiab()?' (works for your live cards too)':''}:</div><div class="promo-add-chips">${opts}</div></div>`;
+  }
+  const empty = !promos.length ? `<div class="wph"><div class="wph-sub">No active 0%/intro-rate promos with a balance yet. 🎉</div></div>` : '';
+  return `<div class="promo-wrap">${head}${rows}${empty}${addSection}</div>`;
+}
+// Editor to attach/clear a promo end date, credit limit, and standard APR on any card
+function openPromoEditor(name){
+  const bill=engBills().find(b=>b.name===name) || {name, promoEnd:'', limit:0, apr:0};
+  const cd=(APP.cardData||{})[_cardKey(name)]||{};
+  gg('manualModal').style.display='flex';
+  gg('manualTitle').textContent='Card promo & limit';
+  gg('manualSub').textContent=esc(name);
+  gg('manualBody').innerHTML=`
+    <label class="mf-label">0% promo ends</label>
+    <input class="mf-in" id="prEnd" type="date" value="${cd.promoEnd||bill.promoEnd||''}">
+    <div class="mf-row">
+      <div><label class="mf-label">Credit limit</label><input class="mf-in" id="prLimit" type="number" value="${cd.limit||bill.limit||''}" placeholder="for utilization"></div>
+      <div><label class="mf-label">Standard APR after promo %</label><input class="mf-in" id="prApr" type="number" value="${cd.apr||bill.apr||''}" placeholder="e.g. 28.99"></div>
+    </div>
+    <div class="ws-hint">These stay attached to this card even when balances refresh live from your bank.</div>
+    <div class="mf-actions">
+      <button class="btn danger-btn" onclick="clearPromo('${esc(name).replace(/'/g,"\\\\'")}')">Clear promo</button>
+      <button class="btn primary" onclick="savePromo('${esc(name).replace(/'/g,"\\\\'")}')">Save</button>
+    </div>`;
+}
+function savePromo(name){
+  const fields={ promoEnd:gg('prEnd').value||'', limit:_num('prLimit'), apr:_num('prApr') };
+  setCardData(name, fields);
+  closeManual();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+  if(sbRichie)sbRichie.do('nod');
+}
+function clearPromo(name){
+  setCardData(name, {promoEnd:''});
+  closeManual();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
 }
 
 /* Richie proactively warns when a 0% promo is expiring soon (once per session per promo). */
@@ -4062,6 +4268,7 @@ function budgetActualBody(w){
   return `<div class="ba-wrap">
     <div class="ba-toolbar">
       <div class="pl-toggle">${[7,30,90].map(k=>`<button class="pl-gbtn${tf===k?' active':''}" onclick="setBaTf('${w.uid}',${k})">${tfLbl[k]}</button>`).join('')}</div>
+      <button class="wx-export" onclick="event.stopPropagation();exportWidget('budget_actual')" title="Export to Excel">⬇ Excel</button>
     </div>
     <div class="ba-summary">
       <div class="ba-sumcell"><div class="ba-suml">Budgeted</div><div class="ba-sumv">${fmtK(d.totBudget)}</div></div>
@@ -4095,11 +4302,37 @@ function categoryHeatmapBody(w){
     return `<div class="hm-row"><div class="hm-cat" title="${esc(c.label)}"><span class="hm-dot" style="background:${c.color}"></span>${esc(c.label)}</div>${cells}<div class="hm-cell hm-avg">${fmtK(c.avg)}</div></div>`;
   }).join('');
   return `<div class="hm-wrap">
-    <div class="hm-toolbar"><div class="pl-toggle">${[3,6,12].map(k=>`<button class="pl-gbtn${months===k?' active':''}" onclick="setHmMonths('${w.uid}',${k})">${k} mo</button>`).join('')}</div>${dataLoaded?'':'<span class="ws-hint" style="margin:0">sample data</span>'}</div>
+    <div class="hm-toolbar"><div class="pl-toggle">${[3,6,12].map(k=>`<button class="pl-gbtn${months===k?' active':''}" onclick="setHmMonths('${w.uid}',${k})">${k} mo</button>`).join('')}</div><div style="display:flex;align-items:center;gap:8px">${dataLoaded?'':'<span class="ws-hint" style="margin:0">sample data</span>'}<button class="wx-export" onclick="event.stopPropagation();exportWidget('category_heatmap')" title="Export to Excel">⬇ Excel</button></div></div>
     <div class="hm-grid">${head}${rows}</div>
   </div>`;
 }
 function setHmMonths(uid,k){ _hmMonths[uid]=k; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+
+/* Export a single widget's data to its own one-sheet workbook */
+function exportWidget(kind){
+  if(typeof XLSX==='undefined'){ alert('Spreadsheet library still loading — try again in a moment.'); return; }
+  const wb=XLSX.utils.book_new(); const today=new Date(); const money=(n)=>Math.round((n||0)*100)/100;
+  let name='Export';
+  if(kind==='budget_actual'){
+    const d=engBudgetVsActual(30); name='Budget_vs_Actual';
+    const rows=[['Category','Budgeted','Actual','Difference','% of budget']];
+    d.rows.forEach(r=>rows.push([r.name,money(r.budget),money(r.actual),money(r.diff),Math.round(r.pct)+'%']));
+    rows.push(['Totals',money(d.totBudget),money(d.totActual),money(d.totDiff)]);
+    XLSX.utils.book_append_sheet(wb,_xlsxSheet(rows),'Budget vs Actual');
+  } else if(kind==='category_heatmap'){
+    const g=engCategoryMonthGrid(12); name='Category_Heatmap';
+    const rows=[['Category',...g.months,'Average']];
+    g.cats.forEach(c=>rows.push([c.label,...c.vals.map(money),money(c.avg)]));
+    XLSX.utils.book_append_sheet(wb,_xlsxSheet(rows),'Heatmap');
+  } else if(kind==='cashflow_planner'){
+    const p=engCashFlowProjection(90); name='Cash_Flow'; const rows=[['Day','Date','Event','Amount','Running Balance']];
+    let bal=p.start; const byDay=p.byDay||{};
+    for(let d=1; d<=p.days; d++){ if(byDay[d]){ byDay[d].forEach(e=>{ bal+=e.amt; const dt=new Date(today.getTime()+d*86400000); rows.push([d,dt.toLocaleDateString(),e.name,money(e.amt),money(bal)]); }); } }
+    XLSX.utils.book_append_sheet(wb,_xlsxSheet(rows),'Cash Flow');
+  } else { exportToExcel(); return; }
+  XLSX.writeFile(wb, `Richie_${name}_${today.toISOString().slice(0,10)}.xlsx`);
+  if(typeof sbRichie!=='undefined'&&sbRichie) sbRichie.do('nod');
+}
 
 /* ═══ FINANCIAL GOALS WIDGET ═══ */
 function goalsWidgetBody(w){
@@ -4259,6 +4492,7 @@ function cfpWidgetBody(w){
       <span class="pl-grp-label">Project</span>
       <div class="pl-toggle">${CFP_RANGES.map(r=>`<button class="pl-gbtn${range===r.k?' active':''}" onclick="setCfpRange('${w.uid}',${r.k})">${r.l}</button>`).join('')}</div>
       <button class="cfp-income-btn" onclick="event.stopPropagation();openIncomeEditor()">💵 Income</button>
+      <button class="wx-export" onclick="event.stopPropagation();exportWidget('cashflow_planner')" title="Export to Excel">⬇ Excel</button>
     </div>
     <div class="cfp-summary" id="cfpsum_${w.uid}"></div>
     <div class="cfp-chart" id="cfpchart_${w.uid}"></div>
@@ -4807,6 +5041,15 @@ function renderSettings(){
         </div>
       </div>
 
+      <div class="set-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
+          <div>
+            <div class="set-card-label" style="margin:0">📊 Export to Excel</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Download a full workbook — bills & debt with payoff times, cash-flow projection, budget vs actual, savings buckets, credit & utilization, income, and goals.</div>
+          </div>
+          <button class="btn primary" onclick="exportToExcel()">Download .xlsx</button>
+        </div>
+      </div>
       <div class="set-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
           <div>
