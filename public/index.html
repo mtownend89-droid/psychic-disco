@@ -899,6 +899,16 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .inc-nm{font-size:13.5px;font-weight:700;color:var(--text);}
 .inc-sub{font-size:11px;color:var(--muted);margin-top:2px;}
 .inc-actions{display:flex;gap:4px;flex-shrink:0;}
+/* ── Current (discretionary) spending ── */
+.ds-budget{margin-top:12px;}
+.ds-budget-top{display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:6px;}
+.ds-bar{height:8px;background:var(--surface3);border-radius:5px;overflow:hidden;}
+.ds-bar-fill{height:100%;border-radius:5px;transition:width .4s ease;}
+.ds-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:13px;padding-top:11px;border-top:1px solid var(--border);}
+.ds-trend{flex-shrink:0;opacity:.9;}
+.ds-trend-meta{text-align:right;min-width:0;}
+.ds-trend-label{font-size:12px;font-weight:700;}
+.ds-top{font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 /* ── 0% Promo Tracker ── */
 .promo-wrap{padding:2px;}
 .promo-alert{background:rgba(240,92,92,0.12);border:1px solid rgba(240,92,92,0.3);border-radius:9px;padding:9px 12px;font-size:12.5px;color:#f0846c;font-weight:600;margin-bottom:11px;}
@@ -2308,6 +2318,35 @@ function engCategoryBreakdown(days){
   rec.forEach(t=>{ const c=getTxnCategory(t); byCat[c]=(byCat[c]||0)+t.amount; });
   return Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([label,value])=>({label,value,color:getCatColor(label)}));
 }
+/* ═══ DISCRETIONARY SPENDING ═══
+   "Discretionary" = day-to-day controllable spend. Excludes fixed bills (housing,
+   utilities, insurance, loans, auto payments) and non-spend flows (savings, income). */
+const NON_DISCRETIONARY=new Set(['Housing','Utilities','Insurance','Loan Payments','Auto Payments','Savings & Invest','Income','Mortgage','House','Auto','Rent','Loans','Loan']);
+function isDiscretionary(label){ return !NON_DISCRETIONARY.has(label); }
+function engDiscretionaryBreakdown(days){ return engCategoryBreakdown(days).filter(r=>isDiscretionary(r.label)); }
+function engDiscretionarySpend(days){ return engDiscretionaryBreakdown(days).reduce((s,r)=>s+r.value,0); }
+// Discretionary monthly budget = zero-based envelopes minus savings/emergency
+function engDiscretionaryBudget(){
+  const buckets=(APP.zeroBuckets||zeroBuckets);
+  const skip=new Set(['savings','emergency fund','emergency']);
+  return buckets.filter(b=>!skip.has((b.name||'').toLowerCase())).reduce((s,b)=>s+(b.amt||0),0);
+}
+// Discretionary spend per month (live txns or sample), for the trend sparkline
+function engDiscretionaryMonthly(months){
+  months=months||6;
+  const g=engCategoryMonthGrid(months);
+  const discCats=g.cats.filter(c=>isDiscretionary(c.label));
+  return g.months.map((mo,i)=>({label:mo, value:Math.round(discCats.reduce((s,c)=>s+(c.vals[i]||0),0))}));
+}
+// tiny inline SVG sparkline
+function _sparkline(vals, color, w, h){
+  w=w||120; h=h||28; if(!vals.length) return '';
+  const max=Math.max(...vals,1), min=Math.min(...vals,0);
+  const rng=(max-min)||1;
+  const pts=vals.map((v,i)=>{ const x=(i/(vals.length-1||1))*w; const y=h-((v-min)/rng)*(h-4)-2; return `${x.toFixed(1)},${y.toFixed(1)}`; }).join(' ');
+  const lastX=w, lastY=h-((vals[vals.length-1]-min)/rng)*(h-4)-2;
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="2.5" fill="${color}"/></svg>`;
+}
 // Query-aware breakdown: honors category include-list and amount filters from widget config
 function engCategoryBreakdownQ(days, query){
   let rows=engCategoryBreakdown(days);
@@ -3416,7 +3455,7 @@ function maybeCoachPage(pg){
 const WIDGET_CATALOG=[
   {id:'net_worth_summary',name:'Net Worth',icon:'📈',cat:'Overview',span:1,minLevel:1,desc:'Total assets minus liabilities.'},
   {id:'cash_summary',name:'Cash on Hand',icon:'💵',cat:'Overview',span:1,minLevel:1,desc:'Combined account balances.'},
-  {id:'spending_month',name:"This Month's Spending",icon:'🛒',cat:'Overview',span:1,minLevel:1,desc:'Total spent this month.'},
+  {id:'spending_month',name:"Current Spending",icon:'🛒',cat:'Overview',span:1,minLevel:1,desc:'Discretionary spending vs budget — your quick "how are we doing" marker (bills & savings excluded).'},
   {id:'income_month',name:"This Month's Income",icon:'💰',cat:'Overview',span:1,minLevel:1,desc:'Money in this month.'},
   {id:'budget_doughnut',name:'Budget by Category',icon:'🎯',cat:'Budget',span:1,minLevel:1,desc:'Spending split by category.'},
   {id:'bills_list',name:'Upcoming Bills',icon:'📋',cat:'Budget',span:1,minLevel:1,desc:"What's due and when."},
@@ -4248,6 +4287,54 @@ function saveBucket(){
 }
 function deleteBucket(i){ if(!confirm('Delete this bucket?'))return; _savingsBuckets().splice(i,1); saveState(); closeManual(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 
+/* ═══ CURRENT (DISCRETIONARY) SPENDING WIDGET ═══ */
+function discretionarySpendBody(w){
+  const days=wDays(w);
+  let disc, spend;
+  if(dataLoaded){
+    disc=engDiscretionaryBreakdown(days);
+    spend=disc.reduce((s,r)=>s+r.value,0);
+  } else {
+    // sample mode: derive from the latest month of the category grid, scaled to window
+    const g=engCategoryMonthGrid(6);
+    const li=g.months.length-1;
+    disc=g.cats.filter(c=>isDiscretionary(c.label)).map(c=>({label:c.label,value:Math.round((c.vals[li]||0)*(days/30)),color:c.color})).filter(r=>r.value>0).sort((a,b)=>b.value-a.value);
+    spend=disc.reduce((s,r)=>s+r.value,0);
+  }
+  const top=disc[0];
+  const budget=engDiscretionaryBudget()*(days/30);
+  const pct = budget>0 ? spend/budget*100 : 0;
+  const over = spend>budget;
+  const color = pct<85?'var(--green)' : pct<=100?'var(--amber)' : 'var(--red)';
+  const remaining = budget-spend;
+  const series=engDiscretionaryMonthly(6);
+  const vals=series.map(s=>s.value);
+  const prev=vals.length>1?vals[vals.length-2]:0;
+  const cur=vals[vals.length-1]||spend;
+  const trendUp = cur>prev;
+  const trendPct = prev>0?Math.round((cur-prev)/prev*100):0;
+  const trendColor = trendUp?'var(--red)':'var(--green)';  // spending up = bad
+  const sub = (w.tf==='30d'||!w.tf) ? 'discretionary · last 30 days' : `discretionary · ${tfLabel(w.tf)}`;
+  return `<div class="wph">
+    <div class="wph-stat">${fmtK(spend)}</div>
+    <div class="wph-sub">${sub}${dataLoaded?'':' · sample'}</div>
+    <div class="ds-budget">
+      <div class="ds-budget-top">
+        <span style="color:${color};font-weight:700">${Math.round(pct)}% of ${fmtK(budget)} budget</span>
+        <span style="color:${over?'var(--red)':'var(--muted)'}">${over?fmtK(-remaining)+' over':fmtK(remaining)+' left'}</span>
+      </div>
+      <div class="ds-bar"><div class="ds-bar-fill" style="width:${Math.min(100,pct)}%;background:${color}"></div></div>
+    </div>
+    <div class="ds-foot">
+      <div class="ds-trend">${_sparkline(vals, trendColor, 92, 26)}</div>
+      <div class="ds-trend-meta">
+        <div class="ds-trend-label" style="color:${trendColor}">${trendUp?'▲':'▼'} ${Math.abs(trendPct)}% vs last mo</div>
+        ${top?`<div class="ds-top"><span class="wph-dot" style="background:${top.color}"></span>Top: ${esc(top.label)} ${fmtK(top.value)}</div>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+
 /* ═══ BUDGET vs ACTUAL WIDGET ═══ */
 let _baTf={};
 function budgetActualBody(w){
@@ -4832,7 +4919,7 @@ function renderWidgetBody(w){
   switch(w.type){
     case 'net_worth_summary': { const a=engNWAssets(), l=engNWLiab(); const nw=dataLoaded?(engNetBalance()+a-l):(a-l); return `<div class="wph"><div class="wph-stat ${nw>=0?'':'red'}" style="${nw<0?'color:var(--red)':''}">${fmtK(nw)}</div><div class="wph-sub">net worth</div><div class="wph-inline"><span style="color:var(--green)">Assets ${fmtK(a)}</span><b style="color:var(--red)">Debts ${fmtK(l)}</b></div></div>`; }
     case 'cash_summary': { if(dataLoaded){ const dep=allAccts.filter(a=>a.type==='depository'); const cash=dep.reduce((s,a)=>s+((a.balances&&(a.balances.available??a.balances.current))||0),0); const big=dep.slice().sort((a,b)=>((b.balances&&(b.balances.available??b.balances.current))||0)-((a.balances&&(a.balances.available??a.balances.current))||0))[0]; return `<div class="wph"><div class="wph-stat">${fmtK(cash)}</div><div class="wph-sub">across ${dep.length||allAccts.length} account${(dep.length||allAccts.length)!==1?'s':''}</div>${big?`<div class="wph-inline"><span>${esc(big.name||'Largest')}</span><b>${fmtK((big.balances&&(big.balances.available??big.balances.current))||0)}</b></div>`:''}</div>`; } return `<div class="wph"><div class="wph-stat">$8,240</div><div class="wph-sub">across 3 accounts \u00b7 sample</div><div class="wph-inline"><span>Ally Savings</span><b>$8,030</b></div></div>`; }
-    case 'spending_month': { const days=wDays(w); if(dataLoaded){ const sp=engSpend(days); const cats=engCategoryBreakdown(days); const top=cats[0]; return `<div class="wph"><div class="wph-stat">${fmtK(sp)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${top?`<div class="wph-inline"><span><span class="wph-dot" style="background:${top.color}"></span>Top: ${top.label}</span><b>${fmtK(top.value)}</b></div>`:''}</div>`; } return `<div class="wph"><div class="wph-stat">${fmtK(Math.round(3118*days/30))}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')} \u00b7 sample</div><div class="wph-inline"><span><span class="wph-dot" style="background:#f5a623"></span>Top: Dining</span><b>$612</b></div></div>`; }
+    case 'spending_month': return discretionarySpendBody(w);
     case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); const rec=engRecent(days).filter(t=>t.amount<0); const byC={}; rec.forEach(t=>{const c=getTxnCategory(t);byC[c]=(byC[c]||0)+Math.abs(t.amount);}); const top=Object.entries(byC).sort((a,b)=>b[1]-a[1])[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${top?`<div class="wph-inline"><span>Largest: ${top[0]}</span><b style="color:var(--green)">${fmtK(top[1])}</b></div>`:''}</div>`; } const top=incomeSources.slice().sort((a,b)=>b.amt*(FREQ_TO_MONTHLY[b.freq]||1)-a.amt*(FREQ_TO_MONTHLY[a.freq]||1))[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">${incomeSources.length} sources \u00b7 sample</div><div class="wph-inline"><span>Largest: ${top.name}</span><b style="color:var(--green)">${fmtK(Math.round(top.amt*(FREQ_TO_MONTHLY[top.freq]||1)))}/mo</b></div></div>`; }
     case 'debt_summary': { const debts=engBills().filter(b=>b.bal<0); const d=debts.reduce((s,b)=>s+Math.abs(b.bal),0); const hi=debts.slice().sort((a,b)=>(b.apr||0)-(a.apr||0))[0]; if(dataLoaded||plaidHasLiab()){ return `<div class="wph"><div class="wph-stat" style="color:var(--red)">${fmtK(d)}</div><div class="wph-sub">across ${debts.length} balance${debts.length!==1?'s':''}</div>${hi&&hi.apr?`<div class="wph-inline"><span>Highest APR: ${esc(hi.name)}</span><b style="color:var(--amber)">${hi.apr.toFixed(1)}%</b></div>`:''}</div>`; } return `<div class="wph"><div class="wph-stat" style="color:var(--red)">${fmtK(d)}</div><div class="wph-sub">across ${debts.length} balances</div>${hi&&hi.apr?`<div class="wph-inline"><span>Highest APR: ${esc(hi.name)}</span><b style="color:var(--amber)">${hi.apr.toFixed(1)}%</b></div>`:''}</div>`; }
     case 'category_heatmap': return categoryHeatmapBody(w);
@@ -4913,7 +5000,17 @@ function widgetDetailContent(type, days){
   days=days||30;
   const dl=tfLabel(TIMEFRAMES.find(t=>t.days===days)?TIMEFRAMES.find(t=>t.days===days).key:'30d');
   switch(type){
-    case 'spending_month': case 'budget_doughnut': case 'top_categories': {
+    case 'spending_month': {
+      let cats;
+      if(live){ cats=engDiscretionaryBreakdown(days); }
+      else { const g=engCategoryMonthGrid(6); const li=g.months.length-1; cats=g.cats.filter(c=>isDiscretionary(c.label)).map(c=>({label:c.label,value:Math.round((c.vals[li]||0)*(days/30)),color:c.color})).filter(r=>r.value>0).sort((a,b)=>b.value-a.value); }
+      const tot=cats.reduce((s,c)=>s+c.value,0);
+      const budget=engDiscretionaryBudget()*(days/30);
+      const pct=budget>0?Math.round(tot/budget*100):0;
+      return { title:'Current discretionary spending', sub:`${live?'Last '+dl:'Sample'} · ${fmtK(tot)} of ${fmtK(budget)} budget (${pct}%) · bills & savings excluded`,
+        body:`<div class="wdt-total" style="color:${pct<85?'var(--green)':pct<=100?'var(--amber)':'var(--red)'}">${fmtK(tot)}<span>discretionary · ${pct}% of budget</span></div>${_detailRows(cats,tot)}` };
+    }
+    case 'budget_doughnut': case 'top_categories': {
       const cats=live?engCategoryBreakdown(days):[{label:'Dining Out',value:612,color:'#f5a623'},{label:'Food & Groceries',value:498,color:'#3dda91'},{label:'Auto Payments',value:284,color:'#b09afa'},{label:'Subscriptions',value:142,color:'#22d3ee'}];
       const tot=cats.reduce((s,c)=>s+c.value,0);
       return { title:'Spending by category', sub:`${live?'Last '+dl:'Sample data'} · ${fmtK(tot)} total across ${cats.length} categories`,
