@@ -819,7 +819,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .wd-item-name{font-size:13px;font-weight:600;}
 .wd-item-desc{font-size:11px;color:var(--muted);margin-top:1px;line-height:1.4;}
 .wd-item-add{margin-left:auto;color:var(--green);font-size:18px;font-weight:700;flex-shrink:0;}
-.cwh-drag{cursor:grab;color:var(--hint);font-size:14px;padding:2px 4px;}
+.cwh-drag{cursor:grab;color:var(--muted);font-size:15px;padding:3px 6px;border-radius:6px;touch-action:none;user-select:none;-webkit-user-select:none;}
+.cwh-drag:hover{background:var(--surface3);color:var(--text);}
+.cwh-drag:active{cursor:grabbing;}
 .cwh-drag:active{cursor:grabbing;}
 .canvas-widget-card.dragging{opacity:0.4;}
 .canvas-widget-card.drag-over-before{box-shadow:-3px 0 0 var(--green);}
@@ -1233,7 +1235,18 @@ select.mf-in{appearance:none;cursor:pointer;}
 .ce-x{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;}
 .ce-sub{padding:0 20px 12px;font-size:12.5px;color:var(--muted);}
 .ce-body{overflow-y:auto;padding:0 20px;flex:1;}
-.ce-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);}
+.ce-row{display:flex;align-items:center;gap:10px;padding:7px 6px;border-bottom:1px solid var(--border);border-radius:6px;}
+.ce-grouprow{background:var(--surface2);margin-top:8px;border-radius:8px 8px 0 0;border-bottom:none;padding:9px 8px;}
+.ce-groupzone{border:1px dashed var(--border2);border-top:none;border-radius:0 0 8px 8px;padding:4px 6px 4px 22px;min-height:20px;margin-bottom:4px;}
+.ce-groupzone.ce-dropok{border-color:var(--green);background:var(--green-dim);}
+.ce-rootzone{border-radius:8px;border-style:dashed;padding:4px 6px;}
+.ce-roothead{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:14px 0 5px;}
+.ce-child{background:transparent;}
+.ce-empty{font-size:11px;color:var(--hint);font-style:italic;padding:7px 4px;}
+.ce-grip{cursor:grab;color:var(--muted);font-size:13px;flex-shrink:0;touch-action:none;user-select:none;-webkit-user-select:none;}
+.ce-grip:active{cursor:grabbing;}
+.ce-grip-folder{cursor:default;font-size:14px;}
+.ce-row.ce-dragging{opacity:0.45;}
 .ce-color{width:24px;height:24px;border-radius:50%;border:2px solid var(--border2);cursor:pointer;padding:0;flex-shrink:0;background:none;}
 .ce-label{flex:1;height:30px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:0 9px;font-size:13px;}
 .ce-grp{font-size:9px;font-weight:700;background:var(--surface3);color:var(--muted);padding:2px 6px;border-radius:3px;letter-spacing:.04em;flex-shrink:0;}
@@ -3857,9 +3870,9 @@ function renderCanvas(pg){
     const _subtitle=_cfg.subtitle?`<div class="cwh-subtitle">${esc(_cfg.subtitle)}</div>`:'';
     const _cardCls=_cfg.cardStyle&&_cfg.cardStyle!=='default'?' cs-'+_cfg.cardStyle:'';
     const _bodyCls=_cfg.height==='tall'?' cwb-tall':_cfg.height==='short'?' cwb-short':'';
-    return `<div class="canvas-widget-card${w.span===2?' span-2':''}${hasDetail?' has-detail':''}${_cardCls}" draggable="true" data-uid="${w.uid}" data-idx="${idx}">
+    return `<div class="canvas-widget-card${w.span===2?' span-2':''}${hasDetail?' has-detail':''}${_cardCls}" data-uid="${w.uid}" data-idx="${idx}">
       <div class="canvas-widget-header">
-        <div class="cwh-left"><span class="cwh-drag" title="Drag to reorder">\u283F</span><span>${_icon}</span><div><span class="cwh-title">${(w.config&&w.config.title)||def.name}</span>${_subtitle}</div></div>
+        <div class="cwh-left"><span class="cwh-drag" title="Drag to move this widget">\u283F</span><span>${_icon}</span><div><span class="cwh-title">${(w.config&&w.config.title)||def.name}</span>${_subtitle}</div></div>
         <div class="cwh-actions">
           ${detailBtn}
           <button class="cwh-btn" onclick="event.stopPropagation();toggleWidgetSpan('${w.uid}')" title="Edit widget">\u270E</button>
@@ -3931,25 +3944,58 @@ function openCatEditor(){
 function closeCatEditor(){ gg('catEditorModal').style.display='none'; }
 function renderCatEditor(){
   const body=gg('catEditorBody'); if(!body) return;
-  // group rows visually: groups then their children, then ungrouped
   const groups=_catEdit.filter(c=>c.group);
   const ungrouped=_catEdit.filter(c=>!c.group&&!c.parent);
-  let rows=[];
-  groups.forEach(g=>{ rows.push({c:g,indent:false,isGroup:true}); _catEdit.filter(ch=>ch.parent===g.id).forEach(ch=>rows.push({c:ch,indent:true})); });
-  ungrouped.forEach(c=>rows.push({c,indent:false}));
-  body.innerHTML=rows.map(r=>{
-    const i=_catEdit.indexOf(r.c);
-    return `<div class="ce-row" style="${r.indent?'padding-left:24px':''}">
-      <input type="color" value="${r.c.color||'#888888'}" onchange="catEditField(${i},'color',this.value)" class="ce-color">
-      ${r.isGroup?'<span class="ce-grp">GROUP</span>':r.indent?'<span class="ce-arrow">↳</span>':''}
-      <input type="text" value="${esc(r.c.label)}" onchange="catEditField(${i},'label',this.value)" class="ce-label">
-      <button class="ce-del" onclick="catEditDelete(${i})" title="Delete">✕</button>
+  let html='';
+  const rowHtml=(c,kind)=>{ // kind: 'group' | 'child' | 'free'
+    const i=_catEdit.indexOf(c);
+    const draggable = kind!=='group';
+    return `<div class="ce-row${kind==='group'?' ce-grouprow':''}${kind==='child'?' ce-child':''}" data-i="${i}" data-id="${esc(c.id)}" data-grp="${kind==='group'?1:0}"${draggable?' draggable="true"':''}>
+      ${draggable?'<span class="ce-grip" title="Drag to move">\u283F</span>':'<span class="ce-grip ce-grip-folder">\uD83D\uDCC1</span>'}
+      <input type="color" value="${c.color||'#888888'}" onchange="catEditField(${i},'color',this.value)" class="ce-color">
+      ${kind==='group'?'<span class="ce-grp">GROUP</span>':''}
+      <input type="text" value="${esc(c.label)}" onchange="catEditField(${i},'label',this.value)" class="ce-label">
+      <button class="ce-del" onclick="catEditDelete(${i})" title="Delete">\u2715</button>
     </div>`;
-  }).join('');
+  };
+  groups.forEach(g=>{
+    html+=rowHtml(g,'group');
+    html+=`<div class="ce-groupzone" data-id="${esc(g.id)}">`;
+    const kids=_catEdit.filter(ch=>ch.parent===g.id);
+    html+= kids.length?kids.map(ch=>rowHtml(ch,'child')).join(''):'<div class="ce-empty">drop a category here</div>';
+    html+=`</div>`;
+  });
+  html+=`<div class="ce-roothead">No group (top level)</div><div class="ce-groupzone ce-rootzone" data-root="1">`;
+  html+= ungrouped.length?ungrouped.map(c=>rowHtml(c,'free')).join(''):'<div class="ce-empty">drop here to remove from a group</div>';
+  html+=`</div>`;
+  body.innerHTML=html;
+  wireCatDrag();
+}
+let _catDragId=null;
+function wireCatDrag(){
+  const body=gg('catEditorBody'); if(!body) return;
+  body.querySelectorAll('.ce-row[draggable="true"]').forEach(row=>{
+    row.addEventListener('dragstart',e=>{ _catDragId=row.dataset.id; row.classList.add('ce-dragging'); e.dataTransfer.effectAllowed='move'; e.stopPropagation(); });
+    row.addEventListener('dragend',()=>{ _catDragId=null; body.querySelectorAll('.ce-dragging,.ce-dropok').forEach(x=>x.classList.remove('ce-dragging','ce-dropok')); });
+  });
+  // group zones (and the root zone) accept drops
+  body.querySelectorAll('.ce-groupzone').forEach(zone=>{
+    zone.addEventListener('dragover',e=>{ if(!_catDragId)return; e.preventDefault(); zone.classList.add('ce-dropok'); });
+    zone.addEventListener('dragleave',()=>zone.classList.remove('ce-dropok'));
+    zone.addEventListener('drop',e=>{ if(!_catDragId)return; e.preventDefault(); zone.classList.remove('ce-dropok');
+      const cat=_catEdit.find(c=>c.id===_catDragId); if(!cat||cat.group) return;
+      if(zone.dataset.root){ delete cat.parent; }
+      else { const gid=zone.dataset.id; if(cat.id!==gid){ cat.parent=gid; delete cat.group; } }
+      renderCatEditor();
+    });
+  });
 }
 function catEditField(i,field,val){ if(_catEdit[i]){ _catEdit[i][field]=val; } }
-function catEditDelete(i){ if(_catEdit[i]&&!confirm('Delete "'+_catEdit[i].label+'"?'))return; _catEdit.splice(i,1); renderCatEditor(); }
+function catEditDelete(i){ if(_catEdit[i]&&!confirm('Delete "'+_catEdit[i].label+'"?'))return;
+  const removed=_catEdit[i]; if(removed&&removed.group){ _catEdit.forEach(c=>{ if(c.parent===removed.id) delete c.parent; }); }
+  _catEdit.splice(i,1); renderCatEditor(); }
 function catEditAdd(){ _catEdit.push({id:'custom_'+Date.now(),label:'New Category',color:'#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0'),plaid:[]}); renderCatEditor(); }
+function catEditAddGroup(){ _catEdit.push({id:'grp_'+Date.now(),label:'New Group',color:'#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0'),group:true}); renderCatEditor(); }
 function catEditSave(){
   saveUserCategories(_catEdit);
   closeCatEditor();
@@ -5442,11 +5488,21 @@ function closeWidgetDetail(){ gg('widgetDetailModal').style.display='none'; }
 function wireDragDrop(){
   const grid=gg('canvasGrid'); if(!grid) return;
   grid.querySelectorAll('.canvas-widget-card').forEach(card=>{
-    card.addEventListener('dragstart',e=>{ dragUid=card.dataset.uid; card.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
-    card.addEventListener('dragend',()=>{ dragUid=null; card.classList.remove('dragging'); grid.querySelectorAll('.canvas-widget-card').forEach(c=>c.classList.remove('drag-over-before','drag-over-after')); });
-    card.addEventListener('dragover',e=>{ e.preventDefault(); const r=card.getBoundingClientRect(); const after=(e.clientX-r.left)>r.width/2; card.classList.toggle('drag-over-after',after); card.classList.toggle('drag-over-before',!after); });
+    card.draggable=false;  // not draggable by default — only via the grip handle
+    const handle=card.querySelector('.cwh-drag');
+    if(handle){
+      const enable=()=>{ card.draggable=true; };
+      const disable=()=>{ setTimeout(()=>{ card.draggable=false; },0); };
+      handle.addEventListener('mousedown',enable);
+      handle.addEventListener('touchstart',enable,{passive:true});
+      handle.addEventListener('mouseup',disable);
+      handle.addEventListener('touchend',disable);
+    }
+    card.addEventListener('dragstart',e=>{ if(!card.draggable){ e.preventDefault(); return; } dragUid=card.dataset.uid; card.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
+    card.addEventListener('dragend',()=>{ dragUid=null; card.draggable=false; card.classList.remove('dragging'); grid.querySelectorAll('.canvas-widget-card').forEach(c=>c.classList.remove('drag-over-before','drag-over-after')); });
+    card.addEventListener('dragover',e=>{ if(!dragUid) return; e.preventDefault(); const r=card.getBoundingClientRect(); const after=(e.clientX-r.left)>r.width/2; card.classList.toggle('drag-over-after',after); card.classList.toggle('drag-over-before',!after); });
     card.addEventListener('dragleave',()=>{ card.classList.remove('drag-over-before','drag-over-after'); });
-    card.addEventListener('drop',e=>{ e.preventDefault(); const targetUid=card.dataset.uid; const r=card.getBoundingClientRect(); const after=(e.clientX-r.left)>r.width/2; reorderWidget(dragUid,targetUid,after); });
+    card.addEventListener('drop',e=>{ if(!dragUid) return; e.preventDefault(); const targetUid=card.dataset.uid; const r=card.getBoundingClientRect(); const after=(e.clientX-r.left)>r.width/2; reorderWidget(dragUid,targetUid,after); });
   });
 }
 function reorderWidget(fromUid,toUid,after){
@@ -6190,10 +6246,11 @@ window.addEventListener('load',start);
 <div id="catEditorModal" class="ce-modal" style="display:none">
   <div class="ce-card">
     <div class="ce-head"><h3>🏷️ Edit Categories</h3><button class="ce-x" onclick="closeCatEditor()">✕</button></div>
-    <div class="ce-sub">Customize labels and colors. These drive your spending charts and budgets.</div>
+    <div class="ce-sub">Drag a category onto a group to move it in, or onto "No group" to pull it out. These drive your spending charts and budgets.</div>
     <div id="catEditorBody" class="ce-body"></div>
     <div class="ce-foot">
-      <button class="btn" onclick="catEditAdd()">+ Add category</button>
+      <button class="btn" onclick="catEditAdd()">+ Category</button>
+      <button class="btn" onclick="catEditAddGroup()">+ Group</button>
       <button class="btn ghost" onclick="catEditReset()">Reset</button>
       <div style="flex:1"></div>
       <button class="btn" onclick="closeCatEditor()">Cancel</button>
