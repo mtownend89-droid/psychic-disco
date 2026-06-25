@@ -872,6 +872,18 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .sb-actions{flex-shrink:0;}
 .sb-bar{height:7px;background:var(--surface3);border-radius:4px;overflow:hidden;margin-top:8px;}
 .sb-bar-fill{height:100%;border-radius:4px;transition:width .4s;}
+.sb-live{font-size:9.5px;font-weight:600;color:var(--green);background:var(--green-dim);border-radius:5px;padding:1px 6px;margin-left:6px;vertical-align:middle;}
+.sb-foot-actions{display:flex;gap:8px;margin-top:6px;}
+.sb-link-btn{font-size:12px;padding:8px 12px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);color:var(--text);cursor:pointer;font-family:var(--font);font-weight:600;white-space:nowrap;}
+.sb-link-btn:hover{border-color:var(--green);}
+.sb-acct-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+.sb-acct-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:10px;cursor:pointer;}
+.sb-acct-row input{width:18px;height:18px;accent-color:var(--green);flex-shrink:0;}
+.sb-acct-ic{font-size:20px;flex-shrink:0;}
+.sb-acct-meta{flex:1;min-width:0;display:flex;flex-direction:column;}
+.sb-acct-nm{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sb-acct-sub{font-size:10.5px;color:var(--muted);}
+.sb-acct-bal{font-weight:700;color:var(--green);flex-shrink:0;}
 /* ── Budget vs Actual ── */
 .ba-wrap{padding:2px;}
 .ba-toolbar{margin-bottom:11px;}
@@ -881,7 +893,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .ba-sumv{font-size:15px;font-weight:700;margin-top:2px;}
 .ba-row{padding:9px 2px;}
 .ba-top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;}
-.ba-nm{font-weight:600;color:var(--text);}
+.ba-nm{font-weight:600;color:var(--text);display:flex;align-items:center;gap:6px;min-width:0;}
+.ba-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.ba-unbud{font-size:9.5px;font-weight:600;color:var(--amber);background:rgba(245,166,35,0.13);border-radius:5px;padding:1px 6px;}
 .ba-diff{font-weight:700;font-variant-numeric:tabular-nums;}
 .ba-bar{position:relative;height:8px;background:var(--surface3);border-radius:4px;overflow:visible;}
 .ba-bar-fill{height:100%;border-radius:4px;}
@@ -899,6 +913,17 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .inc-nm{font-size:13.5px;font-weight:700;color:var(--text);}
 .inc-sub{font-size:11px;color:var(--muted);margin-top:2px;}
 .inc-actions{display:flex;gap:4px;flex-shrink:0;}
+/* ── Budget by Category: two-tier donuts ── */
+.bd2-wrap{display:flex;gap:18px;align-items:flex-start;}
+.bd2-col{flex:1;min-width:0;text-align:center;}
+.bd2-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px;}
+.bd2-chart{display:flex;justify-content:center;}
+.bd2-legend{margin-top:11px;text-align:left;}
+.bd2-leg-item{display:flex;align-items:center;gap:7px;font-size:11.5px;padding:2.5px 0;}
+.bd2-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.bd2-leg-l{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);}
+.bd2-leg-v{color:var(--muted);font-variant-numeric:tabular-nums;flex-shrink:0;}
+@media(max-width:900px){.bd2-wrap{flex-direction:column;align-items:stretch;gap:22px;}}
 /* ── Current (discretionary) spending ── */
 .ds-budget{margin-top:12px;}
 .ds-budget-top{display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:6px;}
@@ -1118,9 +1143,23 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .zb-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:4px 0 10px;}
 .zb-buckets{display:flex;flex-direction:column;gap:13px;}
 .zb-bucket{}
-.zb-bk-top{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px;}
-.zb-bk-nm{color:var(--text);}
-.zb-bk-amt{color:var(--green);font-weight:700;font-variant-numeric:tabular-nums;}
+.zb-bk-top{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.zb-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.zb-bk-nm{flex:1;min-width:0;color:var(--text);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.zb-bk-edit{display:flex;align-items:center;gap:2px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:3px 8px;flex-shrink:0;}
+.zb-bk-edit span{color:var(--muted);font-size:12px;}
+.zb-bk-input{width:62px;background:transparent;border:none;color:var(--green);font-weight:700;font-size:13px;font-family:var(--font);text-align:right;outline:none;font-variant-numeric:tabular-nums;}
+.zb-bk-input::-webkit-outer-spin-button,.zb-bk-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.zb-bk-del{flex-shrink:0;width:24px;height:24px;border-radius:6px;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:13px;}
+.zb-bk-del:hover{background:rgba(240,92,92,0.12);color:var(--red);}
+.zb-addcats{margin-top:14px;padding-top:12px;border-top:1px solid var(--border);}
+.zb-chips{display:flex;flex-wrap:wrap;gap:7px;}
+.zb-chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;padding:5px 11px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);cursor:pointer;font-family:var(--font);}
+.zb-chip:hover{border-color:var(--green);background:var(--green-dim);}
+.zb-tozero{display:flex;align-items:center;justify-content:space-between;gap:10px;background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.25);border-radius:9px;padding:8px 12px;margin-bottom:12px;font-size:12.5px;color:var(--amber);}
+.zb-tozero.over{background:rgba(240,92,92,0.1);border-color:rgba(240,92,92,0.25);color:#f0846c;}
+.zb-tozero button{background:var(--surface);border:1px solid var(--border2);border-radius:7px;padding:5px 11px;font-size:11.5px;font-weight:600;color:var(--text);cursor:pointer;font-family:var(--font);white-space:nowrap;}
+.zb-balanced{background:var(--green-dim);border:1px solid rgba(46,204,138,0.3);border-radius:9px;padding:9px 12px;margin-bottom:12px;font-size:12.5px;color:var(--green);font-weight:600;text-align:center;}
 .zb-slider{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:4px;background:var(--surface3);outline:none;cursor:pointer;}
 .zb-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;background:var(--green);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.3);}
 .zb-slider::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--green);cursor:pointer;border:none;}
@@ -2008,6 +2047,15 @@ const DEFAULT_CATEGORIES=[
 function getUserCategories(){ try{ const s=JSON.parse(LS.getItem('mdf_categories')); return (s&&s.length)?s:DEFAULT_CATEGORIES.map(c=>({...c})); }catch(e){ return DEFAULT_CATEGORIES.map(c=>({...c})); } }
 function mapPlaidCategory(plaidPrimary){ const cats=getUserCategories(); const p=(plaidPrimary||'').toUpperCase().replace(/\s+/g,'_'); for(const cat of cats){ if(cat.plaid&&cat.plaid.some(k=>p.includes(k)||k.includes(p))) return cat.label; } return 'Other'; }
 function getCatColor(label){ const cats=getUserCategories(); const f=cats.find(c=>c.label===label); return f?f.color:'#94a3b8'; }
+// Map a (child) category label to its first-tier parent group {id,label,color}.
+// Top-level categories (like "Other") map to themselves.
+function getCatParent(label){
+  const cats=getUserCategories();
+  const c=cats.find(x=>x.label===label);
+  if(!c) return {id:'other',label:'Other',color:'#94a3b8'};
+  if(c.parent){ const p=cats.find(x=>x.id===c.parent); if(p) return {id:p.id,label:p.label,color:p.color}; }
+  return {id:c.id,label:c.label,color:c.color};
+}
 const _catOverrides=JSON.parse(LS.getItem('mdf_cat_overrides')||'{}');
 function getTxnCategory(t){ const id=t.transaction_id||''; if(id&&_catOverrides[id])return _catOverrides[id]; const raw=(t.personal_finance_category&&t.personal_finance_category.primary)||(t.category&&t.category[0])||''; return mapPlaidCategory(raw); }
 
@@ -2347,6 +2395,31 @@ function _sparkline(vals, color, w, h){
   const lastX=w, lastY=h-((vals[vals.length-1]-min)/rng)*(h-4)-2;
   return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="2.5" fill="${color}"/></svg>`;
 }
+// SVG donut chart (used by Budget by Category two-tier view)
+function _arcPath(cx,cy,r,ir,a0,a1){
+  const x0=cx+r*Math.cos(a0), y0=cy+r*Math.sin(a0);
+  const x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
+  const xi1=cx+ir*Math.cos(a1), yi1=cy+ir*Math.sin(a1);
+  const xi0=cx+ir*Math.cos(a0), yi0=cy+ir*Math.sin(a0);
+  const large=(a1-a0)>Math.PI?1:0;
+  return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)} L ${xi1.toFixed(2)} ${yi1.toFixed(2)} A ${ir} ${ir} 0 ${large} 0 ${xi0.toFixed(2)} ${yi0.toFixed(2)} Z`;
+}
+function _donutSVG(items, size, centerLabel, centerSub){
+  size=size||130; const cx=size/2, cy=size/2, r=size/2-3, ir=r*0.6;
+  const live=items.filter(i=>i.value>0);
+  const total=live.reduce((s,i)=>s+i.value,0)||1;
+  let segs;
+  if(live.length<=1){
+    const it=live[0]||{color:'var(--surface3)'};
+    segs=`<circle cx="${cx}" cy="${cy}" r="${((r+ir)/2).toFixed(2)}" fill="none" stroke="${it.color}" stroke-width="${(r-ir).toFixed(2)}"/>`;
+  } else {
+    let a0=-Math.PI/2;
+    segs=live.map(it=>{ const frac=it.value/total; const a1=a0+frac*2*Math.PI; const p=_arcPath(cx,cy,r,ir,a0,a1); a0=a1; return `<path d="${p}" fill="${it.color}"/>`; }).join('');
+  }
+  return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" style="max-width:100%">${segs}
+    <text x="${cx}" y="${cy-1}" text-anchor="middle" font-size="14" font-weight="700" fill="var(--text)">${centerLabel||''}</text>
+    <text x="${cx}" y="${cy+12}" text-anchor="middle" font-size="8.5" fill="var(--muted)">${centerSub||''}</text></svg>`;
+}
 // Query-aware breakdown: honors category include-list and amount filters from widget config
 function engCategoryBreakdownQ(days, query){
   let rows=engCategoryBreakdown(days);
@@ -2367,43 +2440,58 @@ function _savingsBuckets(){
   if(!APP.savingsBuckets) APP.savingsBuckets=savingsBuckets.map(b=>({...b}));
   return APP.savingsBuckets;
 }
+// A bucket linked to a Plaid account pulls its balance live; otherwise uses the manual amount.
+function _bucketBalance(b){
+  if(b.acctId){ const a=engAccounts().find(x=>x.id===b.acctId); if(a) return a.bal; }
+  return b.balance||0;
+}
 function engSavingsBuckets(){
   return _savingsBuckets().map(b=>{
-    const pct = b.target>0 ? Math.max(0,Math.min(100, b.balance/b.target*100)) : (b.balance>0?100:0);
-    const remaining = Math.max(0, (b.target||0)-b.balance);
+    const balance=_bucketBalance(b);
+    const pct = b.target>0 ? Math.max(0,Math.min(100, balance/b.target*100)) : (balance>0?100:0);
+    const remaining = Math.max(0, (b.target||0)-balance);
     const monthsToGoal = (b.monthly>0 && remaining>0) ? Math.ceil(remaining/b.monthly) : (remaining<=0?0:Infinity);
-    return {...b, pct, remaining, monthsToGoal, done: b.target>0 && b.balance>=b.target};
+    return {...b, balance, linked:!!b.acctId, pct, remaining, monthsToGoal, done: b.target>0 && balance>=b.target};
   });
 }
-function engSavingsTotal(){ return _savingsBuckets().reduce((s,b)=>s+(b.balance||0),0); }
+function engSavingsTotal(){ return _savingsBuckets().reduce((s,b)=>s+_bucketBalance(b),0); }
 
 /* ═══ BUDGET vs ACTUAL ═══
    Compares each zero-based budget envelope against actual spending in that category
    over the selected window. Falls back to sample data when no live txns. */
 function engBudgetVsActual(days){
   days = days||30;
-  const buckets = (APP.zeroBuckets||zeroBuckets);
-  // actual spend by category label (live txns) or sample
-  let actualByCat={};
-  if(dataLoaded){
-    engCategoryBreakdown(days).forEach(r=>{ actualByCat[r.label.toLowerCase()]=r.value; });
-  } else {
-    // representative sample actuals so the widget is meaningful pre-Plaid
-    const sample={groceries:412,'dining out':286,gas:233,medical:178,clothing:64,entertainment:121,savings:500,'emergency fund':200,misc:92};
-    actualByCat=sample;
-  }
-  // scale monthly budget to the window
+  const buckets = _zbBuckets();  // category-linked envelopes ({catId,name,amt})
   const scale = days/30;
+  // actual spend by category label (live txns windowed, or a monthly sample we scale)
+  let actualByLabel={}, live=false;
+  if(dataLoaded){
+    live=true;
+    engCategoryBreakdown(days).forEach(r=>{ actualByLabel[r.label]=r.value; });
+  } else {
+    const sample={'Food & Groceries':412,'Dining Out':286,'Gas & Fuel':233,'Medical':178,'Shopping':64,'Entertainment':121,'Subscriptions':142,'Savings & Invest':500,'Other':92,'Housing':2640,'Utilities':320,'Insurance':266,'Loan Payments':780,'Auto Payments':452,'Travel':96};
+    Object.entries(sample).forEach(([k,v])=>actualByLabel[k]=v*scale);
+  }
+  const budgeted=new Set();
   const rows = buckets.map(b=>{
+    budgeted.add(b.name);
     const budget = (b.amt||0)*scale;
-    const actual = actualByCat[(b.name||'').toLowerCase()] || 0;
+    const actual = actualByLabel[b.name] || 0;
     const diff = budget - actual;            // positive = under budget (good)
     const pct = budget>0 ? Math.min(150, actual/budget*100) : (actual>0?150:0);
-    return { name:b.name, budget, actual, diff, pct, over: actual>budget };
+    return { name:b.name, color:getCatColor(b.name), budget, actual, diff, pct, over: actual>budget, unbudgeted:false };
   });
+  // discretionary categories you spent in but never budgeted (bills are covered separately)
+  Object.keys(actualByLabel).forEach(label=>{
+    if(budgeted.has(label)) return;
+    if(!isDiscretionary(label)) return;     // skip fixed bills — they're not "unbudgeted"
+    const actual=actualByLabel[label]; if(actual<1) return;
+    rows.push({ name:label, color:getCatColor(label), budget:0, actual, diff:-actual, pct:150, over:true, unbudgeted:true });
+  });
+  rows.sort((a,b)=> (a.unbudgeted?1:0)-(b.unbudgeted?1:0) || b.actual-a.actual);
   const totBudget=rows.reduce((s,r)=>s+r.budget,0);
   const totActual=rows.reduce((s,r)=>s+r.actual,0);
-  return { rows, totBudget, totActual, totDiff: totBudget-totActual, days };
+  return { rows, totBudget, totActual, totDiff: totBudget-totActual, days, live };
 }
 
 /* ── Real financial data (ported from live app) ── */
@@ -3457,17 +3545,17 @@ const WIDGET_CATALOG=[
   {id:'cash_summary',name:'Cash on Hand',icon:'💵',cat:'Overview',span:1,minLevel:1,desc:'Combined account balances.'},
   {id:'spending_month',name:"Current Spending",icon:'🛒',cat:'Overview',span:1,minLevel:1,desc:'Discretionary spending vs budget — your quick "how are we doing" marker (bills & savings excluded).'},
   {id:'income_month',name:"This Month's Income",icon:'💰',cat:'Overview',span:1,minLevel:1,desc:'Money in this month.'},
-  {id:'budget_doughnut',name:'Budget by Category',icon:'🎯',cat:'Budget',span:1,minLevel:1,desc:'Spending split by category.'},
+  {id:'budget_doughnut',name:'Budget by Category',icon:'🎯',cat:'Budget',span:2,minLevel:1,desc:'Two donuts side by side — spending by group and by category (stacked on mobile).'},
   {id:'bills_list',name:'Upcoming Bills',icon:'📋',cat:'Budget',span:1,minLevel:1,desc:"What's due and when."},
   {id:'zero_budget',name:'Zero-Based Budget',icon:'🧮',cat:'Budget',span:2,minLevel:2,desc:'Give every dollar a job.'},
   {id:'budget_actual',name:'Budget vs Actual',icon:'⚖️',cat:'Budget',span:2,minLevel:1,desc:'Compare what you planned to spend against what you actually spent, per category.'},
   {id:'savings_buckets',name:'Savings Buckets',icon:'🪣',cat:'Overview',span:2,minLevel:1,desc:'Sinking funds — Reserve, Home, Family, Medical — each with its own goal and progress.'},
-  {id:'cashflow_chart',name:'Cash Flow',icon:'🌊',cat:'Cash Flow',span:2,minLevel:1,desc:'Income vs. spending over time.'},
+  {id:'cashflow_chart',name:'Cash Flow',icon:'🌊',cat:'Cash Flow',span:2,minLevel:1,desc:'Your projected running balance — the same forward line as the Cash Flow Planner.'},
   {id:'pl_panel',name:'Profit & Loss',icon:'📊',cat:'Cash Flow',span:2,minLevel:1,desc:'Income, spending, net & savings rate by day/week/month.'},
   {id:'cashflow_planner',name:'Cash Flow Planner',icon:'📅',cat:'Cash Flow',span:2,minLevel:1,desc:'Project your running balance forward — edit bills, see your low point before it hits.'},
   {id:'goals',name:'Financial Goals',icon:'🎯',cat:'Overview',span:2,minLevel:1,desc:'Set goals, track progress automatically, and let Richie coach you to the finish.'},
   {id:'accounts_list',name:'All Accounts',icon:'🏦',cat:'Overview',span:2,minLevel:1,desc:'Every account with balances — tap to see transactions.'},
-  {id:'sankey',name:'Money Flow (Sankey)',icon:'🔀',cat:'Cash Flow',span:2,minLevel:2,desc:'Visualize income flowing to spending.'},
+  {id:'sankey',name:'Money Flow (Sankey)',icon:'🔀',cat:'Cash Flow',span:2,minLevel:2,desc:'Income → category group → category, flowing left to right through your category tree.'},
   {id:'top_categories',name:'Top Categories',icon:'📊',cat:'Cash Flow',span:1,minLevel:1,desc:'Where your money goes most.'},
   {id:'category_heatmap',name:'Category Heatmap',icon:'🗓️',cat:'Cash Flow',span:2,minLevel:2,desc:'Spending by category across months — spot seasonal patterns at a glance.'},
   {id:'net_worth_chart',name:'Net Worth Trend',icon:'📈',cat:'Wealth',span:2,minLevel:2,desc:'Net worth over months.'},
@@ -3561,7 +3649,7 @@ function openStudio(type, editUid){
 function closeStudio(){ gg('widgetStudio').style.display='none'; _ws=null; }
 function wsApplicableSteps(){
   // Some widgets (interactive ones) only get title/size — skip data/display query
-  const dataCapable=['spending_month','income_month','top_categories','budget_doughnut','cashflow_chart','sankey','net_worth_chart','debt_summary','debt_payoff','bills_list','cash_summary','net_worth_summary','zero_budget','fire_progress'].includes(_ws.type);
+  const dataCapable=['spending_month','income_month','top_categories','budget_doughnut','sankey','net_worth_chart','debt_summary','debt_payoff','bills_list','cash_summary','net_worth_summary','zero_budget','fire_progress'].includes(_ws.type);
   return dataCapable?WS_STEPS:['Display','Size & layout','Confirm'];
 }
 function wsRender(){
@@ -3591,7 +3679,7 @@ function wsRenderPreview(){
     <div class="canvas-widget-body" style="${cfg.height==='tall'?'min-height:220px':''}">${body}</div>
   </div>`;
   // mount chart-type previews
-  setTimeout(()=>{ try{ if(['cashflow_chart','net_worth_chart','retirement_proj','sankey','fire_calc'].includes(_ws.type)) buildWidgetChart(_ws.w,'cv_'+_ws.w.uid); }catch(e){} },30);
+  setTimeout(()=>{ try{ if(['net_worth_chart','retirement_proj','sankey','fire_calc'].includes(_ws.type)) buildWidgetChart(_ws.w,'cv_'+_ws.w.uid); }catch(e){} },30);
 }
 // ── Step: Data & query ──
 function wsDataStep(){
@@ -3728,7 +3816,7 @@ function removeWidget(uid){
 }
 function toggleWidgetSpan(uid){ openWidgetEditor(uid); }
 // Time-relevant widgets that flex with the selected window
-const WIDGET_HAS_TF=['spending_month','income_month','top_categories','budget_doughnut','cashflow_chart','sankey'];
+const WIDGET_HAS_TF=['spending_month','income_month','top_categories','budget_doughnut','sankey'];
 function widgetHasTimeframe(type){ return WIDGET_HAS_TF.includes(type); }
 function setWidgetTf(uid,key){
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(!pg) return;
@@ -3801,6 +3889,7 @@ function mountWidgetCharts(pg){
       if(w.type==='debt_planner'){ dpRecalc(); dpRenderOrder(); }
       if(w.type==='pl_panel'){ plMount(w); }
       if(w.type==='cashflow_planner'){ cfpMount(w); }
+      if(w.type==='cashflow_chart'){ cfcMount(w); }
       if(w.type==='accounts_list'){ acctMount(w); }
     }catch(e){ /* ignore */ }
   });
@@ -3815,16 +3904,7 @@ function buildWidgetChart(w, cid){
   const live=dataLoaded;
   if(w.type==='sankey'){ buildSankey(cid, wDays(w)); return; }
   if(w.type==='fire_calc'){ fireRefresh(); return; }
-  if(w.type==='cashflow_chart'){
-    const tf=w.tf||'30d'; const monthsBack={'1w':1,'30d':3,'3m':3,'1y':12}[tf]||3;
-    const ser=live?engMonthlySeries(monthsBack):[{label:'Jan',spend:2800,income:5200},{label:'Feb',spend:3100,income:5800},{label:'Mar',spend:3118,income:5400}].slice(-monthsBack);
-    buildChartWidget(cid,'bar',ser.map(s=>s.label),null,null,{
-      datasets:[
-        {label:'Income',data:ser.map(s=>s.income),backgroundColor:'#2ecc8a',borderRadius:4,borderWidth:0},
-        {label:'Spending',data:ser.map(s=>s.spend),backgroundColor:'#f05c5c',borderRadius:4,borderWidth:0},
-      ], builtinLegend:true
-    });
-  } else if(w.type==='net_worth_chart'){
+  if(w.type==='net_worth_chart'){
     // Net worth trend: if no time-series, synthesize a gentle ramp toward current net worth
     const cur=live?engNetBalance()+engNWAssets()-engNWLiab():engNetWorth();
     const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -3988,51 +4068,112 @@ function fdSetScenario(id){
 }
 
 /* ═══ ZERO-BASED BUDGET WIDGET (interactive sliders) ═══ */
+// Budgetable categories = tier-2 (children) + Other, excluding Income
+function _zbBudgetableCats(){
+  return getUserCategories().filter(c=>(c.parent || c.id==='other') && c.id!=='income');
+}
 function _zbBuckets(){
-  // persist user-adjusted buckets in APP; seed from defaults once
   if(!APP.zeroBuckets){ APP.zeroBuckets=zeroBuckets.map(b=>({...b})); }
+  // migrate plain envelopes → category-linked (each bucket gets a catId from the tree)
+  if(!APP._zbCatLinked){
+    const cats=_zbBudgetableCats();
+    const matched=APP.zeroBuckets.map(b=>{
+      if(b.catId) return b;
+      const nm=(b.name||'').toLowerCase();
+      const m=cats.find(c=>c.label.toLowerCase()===nm)
+            || cats.find(c=>c.label.toLowerCase().includes(nm)||nm.includes(c.label.toLowerCase()));
+      return m?{catId:m.id, name:m.label, amt:b.amt}:{catId:'other', name:'Other', amt:b.amt};
+    });
+    // dedupe by category (sum amounts if two old envelopes mapped to the same category)
+    const byId={}; matched.forEach(b=>{ if(byId[b.catId]) byId[b.catId].amt+=b.amt; else byId[b.catId]={...b}; });
+    APP.zeroBuckets=Object.values(byId);
+    APP._zbCatLinked=true; saveState();
+  }
   return APP.zeroBuckets;
 }
 function zbWidgetBody(w){
   const income=engMonthlyIncome();
   const bills=engMonthlyBills();
   const buckets=_zbBuckets();
-  const assigned=buckets.reduce((s,z)=>s+z.amt,0)+bills;
+  const envTotal=buckets.reduce((s,z)=>s+z.amt,0);
+  const assigned=envTotal+bills;
   const left=income-assigned;
   const afterBills=Math.max(0, income-bills);
   const leftColor=Math.abs(left)<1?'var(--green)':left>0?'var(--amber)':'var(--red)';
+  const sliderMax=(amt)=>Math.max(1500, Math.ceil(afterBills/100)*100, Math.ceil(amt/100)*100);
+  const balanceRow = Math.abs(left)<1
+    ? `<div class="zb-balanced">✓ Every dollar is assigned — your budget is balanced.</div>`
+    : left>0
+      ? `<div class="zb-tozero"><span>${fmtK(left)} still unassigned</span><button onclick="event.stopPropagation();zbBalance('${w.uid}')">Assign to Savings →</button></div>`
+      : `<div class="zb-tozero over"><span>${fmtK(-left)} over budget</span><button onclick="event.stopPropagation();zbBalance('${w.uid}')">Trim to balance →</button></div>`;
+  // unselected tier-2 categories available to add
+  const selectedIds=new Set(buckets.map(b=>b.catId));
+  const avail=_zbBudgetableCats().filter(c=>!selectedIds.has(c.id));
+  const addSection = avail.length ? `<div class="zb-addcats">
+      <div class="ws-hint" style="margin:0 0 7px">Add a category to budget:</div>
+      <div class="zb-chips">${avail.map(c=>`<button class="zb-chip" onclick="event.stopPropagation();zbAddCat('${c.id}','${w.uid}')"><span class="zb-dot" style="background:${c.color}"></span>${esc(c.label)}</button>`).join('')}</div>
+    </div>` : '';
   return `<div class="zb-wrap">
     <div class="zb-head">
       <div class="zb-hstat"><span>Monthly income</span><b>${fmtK(income)}</b></div>
       <div class="zb-hstat"><span>Bills (fixed)</span><b style="color:var(--red)">${fmtK(bills)}</b></div>
-      <div class="zb-hstat"><span>Assigned to envelopes</span><b>${fmtK(buckets.reduce((s,z)=>s+z.amt,0))}</b></div>
+      <div class="zb-hstat"><span>Assigned to envelopes</span><b>${fmtK(envTotal)}</b></div>
       <div class="zb-hstat zb-tobudget"><span>To budget</span><b style="color:${leftColor}">${left>=0?'':'-'}${fmtK(Math.abs(left))} ${Math.abs(left)<1?'✓ balanced':left>0?'left':'over'}</b></div>
     </div>
     <div class="zb-bar"><div class="zb-bar-fill" style="width:${Math.min(100,Math.round(assigned/Math.max(income,1)*100))}%;background:${left<0?'var(--red)':'var(--green)'}"></div></div>
-    <div class="zb-section-label">Adjust your envelopes <span class="ws-hint" style="margin:0">drag a slider — "to budget" updates live</span></div>
+    ${balanceRow}
+    <div class="zb-section-label">Category envelopes <span class="ws-hint" style="margin:0">type a dollar amount or drag</span></div>
     <div class="zb-buckets">
       ${buckets.map((b,i)=>`<div class="zb-bucket">
-        <div class="zb-bk-top"><span class="zb-bk-nm">${esc(b.name)}</span><span class="zb-bk-amt">${fmtK(b.amt)}</span></div>
-        <input type="range" class="zb-slider" min="0" max="${Math.max(1500, Math.ceil(afterBills/100)*100)}" step="10" value="${b.amt}" oninput="zbSet(${i},this.value,'${w.uid}')" onchange="zbCommit('${w.uid}')">
-      </div>`).join('')}
+        <div class="zb-bk-top">
+          <span class="zb-dot" style="background:${getCatColor(b.name)}"></span>
+          <span class="zb-bk-nm">${esc(b.name)}</span>
+          <div class="zb-bk-edit"><span>$</span><input class="zb-bk-input" type="number" min="0" step="10" value="${b.amt}" onclick="event.stopPropagation()" oninput="zbSetVal(${i},this.value,'${w.uid}','input')" onchange="zbCommit('${w.uid}')" aria-label="Budget for ${esc(b.name)}"></div>
+          <button class="zb-bk-del" onclick="event.stopPropagation();zbDelBucket(${i},'${w.uid}')" title="Remove ${esc(b.name)} from budget">\u2715</button>
+        </div>
+        <input type="range" class="zb-slider" min="0" max="${sliderMax(b.amt)}" step="10" value="${b.amt}" onclick="event.stopPropagation()" oninput="zbSetVal(${i},this.value,'${w.uid}','slider')" onchange="zbCommit('${w.uid}')">
+      </div>`).join('') || '<div class="ws-hint">No categories budgeted yet — add some below.</div>'}
     </div>
-    <button class="manual-add-btn" onclick="event.stopPropagation();zbAddBucket('${w.uid}')">\u2795 Add an envelope</button>
+    ${addSection}
   </div>`;
 }
-function zbSet(i,val,uid){
-  const b=_zbBuckets(); b[i].amt=parseInt(val)||0;
-  // live-update the labels without full re-render (keeps slider grab smooth)
+function zbAddCat(catId,uid){
+  const c=_zbBudgetableCats().find(x=>x.id===catId); if(!c) return;
+  const b=_zbBuckets(); if(b.some(x=>x.catId===catId)) return;
+  b.push({catId:c.id, name:c.label, amt:0}); saveState();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+  if(sbRichie)sbRichie.do('nod');
+}
+function zbSetVal(i,val,uid,from){
+  const b=_zbBuckets(); b[i].amt=Math.max(0,parseInt(val)||0);
+  const card=document.querySelector(`[data-uid="${uid}"]`)||document;
+  const sliders=card.querySelectorAll('.zb-slider'), inputs=card.querySelectorAll('.zb-bk-input');
+  if(from!=='slider' && sliders[i]){ if(parseInt(sliders[i].max)<b[i].amt) sliders[i].max=Math.ceil(b[i].amt/100)*100; sliders[i].value=b[i].amt; }
+  if(from!=='input' && inputs[i] && document.activeElement!==inputs[i]) inputs[i].value=b[i].amt;
   const income=engMonthlyIncome(), bills=engMonthlyBills();
   const assigned=b.reduce((s,z)=>s+z.amt,0)+bills; const left=income-assigned;
-  const card=document.querySelector(`[data-uid="${uid}"]`)||document;
-  const amtEls=card.querySelectorAll('.zb-bk-amt');
-  if(amtEls[i]) amtEls[i].textContent=fmtK(b[i].amt);
+  const envEl=card.querySelector('.zb-head .zb-hstat:nth-child(3) b'); if(envEl) envEl.textContent=fmtK(b.reduce((s,z)=>s+z.amt,0));
   const tb=card.querySelector('.zb-tobudget b');
   if(tb){ tb.textContent=(left>=0?'':'-')+fmtK(Math.abs(left))+' '+(Math.abs(left)<1?'✓ balanced':left>0?'left':'over'); tb.style.color=Math.abs(left)<1?'var(--green)':left>0?'var(--amber)':'var(--red)'; }
   const bar=card.querySelector('.zb-bar-fill');
   if(bar){ bar.style.width=Math.min(100,Math.round(assigned/Math.max(income,1)*100))+'%'; bar.style.background=left<0?'var(--red)':'var(--green)'; }
 }
-function zbCommit(uid){ saveState(); }
+function zbCommit(uid){ saveState(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+function zbDelBucket(i,uid){ const b=_zbBuckets(); b.splice(i,1); saveState(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+function zbBalance(uid){
+  const b=_zbBuckets(); const income=engMonthlyIncome(), bills=engMonthlyBills();
+  const left=income - (b.reduce((s,z)=>s+z.amt,0)+bills);
+  if(Math.abs(left)<1) return;
+  if(left>0){
+    let sav=b.find(z=>/sav/i.test(z.name));
+    if(!sav){ const c=_zbBudgetableCats().find(x=>/sav/i.test(x.label)); sav={catId:c?c.id:'savings', name:c?c.label:'Savings & Invest', amt:0}; b.push(sav); }
+    sav.amt+=Math.round(left);
+  } else {
+    const big=b.slice().sort((x,y)=>y.amt-x.amt)[0]; if(big) big.amt=Math.max(0, big.amt-Math.round(-left));
+  }
+  saveState(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+  if(sbRichie)sbRichie.do('nod');
+}
 function zbAddBucket(uid){
   const name=prompt('Envelope name (e.g. Hobbies, Pet, Gifts):'); if(!name) return;
   _zbBuckets().push({name:name.trim(), amt:0}); saveState();
@@ -4228,16 +4369,17 @@ function creditUtilBody(w){
 function savingsBucketsBody(w){
   const buckets=engSavingsBuckets();
   const total=engSavingsTotal();
-  if(!buckets.length) return `<div class="wph"><div class="wph-sub">No savings buckets yet.</div><button class="manual-add-btn" onclick="event.stopPropagation();editBucket(-1)">➕ Add a bucket</button></div>`;
+  const linkBtn=`<button class="sb-link-btn" onclick="event.stopPropagation();openBucketAccounts('${w.uid}')">🔗 Accounts</button>`;
+  if(!buckets.length) return `<div class="wph"><div class="wph-sub">No savings buckets yet.</div><div style="display:flex;gap:8px;justify-content:center;margin-top:8px">${linkBtn}<button class="manual-add-btn" style="width:auto" onclick="event.stopPropagation();editBucket(-1)">➕ Add a bucket</button></div></div>`;
   const rows=buckets.map((b,i)=>{
     const color=b.done?'var(--green)':b.pct>=66?'var(--green)':b.pct>=33?'var(--amber)':'var(--blue)';
     const sub = b.done ? 'Funded! 🎉'
       : b.target>0 ? `${fmtK(b.remaining)} to go${b.monthly>0&&b.monthsToGoal!==Infinity?` · ~${b.monthsToGoal} mo at ${fmtK(b.monthly)}/mo`:''}`
-      : 'No target set';
+      : (b.linked?'live balance':'No target set');
     return `<div class="sb-bucket">
       <div class="sb-top">
         <span class="sb-icon">${b.icon||'🪣'}</span>
-        <div class="sb-meta"><div class="sb-nm">${esc(b.name)}</div><div class="sb-sub">${sub}</div></div>
+        <div class="sb-meta"><div class="sb-nm">${esc(b.name)}${b.linked?'<span class="sb-live">🔗 live</span>':''}</div><div class="sb-sub">${sub}</div></div>
         <div class="sb-amt"><div class="sb-bal">${fmtK(b.balance)}</div>${b.target>0?`<div class="sb-tgt">of ${fmtK(b.target)}</div>`:''}</div>
         <div class="sb-actions"><button class="goal-mini" onclick="event.stopPropagation();editBucket(${i})" title="Edit">✎</button></div>
       </div>
@@ -4245,17 +4387,44 @@ function savingsBucketsBody(w){
     </div>`;
   }).join('');
   return `<div class="sb-wrap">
-    <div class="sb-header"><span>${buckets.length} funds</span><b style="color:var(--green)">${fmtK(total)} saved</b></div>
+    <div class="sb-header"><span>${buckets.length} fund${buckets.length!==1?'s':''}</span><b style="color:var(--green)">${fmtK(total)} saved</b></div>
     ${rows}
-    <button class="manual-add-btn" onclick="event.stopPropagation();editBucket(-1)">➕ Add a bucket</button>
+    <div class="sb-foot-actions">${linkBtn}<button class="manual-add-btn" style="width:auto;flex:1" onclick="event.stopPropagation();editBucket(-1)">➕ Add a bucket</button></div>
   </div>`;
+}
+// Picker: choose which Plaid (or manual) accounts appear as linked buckets
+function openBucketAccounts(uid){
+  const accts=engAccounts().filter(a=>a.type!=='credit');
+  const linked=new Set(_savingsBuckets().filter(b=>b.acctId).map(b=>b.acctId));
+  gg('manualModal').style.display='flex';
+  gg('manualTitle').textContent='Select accounts';
+  gg('manualSub').textContent=dataLoaded?'Pick accounts to show as buckets — balances stay live from Plaid.':'Connect a bank for live balances. (Showing sample accounts.)';
+  gg('manualBody').innerHTML=`
+    <div class="sb-acct-list">${accts.map(a=>`
+      <label class="sb-acct-row">
+        <input type="checkbox" ${linked.has(a.id)?'checked':''} onchange="toggleBucketAccount('${a.id}','${uid}')">
+        <span class="sb-acct-ic">${_savingsIconFor(a)}</span>
+        <span class="sb-acct-meta"><span class="sb-acct-nm">${esc(a.name)}</span><span class="sb-acct-sub">${esc(a.institution||a.subtype||a.type)}</span></span>
+        <span class="sb-acct-bal">${fmtK(a.bal)}</span>
+      </label>`).join('')||'<div class="ws-hint">No deposit/investment accounts found.</div>'}</div>
+    <div class="mf-actions"><span></span><button class="btn primary" onclick="closeManual()">Done</button></div>`;
+}
+function _savingsIconFor(a){ const s=(a.subtype||'')+' '+(a.type||''); if(/invest|401|ira|brokerage/i.test(s))return '📈'; if(/saving/i.test(s))return '🛟'; if(/check/i.test(s))return '💵'; return '🏦'; }
+function toggleBucketAccount(acctId,uid){
+  const list=_savingsBuckets();
+  const idx=list.findIndex(b=>b.acctId===acctId);
+  if(idx>=0){ list.splice(idx,1); }
+  else { const a=engAccounts().find(x=>x.id===acctId); if(a) list.push({name:a.name, icon:_savingsIconFor(a), acctId:acctId, balance:0, target:0, monthly:0, note:'linked'}); }
+  saveState();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
 }
 let _bucketEdit=null;
 function editBucket(i){
   _bucketEdit=i;
   const list=_savingsBuckets();
-  const b = i>=0 ? list[i] : {name:'',icon:'🪣',balance:'',target:'',monthly:'',note:''};
+  const b = i>=0 ? list[i] : {name:'',icon:'🪣',balance:'',target:'',monthly:'',note:'',acctId:''};
   const icons=['🪣','🛟','🔨','🎉','🏥','✈️','🚗','🏠','🎓','💍','🎁','🐾'];
+  const accts=engAccounts().filter(a=>a.type!=='credit');
   gg('manualModal').style.display='flex';
   gg('manualTitle').textContent = i>=0?'Edit bucket':'Add savings bucket';
   gg('manualSub').textContent='A sinking fund with its own balance and goal.';
@@ -4264,8 +4433,13 @@ function editBucket(i){
     <input class="mf-in" id="bkName" value="${esc(b.name||'')}" placeholder="e.g. Reserve / Opportunity">
     <label class="mf-label">Icon</label>
     <div class="goal-icon-grid">${icons.map(ic=>`<button class="goal-icon-opt${b.icon===ic?' sel':''}" onclick="document.querySelectorAll('.goal-icon-opt').forEach(e=>e.classList.remove('sel'));this.classList.add('sel');window._bkIcon='${ic}'">${ic}</button>`).join('')}</div>
+    <label class="mf-label">Balance source</label>
+    <select class="mf-in" id="bkAcct" onchange="bkAcctChange()">
+      <option value="">— Manual balance —</option>
+      ${accts.map(a=>`<option value="${a.id}"${b.acctId===a.id?' selected':''}>🔗 ${esc(a.name)} (${fmtK(a.bal)})</option>`).join('')}
+    </select>
     <div class="mf-row">
-      <div><label class="mf-label">Current balance</label><input class="mf-in" id="bkBal" type="number" value="${b.balance||''}" placeholder="0"></div>
+      <div id="bkBalWrap"><label class="mf-label">Current balance</label><input class="mf-in" id="bkBal" type="number" value="${b.balance||''}" placeholder="0"></div>
       <div><label class="mf-label">Goal target</label><input class="mf-in" id="bkTgt" type="number" value="${b.target||''}" placeholder="0"></div>
     </div>
     <label class="mf-label">Monthly contribution (optional)</label>
@@ -4275,10 +4449,18 @@ function editBucket(i){
       <button class="btn primary" onclick="saveBucket()">${i>=0?'Save':'Add'}</button>
     </div>`;
   window._bkIcon=b.icon||'🪣';
+  bkAcctChange();
+}
+function bkAcctChange(){
+  const sel=gg('bkAcct'); const wrap=gg('bkBalWrap'); if(!sel||!wrap) return;
+  const linked=!!sel.value;
+  wrap.style.display=linked?'none':'block';
+  if(linked){ const a=engAccounts().find(x=>x.id===sel.value); const nm=gg('bkName'); if(a && nm && !nm.value.trim()) nm.value=a.name; }
 }
 function saveBucket(){
   const name=(gg('bkName').value||'').trim(); if(!name){ gg('bkName').focus(); return; }
-  const item={name, icon:window._bkIcon||'🪣', balance:_num('bkBal'), target:_num('bkTgt'), monthly:_num('bkMo'), note:''};
+  const acctId=gg('bkAcct')?gg('bkAcct').value:'';
+  const item={name, icon:window._bkIcon||'🪣', acctId:acctId||'', balance: acctId?0:_num('bkBal'), target:_num('bkTgt'), monthly:_num('bkMo'), note:acctId?'linked':''};
   const list=_savingsBuckets();
   if(_bucketEdit>=0) list[_bucketEdit]=item; else list.push(item);
   saveState(); closeManual();
@@ -4286,6 +4468,40 @@ function saveBucket(){
   if(sbRichie)sbRichie.do('nod');
 }
 function deleteBucket(i){ if(!confirm('Delete this bucket?'))return; _savingsBuckets().splice(i,1); saveState(); closeManual(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+
+/* ═══ BUDGET BY CATEGORY — two-tier donuts (groups + categories) ═══ */
+function budgetTiersBody(w){
+  const days=wDays(w);
+  let kids = dataLoaded ? engCategoryBreakdown(days) : [
+    {label:'Housing',value:2640},{label:'Loan Payments',value:780},{label:'Dining Out',value:612},
+    {label:'Food & Groceries',value:498},{label:'Auto Payments',value:452},{label:'Utilities',value:320},
+    {label:'Insurance',value:266},{label:'Shopping',value:240},{label:'Gas & Fuel',value:233},
+    {label:'Medical',value:178},{label:'Subscriptions',value:142},{label:'Entertainment',value:121}
+  ].map(c=>({...c,color:getCatColor(c.label)}));
+  kids=kids.filter(c=>c.value>0).sort((a,b)=>b.value-a.value);
+  if(!kids.length) return `<div class="wph"><div class="wph-sub">No spending to chart yet.</div></div>`;
+  const total=kids.reduce((s,c)=>s+c.value,0);
+  // Tier 1 — roll up into parent groups
+  const gmap={};
+  kids.forEach(c=>{ const p=getCatParent(c.label); if(!gmap[p.id])gmap[p.id]={label:p.label,color:p.color,value:0}; gmap[p.id].value+=c.value; });
+  const groups=Object.values(gmap).sort((a,b)=>b.value-a.value);
+  // Tier 2 — top 8 categories + Other
+  let cats2=kids.slice();
+  if(cats2.length>8){ const top=cats2.slice(0,8); const rest=cats2.slice(8).reduce((s,c)=>s+c.value,0); top.push({label:'Other',value:rest,color:'#94a3b8'}); cats2=top; }
+  const legend=(items)=>items.map(it=>`<div class="bd2-leg-item"><span class="bd2-dot" style="background:${it.color}"></span><span class="bd2-leg-l">${esc(it.label)}</span><span class="bd2-leg-v">${fmtK(it.value)} · ${Math.round(it.value/total*100)}%</span></div>`).join('');
+  return `<div class="bd2-wrap">
+    <div class="bd2-col">
+      <div class="bd2-title">By group</div>
+      <div class="bd2-chart">${_donutSVG(groups,128,fmtK(total),'total')}</div>
+      <div class="bd2-legend">${legend(groups)}</div>
+    </div>
+    <div class="bd2-col">
+      <div class="bd2-title">By category</div>
+      <div class="bd2-chart">${_donutSVG(cats2,128,String(kids.length),'categories')}</div>
+      <div class="bd2-legend">${legend(cats2)}</div>
+    </div>
+  </div>${dataLoaded?'':'<div class="ws-hint" style="margin-top:8px;text-align:center">sample data — connect a bank for live spending</div>'}`;
+}
 
 /* ═══ CURRENT (DISCRETIONARY) SPENDING WIDGET ═══ */
 function discretionarySpendBody(w){
@@ -4346,9 +4562,9 @@ function budgetActualBody(w){
     const barColor = r.over?'var(--red)':r.pct>=85?'var(--amber)':'var(--green)';
     const diffColor = r.diff>=0?'var(--green)':'var(--red)';
     return `<div class="ba-row">
-      <div class="ba-top"><span class="ba-nm">${esc(r.name)}</span><span class="ba-diff" style="color:${diffColor}">${r.diff>=0?'+':'-'}${fmtK(Math.abs(r.diff))}</span></div>
-      <div class="ba-bar"><div class="ba-bar-fill" style="width:${Math.min(100,r.pct)}%;background:${barColor}"></div><div class="ba-bar-mark" title="budget"></div></div>
-      <div class="ba-sub">${fmtK(r.actual)} spent of ${fmtK(r.budget)} ${r.over?'· <b style="color:var(--red)">over</b>':'budget'}</div>
+      <div class="ba-top"><span class="ba-nm"><span class="ba-dot" style="background:${r.color}"></span>${esc(r.name)}${r.unbudgeted?'<span class="ba-unbud">unbudgeted</span>':''}</span><span class="ba-diff" style="color:${diffColor}">${r.diff>=0?'+':'-'}${fmtK(Math.abs(r.diff))}</span></div>
+      <div class="ba-bar"><div class="ba-bar-fill" style="width:${Math.min(100,r.pct)}%;background:${barColor}"></div>${r.budget>0?'<div class="ba-bar-mark" title="budget"></div>':''}</div>
+      <div class="ba-sub">${fmtK(r.actual)} spent ${r.budget>0?'of '+fmtK(r.budget)+(r.over?' · <b style="color:var(--red)">over</b>':' budget'):'· <b style="color:var(--amber)">no budget set</b>'}</div>
     </div>`;
   }).join('');
   const totColor=d.totDiff>=0?'var(--green)':'var(--red)';
@@ -4572,6 +4788,61 @@ function goalWizFinish(){
 /* ═══ CASH FLOW PLANNER WIDGET ═══ */
 let _cfpRange={};  // per-widget projection window in days
 const CFP_RANGES=[{k:7,l:'1 wk'},{k:30,l:'30 days'},{k:60,l:'60 days'},{k:90,l:'90 days'}];
+/* Shared running-balance line chart (used by both the Planner and the Cash Flow widget) */
+function cfpLineSVG(p, idSuffix, W, H){
+  W=W||300; H=H||80; const pad=4;
+  const s=p.series||[]; if(!s.length) return '';
+  const min=Math.min(...s.map(x=>x.bal),0), max=Math.max(...s.map(x=>x.bal),1);
+  const rng=(max-min)||1;
+  const X=d=>pad+(d/p.days)*(W-pad*2);
+  const Y=b=>H-pad-((b-min)/rng)*(H-pad*2);
+  const zeroY=Y(0);
+  const pts=s.map(x=>`${X(x.day).toFixed(1)},${Y(x.bal).toFixed(1)}`).join(' ');
+  const area=`${pad},${H-pad} ${pts} ${X(p.days).toFixed(1)},${H-pad}`;
+  const lowX=X(p.low.day), lowY=Y(p.low.bal);
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none">
+    <defs><linearGradient id="cfpg_${idSuffix}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--green)" stop-opacity="0.3"/><stop offset="100%" stop-color="var(--green)" stop-opacity="0"/></linearGradient></defs>
+    ${min<0?`<line x1="0" y1="${zeroY.toFixed(1)}" x2="${W}" y2="${zeroY.toFixed(1)}" stroke="var(--red)" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/>`:''}
+    <polygon points="${area}" fill="url(#cfpg_${idSuffix})"/>
+    <polyline points="${pts}" fill="none" stroke="var(--green)" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="${lowX.toFixed(1)}" cy="${lowY.toFixed(1)}" r="3.5" fill="${p.low.bal<0?'var(--red)':'var(--amber)'}"/>
+  </svg>`;
+}
+
+/* ═══ CASH FLOW widget — same running-balance line as the Planner, same engine ═══ */
+function cashflowChartBody(w){
+  const range=_cfpRange['cfc'+w.uid]||30;
+  return `<div class="cfp-wrap">
+    <div class="cfp-toolbar">
+      <span class="pl-grp-label">Project</span>
+      <div class="pl-toggle">${CFP_RANGES.map(r=>`<button class="pl-gbtn${range===r.k?' active':''}" onclick="setCfcRange('${w.uid}',${r.k})">${r.l}</button>`).join('')}</div>
+    </div>
+    <div class="cfp-summary" id="cfcsum_${w.uid}"></div>
+    <div class="cfp-chart" id="cfcchart_${w.uid}"></div>
+    <div class="cfp-lowflag" id="cfclow_${w.uid}"></div>
+  </div>`;
+}
+function setCfcRange(uid,k){ _cfpRange['cfc'+uid]=k; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+function cfcMount(w){
+  const range=_cfpRange['cfc'+w.uid]||30;
+  const p=engCashFlowProjection(range);
+  const sum=gg('cfcsum_'+w.uid);
+  if(sum){ sum.innerHTML=`
+    <div class="cfp-stat"><div class="cfp-stat-l">Starting cash</div><div class="cfp-stat-v">${fmtK(p.start)}</div></div>
+    <div class="cfp-stat"><div class="cfp-stat-l">Income in</div><div class="cfp-stat-v" style="color:var(--green)">+${fmtK(p.totalIn)}</div></div>
+    <div class="cfp-stat"><div class="cfp-stat-l">Bills out</div><div class="cfp-stat-v" style="color:var(--red)">-${fmtK(p.totalOut)}</div></div>
+    <div class="cfp-stat"><div class="cfp-stat-l">End balance</div><div class="cfp-stat-v" style="color:${p.end>=0?'var(--green)':'var(--red)'}">${fmtK(p.end)}</div></div>`;
+  }
+  const chart=gg('cfcchart_'+w.uid);
+  if(chart){ chart.innerHTML=cfpLineSVG(p, 'cfc'+w.uid, 300, 80); }
+  const low=gg('cfclow_'+w.uid);
+  if(low){
+    if(p.low.bal<0){ low.className='cfp-lowflag danger'; low.innerHTML=`⚠️ Dips to <b>${fmtK(p.low.bal)}</b> on day ${p.low.day}. Open the Planner to adjust.`; }
+    else if(p.low.bal<200){ low.className='cfp-lowflag warn'; low.innerHTML=`⚡ Tight — low point <b>${fmtK(p.low.bal)}</b> around day ${p.low.day}.`; }
+    else { low.className='cfp-lowflag ok'; low.innerHTML=`✅ Stays above <b>${fmtK(p.low.bal)}</b> (low point day ${p.low.day}).`; }
+  }
+}
+
 function cfpWidgetBody(w){
   const range=_cfpRange[w.uid]||30;
   return `<div class="cfp-wrap">
@@ -4602,24 +4873,7 @@ function cfpMount(w){
   }
   // running balance line (mini SVG sparkline so it works everywhere, no Chart.js dependency)
   const chart=gg('cfpchart_'+w.uid);
-  if(chart){
-    const s=p.series; const W=300, H=80, pad=4;
-    const min=Math.min(...s.map(x=>x.bal),0), max=Math.max(...s.map(x=>x.bal),1);
-    const rng=(max-min)||1;
-    const X=d=>pad+(d/p.days)*(W-pad*2);
-    const Y=b=>H-pad-((b-min)/rng)*(H-pad*2);
-    const zeroY=Y(0);
-    const pts=s.map(x=>`${X(x.day).toFixed(1)},${Y(x.bal).toFixed(1)}`).join(' ');
-    const area=`${pad},${H-pad} ${pts} ${X(p.days).toFixed(1)},${H-pad}`;
-    const lowX=X(p.low.day), lowY=Y(p.low.bal);
-    chart.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none">
-      <defs><linearGradient id="cfpg_${w.uid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--green)" stop-opacity="0.3"/><stop offset="100%" stop-color="var(--green)" stop-opacity="0"/></linearGradient></defs>
-      ${min<0?`<line x1="0" y1="${zeroY.toFixed(1)}" x2="${W}" y2="${zeroY.toFixed(1)}" stroke="var(--red)" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/>`:''}
-      <polygon points="${area}" fill="url(#cfpg_${w.uid})"/>
-      <polyline points="${pts}" fill="none" stroke="var(--green)" stroke-width="2" stroke-linejoin="round"/>
-      <circle cx="${lowX.toFixed(1)}" cy="${lowY.toFixed(1)}" r="3.5" fill="${p.low.bal<0?'var(--red)':'var(--amber)'}"/>
-    </svg>`;
-  }
+  if(chart){ chart.innerHTML=cfpLineSVG(p, w.uid, 300, 80); }
   // low-point flag
   const low=gg('cfplow_'+w.uid);
   if(low){
@@ -4688,10 +4942,8 @@ function plMount(w){
   }
   const det=gg('pldet_'+w.uid);
   if(det){
-    // mini bar chart of net per period + detail rows
-    const b=s.buckets, mx=Math.max(...b.map(x=>Math.abs(x.inc-x.spend)),1);
-    const bars=b.map(x=>{ const n=x.inc-x.spend; const h=Math.round(Math.abs(n)/mx*46); return `<div class="pl-bar-col" title="${x.key}: ${n>=0?'+':'-'}${fmtK(Math.abs(n))}"><div class="pl-bar ${n>=0?'pos':'neg'}" style="height:${h}px"></div><div class="pl-bar-x">${x.key}</div></div>`; }).join('');
-    det.innerHTML=`<div class="pl-bars">${bars}</div>
+    // net-per-period LINE chart: solid baseline at 0, dotted line at the average
+    det.innerHTML=`${plLineSVG(s.buckets, s.avgNet)}
       <div class="pl-extra">
         <div class="pl-xrow"><span>Avg net / period</span><b style="color:${s.avgNet>=0?'var(--green)':'var(--red)'}">${s.avgNet>=0?'+':'-'}${fmtK(Math.abs(s.avgNet))}</b></div>
         <div class="pl-xrow"><span>Best period</span><b style="color:var(--green)">${s.best?s.best.key+' · +'+fmtK(s.best.inc-s.best.spend):'—'}</b></div>
@@ -4699,6 +4951,34 @@ function plMount(w){
         <div class="pl-xrow"><span>Transactions</span><b>${s.txnCount} over ${s.periods} period${s.periods!==1?'s':''}</b></div>
       </div>`;
   }
+}
+/* Net-per-period line chart with a hard zero baseline and a dotted average line */
+function plLineSVG(buckets, avgNet){
+  const b=buckets||[]; if(!b.length) return '';
+  const nets=b.map(x=>x.inc-x.spend);
+  const avg=avgNet!=null?avgNet:Math.round(nets.reduce((s,v)=>s+v,0)/nets.length);
+  const maxV=Math.max(...nets, avg, 0), minV=Math.min(...nets, avg, 0);
+  const rng=(maxV-minV)||1;
+  const W=300, H=120, padX=8, padT=16, padB=20, plotH=H-padT-padB;
+  const X=i=> padX + (b.length<=1?(W-padX*2)/2:(i/(b.length-1))*(W-padX*2));
+  const Y=v=> padT + (maxV - v)/rng*plotH;
+  const zeroY=Y(0), avgY=Y(avg);
+  const pts=nets.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
+  const dots=nets.map((v,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2.6" fill="${v>=0?'var(--green)':'var(--red)'}"/>`).join('');
+  // sparse x labels (avoid crowding when many daily periods)
+  const step=b.length>8?Math.ceil(b.length/6):1;
+  const xlabels=b.map((x,i)=> (i%step===0||i===b.length-1) ? `<text x="${X(i).toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="8" fill="var(--muted)">${x.key}</text>`:'').join('');
+  const avgLabel=`${avg>=0?'+':'-'}$${Math.abs(avg)>=1000?(Math.abs(avg)/1000).toFixed(1)+'k':Math.abs(avg)}`;
+  const avgCol=avg>=0?'var(--green)':'var(--red)';
+  return `<svg class="pl-linechart" viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="none" style="height:120px;display:block">
+    <line x1="${padX}" y1="${zeroY.toFixed(1)}" x2="${W-padX}" y2="${zeroY.toFixed(1)}" stroke="var(--text)" stroke-width="1.5" opacity="0.55"/>
+    <text x="${padX}" y="${(zeroY-3).toFixed(1)}" font-size="8" fill="var(--muted)" opacity="0.8">0</text>
+    <line x1="${padX}" y1="${avgY.toFixed(1)}" x2="${W-padX}" y2="${avgY.toFixed(1)}" stroke="${avgCol}" stroke-width="1.2" stroke-dasharray="4 3" opacity="0.9"/>
+    <text x="${W-padX}" y="${(avgY-3).toFixed(1)}" text-anchor="end" font-size="8" fill="${avgCol}">avg ${avgLabel}</text>
+    <polyline points="${pts}" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    ${dots}
+    ${xlabels}
+  </svg>`;
 }
 
 /* ═══ ALL ACCOUNTS WIDGET ═══ */
@@ -4877,39 +5157,85 @@ function dpRenderOrder(){
 function buildSankey(cid, days){
   days=days||30;
   const canvas=gg(cid); if(!canvas) return;
-  const parent=canvas.parentElement; if(!parent||parent.clientWidth<50){ setTimeout(()=>buildSankey(cid),200); return; }
-  const dpr=window.devicePixelRatio||1, W=parent.clientWidth-2, H=220;
+  const parent=canvas.parentElement; if(!parent||parent.clientWidth<50){ setTimeout(()=>buildSankey(cid,days),200); return; }
+  const FM={weekly:52/12,biweekly:26/12,monthly:1,quarterly:1/3,annual:1/12,yearly:1/12};
+
+  // ── Income column (tier 1) ──
+  const incSrc=_effectiveIncomeSources?_effectiveIncomeSources():incomeSources;
+  const incNodes=incSrc.map(s=>({label:s.name.split(' ').slice(0,2).join(' '),value:Math.round(s.amt*(FM[s.freq]||1)),color:'#3dda91'})).filter(n=>n.value>0);
+  const incTotal=incNodes.reduce((s,n)=>s+n.value,0)||1;
+
+  // ── Child categories (tier 3) from the live category breakdown or a sample ──
+  let childRaw;
+  if(dataLoaded && allTxns.length){ childRaw=engCategoryBreakdown(days).map(c=>({label:c.label,value:Math.round(c.value),color:c.color})); }
+  else { childRaw=[
+      {label:'Housing',value:Math.round(2640*days/30)},{label:'Loan Payments',value:Math.round(780*days/30)},
+      {label:'Dining Out',value:Math.round(612*days/30)},{label:'Food & Groceries',value:Math.round(498*days/30)},
+      {label:'Auto Payments',value:Math.round(452*days/30)},{label:'Utilities',value:Math.round(320*days/30)},
+      {label:'Insurance',value:Math.round(266*days/30)},{label:'Shopping',value:Math.round(240*days/30)},
+      {label:'Gas & Fuel',value:Math.round(233*days/30)},{label:'Medical',value:Math.round(178*days/30)},
+      {label:'Subscriptions',value:Math.round(142*days/30)},{label:'Entertainment',value:Math.round(121*days/30)},
+    ].map(c=>({...c,color:getCatColor(c.label)})); }
+  childRaw=childRaw.filter(c=>c.value>0).sort((a,b)=>b.value-a.value).slice(0,11);
+
+  // ── Parent groups (tier 2), derived from the displayed children so columns balance ──
+  const groupMap={};
+  childRaw.forEach(c=>{ const p=getCatParent(c.label); c.parentId=p.id; c.parentLabel=p.label; if(!groupMap[p.id])groupMap[p.id]={id:p.id,label:p.label,color:p.color,value:0}; groupMap[p.id].value+=c.value; });
+  const groupNodes=Object.values(groupMap).sort((a,b)=>b.value-a.value);
+  const groupOrder={}; groupNodes.forEach((g,i)=>groupOrder[g.id]=i);
+  // order children by their group, then by value, to minimize crossing
+  const childNodes=childRaw.slice().sort((a,b)=> (groupOrder[a.parentId]-groupOrder[b.parentId]) || (b.value-a.value));
+  const spTotal=childNodes.reduce((s,n)=>s+n.value,0)||1;
+
+  if(!incNodes.length && !childNodes.length){ const ctx0=canvas.getContext('2d'); ctx0.fillStyle='#888';ctx0.font='12px sans-serif';ctx0.textAlign='center';ctx0.fillText('Add income & spending to see flow',parent.clientWidth/2,100); return; }
+
+  // ── Canvas sizing (taller when more children) ──
+  const dpr=window.devicePixelRatio||1, W=parent.clientWidth-2, H=Math.max(230, childNodes.length*23+44);
   canvas.width=W*dpr; canvas.height=H*dpr; canvas.style.width=W+'px'; canvas.style.height=H+'px';
   const ctx=canvas.getContext('2d'); ctx.scale(dpr,dpr); ctx.clearRect(0,0,W,H);
-  const FM={weekly:52/12,biweekly:26/12,monthly:1,quarterly:1/3,annual:1/12,yearly:1/12};
-  const incNodes=incomeSources.map(s=>({label:s.name.split(' ').slice(0,2).join(' '),value:Math.round(s.amt*(FM[s.freq]||1)),color:'#3dda91'})).filter(n=>n.value>0);
-  const incTotal=incNodes.reduce((s,n)=>s+n.value,0)||1;
-  let spNodes;
-  if(dataLoaded && allTxns.length){ spNodes=engCategoryBreakdown(days).slice(0,7).map(c=>({label:c.label,value:Math.round(c.value),color:c.color})); }
-  else { const bc={}; engBills().forEach(b=>{ if(b.pay>0) bc[b.cat||'Bills']=(bc[b.cat||'Bills']||0)+b.pay; }); spNodes=Object.entries(bc).sort((a,b)=>b[1]-a[1]).slice(0,7).map(([lbl,val])=>({label:lbl,value:Math.round(val),color:getCatColor(lbl)})); }
-  const spTotal=spNodes.reduce((s,n)=>s+n.value,0)||1;
-  if(!incNodes.length&&!spNodes.length){ ctx.fillStyle='#888';ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText('Add income & spending to see flow',W/2,H/2); return; }
-  const PAD=14,GAP=5,NW=12,LW=Math.min(110,W*0.16),LX=LW,RX=W-LW-NW,avail=H-PAD*2;
-  function layout(nodes,total,scale){ let y=PAD; return nodes.map(n=>{const h=Math.max(5,Math.round(n.value/total*scale));const r={...n,y,h};y+=h+GAP;return r;}); }
-  const iN=layout(incNodes,incTotal,avail-(Math.max(incNodes.length-1,0))*GAP);
-  const sN=layout(spNodes,spTotal,avail-(Math.max(spNodes.length-1,0))*GAP);
-  const iF=iN.map(n=>n.y), sF=sN.map(n=>n.y);
-  iN.forEach((src,si)=>{ sN.forEach((dst,di)=>{
-    const sfh=Math.max(1,Math.round(src.h*dst.value/spTotal)), dfh=Math.max(1,Math.round(dst.h*src.value/incTotal));
-    const x0=LX+NW,y0=iF[si],x1=RX,y1=sF[di]; iF[si]+=sfh; sF[di]+=dfh; const mx=(x0+x1)/2;
-    const g=ctx.createLinearGradient(x0,0,x1,0); g.addColorStop(0,(src.color||'#3dda91')+'88'); g.addColorStop(1,(dst.color||'#94a3b8')+'88');
-    ctx.beginPath(); ctx.moveTo(x0,y0); ctx.bezierCurveTo(mx,y0,mx,y1,x1,y1); ctx.lineTo(x1,y1+dfh); ctx.bezierCurveTo(mx,y1+dfh,mx,y0+sfh,x0,y0+sfh); ctx.closePath(); ctx.fillStyle=g; ctx.fill();
+
+  const PADT=18,PADB=10,GAP=5,NW=11,LLW=Math.min(58,W*0.16),RLW=Math.min(90,W*0.24);
+  const xI=LLW, xC=W-RLW-NW, xG=Math.round((xI+NW+xC)/2 - NW/2);
+  const avail=H-PADT-PADB;
+  function layout(nodes,total){ const g=Math.max(nodes.length-1,0)*GAP; const scale=avail-g; let y=PADT; return nodes.map(n=>{const h=Math.max(5,n.value/total*scale);const r={...n,y,h};y+=h+GAP;return r;}); }
+  const iN=layout(incNodes,incTotal), gN=layout(groupNodes,spTotal), cN=layout(childNodes,spTotal);
+
+  function flow(x0,y0,h0,x1,y1,h1,c0,c1){
+    const mx=(x0+x1)/2; const g=ctx.createLinearGradient(x0,0,x1,0);
+    g.addColorStop(0,(c0||'#3dda91')+'7a'); g.addColorStop(1,(c1||'#94a3b8')+'7a');
+    ctx.beginPath(); ctx.moveTo(x0,y0); ctx.bezierCurveTo(mx,y0,mx,y1,x1,y1); ctx.lineTo(x1,y1+h1); ctx.bezierCurveTo(mx,y1+h1,mx,y0+h0,x0,y0+h0); ctx.closePath(); ctx.fillStyle=g; ctx.fill();
+  }
+  // income → group
+  const iR=iN.map(n=>n.y), gL=gN.map(n=>n.y);
+  iN.forEach((src,si)=>{ gN.forEach((dst,di)=>{
+    const sfh=Math.max(0.5,src.h*dst.value/spTotal), dfh=Math.max(0.5,dst.h*src.value/incTotal);
+    flow(xI+NW,iR[si],sfh,xG,gL[di],dfh,src.color,dst.color); iR[si]+=sfh; gL[di]+=dfh;
   }); });
+  // group → child (each child to its own parent only)
+  const gR=gN.map(n=>n.y);
+  gN.forEach((g,gi)=>{ cN.forEach((c)=>{ if(c.parentId!==g.id) return;
+    const sfh=Math.max(0.5,g.h*c.value/g.value), dfh=c.h;
+    flow(xG+NW,gR[gi],sfh,xC,c.y,dfh,g.color,c.color); gR[gi]+=sfh;
+  }); });
+
   const textC=getComputedStyle(document.documentElement).getPropertyValue('--text').trim()||'#e4e6f0';
   const mutC=getComputedStyle(document.documentElement).getPropertyValue('--muted').trim()||'#8b8fa8';
-  function drawNodes(nodes,total,isLeft){ const nx=isLeft?LX:RX; nodes.forEach(n=>{
-    ctx.fillStyle=n.color||'#3dda91'; ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(nx,n.y,NW,n.h,2);else ctx.rect(nx,n.y,NW,n.h); ctx.fill();
-    const lx=isLeft?LX-4:RX+NW+4, midY=n.y+n.h/2; ctx.textAlign=isLeft?'right':'left';
-    ctx.font='bold 10px sans-serif'; ctx.fillStyle=textC; const maxL=14, lbl=n.label.length>maxL?n.label.slice(0,maxL-1)+'\u2026':n.label; ctx.fillText(lbl,lx,midY-2);
-    const val=n.value>=1000?'$'+(n.value/1000).toFixed(1)+'K':'$'+n.value; ctx.font='9px monospace'; ctx.fillStyle=mutC; ctx.fillText(val+' \u00b7 '+Math.round(n.value/total*100)+'%',lx,midY+10);
-  }); }
-  drawNodes(iN,incTotal,true); drawNodes(sN,spTotal,false);
-  ctx.textAlign='left'; ctx.font='bold 9px sans-serif'; ctx.fillStyle=mutC; ctx.fillText('INCOME',LX,10); ctx.textAlign='right'; ctx.fillText('SPENDING',RX,10);
+  const short=(s,n)=>s.length>n?s.slice(0,n-1)+'\u2026':s;
+  // income nodes + labels (left)
+  iN.forEach(n=>{ ctx.fillStyle=n.color; ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(xI,n.y,NW,n.h,2);else ctx.rect(xI,n.y,NW,n.h); ctx.fill();
+    ctx.textAlign='right'; ctx.font='bold 9px sans-serif'; ctx.fillStyle=textC; ctx.fillText(short(n.label,9),xI-4,n.y+n.h/2+3); });
+  // group nodes + labels (centered above bar)
+  gN.forEach(n=>{ ctx.fillStyle=n.color; ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(xG,n.y,NW,n.h,2);else ctx.rect(xG,n.y,NW,n.h); ctx.fill();
+    ctx.textAlign='center'; ctx.font='bold 9px sans-serif'; ctx.fillStyle=textC; ctx.fillText(short(n.label,16)+' '+Math.round(n.value/spTotal*100)+'%',xG+NW/2,n.y-4); });
+  // child nodes + labels (right)
+  cN.forEach(n=>{ ctx.fillStyle=n.color; ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(xC,n.y,NW,n.h,2);else ctx.rect(xC,n.y,NW,n.h); ctx.fill();
+    const midY=n.y+n.h/2; ctx.textAlign='left'; ctx.font='bold 9.5px sans-serif'; ctx.fillStyle=textC; ctx.fillText(short(n.label,15),xC+NW+4,midY-1);
+    const val=n.value>=1000?'$'+(n.value/1000).toFixed(1)+'K':'$'+n.value; ctx.font='8.5px monospace'; ctx.fillStyle=mutC; ctx.fillText(val,xC+NW+4,midY+9); });
+  // column headers
+  ctx.font='bold 8px sans-serif'; ctx.fillStyle=mutC;
+  ctx.textAlign='right'; ctx.fillText('INCOME',xI+NW,9);
+  ctx.textAlign='center'; ctx.fillText('GROUP',xG+NW/2,9);
+  ctx.textAlign='left'; ctx.fillText('CATEGORY',xC,9);
 }
 
 function renderWidgetBody(w){
@@ -4923,7 +5249,8 @@ function renderWidgetBody(w){
     case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); const rec=engRecent(days).filter(t=>t.amount<0); const byC={}; rec.forEach(t=>{const c=getTxnCategory(t);byC[c]=(byC[c]||0)+Math.abs(t.amount);}); const top=Object.entries(byC).sort((a,b)=>b[1]-a[1])[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${top?`<div class="wph-inline"><span>Largest: ${top[0]}</span><b style="color:var(--green)">${fmtK(top[1])}</b></div>`:''}</div>`; } const top=incomeSources.slice().sort((a,b)=>b.amt*(FREQ_TO_MONTHLY[b.freq]||1)-a.amt*(FREQ_TO_MONTHLY[a.freq]||1))[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">${incomeSources.length} sources \u00b7 sample</div><div class="wph-inline"><span>Largest: ${top.name}</span><b style="color:var(--green)">${fmtK(Math.round(top.amt*(FREQ_TO_MONTHLY[top.freq]||1)))}/mo</b></div></div>`; }
     case 'debt_summary': { const debts=engBills().filter(b=>b.bal<0); const d=debts.reduce((s,b)=>s+Math.abs(b.bal),0); const hi=debts.slice().sort((a,b)=>(b.apr||0)-(a.apr||0))[0]; if(dataLoaded||plaidHasLiab()){ return `<div class="wph"><div class="wph-stat" style="color:var(--red)">${fmtK(d)}</div><div class="wph-sub">across ${debts.length} balance${debts.length!==1?'s':''}</div>${hi&&hi.apr?`<div class="wph-inline"><span>Highest APR: ${esc(hi.name)}</span><b style="color:var(--amber)">${hi.apr.toFixed(1)}%</b></div>`:''}</div>`; } return `<div class="wph"><div class="wph-stat" style="color:var(--red)">${fmtK(d)}</div><div class="wph-sub">across ${debts.length} balances</div>${hi&&hi.apr?`<div class="wph-inline"><span>Highest APR: ${esc(hi.name)}</span><b style="color:var(--amber)">${hi.apr.toFixed(1)}%</b></div>`:''}</div>`; }
     case 'category_heatmap': return categoryHeatmapBody(w);
-    case 'top_categories': case 'budget_doughnut': { const cfg=widgetConfig(w); const days=wDays(w);
+    case 'budget_doughnut': return budgetTiersBody(w);
+    case 'top_categories': { const cfg=widgetConfig(w); const days=wDays(w);
       let cats = dataLoaded ? engCategoryBreakdownQ(days, cfg.query) : [{label:'Dining Out',value:612,color:'#f5a623'},{label:'Food & Groceries',value:498,color:'#3dda91'},{label:'Auto Payments',value:284,color:'#b09afa'},{label:'Subscriptions',value:142,color:'#22d3ee'},{label:'Travel',value:96,color:'#818cf8'},{label:'Medical',value:60,color:'#34d399'}];
       // sort
       if(cfg.sortBy==='name') cats=cats.slice().sort((a,b)=>cfg.sortDir==='asc'?a.label.localeCompare(b.label):b.label.localeCompare(a.label));
@@ -4959,12 +5286,12 @@ function renderWidgetBody(w){
       return `<div class="wph wph-${cfg.density}">${cats.map((c,i)=>`<div class="wph-row"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col(c,i)};margin-right:7px"></span>${c.label}</span><b>${itemVal(c)}</b></div>`).join('')}</div>`;
     }
     case 'bills_list': { return billsWidgetBody(w); }
-    case 'cashflow_chart': { const tf=w.tf||'30d'; const mb={'1w':1,'30d':3,'3m':3,'1y':12}[tf]||3; return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Income vs spending${dataLoaded?' · last '+mb+' mo':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`; }
+    case 'cashflow_chart': return cashflowChartBody(w);
     case 'pl_panel': return plWidgetBody(w);
     case 'cashflow_planner': return cfpWidgetBody(w);
     case 'goals': return goalsWidgetBody(w);
     case 'accounts_list': return acctWidgetBody(w);
-    case 'sankey': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Money flow${dataLoaded?' · last '+tfLabel(w.tf||'30d'):' · from your bills'}</div><div style="position:relative"><canvas id="cv_${w.uid}"></canvas></div></div>`;
+    case 'sankey': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Income → group → category${dataLoaded?' · last '+tfLabel(w.tf||'30d'):' · sample'}</div><div style="position:relative"><canvas id="cv_${w.uid}"></canvas></div></div>`;
     case 'net_worth_chart': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Net worth trend${dataLoaded?'':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
     case 'fire_progress': { const target=engMonthlyBills()*12*25; const cur=dataLoaded?Math.max(engNWAssets(),engNetBalance()):engNWAssets(); const pct=target>0?Math.min(100,Math.round(cur/target*100)):0; return `<div class="wph"><div class="wph-stat">${pct}%</div><div class="wph-sub">to FI (${fmtM(target)} target)</div><div class="xp-bar" style="margin-top:8px"><div class="xp-fill" style="width:${pct}%"></div></div></div>`; }
     case 'retirement_proj': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Projected growth</div><div style="height:140px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
@@ -4984,7 +5311,7 @@ let dragUid=null;
 /* ── Widget detail drill-down ──
    Widgets that support an expanded view declare it here. Opening shows a modal
    with richer Plaid / bills / income breakdowns (amounts + %, sortable lists). */
-const WIDGET_HAS_DETAIL=['net_worth_summary','cash_summary','spending_month','income_month','debt_summary','top_categories','bills_list','budget_doughnut','cashflow_chart','sankey','net_worth_chart','debt_payoff','zero_budget','fire_progress'];
+const WIDGET_HAS_DETAIL=['net_worth_summary','cash_summary','spending_month','income_month','debt_summary','top_categories','bills_list','budget_doughnut','cashflow_chart','sankey','net_worth_chart','debt_payoff','fire_progress'];
 function widgetHasDetail(type){ return WIDGET_HAS_DETAIL.includes(type); }
 function _detailRows(items, total){
   // items: [{label, value, color?, note?}] → rows with amount + %
@@ -5010,7 +5337,17 @@ function widgetDetailContent(type, days){
       return { title:'Current discretionary spending', sub:`${live?'Last '+dl:'Sample'} · ${fmtK(tot)} of ${fmtK(budget)} budget (${pct}%) · bills & savings excluded`,
         body:`<div class="wdt-total" style="color:${pct<85?'var(--green)':pct<=100?'var(--amber)':'var(--red)'}">${fmtK(tot)}<span>discretionary · ${pct}% of budget</span></div>${_detailRows(cats,tot)}` };
     }
-    case 'budget_doughnut': case 'top_categories': {
+    case 'budget_doughnut': {
+      let kids=live?engCategoryBreakdown(days):[{label:'Housing',value:2640},{label:'Dining Out',value:612},{label:'Food & Groceries',value:498},{label:'Auto Payments',value:452},{label:'Utilities',value:320},{label:'Subscriptions',value:142}].map(c=>({...c,color:getCatColor(c.label)}));
+      kids=kids.filter(c=>c.value>0);
+      const gmap={}; kids.forEach(c=>{ const p=getCatParent(c.label); if(!gmap[p.id])gmap[p.id]={label:p.label,color:p.color,value:0,kids:[]}; gmap[p.id].value+=c.value; gmap[p.id].kids.push(c); });
+      const groups=Object.values(gmap).sort((a,b)=>b.value-a.value);
+      const tot=kids.reduce((s,c)=>s+c.value,0)||1;
+      const body=`<div class="wdt-total">${fmtK(tot)}<span>total · ${groups.length} groups, ${kids.length} categories</span></div>`+
+        groups.map(g=>`<div class="wdt-section">${esc(g.label)} · ${fmtK(g.value)} (${Math.round(g.value/tot*100)}%)</div>${_detailRows(g.kids.sort((a,b)=>b.value-a.value),g.value)}`).join('');
+      return { title:'Budget by category', sub:`${live?'Last '+dl:'Sample data'} · grouped by your category tree`, body };
+    }
+    case 'top_categories': {
       const cats=live?engCategoryBreakdown(days):[{label:'Dining Out',value:612,color:'#f5a623'},{label:'Food & Groceries',value:498,color:'#3dda91'},{label:'Auto Payments',value:284,color:'#b09afa'},{label:'Subscriptions',value:142,color:'#22d3ee'}];
       const tot=cats.reduce((s,c)=>s+c.value,0);
       return { title:'Spending by category', sub:`${live?'Last '+dl:'Sample data'} · ${fmtK(tot)} total across ${cats.length} categories`,
@@ -5056,15 +5393,26 @@ function widgetDetailContent(type, days){
       return { title:'All upcoming bills', sub:`${fmtK(tot)}/mo across ${bl.length} bills${plaidHasLiab()?' · live':''}`, body:`<div class="wdt-total">${fmtK(tot)}<span>monthly bills</span></div>${_detailRows(bl,tot)}` };
     }
     case 'cashflow_chart': {
-      const ser=live?engMonthlySeries(6):[{label:'Jan',spend:2800,income:5200},{label:'Feb',spend:3100,income:5200},{label:'Mar',spend:2950,income:5800},{label:'Apr',spend:3300,income:5200},{label:'May',spend:3050,income:5200},{label:'Jun',spend:3118,income:5400}];
-      const rows=ser.map(s=>{ const net=s.income-s.spend; return `<div class="wdt-row"><span class="wdt-label">${s.label}</span><span class="wdt-vals"><span style="color:var(--green)">${fmtK(s.income)}</span> <span style="color:var(--red)">-${fmtK(s.spend)}</span> <b style="color:${net>=0?'var(--green)':'var(--red)'};min-width:64px;text-align:right">${net>=0?'+':'-'}${fmtK(Math.abs(net))}</b></span></div>`; }).join('');
-      const avgNet=Math.round(ser.reduce((s,x)=>s+(x.income-x.spend),0)/ser.length);
-      return { title:'Cash flow — last 6 months', sub:`Avg net ${avgNet>=0?'+':'-'}${fmtK(Math.abs(avgNet))}/mo`, body:`<div class="wdt-cf-head"><span>Month</span><span>Income · Spend · Net</span></div>${rows}` };
+      const p=engCashFlowProjection(90);
+      const ev=[...p.events].sort((a,b)=>a.day-b.day).slice(0,12).map(e=>({label:(e.day===0?'today':'day '+e.day)+' · '+e.name, value:Math.abs(e.amt), color:e.type==='income'?'var(--green)':'var(--red)', note:e.type}));
+      return { title:'Cash flow projection', sub:`Start ${fmtK(p.start)} → end ${fmtK(p.end)} over 90 days · low ${fmtK(p.low.bal)} on day ${p.low.day}`,
+        body:`<div class="wdt-total" style="color:${p.end>=0?'var(--green)':'var(--red)'}">${fmtK(p.end)}<span>projected balance in 90 days</span></div>
+        <div class="wdt-row"><span class="wdt-label">Income in</span><span class="wdt-vals"><b style="color:var(--green)">+${fmtK(p.totalIn)}</b></span></div>
+        <div class="wdt-row"><span class="wdt-label">Bills out</span><span class="wdt-vals"><b style="color:var(--red)">-${fmtK(p.totalOut)}</b></span></div>
+        <div class="wdt-row"><span class="wdt-label">Lowest point</span><span class="wdt-vals"><b style="color:${p.low.bal<0?'var(--red)':'var(--amber)'}">${fmtK(p.low.bal)}</b> · day ${p.low.day}</span></div>
+        <div class="wdt-section">Next events</div>${_detailRows(ev, ev.reduce((s,e)=>s+e.value,0))}` };
     }
     case 'sankey': {
-      const inc=incomeSources.map(s=>({label:s.name,value:Math.round(s.amt*(FREQ_TO_MONTHLY[s.freq]||1)),color:'#3dda91'})); const incT=inc.reduce((s,i)=>s+i.value,0);
-      const sp=live&&allTxns.length?engCategoryBreakdown(days):engBills().filter(b=>b.pay>0).map(b=>({label:b.name,value:b.pay,color:getCatColor(b.cat||'Other')})); const spT=sp.reduce((s,i)=>s+i.value,0);
-      return { title:'Money flow detail', sub:`${fmtK(incT)} in → ${fmtK(spT)} out`, body:`<div class="wdt-section">Income in</div>${_detailRows(inc,incT)}<div class="wdt-section">Flowing out</div>${_detailRows(sp,spT)}` };
+      const inc=(_effectiveIncomeSources?_effectiveIncomeSources():incomeSources).map(s=>({label:s.name,value:Math.round(s.amt*(FREQ_TO_MONTHLY[s.freq]||1)),color:'#3dda91'})); const incT=inc.reduce((s,i)=>s+i.value,0);
+      let kids = live&&allTxns.length?engCategoryBreakdown(days):[{label:'Housing',value:2640},{label:'Loan Payments',value:780},{label:'Dining Out',value:612},{label:'Food & Groceries',value:498},{label:'Auto Payments',value:452},{label:'Utilities',value:320},{label:'Gas & Fuel',value:233},{label:'Medical',value:178},{label:'Subscriptions',value:142}].map(c=>({...c,color:getCatColor(c.label)}));
+      // group into the category tree
+      const gmap={};
+      kids.forEach(c=>{ const p=getCatParent(c.label); if(!gmap[p.id])gmap[p.id]={label:p.label,color:p.color,value:0,kids:[]}; gmap[p.id].value+=c.value; gmap[p.id].kids.push(c); });
+      const groups=Object.values(gmap).sort((a,b)=>b.value-a.value);
+      const spT=kids.reduce((s,i)=>s+i.value,0)||1;
+      const body=`<div class="wdt-section">Income in · ${fmtK(incT)}</div>${_detailRows(inc,incT)}`+
+        groups.map(g=>`<div class="wdt-section">${esc(g.label)} · ${fmtK(g.value)} (${Math.round(g.value/spT*100)}%)</div>${_detailRows(g.kids.sort((a,b)=>b.value-a.value),g.value)}`).join('');
+      return { title:'Money flow by category tree', sub:`${fmtK(incT)} in → ${fmtK(spT)} out across ${groups.length} groups`, body };
     }
     case 'zero_budget': {
       const income=engMonthlyIncome(); const billRows=engBills().filter(b=>b.pay>0).map(b=>({label:b.name,value:b.pay,note:'bill'})); const bucketRows=zeroBuckets.map(z=>({label:z.name,value:z.amt,note:'envelope'}));
