@@ -579,8 +579,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .cwt-chip{font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;transition:all .12s;}
 .cwt-chip:hover{border-color:var(--border2);color:var(--text);}
 .cwt-chip.active{background:var(--green-dim);border-color:var(--green);color:var(--green);}
-/* ── Widget detail drill-down ── */
-.canvas-widget-card.has-detail .canvas-widget-body:hover{background:rgba(255,255,255,0.015);}
+/* ── Widget detail drill-down (opens only via the ⓘ info icon) ── */
+.cwh-info{color:var(--blue)!important;}
+.cwh-info:hover{background:rgba(91,141,239,0.16)!important;color:var(--blue)!important;}
 .wdt-modal{position:fixed;inset:0;z-index:2980;background:rgba(8,10,16,0.72);display:none;align-items:center;justify-content:center;padding:20px;animation:fade-in .2s ease;}
 .wdt-card{background:var(--surface);border:1px solid var(--border2);border-radius:16px;width:min(480px,94vw);max-height:84vh;display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,0.5);animation:slide-up .25s ease;}
 .wdt-head{display:flex;align-items:flex-start;justify-content:space-between;padding:18px 20px 10px;border-bottom:1px solid var(--border);}
@@ -694,6 +695,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 @media(max-width:640px){.ri-choices{grid-template-columns:1fr 1fr;}}
 @media(max-width:400px){.ri-choices{grid-template-columns:1fr;}}
 @media(max-width:640px){.ri-choices{grid-template-columns:1fr 1fr;}}
+.ri-audio-btn{position:absolute;top:16px;right:16px;z-index:10;width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);background:rgba(22,25,32,0.8);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.ri-audio-btn:hover{background:rgba(40,44,56,0.9);}
+.ri-choices.ri-goals{grid-template-columns:1fr 1fr;}
+.ri-goal{position:relative;}
+.ri-goal.sel{border-color:var(--green);background:rgba(46,204,138,0.12);}
+.ri-goal.dim{opacity:0.4;pointer-events:none;}
+.ri-goals-foot{grid-column:1/-1;margin-top:6px;display:flex;justify-content:center;}
+.ri-goals-foot .ri-cta-btn.disabled{opacity:0.5;pointer-events:none;}
 .ri-choice{background:rgba(22,25,32,0.9);border:2px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px 12px;cursor:pointer;transition:all .18s;text-align:center;}
 .ri-quiz-opt{text-align:left;padding:15px 16px;font-size:15px;font-weight:600;line-height:1.3;}
 .ri-quiz .ri-choices-title{grid-column:1/-1;}
@@ -1818,6 +1827,7 @@ canvas.chart-interactive{cursor:crosshair;}
 <div id="richieIntro" onclick="riAdvance(event)">
   <div class="ri-bg"></div>
   <div class="ri-stars" id="riStars"></div>
+  <button class="ri-audio-btn" id="riAudioBtn" onclick="event.stopPropagation();riToggleAudio()" title="Toggle Richie's voice">🔊</button>
   <div class="ri-char-wrap">
     <span class="richie ri-char" id="riChar">💰</span>
     <span class="r-zzz-wrap" id="riZzz"></span>
@@ -1849,8 +1859,7 @@ canvas.chart-interactive{cursor:crosshair;}
     </div>
     <div class="wiz-steps" id="wizSteps">
       <div class="wiz-step-tab active" data-step="1">1 · Who</div>
-      <div class="wiz-step-tab" data-step="2">2 · Starter</div>
-      <div class="wiz-step-tab" data-step="3">3 · Done</div>
+      <div class="wiz-step-tab" data-step="2">2 · Done</div>
     </div>
     <div class="wiz-body" id="wizBody"></div>
     <div class="wiz-footer">
@@ -3905,8 +3914,8 @@ function renderCanvas(pg){
     catch(e){ console.warn('widget '+w.type+' failed:',e.message); body='<div class="wph"><div class="wph-sub">Couldn\'t load this widget.</div></div>'; }
     const hasDetail=widgetHasDetail(w.type) && widgetUnlocked(def);
     const dDays=widgetHasTimeframe(w.type)?wDays(w):30;
-    const detailBtn=hasDetail?`<button class="cwh-btn" onclick="event.stopPropagation();openWidgetDetail('${w.type}',${dDays})" title="View details">\u24D8</button>`:'';
-    const bodyClick=hasDetail?` onclick="openWidgetDetail('${w.type}',${dDays})" style="cursor:pointer"`:'';
+    const detailBtn=hasDetail?`<button class="cwh-btn cwh-info" onclick="event.stopPropagation();openWidgetDetail('${w.type}',${dDays})" title="View details">\u24D8</button>`:'';
+    const bodyClick='';  // drill-down opens ONLY from the ⓘ info icon, never the body
     const hasTf=widgetHasTimeframe(w.type) && widgetUnlocked(def);
     const tfCur=w.tf||'30d';
     const tfRow=hasTf?`<div class="cwt-row">${TIMEFRAMES.map(t=>`<button class="cwt-chip${tfCur===t.key?' active':''}" onclick="event.stopPropagation();setWidgetTf('${w.uid}','${t.key}')">${t.label}</button>`).join('')}</div>`:'';
@@ -5929,7 +5938,9 @@ const RICHIE_STORY=[
   {text:"One more thing, so I can pitch everything at the right level\u2026", emotion:'curious', wake:true},
   {text:"Be honest on a few quick questions \u2014 no judgment, I'm literally a bag of money.", emotion:'happy', wake:true},
   {choice:'levelquiz'},
-  {text:"Perfect. And don't worry \u2014 as you hit goals you'll LEVEL UP and unlock more. Like a game.", emotion:'excited', wake:true},
+  {text:"Perfect \u2014 I'll tune everything to match.", emotion:'excited', wake:true},
+  {text:"Now the fun part \u2014 what are we actually working toward? Pick what matters most to you.", emotion:'excited', wake:true},
+  {choice:'goals'},
   {text:"Alright. Enough chit-chat. Let's build something good. Ready?", emotion:'celebrate', wake:true},
 ];
 let riScene=0, riTyping=false, riTypeTimer=null, riFullText="";
@@ -5953,6 +5964,7 @@ function riRenderScene(){
   if(scene.choice){
     hint.style.display='none';
     if(scene.choice==='levelquiz'){ bubble.style.display='block'; if(scene.wake&&riChar&&riChar.sleeping){riChar.sleep(false);} riStartQuiz(); return; }
+    if(scene.choice==='goals'){ bubble.style.display='block'; if(scene.wake&&riChar&&riChar.sleeping){riChar.sleep(false);} riTypeText("Pick up to 3 \u2014 these become your home pages."); riShowChoices('goals'); return; }
     bubble.style.display='none'; riShowChoices(scene.choice); return;
   }
   bubble.style.display='block';
@@ -5963,6 +5975,7 @@ function riRenderScene(){
 }
 function riTypeText(txt){
   clearTimeout(riTypeTimer); riFullText=txt; riTyping=true; if(riChar) riChar.talk(true);
+  riSpeak(txt);
   const el=gg('riText'); let i=0; el.innerHTML='<span class="ri-cursor"></span>';
   (function step(){
     if(i<=txt.length){ el.innerHTML=txt.slice(0,i)+'<span class="ri-cursor"></span>'; i++; riTypeTimer=setTimeout(step,20+Math.random()*28); }
@@ -5985,6 +5998,8 @@ function riShowChoices(kind){
   if(kind==='persona'){
     wrap.innerHTML='<div class="ri-choices-title">Pick your guide \u2014 you can change this later in settings</div>'+
       PERSONA_ORDER.map(k=>{const p=RICHIE_PERSONAS[k];return `<div class="ri-choice" onclick="riPickPersona('${k}',event)"><div class="ri-choice-icon">${p.icon}</div><div class="ri-choice-name">${p.name}</div><div class="ri-choice-desc">${p.blurb||''}</div></div>`;}).join('');
+  } else if(kind==='goals'){
+    riRenderGoals();
   } else {
     wrap.innerHTML='<div class="ri-choices-title">Your starting level \u2014 you\'ll level up as you go</div>'+
       LEVELS.map(l=>`<div class="ri-choice" onclick="riPickLevel(${l.n},event)"><div class="ri-choice-icon">${l.icon}</div><div class="ri-choice-name">Lv ${l.n} \u00b7 ${l.name}</div><div class="ri-choice-desc">${l.desc||''}</div></div>`).join('');
@@ -6026,6 +6041,63 @@ function riAnswerQuiz(pts,e){
   if(riChar) riChar.emotion('excited'); riScene++; gg('riClickHint').style.display='inline';
   riTypeText(`Got it \u2014 you're a ${lv.icon} Lv ${lv.n} \u00b7 ${lv.name}. ${lv.desc} As you hit goals you'll LEVEL UP and unlock more.`);
 }
+/* ── Narrated goals picker (now part of the intro, before naming) ── */
+function riRenderGoals(){
+  const chosen=setupConfig.chosenGoals||[];
+  const wrap=gg('riChoices'); wrap.style.display='grid'; wrap.style.gridTemplateColumns=''; wrap.classList.remove('ri-quiz'); wrap.classList.add('ri-goals');
+  wrap.innerHTML=`<div class="ri-choices-title">Pick up to 3 \u2014 ${chosen.length}/3 chosen</div>`+
+    GOAL_PRESETS.map(g=>{ const sel=chosen.some(c=>c.key===g.key); const dim=!sel&&chosen.length>=3;
+      return `<div class="ri-choice ri-goal${sel?' sel':''}${dim?' dim':''}" onclick="${dim?'':`riToggleGoal('${g.key}',event)`}"><div class="ri-choice-icon">${g.icon}</div><div class="ri-choice-name">${g.name}</div><div class="ri-choice-desc">${g.blurb||''}</div></div>`;
+    }).join('')+
+    `<div class="ri-goals-foot"><button class="ri-cta-btn${chosen.length?'':' disabled'}" onclick="riGoalsDone(event)">${chosen.length?`Continue with ${chosen.length} goal${chosen.length>1?'s':''} \u2192`:'Pick at least one'}</button></div>`;
+}
+function riToggleGoal(key,e){
+  if(e)e.stopPropagation();
+  const g=GOAL_PRESETS.find(x=>x.key===key); if(!g) return;
+  setupConfig.chosenGoals=setupConfig.chosenGoals||[];
+  const i=setupConfig.chosenGoals.findIndex(c=>c.key===key);
+  if(i>=0) setupConfig.chosenGoals.splice(i,1);
+  else { if(setupConfig.chosenGoals.length>=3) return; setupConfig.chosenGoals.push({key:g.key,name:g.name,metric:g.metric,target:g.target,icon:g.icon,auto:g.auto}); }
+  if(riChar) riChar.do('bounce');
+  riRenderGoals();
+}
+function riGoalsDone(e){
+  if(e)e.stopPropagation();
+  if(!(setupConfig.chosenGoals||[]).length) return;
+  const wrap=gg('riChoices'); wrap.style.display='none'; wrap.classList.remove('ri-goals');
+  document.querySelector('.ri-bubble-wrap').style.display='block';
+  if(riChar) riChar.emotion('celebrate'); riScene++; gg('riClickHint').style.display='inline';
+  const names=setupConfig.chosenGoals.map(g=>g.name).join(', ');
+  riTypeText(`Love it \u2014 ${names}. That's our mission. Now let's get you set up.`);
+}
+
+/* ── Richie's voice (Web Speech API) ── */
+let riAudioOn = true;
+try{ const s=LS.getItem('richie_audio'); if(s!==null) riAudioOn = s==='1'; }catch(e){}
+function riSpeak(text){
+  if(!riAudioOn || typeof window==='undefined' || !window.speechSynthesis) return;
+  try{
+    const clean=(text||'').replace(/[\u{1F000}-\u{1FAFF}\u2190-\u27BF\u2B00-\u2BFF\uFE0F]/gu,'').replace(/\s+/g,' ').trim();
+    if(!clean) return;
+    window.speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(clean);
+    u.rate=1.05; u.pitch=1.12; u.volume=1;
+    const vs=window.speechSynthesis.getVoices()||[];
+    const pick=vs.find(v=>/en[-_]?US/i.test(v.lang)&&/(daniel|alex|fred|guy|aaron|tom|male)/i.test(v.name))
+             || vs.find(v=>/en[-_]?US/i.test(v.lang)) || vs.find(v=>/^en/i.test(v.lang));
+    if(pick) u.voice=pick;
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}
+function riToggleAudio(){
+  riAudioOn=!riAudioOn;
+  try{ LS.setItem('richie_audio', riAudioOn?'1':'0'); }catch(e){}
+  if(!riAudioOn && window.speechSynthesis){ try{window.speechSynthesis.cancel();}catch(e){} }
+  else if(riAudioOn && riFullText){ riSpeak(riFullText); }
+  const b=gg('riAudioBtn'); if(b) b.textContent=riAudioOn?'🔊':'🔇';
+}
+// warm up voices list (some browsers load async)
+try{ if(typeof window!=='undefined' && window.speechSynthesis){ window.speechSynthesis.onvoiceschanged=()=>{}; window.speechSynthesis.getVoices(); } }catch(e){}
 function riFinishIntro(){
   gg('riClickHint').style.display='none'; gg('riCta').style.display='none';
   const bubble=document.querySelector('.ri-bubble-wrap'); if(bubble){bubble.style.transition='opacity .4s';bubble.style.opacity='0';}
@@ -6048,16 +6120,16 @@ const WIZ_BUNDLES=[
   {id:'playground',icon:'🎮',name:'The Playground',desc:'Stress-test scenarios and plan debt payoff interactively.',quip:'"Let\'s run the what-ifs."',pages:['Playground','Net Worth']},
   {id:'blank',icon:'🎨',name:'Blank Canvas',desc:'Start empty and build it your way.',quip:'"A true artist."',pages:['You build everything']},
 ];
-const WIZ_TITLES={1:"Who are we building this for?",2:"What are your top 3 money goals?",3:"Your plan is ready"};
-const WIZ_QUIPS={1:"Don't worry, this is the easy part.",2:"Pick 3 — I'll build your whole app around achieving them.",3:"Look at you. A plan and a coach. Let's go."};
+const WIZ_TITLES={1:"Who are we building this for?",2:"Your plan is ready"};
+const WIZ_QUIPS={1:"Don't worry, this is the easy part.",2:"Look at you. A plan and a coach. Let's go."};
 function startWizard(){ gg('setupWizard').style.display='flex'; if(!wizChar) wizChar=new RichieEmoji(gg('wizRichie')); wizChar.do('bounce'); wizGoTo(1); }
 function wizGoTo(step){
   wizStep=step;
   document.querySelectorAll('.wiz-step-tab').forEach(t=>{const s=+t.dataset.step;t.className='wiz-step-tab'+(s===step?' active':s<step?' done':'');});
   gg('wizTitle').textContent=WIZ_TITLES[step]; gg('wizQuip').textContent=WIZ_QUIPS[step];
-  gg('wizBackBtn').style.visibility=step>1&&step<3?'visible':'hidden';
-  gg('wizNextBtn').textContent=step===3?"Sign in to finish \u2192":"Next \u2192";
-  if(wizChar) wizChar.do(step===3?'tada':step%2===0?'wiggle':'bounce');
+  gg('wizBackBtn').style.visibility=step>1?'visible':'hidden';
+  gg('wizNextBtn').textContent=step===2?"Sign in to finish \u2192":"Next \u2192";
+  if(wizChar) wizChar.do(step===2?'tada':'bounce');
   wizRenderBody();
 }
 function wizRenderBody(){
@@ -6069,20 +6141,6 @@ function wizRenderBody(){
       <button class="btn" onclick="wizAddProfile()" style="margin-top:6px">+ Add a person</button></div>`;
     wizRenderProfiles();
   } else if(wizStep===2){
-    const chosen=setupConfig.chosenGoals||[];
-    b.innerHTML=`<div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6">Choose up to 3 goals. I'll build pages with exactly the right widgets to track each one — and coach you the whole way. <b style="color:var(--green)">${chosen.length}/3 chosen</b></div>
-      <div class="goal-pick-grid">${GOAL_PRESETS.map(g=>{
-        const sel=chosen.some(c=>c.key===g.key);
-        const dim=!sel&&chosen.length>=3;
-        return `<div class="goal-pick-card${sel?' selected':''}${dim?' dim':''}" onclick="${dim?'':`wizToggleGoal('${g.key}')`}">
-          <div class="bundle-check">\u2713</div>
-          <div class="goal-pick-icon">${g.icon}</div>
-          <div class="goal-pick-name">${g.name}</div>
-          <div class="goal-pick-blurb">${g.blurb}</div>
-        </div>`;
-      }).join('')}</div>
-      <div style="margin-top:14px"><button class="btn" onclick="wizCustomGoalPrompt()" style="width:100%">\u2795 Add a custom goal instead</button></div>`;
-  } else if(wizStep===3){
     const chosen=setupConfig.chosenGoals||[];
     const p=RICHIE_PERSONAS[setupConfig.persona]; const lv=LEVELS.find(l=>l.n===setupConfig.level);
     b.innerHTML=`<div class="wiz-success">
@@ -6128,8 +6186,7 @@ function wizCustomGoalPrompt(){
 function wizBack(){if(wizStep>1)wizGoTo(wizStep-1);}
 function wizNext(){
   if(wizStep===1){ if(!setupConfig.householdName.trim()){wizShake('wizHousehold');return;} if(!setupConfig.profiles.some(p=>p.name.trim())){alert("Richie says: give me at least one name!");return;} }
-  if(wizStep===2){ if(!(setupConfig.chosenGoals||[]).length){alert("Richie says: pick at least one goal — that's what I'll build your app around!");return;} }
-  if(wizStep===3){ wizFinish(); return; }
+  if(wizStep===2){ wizFinish(); return; }
   wizGoTo(wizStep+1);
 }
 function wizShake(id){const el=gg(id);if(!el)return;el.style.borderColor='#f05c5c';el.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:300});setTimeout(()=>el.style.borderColor='',800);}
