@@ -1079,6 +1079,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .pl-bar.pos{background:var(--green);}
 .pl-bar.neg{background:var(--red);}
 .pl-bar-x{font-size:8.5px;color:var(--muted);white-space:nowrap;}
+.pl-linechart{width:100%;height:auto;display:block;max-height:300px;}
+.pl-linechart.wide{max-height:240px;}
+@media(max-width:560px){.pl-linechart{max-height:340px;}}
 .pl-extra{margin-top:10px;}
 .pl-xrow{display:flex;justify-content:space-between;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--border);}
 .pl-xrow:last-child{border-bottom:none;}
@@ -5032,7 +5035,7 @@ function plMount(w){
   const det=gg('pldet_'+w.uid);
   if(det){
     // net-per-period LINE chart: solid baseline at 0, dotted line at the average
-    det.innerHTML=`${plLineSVG(s.buckets, s.avgNet)}
+    det.innerHTML=`${plLineSVG(s.buckets, s.avgNet, {wide: (w&&w.span===2)})}
       <div class="pl-extra">
         <div class="pl-xrow"><span>Avg net / period</span><b style="color:${s.avgNet>=0?'var(--green)':'var(--red)'}">${s.avgNet>=0?'+':'-'}${fmtK(Math.abs(s.avgNet))}</b></div>
         <div class="pl-xrow"><span>Best period</span><b style="color:var(--green)">${s.best?s.best.key+' · +'+fmtK(s.best.inc-s.best.spend):'—'}</b></div>
@@ -5041,30 +5044,72 @@ function plMount(w){
       </div>`;
   }
 }
-/* Net-per-period line chart with a hard zero baseline and a dotted average line */
-function plLineSVG(buckets, avgNet){
+/* Smooth monotone-cubic path (Fritsch–Carlson) — stays within the data, no overshoot */
+function _smoothPath(pts){
+  const n=pts.length;
+  if(n<2) return n?`M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`:'';
+  const dx=[],dy=[],m=[];
+  for(let i=0;i<n-1;i++){ dx[i]=pts[i+1].x-pts[i].x||1; dy[i]=pts[i+1].y-pts[i].y; m[i]=dy[i]/dx[i]; }
+  const t=new Array(n); t[0]=m[0]; t[n-1]=m[n-2];
+  for(let i=1;i<n-1;i++){ t[i]=(m[i-1]*m[i]<=0)?0:(m[i-1]+m[i])/2; }
+  for(let i=0;i<n-1;i++){
+    if(m[i]===0){ t[i]=0; t[i+1]=0; }
+    else { const a=t[i]/m[i], b=t[i+1]/m[i]; const h=Math.hypot(a,b); if(h>3){ const tau=3/h; t[i]=tau*a*m[i]; t[i+1]=tau*b*m[i]; } }
+  }
+  let d=`M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+  for(let i=0;i<n-1;i++){
+    const h=dx[i];
+    const c1x=pts[i].x+h/3, c1y=pts[i].y+t[i]*h/3;
+    const c2x=pts[i+1].x-h/3, c2y=pts[i+1].y-t[i+1]*h/3;
+    d+=` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${pts[i+1].x.toFixed(1)} ${pts[i+1].y.toFixed(1)}`;
+  }
+  return d;
+}
+/* Net-per-period SMOOTH line chart — uniform scaling (crisp on any width),
+   area fill, hard zero baseline, dashed average line. Wide vs tall layout. */
+function plLineSVG(buckets, avgNet, opts){
+  opts=opts||{};
   const b=buckets||[]; if(!b.length) return '';
   const nets=b.map(x=>x.inc-x.spend);
   const avg=avgNet!=null?avgNet:Math.round(nets.reduce((s,v)=>s+v,0)/nets.length);
+  const wide=!!opts.wide;
+  const W=wide?960:460, H=wide?300:340;
+  const padL=46, padR=wide?26:16, padT=24, padB=46;
+  const plotW=W-padL-padR, plotH=H-padT-padB, baseY=padT+plotH;
   const maxV=Math.max(...nets, avg, 0), minV=Math.min(...nets, avg, 0);
-  const rng=(maxV-minV)||1;
-  const W=300, H=120, padX=8, padT=16, padB=20, plotH=H-padT-padB;
-  const X=i=> padX + (b.length<=1?(W-padX*2)/2:(i/(b.length-1))*(W-padX*2));
-  const Y=v=> padT + (maxV - v)/rng*plotH;
+  const sp=(maxV-minV)||Math.max(Math.abs(maxV),1); const padV=sp*0.14;
+  const top=maxV+padV, bot=minV-padV, rng=(top-bot)||1;
+  const X=i=> padL + (b.length<=1? plotW/2 : (i/(b.length-1))*plotW);
+  const Y=v=> padT + (top - v)/rng*plotH;
+  const pts=nets.map((v,i)=>({x:X(i), y:Y(v), v}));
   const zeroY=Y(0), avgY=Y(avg);
-  const pts=nets.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
-  const dots=nets.map((v,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2.6" fill="${v>=0?'var(--green)':'var(--red)'}"/>`).join('');
-  // sparse x labels (avoid crowding when many daily periods)
-  const step=b.length>8?Math.ceil(b.length/6):1;
-  const xlabels=b.map((x,i)=> (i%step===0||i===b.length-1) ? `<text x="${X(i).toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="8" fill="var(--muted)">${x.key}</text>`:'').join('');
-  const avgLabel=`${avg>=0?'+':'-'}$${Math.abs(avg)>=1000?(Math.abs(avg)/1000).toFixed(1)+'k':Math.abs(avg)}`;
+  const line=_smoothPath(pts);
+  const area=`${line} L ${X(b.length-1).toFixed(1)} ${baseY.toFixed(1)} L ${X(0).toFixed(1)} ${baseY.toFixed(1)} Z`;
+  const gid='plg'+Math.random().toString(36).slice(2,7);
+  const fs=wide?15:17, fsAxis=wide?13:15, dotR=wide?4:5;
+  const dots=pts.map((p,i)=>{
+    const last=i===pts.length-1;
+    return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${last?dotR+1.5:dotR}" fill="${p.v>=0?'var(--green)':'var(--red)'}" stroke="var(--surface)" stroke-width="2"/>`;
+  }).join('');
+  const step=b.length>(wide?9:6)?Math.ceil(b.length/(wide?7:5)):1;
+  const xlabels=b.map((x,i)=> (i%step===0||i===b.length-1)
+    ? `<text x="${X(i).toFixed(1)}" y="${(H-16).toFixed(1)}" text-anchor="middle" font-size="${fsAxis}" fill="var(--muted)">${esc(x.key)}</text>`:'').join('');
+  const fk=(n)=>`${n>=0?'+':'-'}$${Math.abs(n)>=1000?(Math.abs(n)/1000).toFixed(1)+'k':Math.abs(n)}`;
   const avgCol=avg>=0?'var(--green)':'var(--red)';
-  return `<svg class="pl-linechart" viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="none" style="height:120px;display:block">
-    <line x1="${padX}" y1="${zeroY.toFixed(1)}" x2="${W-padX}" y2="${zeroY.toFixed(1)}" stroke="var(--text)" stroke-width="1.5" opacity="0.55"/>
-    <text x="${padX}" y="${(zeroY-3).toFixed(1)}" font-size="8" fill="var(--muted)" opacity="0.8">0</text>
-    <line x1="${padX}" y1="${avgY.toFixed(1)}" x2="${W-padX}" y2="${avgY.toFixed(1)}" stroke="${avgCol}" stroke-width="1.2" stroke-dasharray="4 3" opacity="0.9"/>
-    <text x="${W-padX}" y="${(avgY-3).toFixed(1)}" text-anchor="end" font-size="8" fill="${avgCol}">avg ${avgLabel}</text>
-    <polyline points="${pts}" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+  return `<svg class="pl-linechart${wide?' wide':''}" viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet" style="display:block">
+    <defs>
+      <linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--blue)" stop-opacity="0.32"/>
+        <stop offset="100%" stop-color="var(--blue)" stop-opacity="0.02"/>
+      </linearGradient>
+    </defs>
+    <line x1="${padL}" y1="${zeroY.toFixed(1)}" x2="${(W-padR).toFixed(1)}" y2="${zeroY.toFixed(1)}" stroke="var(--text)" stroke-width="1" opacity="0.4"/>
+    <text x="${(padL-8).toFixed(1)}" y="${(zeroY+4).toFixed(1)}" text-anchor="end" font-size="${fsAxis}" fill="var(--muted)" opacity="0.85">0</text>
+    <line x1="${padL}" y1="${avgY.toFixed(1)}" x2="${(W-padR).toFixed(1)}" y2="${avgY.toFixed(1)}" stroke="${avgCol}" stroke-width="1.4" stroke-dasharray="6 4" opacity="0.8"/>
+    ${(()=>{ const txt='avg '+fk(avg); const tw=txt.length*(fsAxis*0.6)+12; const x1=W-padR; const flip=(avgY-7-fsAxis)<padT; const ly=flip?avgY+fsAxis+6:avgY-8; const ry=flip?avgY+4:avgY-9-fsAxis;
+      return `<rect x="${(x1-tw).toFixed(1)}" y="${ry.toFixed(1)}" width="${tw.toFixed(1)}" height="${(fsAxis+7).toFixed(1)}" rx="4" fill="var(--surface)" opacity="0.8"/><text x="${(x1-6).toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="end" font-size="${fsAxis}" font-weight="600" fill="${avgCol}">${txt}</text>`; })()}
+    <path d="${area}" fill="url(#${gid})"/>
+    <path d="${line}" fill="none" stroke="var(--blue)" stroke-width="${wide?3:3.4}" stroke-linejoin="round" stroke-linecap="round"/>
     ${dots}
     ${xlabels}
   </svg>`;
