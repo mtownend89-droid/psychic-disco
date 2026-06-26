@@ -695,6 +695,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 @media(max-width:400px){.ri-choices{grid-template-columns:1fr;}}
 @media(max-width:640px){.ri-choices{grid-template-columns:1fr 1fr;}}
 .ri-choice{background:rgba(22,25,32,0.9);border:2px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px 12px;cursor:pointer;transition:all .18s;text-align:center;}
+.ri-quiz-opt{text-align:left;padding:15px 16px;font-size:15px;font-weight:600;line-height:1.3;}
+.ri-quiz .ri-choices-title{grid-column:1/-1;}
 .ri-choice:hover{transform:translateY(-3px);border-color:rgba(255,255,255,0.2);background:rgba(30,34,44,0.95);}
 .ri-choice-icon{font-size:30px;margin-bottom:6px;}
 .ri-choice-name{font-size:13.5px;font-weight:700;color:var(--text);margin-bottom:3px;}
@@ -1112,7 +1114,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .bill-row:last-of-type{border-bottom:none;}
 .bill-row.paid .bill-nm{text-decoration:line-through;opacity:.5;}
 .bill-row.paid .bill-sub{opacity:.5;}
-.bill-check{width:24px;height:24px;border-radius:7px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--green);font-size:13px;font-weight:800;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .12s;}
+.bills-hint{font-size:11px;color:var(--hint);margin:0 0 8px;}
+.bill-check{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--green);font-size:15px;font-weight:800;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .12s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+.bill-check:hover{border-color:var(--green);}
+.bill-check:active{transform:scale(0.92);}
 .bill-row.paid .bill-check{background:var(--green-dim);border-color:var(--green);}
 .bill-info{flex:1;min-width:0;}
 .bill-nm{font-size:13.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -3298,6 +3303,39 @@ const LEVELS=[
   {n:4,key:'investor',icon:'📈',name:'Investor',desc:"Growing wealth. Minimal hand-holding."},
   {n:5,key:'mogul',icon:'🏦',name:'Mogul',desc:"Power user. Everything on, pro mode."},
 ];
+// Quiz Richie uses to DETERMINE the starting level (no self-selection).
+// Each option carries points 1–5; the average maps to a level.
+const LEVEL_QUIZ=[
+  { q:"How do you keep track of your money right now?", opts:[
+    {label:"I don't really — it just kind of happens", pts:1},
+    {label:"I peek at my bank app now and then", pts:2},
+    {label:"I keep a budget I mostly stick to", pts:3},
+    {label:"I track budgets, savings, and net worth", pts:4},
+    {label:"Spreadsheets, accounts, the whole system", pts:5},
+  ]},
+  { q:"If a surprise $1,000 bill hit tomorrow, you'd…", opts:[
+    {label:"Be in real trouble", pts:1},
+    {label:"Scramble, but figure it out", pts:2},
+    {label:"Cover it from a small cushion", pts:3},
+    {label:"Pay it from my emergency fund, no sweat", pts:4},
+    {label:"Not even blink", pts:5},
+  ]},
+  { q:"How do you feel about investing?", opts:[
+    {label:"Honestly? No idea where to start", pts:1},
+    {label:"Curious but a little nervous", pts:2},
+    {label:"I put money in retirement accounts", pts:3},
+    {label:"I invest regularly and rebalance", pts:4},
+    {label:"I run a diversified portfolio I manage", pts:5},
+  ]},
+  { q:"Your debt situation is best described as…", opts:[
+    {label:"Stressful — I'm not sure what I owe", pts:1},
+    {label:"I make the minimum payments", pts:2},
+    {label:"I have a payoff plan I'm working", pts:3},
+    {label:"Low or no debt, all intentional", pts:4},
+    {label:"Debt's just a tool I optimize", pts:5},
+  ]},
+];
+function levelFromQuiz(score, count){ return Math.max(1, Math.min(5, Math.round(score/Math.max(count,1)))); }
 
 /* ═══════════════ BUNDLES → starter pages ═══════════════ */
 const BUNDLE_PAGES={
@@ -4267,6 +4305,7 @@ function billsWidgetBody(w){
     <div class="bills-tf">
       ${[['month','Monthly'],['week','Weekly'],['day','Daily']].map(t=>`<button class="bills-tf-btn${tf===t[0]?' active':''}" onclick="event.stopPropagation();setBillsTf('${w.uid}','${t[0]}')">${t[1]}</button>`).join('')}
     </div>
+    <div class="bills-hint">Tap the box on the left to mark a bill paid</div>
     ${rows}
     <div class="bills-foot">
       <span>${all.filter(b=>!b.paid).length} unpaid \u00b7 ${all.filter(b=>b.paid).length} paid</span>
@@ -5357,7 +5396,7 @@ let dragUid=null;
 /* ── Widget detail drill-down ──
    Widgets that support an expanded view declare it here. Opening shows a modal
    with richer Plaid / bills / income breakdowns (amounts + %, sortable lists). */
-const WIDGET_HAS_DETAIL=['net_worth_summary','cash_summary','spending_month','income_month','debt_summary','top_categories','bills_list','budget_doughnut','cashflow_chart','sankey','net_worth_chart','debt_payoff','fire_progress'];
+const WIDGET_HAS_DETAIL=['net_worth_summary','cash_summary','spending_month','income_month','debt_summary','top_categories','budget_doughnut','cashflow_chart','sankey','net_worth_chart','debt_payoff','fire_progress'];
 function widgetHasDetail(type){ return WIDGET_HAS_DETAIL.includes(type); }
 function _detailRows(items, total){
   // items: [{label, value, color?, note?}] → rows with amount + %
@@ -5804,8 +5843,8 @@ const RICHIE_STORY=[
   {text:"Before we build your world \u2014 quick thing. What kind of guide do you want me to be?", emotion:'curious', wake:true},
   {choice:'persona'},
   {text:"One more thing, so I can pitch everything at the right level\u2026", emotion:'curious', wake:true},
-  {text:"Be honest \u2014 how do you feel about money stuff right now?", emotion:'happy', wake:true},
-  {choice:'level'},
+  {text:"Be honest on a few quick questions \u2014 no judgment, I'm literally a bag of money.", emotion:'happy', wake:true},
+  {choice:'levelquiz'},
   {text:"Perfect. And don't worry \u2014 as you hit goals you'll LEVEL UP and unlock more. Like a game.", emotion:'excited', wake:true},
   {text:"Alright. Enough chit-chat. Let's build something good. Ready?", emotion:'celebrate', wake:true},
 ];
@@ -5827,7 +5866,11 @@ function riRenderScene(){
   RICHIE_STORY.forEach((_,i)=>{const d=gg('riDot-'+i);if(d)d.className='ri-dot'+(i===riScene?' active':i<riScene?' done':'');});
   const choices=gg('riChoices'), cta=gg('riCta'), hint=gg('riClickHint'), bubble=document.querySelector('.ri-bubble-wrap');
   choices.style.display='none'; cta.style.display='none';
-  if(scene.choice){ bubble.style.display='none'; hint.style.display='none'; riShowChoices(scene.choice); return; }
+  if(scene.choice){
+    hint.style.display='none';
+    if(scene.choice==='levelquiz'){ bubble.style.display='block'; if(scene.wake&&riChar&&riChar.sleeping){riChar.sleep(false);} riStartQuiz(); return; }
+    bubble.style.display='none'; riShowChoices(scene.choice); return;
+  }
   bubble.style.display='block';
   if(scene.wake && riChar && riChar.sleeping){ riChar.sleep(false); riChar.wave(); }
   else if(scene.emotion){ setTimeout(()=>{ if(riChar) riChar.emotion(scene.emotion); }, 120); }
@@ -5854,7 +5897,7 @@ function riAdvance(e){
 }
 function riCtaAction(e){ e.stopPropagation(); riFinishIntro(); }
 function riShowChoices(kind){
-  const wrap=gg('riChoices'); wrap.style.display='grid';
+  const wrap=gg('riChoices'); wrap.style.display='grid'; wrap.style.gridTemplateColumns=''; wrap.classList.remove('ri-quiz');
   if(kind==='persona'){
     wrap.innerHTML='<div class="ri-choices-title">Pick your guide \u2014 you can change this later in settings</div>'+
       PERSONA_ORDER.map(k=>{const p=RICHIE_PERSONAS[k];return `<div class="ri-choice" onclick="riPickPersona('${k}',event)"><div class="ri-choice-icon">${p.icon}</div><div class="ri-choice-name">${p.name}</div><div class="ri-choice-desc">${p.blurb||''}</div></div>`;}).join('');
@@ -5876,6 +5919,28 @@ function riPickLevel(n,e){
   gg('riChoices').style.display='none'; document.querySelector('.ri-bubble-wrap').style.display='block';
   if(riChar) riChar.emotion('happy'); riScene++; gg('riClickHint').style.display='inline';
   riTypeText(`${lv.icon} ${lv.name} it is. Good to know \u2014 I'll keep things just right for you.`);
+}
+/* ── Level quiz: Richie determines the level from answers ── */
+let riQuizIdx=0, riQuizScore=0;
+function riStartQuiz(){ riQuizIdx=0; riQuizScore=0; riRenderQuiz(); }
+function riRenderQuiz(){
+  const q=LEVEL_QUIZ[riQuizIdx];
+  if(riChar) riChar.emotion(riQuizIdx%2?'curious':'happy');
+  riTypeText(q.q);
+  const wrap=gg('riChoices'); wrap.style.display='grid'; wrap.style.gridTemplateColumns='1fr'; wrap.classList.add('ri-quiz');
+  wrap.innerHTML=`<div class="ri-choices-title">Question ${riQuizIdx+1} of ${LEVEL_QUIZ.length}</div>`+
+    q.opts.map(o=>`<div class="ri-choice ri-quiz-opt" onclick="riAnswerQuiz(${o.pts},event)">${esc(o.label)}</div>`).join('');
+}
+function riAnswerQuiz(pts,e){
+  if(e)e.stopPropagation();
+  riQuizScore+=pts; riQuizIdx++;
+  if(riQuizIdx<LEVEL_QUIZ.length){ riRenderQuiz(); return; }
+  const lvl=levelFromQuiz(riQuizScore, LEVEL_QUIZ.length);
+  setupConfig.level=lvl; const lv=LEVELS.find(l=>l.n===lvl);
+  const wrap=gg('riChoices'); wrap.style.display='none'; wrap.classList.remove('ri-quiz'); wrap.style.gridTemplateColumns='';
+  document.querySelector('.ri-bubble-wrap').style.display='block';
+  if(riChar) riChar.emotion('excited'); riScene++; gg('riClickHint').style.display='inline';
+  riTypeText(`Got it \u2014 you're a ${lv.icon} Lv ${lv.n} \u00b7 ${lv.name}. ${lv.desc} As you hit goals you'll LEVEL UP and unlock more.`);
 }
 function riFinishIntro(){
   gg('riClickHint').style.display='none'; gg('riCta').style.display='none';
