@@ -1644,6 +1644,10 @@ canvas.chart-interactive{cursor:crosshair;}
 .settings-modal{position:fixed;inset:0;z-index:500;display:none;align-items:flex-start;justify-content:flex-end;}
 .settings-modal.open{display:flex;}
 .settings-backdrop{position:absolute;inset:0;background:rgba(0,0,0,0.55);}
+.set-danger{border:1px solid rgba(240,92,92,0.3)!important;}
+.btn.danger-btn{background:rgba(240,92,92,0.12);border:1px solid rgba(240,92,92,0.4);color:#f0846c;}
+.btn.danger-btn:hover:not(:disabled){background:rgba(240,92,92,0.2);}
+.btn.danger-btn:disabled{opacity:.45;cursor:not-allowed;}
 .settings-panel{position:relative;width:540px;max-width:95vw;height:100vh;background:var(--sidebar);border-left:1px solid var(--border2);display:flex;flex-direction:column;overflow:hidden;animation:slideInRight 0.22s ease;}
 .settings-hdr{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 16px;border-bottom:1px solid var(--border);flex-shrink:0;}
 .settings-hdr-title{font-size:16px;font-weight:700;color:var(--text);}
@@ -5628,6 +5632,16 @@ function renderSettings(){
           <button class="btn" onclick="logout()">Sign out</button>
         </div>
       </div>
+
+      <div class="set-card set-danger">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
+          <div>
+            <div class="set-card-label" style="margin:0;color:var(--red)">⚠️ Full reset — start over</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Erase <b>everything</b> — pages, widgets, categories, goals, bank links, and settings — and go all the way back to Richie's intro. This cannot be undone.</div>
+          </div>
+          <button class="btn danger-btn" onclick="openFullResetConfirm()">Full reset</button>
+        </div>
+      </div>
     </div>`;
   gg('setPersonaRow').innerHTML=Object.keys(RICHIE_PERSONAS).map(k=>{
     const pp=RICHIE_PERSONAS[k];
@@ -5643,6 +5657,31 @@ function renderSettings(){
 
 function setPersona(key){ APP.persona=key; saveState(); applyAccent(); renderShell(); renderSettings(); if(sbRichie)sbRichie.do('bounce'); richieSay(RICHIE_PERSONAS[key].quips[0]); }
 function toggleProMode(){ APP.proMode=!APP.proMode; saveState(); gg('proToggle').classList.toggle('on',APP.proMode); renderSettings(); richieSay(APP.proMode?"Pro Mode ON. Everything's unlocked — go wild.":"Pro Mode off. Back to leveling up the fun way."); }
+// ── Full reset: wipe all data and revert to onboarding (type-YES confirm) ──
+function openFullResetConfirm(){
+  const inp=gg('resetConfirmInput'); if(inp){ inp.value=''; }
+  const btn=gg('resetConfirmBtn'); if(btn){ btn.disabled=true; }
+  gg('fullResetModal').style.display='flex';
+  setTimeout(()=>{ if(inp) inp.focus(); },50);
+}
+function closeFullReset(){ gg('fullResetModal').style.display='none'; }
+function fullResetCheck(){
+  const v=(gg('resetConfirmInput').value||'').trim().toUpperCase();
+  gg('resetConfirmBtn').disabled = (v!=='YES');
+}
+function doFullReset(){
+  const v=(gg('resetConfirmInput').value||'').trim().toUpperCase();
+  if(v!=='YES') return;  // hard guard — only proceeds on an exact YES
+  try{
+    ['richie_setup','richie_app','mdf_categories','mdf_cat_overrides','mdf_fire'].forEach(k=>{ try{LS.removeItem(k);}catch(e){} });
+    try{ SS.removeItem('mdf_token'); }catch(e){}
+    // defensive sweep of any remaining app-scoped keys
+    try{ Object.keys(window.localStorage||{}).forEach(k=>{ if(/^(richie_|mdf_)/.test(k)) window.localStorage.removeItem(k); }); }catch(e){}
+  }catch(e){}
+  // reload → start() sees no setup/app → runIntro() (onboarding from the top)
+  location.reload();
+}
+
 function resetWorld(){
   if(!confirm("Rebuild your pages and widgets from a fresh starter layout? Your custom page edits will be replaced (login & bank stay connected).")) return;
   const setup=JSON.parse(LS.getItem('richie_setup')||'{}');
@@ -6284,6 +6323,25 @@ function start(){
 }
 window.addEventListener('load',start);
 </script>
+
+<!-- Full Reset Confirm Modal -->
+<div id="fullResetModal" class="wdt-modal" style="display:none" onclick="if(event.target===this)closeFullReset()">
+  <div class="wdt-card" style="max-width:440px">
+    <div class="wdt-head">
+      <div><h3 style="color:var(--red)">⚠️ Full reset</h3><p class="wdt-sub">This erases everything and starts you over at onboarding.</p></div>
+      <button class="wdt-x" onclick="closeFullReset()">×</button>
+    </div>
+    <div class="wdt-body-wrap">
+      <p style="font-size:13px;color:var(--text);line-height:1.6;margin-bottom:6px">You're about to permanently delete <b>all of your data</b> — pages, widgets, categories, goals, bank connections, and settings — and restart Richie's intro from scratch. <b>This cannot be undone.</b></p>
+      <label class="mf-label">Type <b style="color:var(--red)">YES</b> to confirm</label>
+      <input class="mf-in" id="resetConfirmInput" autocomplete="off" autocapitalize="characters" placeholder="YES" oninput="fullResetCheck()" onkeydown="if(event.key==='Enter')doFullReset()">
+      <div class="mf-actions">
+        <button class="btn" onclick="closeFullReset()">Cancel</button>
+        <button class="btn danger-btn" id="resetConfirmBtn" disabled onclick="doFullReset()">Erase everything &amp; start over</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Manual Bill / Account Editor Modal -->
 <div id="manualModal" class="wdt-modal" style="display:none" onclick="if(event.target===this)closeManual()">
