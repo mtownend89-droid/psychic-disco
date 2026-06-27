@@ -455,6 +455,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 #richieAssistant{
   position:fixed;bottom:24px;right:24px;z-index:900;
 }
+.ra-actor{position:fixed;z-index:1200;width:54px;height:54px;display:flex;align-items:center;justify-content:center;font-size:40px;opacity:0;transform:scale(.3);pointer-events:none;transition:left .52s cubic-bezier(.5,1.3,.5,1),top .52s cubic-bezier(.5,1.3,.5,1),opacity .25s,transform .25s;filter:drop-shadow(0 6px 9px rgba(0,0,0,.55));}
+.ra-actor.out{opacity:1;}
+@keyframes ra-bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-5px) rotate(2deg)}}
+.ra-bubble{position:fixed;z-index:1201;max-width:280px;background:#fff;color:#15171d;border-radius:16px;padding:13px 15px 12px;box-shadow:0 16px 48px rgba(0,0,0,.55);opacity:0;transform:translateY(8px) scale(.96);transition:opacity .22s,transform .22s;pointer-events:none;}
+.ra-bubble.show{opacity:1;transform:none;pointer-events:auto;}
+.ra-msg{font-size:14px;line-height:1.45;font-weight:500;}
+.ra-acts{display:flex;gap:8px;margin-top:11px;justify-content:flex-end;}
+.ra-acts button{font-size:12px;font-weight:700;border-radius:9px;padding:6px 11px;border:1px solid #dfe2ea;background:#f3f5f8;color:#1b1e26;cursor:pointer;}
+.ra-acts #raMore{background:var(--green);border-color:var(--green);color:#06281c;}
 .richie-fab{
   width:58px;height:58px;border-radius:50%;
   background:linear-gradient(135deg,#2ecc8a,#1ba870);
@@ -1956,7 +1965,13 @@ canvas.chart-interactive{cursor:crosshair;}
       <button class="rp-new-tip-btn" onclick="newRichieTip()">💬 Tell me something else</button>
     </div>
   </div>
-  <button class="richie-fab" onclick="toggleRichiePanel()"><span id="fabChar">💰</span></button>
+  <button class="richie-fab" onclick="richieHopOut()"><span id="fabChar">💰</span></button>
+</div>
+<!-- Richie actor (emerges from his house / FAB) -->
+<div class="ra-actor" id="raActor"><span id="raChar">💰</span></div>
+<div class="ra-bubble" id="raBubble">
+  <div class="ra-msg" id="raMsg"></div>
+  <div class="ra-acts"><button id="raMore" onclick="richieCoachNow()">💬 More</button><button id="raClose" onclick="richieGoHome()">✕ go home</button></div>
 </div>
 
 <!-- PAGE EDITOR MODAL -->
@@ -5919,6 +5934,58 @@ async function richieAITip(){
     if(typeof riAudioOn!=='undefined'&&riAudioOn)riSpeak(tip);
   }catch(e){ fallback(); }
 }
+// ── Richie leaves his house (FAB), interacts, and returns ──
+let _raChar=null, _raBusy=false, _raHomeTimer=null;
+function _fabRect(){ const f=document.querySelector('.richie-fab'); return f?f.getBoundingClientRect():{left:window.innerWidth-80,top:window.innerHeight-80,width:58,height:58}; }
+function richieHopOut(){
+  if(_raBusy){ richieGoHome(); return; }
+  _raBusy=true;
+  if(!_raChar){ try{ _raChar=new RichieEmoji(gg('raChar')); }catch(e){} }
+  const fc=gg('fabChar'); if(fc) fc.style.opacity='0';            // the bag leaves the house
+  const actor=gg('raActor'); const r=_fabRect();
+  actor.style.left=(r.left+2)+'px'; actor.style.top=r.top+'px';
+  actor.classList.add('out'); actor.style.transform='scale(1)';
+  setTimeout(()=>{
+    const tx=Math.max(12, r.left-118), ty=Math.max(12, r.top-118);
+    actor.style.left=tx+'px'; actor.style.top=ty+'px';
+    if(_raChar)_raChar.emotion('happy');
+    richieCoachNow();
+  }, 80);
+}
+function richieGoHome(){
+  clearTimeout(_raHomeTimer);
+  gg('raBubble').classList.remove('show');
+  const actor=gg('raActor'); const r=_fabRect();
+  actor.style.left=(r.left+2)+'px'; actor.style.top=r.top+'px';
+  actor.style.transform='scale(.3)'; actor.style.opacity='0';
+  setTimeout(()=>{ actor.classList.remove('out'); const fc=gg('fabChar'); if(fc) fc.style.opacity='1'; _raBusy=false; }, 480);
+}
+function _raBubble(msg){
+  gg('raMsg').textContent=msg;
+  const b=gg('raBubble'); b.classList.add('show');
+  requestAnimationFrame(()=>{
+    const a=gg('raActor').getBoundingClientRect(); const bw=b.offsetWidth, bh=b.offsetHeight;
+    let x=a.left+a.width-bw+18; let y=a.top-bh-8;
+    if(y<8) y=a.top+a.height+8;
+    x=Math.max(8,Math.min(window.innerWidth-bw-8,x));
+    b.style.left=x+'px'; b.style.top=y+'px';
+  });
+}
+async function richieCoachNow(){
+  _raBubble('Let me take a look…'); if(_raChar)_raChar.emotion('curious');
+  let tip='';
+  try{
+    const res=await fetch('/api/coach',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ context:richieContext(), persona:APP.persona||'coach', level:APP.level||1, seen:_aiSeen.slice(-6) })});
+    if(res.ok){ const j=await res.json(); tip=(j&&j.tip||'').trim(); }
+  }catch(e){}
+  if(!tip){ const q=richieQuips(); tip=q[Math.floor(Math.random()*q.length)]; }
+  _aiSeen.push(tip); if(_aiSeen.length>12)_aiSeen.shift();
+  _raBubble(tip); if(_raChar)_raChar.do('point');
+  if(typeof riAudioOn!=='undefined'&&riAudioOn) riSpeak(tip);
+  clearTimeout(_raHomeTimer); _raHomeTimer=setTimeout(richieGoHome, 14000);
+}
+window.addEventListener('resize',()=>{ if(_raBusy){ const a=gg('raActor'); const r=_fabRect(); /* keep bubble anchored */ if(gg('raBubble').classList.contains('show')) _raBubble(gg('raMsg').textContent); } });
 function newSbTip(){ const b=richieQuips(); gg('sbRichieTip').textContent=b[Math.floor(Math.random()*b.length)]; }
 function richieSay(msg){
   gg('richieAssistant').style.display='block';
@@ -6482,13 +6549,34 @@ function runWelcomeBack(){
   const name=(JSON.parse(LS.getItem('richie_setup')||'{}').householdName)||(APP&&APP.household)||'friend';
   const swot=buildSWOT();
   const greet=`Welcome back! Here's your money SWOT — a quick read on where ${name} stands today.`;
+  if(typeof riAudioOn!=='undefined'&&riAudioOn) riSpeak(greet);
   // typewriter greeting
   let i=0; const el=gg('wbText'); el.innerHTML='';
   (function type(){
     if(i<=greet.length){ el.textContent=greet.slice(0,i); i++; setTimeout(type,18); }
-    else { wb.talk(false); showSwotPanel(swot); }
+    else { wb.talk(false); showSwotPanel(swot); wbDailyTask(swot, greet); }
   })();
   wb.talk(true);
+}
+function suggestDailyTask(swot){
+  try{ const bills=(engUpcomingBills()||[]).filter(b=>!b.paid);
+    if(bills.length){ return `You've got ${bills.length} bill${bills.length>1?'s':''} coming up — check them and mark anything you've already paid.`; } }catch(e){}
+  try{ if(!APP.plaidConnected && !dataLoaded){ return `Connect a bank so I can coach you with your real, live numbers.`; } }catch(e){}
+  if(swot&&swot.O&&swot.O.length) return `Today's move: ${swot.O[0]}`;
+  if(swot&&swot.W&&swot.W.length) return `One thing worth a look today: ${swot.W[0]}`;
+  return `Open your top goal and log one small win today.`;
+}
+async function wbDailyTask(swot, greet){
+  let task=suggestDailyTask(swot);
+  try{
+    const res=await fetch('/api/coach',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ context:{ screen:'Welcome / daily SWOT', ask:'Suggest ONE concrete task the user should do today', swot:{S:swot.S,W:swot.W,O:swot.O,T:swot.T}, netWorth:swot.nw }, persona:(APP&&APP.persona)||'coach', level:(APP&&APP.level)||1, seen:[] })});
+    if(res.ok){ const j=await res.json(); if(j&&j.tip) task=j.tip.trim(); }
+  }catch(e){}
+  const el=gg('wbText');
+  el.innerHTML = esc(greet||el.textContent) + `<br><br><span style="color:var(--green);font-weight:700">🎯 Today: </span>${esc(task)}`;
+  if(window._wbRichie) window._wbRichie.do('point');
+  if(typeof riAudioOn!=='undefined'&&riAudioOn) riSpeak("And here's a task for today. "+task);
 }
 function showSwotPanel(swot){
   const sec=(title,items,color,icon)=>`<div class="swot-cell"><div class="swot-head" style="color:${color}">${icon} ${title}</div><ul>${items.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;
