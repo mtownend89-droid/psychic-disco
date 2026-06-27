@@ -696,11 +696,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 @media(max-width:400px){.ri-choices{grid-template-columns:1fr;}}
 @media(max-width:640px){.ri-choices{grid-template-columns:1fr 1fr;}}
 .ri-top-ctrls{position:absolute;top:16px;right:16px;z-index:10;display:flex;align-items:center;gap:8px;}
-.ri-voice-pick{display:flex;background:rgba(22,25,32,0.8);border:1px solid rgba(255,255,255,0.15);border-radius:22px;overflow:hidden;}
-.ri-vp-btn{width:36px;height:36px;border:none;background:transparent;color:#9aa0b4;font-size:17px;font-weight:700;cursor:pointer;transition:all .14s;display:flex;align-items:center;justify-content:center;}
-.ri-vp-btn.active{background:var(--green);color:#fff;}
 .ri-audio-btn{z-index:10;width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);background:rgba(22,25,32,0.8);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .ri-audio-btn:hover{background:rgba(40,44,56,0.9);}
+.ri-voicebar{position:absolute;top:14px;left:16px;z-index:10;display:flex;flex-direction:column;gap:6px;max-width:72%;}
+.ri-voicebar-lbl{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#8b8fa8;font-weight:700;}
+.ri-vchips{display:flex;flex-wrap:wrap;gap:6px;}
+.ri-vchip{padding:6px 11px;border-radius:16px;border:1px solid rgba(255,255,255,0.15);background:rgba(22,25,32,0.8);color:#cfd2e0;font-size:12px;font-weight:600;cursor:pointer;transition:all .14s;white-space:nowrap;}
+.ri-vchip:hover{border-color:rgba(255,255,255,0.35);}
+.ri-vchip.active{background:var(--green);border-color:var(--green);color:#fff;}
 .ri-choices.ri-goals{grid-template-columns:1fr 1fr;}
 .ri-goal{position:relative;}
 .ri-goal.sel{border-color:var(--green);background:rgba(46,204,138,0.12);}
@@ -1832,12 +1835,9 @@ canvas.chart-interactive{cursor:crosshair;}
   <div class="ri-bg"></div>
   <div class="ri-stars" id="riStars"></div>
   <div class="ri-top-ctrls">
-    <div class="ri-voice-pick" title="Richie's voice">
-      <button class="ri-vp-btn active" id="riVpMale" onclick="event.stopPropagation();riSetVoiceGender('male')" title="Male voice">♂</button>
-      <button class="ri-vp-btn" id="riVpFemale" onclick="event.stopPropagation();riSetVoiceGender('female')" title="Female voice">♀</button>
-    </div>
     <button class="ri-audio-btn" id="riAudioBtn" onclick="event.stopPropagation();riToggleAudio()" title="Toggle Richie's voice">🔊</button>
   </div>
+  <div class="ri-voicebar" id="riVoiceBar"><span class="ri-voicebar-lbl">Richie's voice</span><div class="ri-vchips" id="riVoiceChips"></div></div>
   <div class="ri-char-wrap">
     <span class="richie ri-char" id="riChar">💰</span>
     <span class="r-zzz-wrap" id="riZzz"></span>
@@ -3378,9 +3378,29 @@ const LEVEL_QUIZ=[
 ];
 function levelFromQuiz(score, count){ return Math.max(1, Math.min(5, Math.round(score/Math.max(count,1)))); }
 // Voice inflection per persona (rate & pitch shape Richie's delivery)
+// Persona inflection = RELATIVE modifier on top of the chosen base voice
+// r = rate multiplier, p = pitch offset
 const PERSONA_VOICE={
-  coach:{rate:1.0,pitch:1.08}, crusher:{rate:1.13,pitch:0.9}, accountant:{rate:0.95,pitch:1.0},
-  mascot:{rate:1.18,pitch:1.34}, retired:{rate:0.9,pitch:0.97}, investor:{rate:0.98,pitch:1.03},
+  coach:{r:1.0,p:0.04}, crusher:{r:1.08,p:-0.12}, accountant:{r:0.96,p:-0.02},
+  mascot:{r:1.14,p:0.20}, retired:{r:0.9,p:-0.06}, investor:{r:0.98,p:0.0},
+};
+// Selectable base voices (male/female + styles). Each prefers matching device
+// voices, and falls back to pitch/rate shaping so they stay distinct anywhere.
+const VOICE_PRESETS=[
+  {id:'guy',  label:'Guy',   emoji:'🧔', gender:'male',   rate:1.0,  pitch:0.82, oai:'cedar',  style:'a friendly, natural adult male voice', match:/(daniel|alex|aaron|tom|fred|nathan|oliver|david|mark|reed|eddy|\bmale\b)/, sample:"Hey, I'm Richie. Let's grow your money."},
+  {id:'gal',  label:'Gal',   emoji:'👩', gender:'female', rate:1.0,  pitch:1.16, oai:'marin',  style:'a friendly, natural adult female voice', match:/(samantha|karen|victoria|moira|tessa|fiona|serena|allison|ava|susan|nora|kate|google us english|\bfemale\b)/, sample:"Hi, I'm Richie. Let's grow your money."},
+  {id:'hype', label:'Hype',  emoji:'🔥', gender:'any',    rate:1.16, pitch:1.22, oai:'fable',  style:'fast, high-energy and excited', match:/(samantha|google|natural|neural)/, sample:"WOO! I'm Richie and we are gonna CRUSH this!"},
+  {id:'calm', label:'Calm',  emoji:'🧊', gender:'any',    rate:0.9,  pitch:0.96, oai:'sage',   style:'slow, calm and soothing', match:/(daniel|serena|natural|neural)/, sample:"Take a breath. I'm Richie. We'll do this together."},
+  {id:'deep', label:'Deep',  emoji:'🎙️', gender:'male',   rate:0.94, pitch:0.68, oai:'onyx',   style:'a deep, slow, resonant male voice', match:/(daniel|alex|david|fred|reed|\bmale\b)/, sample:"I'm Richie. Let's talk about your money."},
+];
+// Per-persona delivery style sent to OpenAI TTS (gpt-4o-mini-tts "instructions")
+const PERSONA_TTS_STYLE={
+  coach:"Warm, encouraging and supportive — like a friendly coach cheering someone on.",
+  crusher:"Intense, punchy tough-love — forceful and motivating, no-nonsense.",
+  accountant:"Precise, measured and matter-of-fact. Calm and a little dry.",
+  mascot:"Hyper, goofy and excited — a high-energy cartoon mascot.",
+  retired:"Relaxed, mellow and easygoing — wise and unhurried.",
+  investor:"Calm, thoughtful, patient and folksy — reassuring and steady.",
 };
 // Decide which coach Richie becomes, from quiz affinities + goals + level
 function determinePersona(coachTally){
@@ -5675,6 +5695,17 @@ function renderSettings(){
       </div>
 
       <div class="set-card">
+        <div class="set-card-label">Richie's voice</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Pick a voice style. Tap to hear a sample. Falls back to your device's built-in voices if premium voices aren't set up.</div>
+        <div class="ri-vchips" id="setVoiceChips">${voiceChipsHTML()}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
+          <button class="btn" onclick="riToggleAudio()" id="setVoiceToggle">${riAudioOn?'🔊 Voice on':'🔇 Voice off'}</button>
+          <button class="btn" onclick="riSpeak(currentPreset().sample)">▶ Preview</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;opacity:0.8">Richie's voice is AI-generated, not a real person.</div>
+      </div>
+
+      <div class="set-card">
         <div class="set-card-label">Knowledge Level</div>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
           <div class="level-badge" id="setLevelBadge"></div>
@@ -5998,6 +6029,7 @@ function runIntro(){
   gg('riDots').innerHTML=RICHIE_STORY.map((_,i)=>`<div class="ri-dot" id="riDot-${i}"></div>`).join('');
   riChar=new RichieEmoji(gg('riChar'), gg('riZzz')); riChar.sleep(true);
   gg('richieIntro').style.display='flex';
+  const vc=gg('riVoiceChips'); if(vc) vc.innerHTML=voiceChipsHTML();
   riSyncVoiceUI();
   riScene=0; riRenderScene();
 }
@@ -6124,74 +6156,103 @@ function riGoalsDone(e){
   riTypeText(`Love it \u2014 ${names}. Based on everything you told me, here's who I'm going to be for you: your ${p.icon} ${p.name}. ${p.introLine}`);
 }
 
-/* ── Richie's voice (Web Speech API) — smooth, natural, persona-inflected ── */
+/* ── Richie's voice (Web Speech API) — preset-based, persona-inflected ── */
 let riAudioOn = true;
 try{ const s=LS.getItem('richie_audio'); if(s!==null) riAudioOn = s==='1'; }catch(e){}
-let riVoiceGender='male';
-try{ const g=LS.getItem('richie_voice_gender'); if(g==='male'||g==='female') riVoiceGender=g; }catch(e){}
-let _riVoice=null;
-const _FEMALE_VOICES=/(female|woman|samantha|victoria|karen|moira|tessa|fiona|serena|allison|ava|susan|zira|kate|catherine|nora|sandy|veena|rishi|amelie|anna|google us english|google uk english female)/;
-const _MALE_VOICES=/(\bmale\b|\bman\b|daniel|alex|fred|tom|aaron|nathan|oliver|david|mark|gordon|arthur|reed|eddy|junior|ralph|albert|bruce|lee|google uk english male)/;
-function _pickVoice(){
+let riVoiceId='guy';
+try{ const g=LS.getItem('richie_voice'); if(g&&VOICE_PRESETS.some(p=>p.id===g)) riVoiceId=g;
+     else { const old=LS.getItem('richie_voice_gender'); if(old==='female') riVoiceId='gal'; } }catch(e){}
+let _riVoice=null, _riVoiceForId=null;
+const _FEMALE_VOICES=/(female|woman|samantha|victoria|karen|moira|tessa|fiona|serena|allison|ava|susan|zira|kate|catherine|nora|sandy|veena|amelie|anna|google us english|google uk english female)/;
+const _MALE_VOICES=/(\bmale\b|\bman\b|daniel|alex|fred|tom|aaron|nathan|oliver|david|mark|gordon|arthur|reed|eddy|junior|ralph|albert|bruce|lee|rishi|google uk english male)/;
+function currentPreset(){ return VOICE_PRESETS.find(p=>p.id===riVoiceId)||VOICE_PRESETS[0]; }
+function _pickVoice(preset){
   if(typeof window==='undefined' || !window.speechSynthesis) return null;
   const vs=window.speechSynthesis.getVoices()||[]; if(!vs.length) return null;
-  const want=riVoiceGender;
+  const want=preset.gender;
   const score=v=>{ let s=0; const n=(v.name||'').toLowerCase(), l=(v.lang||'').toLowerCase();
-    if(/^en[-_]us/.test(l)) s+=5; else if(/^en[-_]gb/.test(l)) s+=3; else if(/^en/.test(l)) s+=2;
+    if(/^en[-_]us/.test(l)) s+=5; else if(/^en[-_]gb/.test(l)) s+=3; else if(/^en/.test(l)) s+=2; else s-=4;
     if(/natural|neural|enhanced|premium/.test(n)) s+=7;
     if(/google/.test(n)) s+=4;
     if(/microsoft/.test(n)) s+=2;
-    const isF=_FEMALE_VOICES.test(n), isM=_MALE_VOICES.test(n);   // gender preference is strong
-    if(want==='female'){ if(isF) s+=12; else if(isM) s-=10; }
-    else { if(isM) s+=12; else if(isF) s-=10; }
+    if(preset.match && preset.match.test(n)) s+=9;            // preferred names for this preset
+    if(want==='male'){ if(_MALE_VOICES.test(n)) s+=10; else if(_FEMALE_VOICES.test(n)) s-=9; }
+    else if(want==='female'){ if(_FEMALE_VOICES.test(n)) s+=10; else if(_MALE_VOICES.test(n)) s-=9; }
     return s; };
   return vs.slice().sort((a,b)=>score(b)-score(a))[0]||vs[0];
 }
-function _personaVoice(){ const k=setupConfig.persona||(typeof APP!=='undefined'&&APP.persona); return PERSONA_VOICE[k]||{rate:1.02,pitch:1.08}; }
-function riSpeak(text){
-  if(!riAudioOn || typeof window==='undefined' || !window.speechSynthesis) return;
-  try{
-    const clean=(text||'').replace(/[\u{1F000}-\u{1FAFF}\u2190-\u27BF\u2B00-\u2BFF\uFE0F\u2022]/gu,'').replace(/\s+/g,' ').trim();
-    if(!clean) return;
-    if(!_riVoice) _riVoice=_pickVoice();
-    const v=_personaVoice();
-    // female-selected voices read a touch higher; male a touch lower — on top of persona shaping
-    const gp=riVoiceGender==='female'?0.06:-0.04;
-    window.speechSynthesis.cancel();
-    const chunks=clean.match(/[^.!?…]+[.!?…]*/g)||[clean];
-    chunks.forEach(ch=>{
-      const t=ch.trim(); if(!t) return;
-      const u=new SpeechSynthesisUtterance(t);
-      u.rate=v.rate; u.pitch=Math.max(0,v.pitch+gp); u.volume=1;
-      if(_riVoice) u.voice=_riVoice;
-      window.speechSynthesis.speak(u);
-    });
-  }catch(e){}
+function _personaMod(){ const k=setupConfig.persona||(typeof APP!=='undefined'&&APP.persona); return PERSONA_VOICE[k]||{r:1.0,p:0.04}; }
+function _resolveVoice(){
+  const pre=currentPreset();
+  if(_riVoiceForId!==pre.id){ _riVoice=_pickVoice(pre); _riVoiceForId=pre.id; }
+  return _riVoice;
 }
-function riSetVoiceGender(g){
-  if(g!=='male'&&g!=='female') return;
-  riVoiceGender=g; try{ LS.setItem('richie_voice_gender',g); }catch(e){}
-  _riVoice=_pickVoice();
-  const mm=gg('riVpMale'), ff=gg('riVpFemale');
-  if(mm) mm.classList.toggle('active',g==='male');
-  if(ff) ff.classList.toggle('active',g==='female');
-  if(riAudioOn && riFullText) riSpeak(riFullText);   // preview the new voice
+/* Cloud TTS via our backend proxy → OpenAI. Auto-detects; falls back to the
+   browser voice if the /api/tts route isn't set up (no key / not deployed). */
+let _ttsMode='auto';   // 'auto' | 'cloud' | 'browser'
+let _ttsAudio=null, _ttsSeq=0;
+function _stopTts(){ try{ if(_ttsAudio){ _ttsAudio.pause(); _ttsAudio=null; } }catch(e){} try{ if(window.speechSynthesis) window.speechSynthesis.cancel(); }catch(e){} }
+async function _ttsCloud(text){
+  const pre=currentPreset();
+  const k=setupConfig.persona||(typeof APP!=='undefined'&&APP.persona)||'coach';
+  const instructions=`Speak as Richie, a money coach, in ${pre.style}. ${PERSONA_TTS_STYLE[k]||''}`.trim();
+  const seq=++_ttsSeq;
+  const res=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({text, voice:pre.oai||'cedar', instructions})});
+  if(!res.ok) throw new Error('tts '+res.status);
+  const buf=await res.arrayBuffer();
+  if(seq!==_ttsSeq) return;                 // a newer line superseded this one
+  const url=URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'}));
+  _stopTts();
+  _ttsAudio=new Audio(url); _ttsAudio.play().catch(()=>{});
+  _ttsAudio.onended=()=>{ try{URL.revokeObjectURL(url);}catch(e){} };
+}
+function _speakBrowser(clean){
+  if(typeof window==='undefined' || !window.speechSynthesis) return;
+  const pre=currentPreset(); const voice=_resolveVoice(); const mod=_personaMod();
+  const rate=Math.max(0.6,Math.min(1.8, pre.rate*mod.r));
+  const pitch=Math.max(0.1,Math.min(2, pre.pitch+mod.p));
+  window.speechSynthesis.cancel();
+  const chunks=clean.match(/[^.!?…]+[.!?…]*/g)||[clean];
+  chunks.forEach(ch=>{ const t=ch.trim(); if(!t) return;
+    const u=new SpeechSynthesisUtterance(t);
+    u.rate=rate; u.pitch=pitch; u.volume=1; if(voice) u.voice=voice;
+    window.speechSynthesis.speak(u);
+  });
+}
+function riSpeak(text){
+  if(!riAudioOn || typeof window==='undefined') return;
+  const clean=(text||'').replace(/[\u{1F000}-\u{1FAFF}\u2190-\u27BF\u2B00-\u2BFF\uFE0F\u2022]/gu,'').replace(/\s+/g,' ').trim();
+  if(!clean) return;
+  if(_ttsMode==='browser'){ _speakBrowser(clean); return; }
+  // auto / cloud: try the cloud voice; on any failure, fall back to the browser voice
+  _ttsCloud(clean).then(()=>{ _ttsMode='cloud'; }).catch(()=>{ _ttsMode='browser'; _speakBrowser(clean); });
+}
+function riSetVoice(id){
+  if(!VOICE_PRESETS.some(p=>p.id===id)) return;
+  riVoiceId=id; try{ LS.setItem('richie_voice',id); }catch(e){}
+  _riVoiceForId=null; _resolveVoice();
+  riSyncVoiceUI();
+  _stopTts();
+  if(riAudioOn){ const pre=currentPreset(); riSpeak(pre.sample||riFullText||"Hi, I'm Richie."); }  // preview
 }
 function riSyncVoiceUI(){
-  const mm=gg('riVpMale'), ff=gg('riVpFemale'), ab=gg('riAudioBtn');
-  if(mm) mm.classList.toggle('active',riVoiceGender==='male');
-  if(ff) ff.classList.toggle('active',riVoiceGender==='female');
-  if(ab) ab.textContent=riAudioOn?'🔊':'🔇';
+  document.querySelectorAll('.ri-vchip').forEach(el=>el.classList.toggle('active', el.getAttribute('data-vid')===riVoiceId));
+  const ab=gg('riAudioBtn'); if(ab) ab.textContent=riAudioOn?'🔊':'🔇';
+  const st=gg('setVoiceToggle'); if(st) st.textContent=riAudioOn?'🔊 Voice on':'🔇 Voice off';
 }
 function riToggleAudio(){
   riAudioOn=!riAudioOn;
   try{ LS.setItem('richie_audio', riAudioOn?'1':'0'); }catch(e){}
-  if(!riAudioOn && window.speechSynthesis){ try{window.speechSynthesis.cancel();}catch(e){} }
-  else if(riAudioOn && riFullText){ riSpeak(riFullText); }
-  const b=gg('riAudioBtn'); if(b) b.textContent=riAudioOn?'🔊':'🔇';
+  if(!riAudioOn){ _stopTts(); }
+  else { const pre=currentPreset(); riSpeak(riFullText||pre.sample); }
+  riSyncVoiceUI();
+}
+function voiceChipsHTML(){
+  return VOICE_PRESETS.map(p=>`<button class="ri-vchip${p.id===riVoiceId?' active':''}" data-vid="${p.id}" onclick="event.stopPropagation();riSetVoice('${p.id}')" title="${esc(p.label)} voice">${p.emoji} ${p.label}</button>`).join('');
 }
 // warm up voices list (some browsers load async) and cache the best one
-try{ if(typeof window!=='undefined' && window.speechSynthesis){ window.speechSynthesis.onvoiceschanged=()=>{ _riVoice=_pickVoice(); }; window.speechSynthesis.getVoices(); } }catch(e){}
+try{ if(typeof window!=='undefined' && window.speechSynthesis){ window.speechSynthesis.onvoiceschanged=()=>{ _riVoiceForId=null; _resolveVoice(); }; window.speechSynthesis.getVoices(); } }catch(e){}
 function riFinishIntro(){
   gg('riClickHint').style.display='none'; gg('riCta').style.display='none';
   const bubble=document.querySelector('.ri-bubble-wrap'); if(bubble){bubble.style.transition='opacity .4s';bubble.style.opacity='0';}
