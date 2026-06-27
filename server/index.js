@@ -62,6 +62,66 @@ if (!APP_USER || !APP_PASS) {
   console.warn('⚠️  APP_USERNAME or APP_PASSWORD not set — login will fail');
   console.warn('   Set them in Render → Environment');
 }
+const PERSONA_STYLE = {
+  coach:      "a warm, encouraging coach. Celebrate progress, keep it kind.",
+  crusher:    "a tough-love debt crusher. Punchy, urgent, no excuses — but never mean.",
+  accountant: "a precise, dry, matter-of-fact accountant. Exact and calm.",
+  mascot:     "a hyper, goofy cartoon mascot. Playful, high-energy, a little silly.",
+  retired:    "a relaxed retired millionaire. Big-picture, unhurried, wise.",
+  investor:   "a patient, folksy value investor. Calm, long-term, reassuring.",
+};
+ 
+app.post('/api/coach', async (req, res) => {
+  try {
+    const { context = {}, persona = 'coach', level = 1, seen = [] } = req.body || {};
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(501).json({ error: 'coach not configured' });
+    }
+ 
+    const style = PERSONA_STYLE[persona] || PERSONA_STYLE.coach;
+    const sys = [
+      `You are Richie, an in-app money coach. Speak as ${style}`,
+      `The user is at knowledge level ${level} of 5 (1 = brand new, 5 = expert).`,
+      `Give ONE short, specific, helpful pointer (max 2 sentences) about what is on their screen right now.`,
+      `At low levels explain basics simply; at high levels be sharper and more strategic. No fluff, no greetings every time.`,
+      `Ground the tip in the actual numbers provided. Never invent figures. Do not repeat any idea in the "alreadySeen" list.`,
+      `Plain text only — no markdown, no emoji unless the persona is the mascot.`,
+    ].join(' ');
+ 
+    const user = JSON.stringify({ screen: context, alreadySeen: seen });
+ 
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_COACH_MODEL || 'gpt-4o-mini', // cheap + fast; override via env if you like
+        messages: [
+          { role: 'system', content: sys },
+          { role: 'user', content: user },
+        ],
+        max_tokens: 90,
+        temperature: 0.7,
+      }),
+    });
+ 
+    if (!r.ok) {
+      const detail = await r.text().catch(() => '');
+      console.error('OpenAI coach error', r.status, detail);
+      return res.status(502).json({ error: 'coach upstream', status: r.status });
+    }
+ 
+    const data = await r.json();
+    const tip = (data.choices?.[0]?.message?.content || '').trim();
+    res.json({ tip });
+  } catch (e) {
+    console.error('coach route error', e);
+    res.status(500).json({ error: String((e && e.message) || e) });
+  }
+});
+ 
 
 // ── TOKEN AUTH ────────────────────────────────────────────────────────────────
 // Simple signed token stored in sessionStorage — no cookies needed
