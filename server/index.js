@@ -10,6 +10,47 @@ const { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } = re
 const app = express();
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '50kb' }));
+app.post('/api/tts', async (req, res) => {
+  try {
+    const { text, voice, instructions } = req.body || {};
+    if (!text || !String(text).trim()) {
+      return res.status(400).json({ error: 'no text' });
+    }
+    if (!process.env.OPENAI_API_KEY) {
+      // Not configured yet → the app quietly falls back to the device voice.
+      return res.status(501).json({ error: 'TTS not configured' });
+    }
+ 
+    const upstream = await fetch('https://api.openai.com/v1/audio/speech', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini-tts',                 // supports the `instructions` style field
+        voice: voice || 'cedar',                  // cedar/marin are the newest, highest quality
+        input: String(text).slice(0, 1000),       // safety cap
+        instructions: instructions || undefined,  // e.g. "Speak warm and encouraging"
+        response_format: 'mp3',
+      }),
+    });
+ 
+    if (!upstream.ok) {
+      const detail = await upstream.text().catch(() => '');
+      console.error('OpenAI TTS error', upstream.status, detail);
+      return res.status(502).json({ error: 'tts upstream', status: upstream.status });
+    }
+ 
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    res.set('Content-Type', 'audio/mpeg');
+    res.set('Cache-Control', 'no-store');
+    res.send(buf);
+  } catch (e) {
+    console.error('TTS route error', e);
+    res.status(500).json({ error: String((e && e.message) || e) });
+  }
+});
 app.use(cors({ origin: true, credentials: true }));
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
