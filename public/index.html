@@ -695,7 +695,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 @media(max-width:640px){.ri-choices{grid-template-columns:1fr 1fr;}}
 @media(max-width:400px){.ri-choices{grid-template-columns:1fr;}}
 @media(max-width:640px){.ri-choices{grid-template-columns:1fr 1fr;}}
-.ri-audio-btn{position:absolute;top:16px;right:16px;z-index:10;width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);background:rgba(22,25,32,0.8);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.ri-top-ctrls{position:absolute;top:16px;right:16px;z-index:10;display:flex;align-items:center;gap:8px;}
+.ri-voice-pick{display:flex;background:rgba(22,25,32,0.8);border:1px solid rgba(255,255,255,0.15);border-radius:22px;overflow:hidden;}
+.ri-vp-btn{width:36px;height:36px;border:none;background:transparent;color:#9aa0b4;font-size:17px;font-weight:700;cursor:pointer;transition:all .14s;display:flex;align-items:center;justify-content:center;}
+.ri-vp-btn.active{background:var(--green);color:#fff;}
+.ri-audio-btn{z-index:10;width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);background:rgba(22,25,32,0.8);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .ri-audio-btn:hover{background:rgba(40,44,56,0.9);}
 .ri-choices.ri-goals{grid-template-columns:1fr 1fr;}
 .ri-goal{position:relative;}
@@ -1827,7 +1831,13 @@ canvas.chart-interactive{cursor:crosshair;}
 <div id="richieIntro" onclick="riAdvance(event)">
   <div class="ri-bg"></div>
   <div class="ri-stars" id="riStars"></div>
-  <button class="ri-audio-btn" id="riAudioBtn" onclick="event.stopPropagation();riToggleAudio()" title="Toggle Richie's voice">🔊</button>
+  <div class="ri-top-ctrls">
+    <div class="ri-voice-pick" title="Richie's voice">
+      <button class="ri-vp-btn active" id="riVpMale" onclick="event.stopPropagation();riSetVoiceGender('male')" title="Male voice">♂</button>
+      <button class="ri-vp-btn" id="riVpFemale" onclick="event.stopPropagation();riSetVoiceGender('female')" title="Female voice">♀</button>
+    </div>
+    <button class="ri-audio-btn" id="riAudioBtn" onclick="event.stopPropagation();riToggleAudio()" title="Toggle Richie's voice">🔊</button>
+  </div>
   <div class="ri-char-wrap">
     <span class="richie ri-char" id="riChar">💰</span>
     <span class="r-zzz-wrap" id="riZzz"></span>
@@ -3323,35 +3333,71 @@ const LEVELS=[
 // Each option carries points 1–5; the average maps to a level.
 const LEVEL_QUIZ=[
   { q:"How do you keep track of your money right now?", opts:[
-    {label:"I don't really — it just kind of happens", pts:1},
-    {label:"I peek at my bank app now and then", pts:2},
-    {label:"I keep a budget I mostly stick to", pts:3},
-    {label:"I track budgets, savings, and net worth", pts:4},
-    {label:"Spreadsheets, accounts, the whole system", pts:5},
+    {label:"I don't really — it just kind of happens", pts:1, coach:'mascot'},
+    {label:"I peek at my bank app now and then", pts:2, coach:'coach'},
+    {label:"I keep a budget I mostly stick to", pts:3, coach:'accountant'},
+    {label:"I track budgets, savings, and net worth", pts:4, coach:'accountant'},
+    {label:"Spreadsheets, accounts, the whole system", pts:5, coach:'accountant'},
   ]},
   { q:"If a surprise $1,000 bill hit tomorrow, you'd…", opts:[
-    {label:"Be in real trouble", pts:1},
-    {label:"Scramble, but figure it out", pts:2},
-    {label:"Cover it from a small cushion", pts:3},
-    {label:"Pay it from my emergency fund, no sweat", pts:4},
-    {label:"Not even blink", pts:5},
+    {label:"Be in real trouble", pts:1, coach:'coach'},
+    {label:"Scramble, but figure it out", pts:2, coach:'coach'},
+    {label:"Cover it from a small cushion", pts:3, coach:'coach'},
+    {label:"Pay it from my emergency fund, no sweat", pts:4, coach:'retired'},
+    {label:"Not even blink", pts:5, coach:'retired'},
   ]},
   { q:"How do you feel about investing?", opts:[
-    {label:"Honestly? No idea where to start", pts:1},
-    {label:"Curious but a little nervous", pts:2},
-    {label:"I put money in retirement accounts", pts:3},
-    {label:"I invest regularly and rebalance", pts:4},
-    {label:"I run a diversified portfolio I manage", pts:5},
+    {label:"Honestly? No idea where to start", pts:1, coach:'mascot'},
+    {label:"Curious but a little nervous", pts:2, coach:'coach'},
+    {label:"I put money in retirement accounts", pts:3, coach:'investor'},
+    {label:"I invest regularly and rebalance", pts:4, coach:'investor'},
+    {label:"I run a diversified portfolio I manage", pts:5, coach:'investor'},
   ]},
   { q:"Your debt situation is best described as…", opts:[
-    {label:"Stressful — I'm not sure what I owe", pts:1},
-    {label:"I make the minimum payments", pts:2},
-    {label:"I have a payoff plan I'm working", pts:3},
-    {label:"Low or no debt, all intentional", pts:4},
-    {label:"Debt's just a tool I optimize", pts:5},
+    {label:"Stressful — I'm not sure what I owe", pts:1, coach:'crusher'},
+    {label:"I make the minimum payments", pts:2, coach:'crusher'},
+    {label:"I have a payoff plan I'm working", pts:3, coach:'crusher'},
+    {label:"Low or no debt, all intentional", pts:4, coach:'investor'},
+    {label:"Debt's just a tool I optimize", pts:5, coach:'accountant'},
+  ]},
+  // ── coaching-style questions (no level points; they steer which coach Richie becomes) ──
+  { q:"When money gets stressful, what helps you most?", opts:[
+    {label:"A cheerleader in my corner", coach:'coach'},
+    {label:"Someone to light a fire under me", coach:'crusher'},
+    {label:"Cold, hard numbers and a plan", coach:'accountant'},
+    {label:"Keeping it light and a little silly", coach:'mascot'},
+    {label:"Big-picture perspective from someone who's made it", coach:'retired'},
+  ]},
+  { q:"How do you want me to talk to you?", opts:[
+    {label:"Warm and encouraging", coach:'coach'},
+    {label:"Blunt and intense — no excuses", coach:'crusher'},
+    {label:"Precise and matter-of-fact", coach:'accountant'},
+    {label:"Goofy and hyped up", coach:'mascot'},
+    {label:"Calm, wise, and folksy", coach:'investor'},
   ]},
 ];
 function levelFromQuiz(score, count){ return Math.max(1, Math.min(5, Math.round(score/Math.max(count,1)))); }
+// Voice inflection per persona (rate & pitch shape Richie's delivery)
+const PERSONA_VOICE={
+  coach:{rate:1.0,pitch:1.08}, crusher:{rate:1.13,pitch:0.9}, accountant:{rate:0.95,pitch:1.0},
+  mascot:{rate:1.18,pitch:1.34}, retired:{rate:0.9,pitch:0.97}, investor:{rate:0.98,pitch:1.03},
+};
+// Decide which coach Richie becomes, from quiz affinities + goals + level
+function determinePersona(coachTally){
+  const t={}; PERSONA_ORDER.forEach(k=>t[k]=coachTally&&coachTally[k]||0);
+  (setupConfig.chosenGoals||[]).forEach(g=>{
+    const m=((g.metric||'')+' '+(g.key||'')+' '+(g.name||'')).toLowerCase();
+    if(/debt|credit/.test(m)) t.crusher+=2;
+    else if(/emergency|saving|save/.test(m)) t.coach+=1.5;
+    else if(/net.?worth|fire|invest|retire|coast/.test(m)){ t.investor+=1.5; t.retired+=1; }
+  });
+  const lv=setupConfig.level||3;
+  if(lv>=4){ t.investor+=1; t.accountant+=1; }
+  else if(lv<=2){ t.coach+=1; t.mascot+=0.5; }
+  let best='coach', bv=-Infinity;
+  PERSONA_ORDER.forEach(k=>{ if(t[k]>bv){ bv=t[k]; best=k; } });
+  return best;
+}
 
 /* ═══════════════ BUNDLES → starter pages ═══════════════ */
 const BUNDLE_PAGES={
@@ -5933,14 +5979,12 @@ const RICHIE_STORY=[
   {text:"Name's Richie. I'm your money guy. Part accountant, part hype man, fully made of cash.", emotion:'happy', wake:true},
   {text:"Most people have no clue where their money goes. It just\u2026 vanishes. Spooky.", emotion:'surprised', wake:true},
   {text:"But you? You showed up. That already puts you ahead of most folks. No pressure.", emotion:'proud', wake:true},
-  {text:"Before we build your world \u2014 quick thing. What kind of guide do you want me to be?", emotion:'curious', wake:true},
-  {choice:'persona'},
-  {text:"One more thing, so I can pitch everything at the right level\u2026", emotion:'curious', wake:true},
-  {text:"Be honest on a few quick questions \u2014 no judgment, I'm literally a bag of money.", emotion:'happy', wake:true},
+  {text:"Before we build your world \u2014 let me get to know you. A few quick questions, be honest.", emotion:'curious', wake:true},
   {choice:'levelquiz'},
   {text:"Perfect \u2014 I'll tune everything to match.", emotion:'excited', wake:true},
   {text:"Now the fun part \u2014 what are we actually working toward? Pick what matters most to you.", emotion:'excited', wake:true},
   {choice:'goals'},
+  {text:"Reveal placeholder", emotion:'celebrate', wake:true},
   {text:"Alright. Enough chit-chat. Let's build something good. Ready?", emotion:'celebrate', wake:true},
 ];
 let riScene=0, riTyping=false, riTypeTimer=null, riFullText="";
@@ -5954,6 +5998,7 @@ function runIntro(){
   gg('riDots').innerHTML=RICHIE_STORY.map((_,i)=>`<div class="ri-dot" id="riDot-${i}"></div>`).join('');
   riChar=new RichieEmoji(gg('riChar'), gg('riZzz')); riChar.sleep(true);
   gg('richieIntro').style.display='flex';
+  riSyncVoiceUI();
   riScene=0; riRenderScene();
 }
 function riRenderScene(){
@@ -6019,22 +6064,25 @@ function riPickLevel(n,e){
   if(riChar) riChar.emotion('happy'); riScene++; gg('riClickHint').style.display='inline';
   riTypeText(`${lv.icon} ${lv.name} it is. Good to know \u2014 I'll keep things just right for you.`);
 }
-/* ── Level quiz: Richie determines the level from answers ── */
-let riQuizIdx=0, riQuizScore=0;
-function riStartQuiz(){ riQuizIdx=0; riQuizScore=0; riRenderQuiz(); }
+/* ── Level quiz: Richie determines the level AND which coach to become ── */
+let riQuizIdx=0, riQuizScore=0, riQuizLevelCount=0, _quizCoach={};
+function riStartQuiz(){ riQuizIdx=0; riQuizScore=0; riQuizLevelCount=0; _quizCoach={}; riRenderQuiz(); }
 function riRenderQuiz(){
   const q=LEVEL_QUIZ[riQuizIdx];
   if(riChar) riChar.emotion(riQuizIdx%2?'curious':'happy');
   riTypeText(q.q);
   const wrap=gg('riChoices'); wrap.style.display='grid'; wrap.style.gridTemplateColumns='1fr'; wrap.classList.add('ri-quiz');
   wrap.innerHTML=`<div class="ri-choices-title">Question ${riQuizIdx+1} of ${LEVEL_QUIZ.length}</div>`+
-    q.opts.map(o=>`<div class="ri-choice ri-quiz-opt" onclick="riAnswerQuiz(${o.pts},event)">${esc(o.label)}</div>`).join('');
+    q.opts.map((o,oi)=>`<div class="ri-choice ri-quiz-opt" onclick="riAnswerQuiz(${oi},event)">${esc(o.label)}</div>`).join('');
 }
-function riAnswerQuiz(pts,e){
+function riAnswerQuiz(oi,e){
   if(e)e.stopPropagation();
-  riQuizScore+=pts; riQuizIdx++;
+  const o=LEVEL_QUIZ[riQuizIdx].opts[oi]||{};
+  if(o.pts!=null){ riQuizScore+=o.pts; riQuizLevelCount++; }
+  if(o.coach){ const w=(o.pts!=null?1:2); _quizCoach[o.coach]=(_quizCoach[o.coach]||0)+w; }  // style Qs weigh 2×
+  riQuizIdx++;
   if(riQuizIdx<LEVEL_QUIZ.length){ riRenderQuiz(); return; }
-  const lvl=levelFromQuiz(riQuizScore, LEVEL_QUIZ.length);
+  const lvl=levelFromQuiz(riQuizScore, riQuizLevelCount);
   setupConfig.level=lvl; const lv=LEVELS.find(l=>l.n===lvl);
   const wrap=gg('riChoices'); wrap.style.display='none'; wrap.classList.remove('ri-quiz'); wrap.style.gridTemplateColumns='';
   document.querySelector('.ri-bubble-wrap').style.display='block';
@@ -6066,28 +6114,74 @@ function riGoalsDone(e){
   if(!(setupConfig.chosenGoals||[]).length) return;
   const wrap=gg('riChoices'); wrap.style.display='none'; wrap.classList.remove('ri-goals');
   document.querySelector('.ri-bubble-wrap').style.display='block';
+  // Richie picks his own personality now, from the quiz answers + goals + level
+  const pk=determinePersona(_quizCoach);
+  setupConfig.persona=pk; introApplyAccent();
+  const p=RICHIE_PERSONAS[pk];
   if(riChar) riChar.emotion('celebrate'); riScene++; gg('riClickHint').style.display='inline';
   const names=setupConfig.chosenGoals.map(g=>g.name).join(', ');
-  riTypeText(`Love it \u2014 ${names}. That's our mission. Now let's get you set up.`);
+  // persona voice is now active for this reveal line
+  riTypeText(`Love it \u2014 ${names}. Based on everything you told me, here's who I'm going to be for you: your ${p.icon} ${p.name}. ${p.introLine}`);
 }
 
-/* ── Richie's voice (Web Speech API) ── */
+/* ── Richie's voice (Web Speech API) — smooth, natural, persona-inflected ── */
 let riAudioOn = true;
 try{ const s=LS.getItem('richie_audio'); if(s!==null) riAudioOn = s==='1'; }catch(e){}
+let riVoiceGender='male';
+try{ const g=LS.getItem('richie_voice_gender'); if(g==='male'||g==='female') riVoiceGender=g; }catch(e){}
+let _riVoice=null;
+const _FEMALE_VOICES=/(female|woman|samantha|victoria|karen|moira|tessa|fiona|serena|allison|ava|susan|zira|kate|catherine|nora|sandy|veena|rishi|amelie|anna|google us english|google uk english female)/;
+const _MALE_VOICES=/(\bmale\b|\bman\b|daniel|alex|fred|tom|aaron|nathan|oliver|david|mark|gordon|arthur|reed|eddy|junior|ralph|albert|bruce|lee|google uk english male)/;
+function _pickVoice(){
+  if(typeof window==='undefined' || !window.speechSynthesis) return null;
+  const vs=window.speechSynthesis.getVoices()||[]; if(!vs.length) return null;
+  const want=riVoiceGender;
+  const score=v=>{ let s=0; const n=(v.name||'').toLowerCase(), l=(v.lang||'').toLowerCase();
+    if(/^en[-_]us/.test(l)) s+=5; else if(/^en[-_]gb/.test(l)) s+=3; else if(/^en/.test(l)) s+=2;
+    if(/natural|neural|enhanced|premium/.test(n)) s+=7;
+    if(/google/.test(n)) s+=4;
+    if(/microsoft/.test(n)) s+=2;
+    const isF=_FEMALE_VOICES.test(n), isM=_MALE_VOICES.test(n);   // gender preference is strong
+    if(want==='female'){ if(isF) s+=12; else if(isM) s-=10; }
+    else { if(isM) s+=12; else if(isF) s-=10; }
+    return s; };
+  return vs.slice().sort((a,b)=>score(b)-score(a))[0]||vs[0];
+}
+function _personaVoice(){ const k=setupConfig.persona||(typeof APP!=='undefined'&&APP.persona); return PERSONA_VOICE[k]||{rate:1.02,pitch:1.08}; }
 function riSpeak(text){
   if(!riAudioOn || typeof window==='undefined' || !window.speechSynthesis) return;
   try{
-    const clean=(text||'').replace(/[\u{1F000}-\u{1FAFF}\u2190-\u27BF\u2B00-\u2BFF\uFE0F]/gu,'').replace(/\s+/g,' ').trim();
+    const clean=(text||'').replace(/[\u{1F000}-\u{1FAFF}\u2190-\u27BF\u2B00-\u2BFF\uFE0F\u2022]/gu,'').replace(/\s+/g,' ').trim();
     if(!clean) return;
+    if(!_riVoice) _riVoice=_pickVoice();
+    const v=_personaVoice();
+    // female-selected voices read a touch higher; male a touch lower — on top of persona shaping
+    const gp=riVoiceGender==='female'?0.06:-0.04;
     window.speechSynthesis.cancel();
-    const u=new SpeechSynthesisUtterance(clean);
-    u.rate=1.05; u.pitch=1.12; u.volume=1;
-    const vs=window.speechSynthesis.getVoices()||[];
-    const pick=vs.find(v=>/en[-_]?US/i.test(v.lang)&&/(daniel|alex|fred|guy|aaron|tom|male)/i.test(v.name))
-             || vs.find(v=>/en[-_]?US/i.test(v.lang)) || vs.find(v=>/^en/i.test(v.lang));
-    if(pick) u.voice=pick;
-    window.speechSynthesis.speak(u);
+    const chunks=clean.match(/[^.!?…]+[.!?…]*/g)||[clean];
+    chunks.forEach(ch=>{
+      const t=ch.trim(); if(!t) return;
+      const u=new SpeechSynthesisUtterance(t);
+      u.rate=v.rate; u.pitch=Math.max(0,v.pitch+gp); u.volume=1;
+      if(_riVoice) u.voice=_riVoice;
+      window.speechSynthesis.speak(u);
+    });
   }catch(e){}
+}
+function riSetVoiceGender(g){
+  if(g!=='male'&&g!=='female') return;
+  riVoiceGender=g; try{ LS.setItem('richie_voice_gender',g); }catch(e){}
+  _riVoice=_pickVoice();
+  const mm=gg('riVpMale'), ff=gg('riVpFemale');
+  if(mm) mm.classList.toggle('active',g==='male');
+  if(ff) ff.classList.toggle('active',g==='female');
+  if(riAudioOn && riFullText) riSpeak(riFullText);   // preview the new voice
+}
+function riSyncVoiceUI(){
+  const mm=gg('riVpMale'), ff=gg('riVpFemale'), ab=gg('riAudioBtn');
+  if(mm) mm.classList.toggle('active',riVoiceGender==='male');
+  if(ff) ff.classList.toggle('active',riVoiceGender==='female');
+  if(ab) ab.textContent=riAudioOn?'🔊':'🔇';
 }
 function riToggleAudio(){
   riAudioOn=!riAudioOn;
@@ -6096,8 +6190,8 @@ function riToggleAudio(){
   else if(riAudioOn && riFullText){ riSpeak(riFullText); }
   const b=gg('riAudioBtn'); if(b) b.textContent=riAudioOn?'🔊':'🔇';
 }
-// warm up voices list (some browsers load async)
-try{ if(typeof window!=='undefined' && window.speechSynthesis){ window.speechSynthesis.onvoiceschanged=()=>{}; window.speechSynthesis.getVoices(); } }catch(e){}
+// warm up voices list (some browsers load async) and cache the best one
+try{ if(typeof window!=='undefined' && window.speechSynthesis){ window.speechSynthesis.onvoiceschanged=()=>{ _riVoice=_pickVoice(); }; window.speechSynthesis.getVoices(); } }catch(e){}
 function riFinishIntro(){
   gg('riClickHint').style.display='none'; gg('riCta').style.display='none';
   const bubble=document.querySelector('.ri-bubble-wrap'); if(bubble){bubble.style.transition='opacity .4s';bubble.style.opacity='0';}
