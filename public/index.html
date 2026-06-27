@@ -5889,7 +5889,36 @@ function toggleRichiePanel(){
   if(pn.classList.contains('open')){ newRichieTip(); if(rpChar)rpChar.do('wiggle'); }
 }
 function richieQuips(){ const p=RICHIE_PERSONAS[APP.persona]; return p?p.quips:["Money should be a journey, not a chore."]; }
-function newRichieTip(){ const a=gg('rpAction'); if(a)a.innerHTML=''; const b=richieQuips(); gg('rpTip').textContent=b[Math.floor(Math.random()*b.length)]; if(rpChar){rpChar.talk(true);setTimeout(()=>rpChar.talk(false),1300);} }
+function newRichieTip(){ richieAITip(); }
+// ── AI Coach: pull a context-aware tip from /api/coach (falls back to canned quips) ──
+let _aiSeen=[];
+function richieContext(){
+  const pg=APP.pages.find(p=>p.id===APP.activePage);
+  const ctx={ page: pg?pg.name:'Dashboard', widgets: pg?(pg.widgets||[]).map(w=>w.type):[] };
+  if(pg&&pg.goalMetric) ctx.goal=pg.goalMetric;
+  try{ ctx.netWorth=Math.round(engNetWorth()); }catch(e){}
+  try{ ctx.cash=Math.round(engNetBalance()); }catch(e){}
+  try{ ctx.monthlyIncome=Math.round(engMonthlyIncome()); }catch(e){}
+  try{ ctx.spentLast30=Math.round(engSpend30()); }catch(e){}
+  try{ const b=engUpcomingBills()||[]; const unpaid=b.filter(x=>!x.paid); ctx.billsDue=unpaid.length; ctx.billsDueTotal=Math.round(unpaid.reduce((s,x)=>s+(x.pay||x.amount||0),0)); }catch(e){}
+  return ctx;
+}
+async function richieAITip(){
+  const tipEl=gg('rpTip'); const a=gg('rpAction'); if(a)a.innerHTML='';
+  const fallback=()=>{ const b=richieQuips(); const m=b[Math.floor(Math.random()*b.length)]; tipEl.textContent=m; if(typeof riAudioOn!=='undefined'&&riAudioOn)riSpeak(m); };
+  tipEl.textContent='Let me take a look…';
+  if(rpChar){rpChar.talk(true);setTimeout(()=>rpChar.talk(false),1200);}
+  try{
+    const res=await fetch('/api/coach',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ context:richieContext(), persona:APP.persona||'coach', level:APP.level||1, seen:_aiSeen.slice(-6) })});
+    if(!res.ok) throw new Error('coach '+res.status);
+    const j=await res.json(); const tip=(j&&j.tip||'').trim();
+    if(!tip) throw new Error('empty');
+    _aiSeen.push(tip); if(_aiSeen.length>12)_aiSeen.shift();
+    tipEl.textContent=tip; if(rpChar)rpChar.do('nod');
+    if(typeof riAudioOn!=='undefined'&&riAudioOn)riSpeak(tip);
+  }catch(e){ fallback(); }
+}
 function newSbTip(){ const b=richieQuips(); gg('sbRichieTip').textContent=b[Math.floor(Math.random()*b.length)]; }
 function richieSay(msg){
   gg('richieAssistant').style.display='block';
