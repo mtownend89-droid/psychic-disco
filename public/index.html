@@ -742,11 +742,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .ri-choice{background:rgba(22,25,32,0.9);border:2px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px 12px;cursor:pointer;transition:all .18s;text-align:center;}
 .ri-quiz-opt{text-align:left;padding:15px 16px;font-size:15px;font-weight:600;line-height:1.3;}
 .ri-quiz .ri-choices-title{grid-column:1/-1;}
-.ri-interview{gap:10px;max-width:520px;margin:0 auto;}
-.ob-input{width:100%;background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.16);border-radius:14px;color:#fff;font-size:15px;font-family:inherit;padding:13px 15px;line-height:1.5;resize:vertical;min-height:54px;outline:none;transition:border-color .15s;}
-.ob-input:focus{border-color:var(--green);}
-.ob-input::placeholder{color:rgba(255,255,255,0.4);}
-.ri-interview .ri-cta-btn{justify-self:end;}
+.ri-interview{gap:9px;max-width:520px;margin:0 auto;}
+.ob-choice{width:100%;text-align:left;background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.14);border-radius:13px;color:#fff;font-size:15px;font-weight:600;font-family:inherit;padding:14px 16px;cursor:pointer;transition:border-color .15s,background .15s,transform .08s;}
+.ob-choice:hover{border-color:var(--green);background:rgba(46,204,138,0.10);}
+.ob-choice:active{transform:scale(.99);}
+.ob-choice.sel{border-color:var(--green);background:rgba(46,204,138,0.18);color:#fff;}
+.ob-choice:disabled{cursor:default;opacity:.85;}
 .ri-choice:hover{transform:translateY(-3px);border-color:rgba(255,255,255,0.2);background:rgba(30,34,44,0.95);}
 .ri-choice-icon{font-size:30px;margin-bottom:6px;}
 .ri-choice-name{font-size:13.5px;font-weight:700;color:var(--text);margin-bottom:3px;}
@@ -6412,39 +6413,45 @@ function riAnswerQuiz(oi,e){
 }
 /* ── AI-driven onboarding: Richie interviews the user (4 adaptive rounds) ── */
 const OB_ROUNDS=4;
-const OB_FALLBACK_Q=[
-  "How do you keep track of your money right now — an app, a spreadsheet, or mostly in your head?",
-  "When it comes to saving and investing, how confident do you feel — total beginner, getting there, or pretty seasoned?",
-  "What's the one money goal that, if you nailed it this year, would feel like a real win?",
+// Fallback / opener questions WITH multiple-choice options (round 1 is fixed for speed; if the API is down these are used too)
+const OB_FLOW=[
+  { q:"To start \u2014 how would you describe your money life right now?",
+    opts:["Just getting started, figuring it out","Getting by, but I want a real plan","Pretty stable \u2014 optimizing now","Confident \u2014 investing & building wealth"] },
+  { q:"How do you keep track of your money today?",
+    opts:["Mostly in my head","A budgeting app","A spreadsheet","I don't really track it"] },
+  { q:"When it comes to saving & investing, how do you feel?",
+    opts:["Total beginner","Learning the ropes","Fairly comfortable","Very experienced"] },
+  { q:"What would feel like the biggest win this year?",
+    opts:["Build an emergency fund","Pay off debt","Save for a specific goal","Grow investments / net worth"] },
 ];
-let _obHistory=[], _obRound=0, _obBusy=false;
+let _obHistory=[], _obRound=0, _obBusy=false, _obOpts=[];
 function riStartInterview(){
   _obHistory=[]; _obRound=0; _obBusy=false;
-  riAskInterview("To start — tell me a bit about your money life right now. What's going well, what's stressing you, and what made you check out Richie?");
+  riAskInterview(OB_FLOW[0].q, OB_FLOW[0].opts);
 }
-function riAskInterview(q){
+function riAskInterview(q, opts){
   if(riChar) riChar.emotion(_obRound%2?'curious':'happy');
   riTypeText(q);
   _obHistory.push({q});
-  riShowInterviewInput();
+  riShowChoicesMC(opts);
 }
-function riShowInterviewInput(){
+// Multiple-choice answers (no typing) \u2014 Richie's AI sets the options each round
+function riShowChoicesMC(opts){
   const wrap=gg('riChoices'); wrap.style.display='grid'; wrap.style.gridTemplateColumns='1fr';
   wrap.classList.remove('ri-quiz','ri-goals'); wrap.classList.add('ri-interview');
-  wrap.innerHTML=`<div class="ri-choices-title">Round ${Math.min(_obRound+1,OB_ROUNDS)} of ${OB_ROUNDS} — just type, however much you like</div>
-    <textarea id="obInput" class="ob-input" rows="2" placeholder="Type your answer…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();riSubmitAnswer(event);}"></textarea>
-    <button class="ri-cta-btn" id="obSend" onclick="riSubmitAnswer(event)">Send \u2192</button>`;
-  setTimeout(()=>{ const ta=gg('obInput'); if(ta) ta.focus(); }, 220);
+  _obOpts=(opts&&opts.length?opts:OB_FLOW[Math.min(_obRound,OB_FLOW.length-1)].opts).slice(0,5);
+  wrap.innerHTML=`<div class="ri-choices-title">Round ${Math.min(_obRound+1,OB_ROUNDS)} of ${OB_ROUNDS} \u2014 tap what fits best</div>`+
+    _obOpts.map((o,i)=>`<button class="ob-choice" onclick="riPickAnswer(${i})">${esc(o)}</button>`).join('');
 }
-async function riSubmitAnswer(e){
-  if(e)e.stopPropagation();
+async function riPickAnswer(i){
   if(_obBusy) return;
-  const ta=gg('obInput'); const a=(ta&&ta.value||'').trim();
-  if(!a){ if(ta) ta.focus(); return; }
+  const a=_obOpts[i]; if(!a) return;
   _obBusy=true;
   _obHistory[_obHistory.length-1].a=a;
+  const wrap=gg('riChoices'); const btns=wrap.querySelectorAll('.ob-choice');
+  btns.forEach((b,bi)=>{ b.disabled=true; if(bi===i) b.classList.add('sel'); });
   _obRound++;
-  const wrap=gg('riChoices');
+  await new Promise(r=>setTimeout(r,300));
   if(_obRound>=OB_ROUNDS){
     wrap.innerHTML=`<div class="ri-choices-title">Reading between the lines\u2026</div>`;
     if(riChar) riChar.emotion('curious');
@@ -6456,17 +6463,18 @@ async function riSubmitAnswer(e){
   }
   wrap.innerHTML=`<div class="ri-choices-title">\u2026</div>`;
   if(riChar) riChar.emotion('happy');
-  const q=await riFetchNextQuestion();
+  const nq=await riFetchNextQuestion();
   _obBusy=false;
-  riAskInterview(q);
+  riAskInterview(nq.q, nq.opts);
 }
 async function riFetchNextQuestion(){
   try{
     const res=await fetch('/api/onboard',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({ history:_obHistory.map(h=>({q:h.q,a:h.a})), mode:'next' })});
-    if(res.ok){ const j=await res.json(); if(j&&j.question) return j.question.trim(); }
+    if(res.ok){ const j=await res.json(); if(j&&j.question&&Array.isArray(j.options)&&j.options.length) return {q:j.question.trim(), opts:j.options.slice(0,5)}; }
   }catch(e){}
-  return OB_FALLBACK_Q[Math.min(_obRound-1, OB_FALLBACK_Q.length-1)];
+  const fb=OB_FLOW[Math.min(_obRound, OB_FLOW.length-1)];
+  return {q:fb.q, opts:fb.opts};
 }
 async function riFetchProfile(){
   try{
