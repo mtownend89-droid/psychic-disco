@@ -462,7 +462,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 @keyframes ra-bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-5px) rotate(2deg)}}
 .ra-bubble{position:fixed;z-index:1201;max-width:280px;background:#fff;color:#15171d;border-radius:16px;padding:13px 15px 12px;box-shadow:0 16px 48px rgba(0,0,0,.55);opacity:0;transform:translateY(8px) scale(.96);transition:opacity .22s,transform .22s;pointer-events:none;}
 .ra-bubble.show{opacity:1;transform:none;pointer-events:auto;}
-.ra-msg{font-size:14px;line-height:1.45;font-weight:500;}
+.ra-msg{font-size:14px;line-height:1.45;font-weight:500;word-break:break-word;overflow-wrap:anywhere;}
 .ra-acts{display:flex;gap:8px;margin-top:11px;justify-content:flex-end;}
 .ra-acts button{font-size:12px;font-weight:700;border-radius:9px;padding:6px 11px;border:1px solid #dfe2ea;background:#f3f5f8;color:#1b1e26;cursor:pointer;}
 .ra-acts #raMore,.ra-acts .ra-go{background:var(--green);border-color:var(--green);color:#06281c;}
@@ -532,7 +532,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
   font-size:13px;color:var(--text);line-height:1.6;
   margin-bottom:12px;
   border-left:3px solid var(--green);
+  max-height:46vh;overflow-y:auto;word-break:break-word;overflow-wrap:anywhere;
 }
+#rpAction{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+#rpAction:empty{display:none;}
+#rpAction button{font-size:12px;font-weight:700;border-radius:9px;padding:7px 12px;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.05);color:var(--text);cursor:pointer;}
+#rpAction button.ra-go{background:var(--green);border-color:var(--green);color:#06281c;}
 .rp-actions{display:flex;flex-direction:column;gap:6px;}
 .rp-action{
   display:flex;align-items:center;gap:10px;
@@ -5927,7 +5932,7 @@ function levelUp(){
 /* ═══════════════ FLOATING RICHIE ═══════════════ */
 function toggleRichiePanel(){ richieHopOut(); }
 function richieQuips(){ const p=RICHIE_PERSONAS[APP.persona]; return p?p.quips:["Money should be a journey, not a chore."]; }
-function newRichieTip(){ richieAITip(); }
+function newRichieTip(){ richieCoachNow(); }
 // ── AI Coach: pull a context-aware tip from /api/coach (falls back to canned quips) ──
 let _aiSeen=[];
 function richieContext(){
@@ -5987,13 +5992,38 @@ function richiePageLine(pg){
   return `You're on ${name}. Want a quick tip?`;
 }
 // Interactive bubble buttons — Richie can offer real choices the user taps
-function _renderRaActs(){
-  const wrap=gg('raActs'); if(!wrap) return;
+// iOS/Android (or small touch screen) → emerging bubble; desktop browser → block panel
+function _richieMobile(){
+  try{
+    const ua=navigator.userAgent||'';
+    if(/iPhone|iPad|iPod|Android/i.test(ua)) return true;
+    if((navigator.maxTouchPoints||0)>1 && Math.min(window.innerWidth,window.innerHeight)<=820) return true;
+  }catch(e){}
+  return false;
+}
+// Render Richie's action buttons into either the bubble (raActs) or the panel (rpAction)
+function _renderActs(containerId){
+  const wrap=gg(containerId); if(!wrap) return;
   if(_raActions && _raActions.length){
     wrap.innerHTML=_raActions.map((a,i)=>`<button class="${a.cls||''}" onclick="_raAct(${i})">${a.label}</button>`).join('');
-  } else {
+  } else if(containerId==='raActs'){
     wrap.innerHTML=`<button class="ra-go" onclick="richieCoachNow()">💬 More</button><button onclick="richieDismiss()">✕ go home</button>`;
-  }
+  } else { wrap.innerHTML=''; }
+}
+function _renderRaActs(){ _renderActs('raActs'); }
+// Desktop: show Richie's message in the original bottom-right block panel
+function _panelShow(msg, opts){
+  opts=opts||{};
+  const asst=gg('richieAssistant'); if(asst) asst.style.display='block';
+  const pn=gg('richiePanel'); if(!pn) return;
+  if(opts.celebrate) _raConfetti();
+  try{ const k=(typeof APP!=='undefined'&&APP.persona)||'coach'; const p=RICHIE_PERSONAS[k];
+    if(p){ const nm=gg('rpName'); if(nm)nm.textContent='Richie · '+p.name; const c=gg('rpChar'); if(c)c.textContent=p.icon||'💰'; } }catch(e){}
+  pn.classList.add('open'); _raBusy=true;
+  _raActions = opts.actions || null; _renderActs('rpAction');
+  const nb=pn.querySelector('.rp-new-tip-btn'); if(nb) nb.style.display=(_raActions&&_raActions.length)?'none':'';
+  if(rpChar){ rpChar.emotion(opts.celebrate?'celebrate':(opts.emo||'happy')); rpChar.talk(true); }
+  richieSpeakType(gg('rpTip'), msg, ()=>{ if(rpChar)rpChar.talk(false); });   // types (voice off)
 }
 function _raAct(i){ const a=_raActions&&_raActions[i]; if(a&&typeof a.on==='function') a.on(); }
 // Stop everything Richie is currently saying/typing (used when leaving the SWOT)
@@ -6025,6 +6055,7 @@ function richieTakeTo(type, line){
 function richieShow(msg, opts){
   opts=opts||{};
   if(_richieBlocked()){ richieGoHome(); return; }   // overlay came up — clean up, don't speak over it
+  if(!_richieMobile()){ _panelShow(msg, opts); return; }   // desktop browser → original block panel
   if(opts.celebrate) _raConfetti();
   const present=()=>{
     if(_raChar){ if(opts.celebrate){ _raChar.emotion('celebrate'); _raChar.do('tada'); } else { _raChar.emotion(opts.emo||'happy'); } }
@@ -6095,6 +6126,8 @@ function richieMaybeProactive(pg){
 }
 function richieGoHome(){
   clearTimeout(_raHomeTimer); try{ _stopTts(); }catch(e){}
+  const pn=gg('richiePanel'); if(pn) pn.classList.remove('open');   // close the desktop block panel
+  if(!_richieMobile()){ _raBusy=false; _raActions=null; }
   gg('raBubble').classList.remove('show');
   const actor=gg('raActor'); const r=_fabRect();
   actor.style.left=(r.left+2)+'px'; actor.style.top=r.top+'px';
@@ -6102,20 +6135,33 @@ function richieGoHome(){
   setTimeout(()=>{ actor.classList.remove('out'); const fc=gg('fabChar'); if(fc) fc.style.opacity='1'; const ff=gg('richieFab'); if(ff) ff.classList.remove('open'); _raBusy=false; }, 480);
 }
 function _raBubble(msg){
-  gg('raMsg').textContent=msg;
+  const m=gg('raMsg'); m.textContent=msg;
   const b=gg('raBubble'); b.classList.add('show');
   requestAnimationFrame(()=>{
-    const a=gg('raActor').getBoundingClientRect(); const bw=b.offsetWidth, bh=b.offsetHeight;
-    let x=a.left+a.width-bw+18; let y=a.top-bh-8;
-    if(y<8) y=a.top+a.height+8;
-    x=Math.max(8,Math.min(window.innerWidth-bw-8,x));
+    const M=16, vw=window.innerWidth, vh=window.innerHeight;     // keep a clear margin from every edge
+    b.style.maxWidth=Math.min(340, vw-2*M)+'px';                 // never wider than the screen
+    m.style.maxHeight=Math.max(120, vh-2*M-72)+'px';            // long tips scroll; action buttons stay visible
+    m.style.overflowY='auto';
+    const a=gg('raActor').getBoundingClientRect();
+    const bw=b.offsetWidth, bh=b.offsetHeight;
+    // horizontal: sit near the actor, then clamp inside the margins
+    let x=a.left+a.width-bw+18;
+    x=Math.max(M, Math.min(vw-bw-M, x));
+    // vertical: prefer above the actor; drop below only if there's room; then clamp fully on-screen
+    let y=a.top-bh-10;
+    if(y<M) y=a.top+a.height+10;
+    y=Math.max(M, Math.min(vh-bh-M, y));                         // never runs past the bottom (taskbar)
     b.style.left=x+'px'; b.style.top=y+'px';
   });
 }
 async function richieCoachNow(){
   if(_richieBlocked()) return;            // not while onboarding / welcome / login is showing
-  if(!_raBusy){ _raBusy=true; await new Promise(res=>_raEmerge(res)); }
-  _raBubble('…'); if(_raChar)_raChar.emotion('curious');
+  if(_richieMobile()){
+    if(!_raBusy){ _raBusy=true; await new Promise(res=>_raEmerge(res)); }
+    _raBubble('…'); if(_raChar)_raChar.emotion('curious');
+  } else {
+    _panelShow('…', {});                 // desktop → open the block panel with a placeholder
+  }
   let tip='';
   try{
     const res=await fetch('/api/coach',{method:'POST',headers:{'Content-Type':'application/json'},
