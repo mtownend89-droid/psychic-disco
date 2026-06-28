@@ -5960,6 +5960,13 @@ async function richieAITip(){
 // ── Richie leaves his house (FAB), interacts, and returns ──
 let _raChar=null, _raBusy=false, _raHomeTimer=null, _raActions=null, _raSelfNav=false;
 function _fabRect(){ const f=document.querySelector('.richie-fab'); return f?f.getBoundingClientRect():{left:window.innerWidth-80,top:window.innerHeight-80,width:58,height:58}; }
+// Richie stays out of the way while any full-screen overlay (onboarding / welcome / login) is up
+function _richieBlocked(){
+  if((typeof _tourQueue!=='undefined'&&_tourQueue.length)||(typeof APP!=='undefined'&&APP._goalsFirst)) return true;
+  const ids=['richieIntro','welcomeBack','setupWizard','loginScreen'];
+  for(let i=0;i<ids.length;i++){ const el=gg(ids[i]); if(el){ const d=el.style.display; if(d&&d!=='none') return true; } }
+  return false;
+}
 // Leaving a screen: stop this page's Richie instantly so the next page can greet
 function richieStopForNav(){
   richieStopAllSpeech();
@@ -6017,6 +6024,7 @@ function richieTakeTo(type, line){
 // AFTER he has finished speaking (plus a short linger so the text stays up).
 function richieShow(msg, opts){
   opts=opts||{};
+  if(_richieBlocked()){ richieGoHome(); return; }   // overlay came up — clean up, don't speak over it
   if(opts.celebrate) _raConfetti();
   const present=()=>{
     if(_raChar){ if(opts.celebrate){ _raChar.emotion('celebrate'); _raChar.do('tada'); } else { _raChar.emotion(opts.emo||'happy'); } }
@@ -6069,7 +6077,7 @@ function richieOffTrackSignal(pg){
   return null;
 }
 function richieMaybeProactive(pg){
-  if(!_raProactiveOn || _raBusy || !pg || pg.id==='__settings__') return;
+  if(!_raProactiveOn || _raBusy || _richieBlocked() || !pg || pg.id==='__settings__') return;
   const now=Date.now();
   if(now<_raSnoozeUntil || now-_raLastPop<1500) return;     // debounce duplicate renders only
   _raLastPop=now;
@@ -6105,6 +6113,7 @@ function _raBubble(msg){
   });
 }
 async function richieCoachNow(){
+  if(_richieBlocked()) return;            // not while onboarding / welcome / login is showing
   if(!_raBusy){ _raBusy=true; await new Promise(res=>_raEmerge(res)); }
   _raBubble('…'); if(_raChar)_raChar.emotion('curious');
   let tip='';
@@ -6583,9 +6592,10 @@ async function richieSpeakType(el, text, doneCb){
   const audioOn=(typeof riAudioOn!=='undefined' && riAudioOn);
   const clean=(text||'').replace(/[\u{1F000}-\u{1FAFF}\u2190-\u27BF\u2B00-\u2BFF\uFE0F\u2022]/gu,'').replace(/\s+/g,' ').trim();
   try{ _stopTts(); }catch(e){}
-  const seq=_ttsSeq;                                  // this line's generation token
+  const seq=_ttsSeq;                                  // this line's audio generation
+  el._sseq=seq;                                       // claim THIS bubble for this line
   let _done=false;
-  const fireDone=()=>{ if(_done) return; _done=true; if(seq===_ttsSeq && typeof doneCb==='function') doneCb(); };
+  const fireDone=()=>{ if(_done) return; _done=true; if(el._sseq===seq && typeof doneCb==='function') doneCb(); };
   if(!audioOn || _ttsMode==='browser'){
     if(audioOn) _speakBrowser(clean);
     _typeInto(el, text, 24, fireDone); return;
@@ -6593,18 +6603,21 @@ async function richieSpeakType(el, text, doneCb){
   el.textContent='…';
   let audio=null;
   try{ audio=await _ttsFetchAudio(clean); }catch(e){ audio=null; }
-  if(seq!==_ttsSeq) return;                            // superseded by a newer line OR a stop/nav
-  if(!audio){ _ttsMode='browser'; _speakBrowser(clean); _typeInto(el, text, 24, fireDone); return; }
+  if(el._sseq!==seq) return;                           // a NEWER line claimed this same bubble → abort cleanly
+  if(!audio || seq!==_ttsSeq){                          // lost the audio slot (another line is speaking): show text silently, still finish
+    _typeInto(el, text, 24, fireDone); return;
+  }
   _ttsAudio=audio; _ttsMode='cloud';
   let started=false;
   const begin=()=>{ if(started) return; started=true;
-    if(seq!==_ttsSeq) return;                          // stopped before playback began
+    if(el._sseq!==seq){ return; }                      // bubble reclaimed
+    if(seq!==_ttsSeq){ _typeInto(el, text, 24, fireDone); return; }   // lost audio slot late → type silently + finish
     let dur=audio.duration; if(!dur||!isFinite(dur)||dur<=0) dur=Math.max(1.4, clean.length/14);
     const per=Math.max(13, Math.min(55, (dur*1000)/Math.max(text.length,1)));
     audio.play().catch(()=>{});
-    _typeInto(el, text, per, null);                    // typing is visual; "done" waits for the voice to finish
+    _typeInto(el, text, per, null);                     // typing is visual; "done" waits for the voice
     audio.addEventListener('ended', fireDone, {once:true});
-    setTimeout(fireDone, (dur*1000)+1800);             // safety net if 'ended' never fires
+    setTimeout(fireDone, (dur*1000)+1800);              // safety net if 'ended' never fires
   };
   if(audio.readyState>=1) begin();
   else { audio.addEventListener('loadedmetadata', begin, {once:true}); setTimeout(begin, 700); }
