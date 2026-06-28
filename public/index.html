@@ -465,7 +465,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .ra-msg{font-size:14px;line-height:1.45;font-weight:500;}
 .ra-acts{display:flex;gap:8px;margin-top:11px;justify-content:flex-end;}
 .ra-acts button{font-size:12px;font-weight:700;border-radius:9px;padding:6px 11px;border:1px solid #dfe2ea;background:#f3f5f8;color:#1b1e26;cursor:pointer;}
-.ra-acts #raMore{background:var(--green);border-color:var(--green);color:#06281c;}
+.ra-acts #raMore,.ra-acts .ra-go{background:var(--green);border-color:var(--green);color:#06281c;}
+.canvas-widget-card.ra-spot{box-shadow:0 0 0 2px var(--green), 0 0 30px 5px rgba(46,204,138,0.5)!important;border-color:var(--green)!important;transition:box-shadow .3s, border-color .3s;position:relative;z-index:30;}
 .richie-fab{
   width:64px;height:70px;background:none;border:none;padding:0;cursor:pointer;position:relative;
   display:flex;align-items:flex-end;justify-content:center;
@@ -1988,7 +1989,7 @@ canvas.chart-interactive{cursor:crosshair;}
 <div class="ra-actor" id="raActor"><span id="raChar">💰</span></div>
 <div class="ra-bubble" id="raBubble">
   <div class="ra-msg" id="raMsg"></div>
-  <div class="ra-acts"><button id="raMore" onclick="richieCoachNow()">💬 More</button><button id="raClose" onclick="richieDismiss()">✕ go home</button></div>
+  <div class="ra-acts" id="raActs"></div>
 </div>
 
 <!-- PAGE EDITOR MODAL -->
@@ -5951,8 +5952,42 @@ async function richieAITip(){
   }catch(e){ fallback(); }
 }
 // ── Richie leaves his house (FAB), interacts, and returns ──
-let _raChar=null, _raBusy=false, _raHomeTimer=null;
+let _raChar=null, _raBusy=false, _raHomeTimer=null, _raActions=null;
 function _fabRect(){ const f=document.querySelector('.richie-fab'); return f?f.getBoundingClientRect():{left:window.innerWidth-80,top:window.innerHeight-80,width:58,height:58}; }
+// Interactive bubble buttons — Richie can offer real choices the user taps
+function _renderRaActs(){
+  const wrap=gg('raActs'); if(!wrap) return;
+  if(_raActions && _raActions.length){
+    wrap.innerHTML=_raActions.map((a,i)=>`<button class="${a.cls||''}" onclick="_raAct(${i})">${a.label}</button>`).join('');
+  } else {
+    wrap.innerHTML=`<button class="ra-go" onclick="richieCoachNow()">💬 More</button><button onclick="richieDismiss()">✕ go home</button>`;
+  }
+}
+function _raAct(i){ const a=_raActions&&_raActions[i]; if(a&&typeof a.on==='function') a.on(); }
+// Stop everything Richie is currently saying/typing (used when leaving the SWOT)
+function richieStopAllSpeech(){
+  try{ _stopTts(); }catch(e){}
+  ['wbText','wbTask','raMsg','rpTip'].forEach(id=>{ const el=gg(id); if(el&&el._tt){ clearTimeout(el._tt); el._tt=null; } });
+}
+// Richie physically helps: jump to the page with a widget and spotlight it
+function richieFindWidget(type){
+  if(typeof APP==='undefined'||!APP.pages) return null;
+  for(const pg of APP.pages){ const w=(pg.widgets||[]).find(x=>x.type===type); if(w) return {pageId:pg.id, uid:w.uid}; }
+  return null;
+}
+function richieSpotlight(uid){
+  const el=document.querySelector(`[data-uid="${uid}"]`); if(!el) return;
+  try{ el.scrollIntoView({behavior:'smooth', block:'center'}); }catch(e){}
+  el.classList.add('ra-spot'); setTimeout(()=>{ try{el.classList.remove('ra-spot');}catch(e){} }, 5500);
+}
+function richieTakeTo(type, line){
+  const t=richieFindWidget(type); if(!t){ if(line) richieShow(line); return; }
+  _raSnoozeUntil=Date.now()+4000;                       // don't auto-greet the page he's taking you to
+  if(APP.activePage!==t.pageId) switchPage(t.pageId);
+  setTimeout(()=>{ richieSpotlight(t.uid);
+    richieShow(line||'Here it is — take a look. 👇', {actions:[{label:'👍 Got it', on:richieGoHome}]});
+  }, 400);
+}
 // ── ONE funnel for everything Richie says out of his house ──
 // Emerges if needed, types in lockstep with the voice, and only heads home
 // AFTER he has finished speaking (plus a short linger so the text stays up).
@@ -5962,6 +5997,7 @@ function richieShow(msg, opts){
   const present=()=>{
     if(_raChar){ if(opts.celebrate){ _raChar.emotion('celebrate'); _raChar.do('tada'); } else { _raChar.emotion(opts.emo||'happy'); } }
     _raBubble(msg);
+    _raActions = opts.actions || null; _renderRaActs();         // interactive choices, if any
     richieSpeakType(gg('raMsg'), msg, ()=>{                        // done = finished speaking
       if(_raChar)_raChar.do(opts.celebrate?'celebrate':'point');
       clearTimeout(_raHomeTimer);
@@ -6004,8 +6040,8 @@ let _raLastPop=0, _raSnoozeUntil=0;
 function setRichieProactive(on){ _raProactiveOn=!!on; try{ LS.setItem('richie_proactive', on?'1':'0'); }catch(e){} const b=gg('setProactiveBtn'); if(b)b.textContent=_raProactiveOn?'🔔 Pop-in tips: on':'🔕 Pop-in tips: off'; }
 function richieOffTrackSignal(pg){
   try{ const bills=(engUpcomingBills()||[]).filter(b=>!b.paid);
-    if(bills.length>=3){ const tot=bills.reduce((s,b)=>s+(b.pay||b.amount||0),0); return `Heads up — you've got ${bills.length} bills coming up, about ${typeof fmtK==='function'?fmtK(tot):'$'+Math.round(tot)}. Want to run through them?`; } }catch(e){}
-  try{ const inc=engMonthlyIncome(), sp=engSpend30(); if(inc>0 && sp>inc*1.05){ return `Spending's running ahead of income this month. Want a quick look at where it's going?`; } }catch(e){}
+    if(bills.length>=3){ const tot=bills.reduce((s,b)=>s+(b.pay||b.amount||0),0); return {msg:`Heads up — you've got ${bills.length} bills coming up, about ${typeof fmtK==='function'?fmtK(tot):'$'+Math.round(tot)}. Want to run through them?`, widget:'bills_list', cta:'Show me'}; } }catch(e){}
+  try{ const inc=engMonthlyIncome(), sp=engSpend30(); if(inc>0 && sp>inc*1.05){ return {msg:`Spending's running ahead of income this month. Want a quick look at where it's going?`, widget:'top_categories', cta:'Show me'}; } }catch(e){}
   return null;
 }
 function richieMaybeProactive(pg){
@@ -6015,7 +6051,11 @@ function richieMaybeProactive(pg){
   _raLastPop=now;
   const off=richieOffTrackSignal(pg);                        // an event he noticed takes priority
   setTimeout(()=>{ if(_raBusy||document.hidden||APP.activePage!==pg.id) return;
-    if(off){ richiePopMessage(off,'curious'); } else { richieHopOut(); }   // else greet with a page tip
+    if(off){ richieShow(off.msg, {emo:'curious', actions:[
+        {label:off.cta||'Show me', cls:'ra-go', on:()=>richieTakeTo(off.widget, null)},
+        {label:'Not now', on:richieDismiss}
+      ]}); }
+    else { richieHopOut(); }                                 // else greet with a page tip
   }, 900);
 }
 function richieGoHome(){
@@ -6048,7 +6088,7 @@ async function richieCoachNow(){
   }catch(e){}
   if(!tip){ const q=richieQuips(); tip=q[Math.floor(Math.random()*q.length)]; }
   _aiSeen.push(tip); if(_aiSeen.length>12)_aiSeen.shift();
-  richieShow(tip);                 // funnel types in sync + heads home only when he's done
+  richieShow(tip, {actions:[{label:'👍 Got it', cls:'ra-go', on:richieGoHome},{label:'💬 More', on:richieCoachNow}]});
 }
 window.addEventListener('resize',()=>{ if(_raBusy){ const a=gg('raActor'); const r=_fabRect(); /* keep bubble anchored */ if(gg('raBubble').classList.contains('show')) _raBubble(gg('raMsg').textContent); } });
 function newSbTip(){ const b=richieQuips(); gg('sbRichieTip').textContent=b[Math.floor(Math.random()*b.length)]; }
@@ -6706,6 +6746,8 @@ function showSwotPanel(swot){
   if(window._wbRichie) window._wbRichie.emotion('proud');
 }
 function wbEnter(){
+  richieStopAllSpeech();              // stop any SWOT greeting/voice that's still going
+  _raSnoozeUntil=Date.now()+4500;    // don't let house Richie greet on top of it
   gg('welcomeBack').style.display='none';
   enterApp();
 }
