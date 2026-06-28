@@ -6086,7 +6086,7 @@ function richieMaybeProactive(pg){
   }, 280);
 }
 function richieGoHome(){
-  clearTimeout(_raHomeTimer);
+  clearTimeout(_raHomeTimer); try{ _stopTts(); }catch(e){}
   gg('raBubble').classList.remove('show');
   const actor=gg('raActor'); const r=_fabRect();
   actor.style.left=(r.left+2)+'px'; actor.style.top=r.top+'px';
@@ -6536,7 +6536,7 @@ function _resolveVoice(){
    browser voice if the /api/tts route isn't set up (no key / not deployed). */
 let _ttsMode='auto';   // 'auto' | 'cloud' | 'browser'
 let _ttsAudio=null, _ttsSeq=0;
-function _stopTts(){ try{ if(_ttsAudio){ _ttsAudio.pause(); _ttsAudio=null; } }catch(e){} try{ if(window.speechSynthesis) window.speechSynthesis.cancel(); }catch(e){} }
+function _stopTts(){ _ttsSeq++; try{ if(_ttsAudio){ _ttsAudio.pause(); _ttsAudio=null; } }catch(e){} try{ if(window.speechSynthesis) window.speechSynthesis.cancel(); }catch(e){} }
 async function _ttsCloud(text){
   const pre=currentPreset();
   const k=setupConfig.persona||(typeof APP!=='undefined'&&APP.persona)||'coach';
@@ -6582,25 +6582,32 @@ async function richieSpeakType(el, text, doneCb){
   if(!el) return;
   const audioOn=(typeof riAudioOn!=='undefined' && riAudioOn);
   const clean=(text||'').replace(/[\u{1F000}-\u{1FAFF}\u2190-\u27BF\u2B00-\u2BFF\uFE0F\u2022]/gu,'').replace(/\s+/g,' ').trim();
+  try{ _stopTts(); }catch(e){}
+  const seq=_ttsSeq;                                  // this line's generation token
+  let _done=false;
+  const fireDone=()=>{ if(_done) return; _done=true; if(seq===_ttsSeq && typeof doneCb==='function') doneCb(); };
   if(!audioOn || _ttsMode==='browser'){
     if(audioOn) _speakBrowser(clean);
-    _typeInto(el, text, 24, doneCb); return;
+    _typeInto(el, text, 24, fireDone); return;
   }
-  try{ _stopTts(); }catch(e){}
   el.textContent='…';
   let audio=null;
   try{ audio=await _ttsFetchAudio(clean); }catch(e){ audio=null; }
-  if(!audio){ _ttsMode='browser'; _speakBrowser(clean); _typeInto(el, text, 24, doneCb); return; }
+  if(seq!==_ttsSeq) return;                            // superseded by a newer line OR a stop/nav
+  if(!audio){ _ttsMode='browser'; _speakBrowser(clean); _typeInto(el, text, 24, fireDone); return; }
   _ttsAudio=audio; _ttsMode='cloud';
   let started=false;
   const begin=()=>{ if(started) return; started=true;
+    if(seq!==_ttsSeq) return;                          // stopped before playback began
     let dur=audio.duration; if(!dur||!isFinite(dur)||dur<=0) dur=Math.max(1.4, clean.length/14);
     const per=Math.max(13, Math.min(55, (dur*1000)/Math.max(text.length,1)));
     audio.play().catch(()=>{});
-    _typeInto(el, text, per, doneCb);
+    _typeInto(el, text, per, null);                    // typing is visual; "done" waits for the voice to finish
+    audio.addEventListener('ended', fireDone, {once:true});
+    setTimeout(fireDone, (dur*1000)+1800);             // safety net if 'ended' never fires
   };
   if(audio.readyState>=1) begin();
-  else { audio.addEventListener('loadedmetadata', begin, {once:true}); setTimeout(begin, 700); }  // don't stall if metadata is slow
+  else { audio.addEventListener('loadedmetadata', begin, {once:true}); setTimeout(begin, 700); }
 }
 function _speakBrowser(clean){
   if(typeof window==='undefined' || !window.speechSynthesis) return;
@@ -6861,12 +6868,14 @@ function suggestDailyTask(swot){
   return `Open your top goal and log one small win today.`;
 }
 async function wbDailyTask(swot, greet){
+  if(gg('welcomeBack').style.display==='none') return;     // already moved to the app — don't speak
   let task=suggestDailyTask(swot);
   try{
     const res=await fetch('/api/coach',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({ context:{ screen:'Welcome / daily SWOT', ask:'Suggest ONE concrete task the user should do today', swot:{S:swot.S,W:swot.W,O:swot.O,T:swot.T}, netWorth:swot.nw }, persona:(APP&&APP.persona)||'coach', level:(APP&&APP.level)||1, seen:[] })});
     if(res.ok){ const j=await res.json(); if(j&&j.tip) task=j.tip.trim(); }
   }catch(e){}
+  if(gg('welcomeBack').style.display==='none') return;     // left during the fetch — stay silent
   const el=gg('wbText');
   el.innerHTML = esc(greet||el.textContent) + `<br><br><span style="color:var(--green);font-weight:700">🎯 Today: </span>${esc(task)}`;
   if(window._wbRichie) window._wbRichie.do('point');
