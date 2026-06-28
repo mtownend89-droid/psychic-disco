@@ -482,11 +482,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .rf-roof{
   position:absolute;top:2px;left:50%;
   width:0;height:0;border-left:33px solid transparent;border-right:33px solid transparent;border-bottom:23px solid #9a6535;
-  transform:translateX(-50%);transform-origin:bottom center;
+  transform:translateX(-50%);transform-origin:bottom right;
   transition:transform .42s cubic-bezier(.34,1.56,.64,1);z-index:3;
   filter:drop-shadow(0 -1px 1px rgba(0,0,0,0.25));
 }
-.richie-fab.open .rf-roof{transform:translateX(-50%) translateY(-12px) rotate(-34deg);}
+.richie-fab.open .rf-roof{transform:translateX(-50%) rotate(48deg);}
 .richie-fab.open .rf-house{box-shadow:0 4px 26px rgba(46,204,138,0.6);}
 .richie-fab:hover{transform:scale(1.06);}
 .richie-fab-badge{
@@ -5918,10 +5918,7 @@ function levelUp(){
 }
 
 /* ═══════════════ FLOATING RICHIE ═══════════════ */
-function toggleRichiePanel(){
-  const pn=gg('richiePanel'); pn.classList.toggle('open');
-  if(pn.classList.contains('open')){ newRichieTip(); if(rpChar)rpChar.do('wiggle'); }
-}
+function toggleRichiePanel(){ richieHopOut(); }
 function richieQuips(){ const p=RICHIE_PERSONAS[APP.persona]; return p?p.quips:["Money should be a journey, not a chore."]; }
 function newRichieTip(){ richieAITip(); }
 // ── AI Coach: pull a context-aware tip from /api/coach (falls back to canned quips) ──
@@ -5956,13 +5953,28 @@ async function richieAITip(){
 // ── Richie leaves his house (FAB), interacts, and returns ──
 let _raChar=null, _raBusy=false, _raHomeTimer=null;
 function _fabRect(){ const f=document.querySelector('.richie-fab'); return f?f.getBoundingClientRect():{left:window.innerWidth-80,top:window.innerHeight-80,width:58,height:58}; }
-function richieHopOut(){
-  if(_raBusy){ richieGoHome(); return; }
-  _raBusy=true;
-  _raEmerge(()=>{ if(_raChar)_raChar.emotion('happy'); richieCoachNow(); });
+// ── ONE funnel for everything Richie says out of his house ──
+// Emerges if needed, types in lockstep with the voice, and only heads home
+// AFTER he has finished speaking (plus a short linger so the text stays up).
+function richieShow(msg, opts){
+  opts=opts||{};
+  if(opts.celebrate) _raConfetti();
+  const present=()=>{
+    if(_raChar){ if(opts.celebrate){ _raChar.emotion('celebrate'); _raChar.do('tada'); } else { _raChar.emotion(opts.emo||'happy'); } }
+    _raBubble(msg);
+    richieSpeakType(gg('raMsg'), msg, ()=>{                        // done = finished speaking
+      if(_raChar)_raChar.do(opts.celebrate?'celebrate':'point');
+      clearTimeout(_raHomeTimer);
+      _raHomeTimer=setTimeout(richieGoHome, opts.linger||6000);    // linger AFTER he finishes
+    });
+  };
+  clearTimeout(_raHomeTimer);                                       // never auto-home mid-sentence
+  if(_raBusy){ present(); } else { _raBusy=true; _raEmerge(present); }
 }
+function richieHopOut(){ if(_raBusy){ richieGoHome(); return; } richieCoachNow(); }
 function _raEmerge(then){
   if(!_raChar){ try{ _raChar=new RichieEmoji(gg('raChar')); }catch(e){} }
+  const op=gg('richiePanel'); if(op) op.classList.remove('open');   // make sure the old panel is never up
   const ff=gg('richieFab'); if(ff) ff.classList.add('open');       // roof opens
   const fc=gg('fabChar'); if(fc) fc.style.opacity='0';              // the bag leaves the house
   const actor=gg('raActor'); const r=_fabRect();
@@ -5970,21 +5982,10 @@ function _raEmerge(then){
   actor.classList.add('out'); actor.style.transform='scale(1)';
   setTimeout(()=>{ const tx=Math.max(12, r.left-118), ty=Math.max(12, r.top-118); actor.style.left=tx+'px'; actor.style.top=ty+'px'; if(then)then(); }, 80);
 }
-// Emerge with a fixed message (no AI fetch) — used for off-track nudges & wins
-function richiePopMessage(msg, emo){
-  if(_raBusy) return; _raBusy=true;
-  _raEmerge(()=>{ if(_raChar)_raChar.emotion(emo||'happy'); _raBubble(msg);
-    richieSpeakType(gg('raMsg'), msg, ()=>{ if(_raChar)_raChar.do('point'); });
-    clearTimeout(_raHomeTimer); _raHomeTimer=setTimeout(richieGoHome, 15000); });
-}
+// Emerge with a fixed message (no AI fetch) — used for off-track nudges
+function richiePopMessage(msg, emo){ richieShow(msg, {emo:emo||'curious'}); }
 // 🎉 Win celebration — confetti + excited Richie + spoken praise
-function richieCelebrate(msg){
-  _raConfetti();
-  const show=()=>{ if(_raChar){ _raChar.emotion('celebrate'); _raChar.do('tada'); } _raBubble(msg);
-    richieSpeakType(gg('raMsg'), msg, ()=>{ if(_raChar)_raChar.do('celebrate'); });
-    clearTimeout(_raHomeTimer); _raHomeTimer=setTimeout(richieGoHome, 12000); };
-  if(_raBusy){ show(); } else { _raBusy=true; _raEmerge(show); }
-}
+function richieCelebrate(msg){ richieShow(msg, {celebrate:true, linger:5000}); }
 function _raConfetti(){
   const r=_fabRect(); const cx=r.left-100, cy=r.top-100;
   const cols=['#2ecc8a','#5b8def','#f0a540','#f05c5c','#a78bfa','#ffd23f'];
@@ -5994,13 +5995,12 @@ function _raConfetti(){
     d.style.setProperty('--dx',(Math.random()*180-90)+'px'); d.style.setProperty('--dy',(60+Math.random()*120)+'px');
     document.body.appendChild(d); setTimeout(()=>{ try{d.remove();}catch(e){} },1000); }
 }
-// User explicitly dismisses → back off for a few minutes (the Clippy lesson)
-function richieDismiss(){ _raSnoozeUntil=Date.now()+180000; richieGoHome(); }
+// User dismisses → go home and hold off briefly (he'll greet again on the next page)
+function richieDismiss(){ _raSnoozeUntil=Date.now()+30000; richieGoHome(); }
 
-// ── Proactive pop-in (frequency-capped) ──
+// ── Proactive: Richie greets when you arrive on a page, and pops for events ──
 let _raProactiveOn=true; try{ const v=LS.getItem('richie_proactive'); if(v!==null)_raProactiveOn=v==='1'; }catch(e){}
-let _raSeenPages=new Set(), _raLastPop=0, _raSnoozeUntil=0;
-const _RA_COOLDOWN=60000;   // ≥60s between unprompted pops
+let _raLastPop=0, _raSnoozeUntil=0;
 function setRichieProactive(on){ _raProactiveOn=!!on; try{ LS.setItem('richie_proactive', on?'1':'0'); }catch(e){} const b=gg('setProactiveBtn'); if(b)b.textContent=_raProactiveOn?'🔔 Pop-in tips: on':'🔕 Pop-in tips: off'; }
 function richieOffTrackSignal(pg){
   try{ const bills=(engUpcomingBills()||[]).filter(b=>!b.paid);
@@ -6011,14 +6011,12 @@ function richieOffTrackSignal(pg){
 function richieMaybeProactive(pg){
   if(!_raProactiveOn || _raBusy || !pg || pg.id==='__settings__') return;
   const now=Date.now();
-  if(now<_raSnoozeUntil || now-_raLastPop<_RA_COOLDOWN) return;
-  const off=richieOffTrackSignal(pg);
-  const firstVisit=!_raSeenPages.has(pg.id);
-  if(!off && !firstVisit) return;
-  _raSeenPages.add(pg.id); _raLastPop=now;
+  if(now<_raSnoozeUntil || now-_raLastPop<8000) return;     // brief guard against rapid re-fire
+  _raLastPop=now;
+  const off=richieOffTrackSignal(pg);                        // an event he noticed takes priority
   setTimeout(()=>{ if(_raBusy||document.hidden||APP.activePage!==pg.id) return;
-    if(off){ richiePopMessage(off,'curious'); } else { richieHopOut(); }
-  }, 1100);
+    if(off){ richiePopMessage(off,'curious'); } else { richieHopOut(); }   // else greet with a page tip
+  }, 900);
 }
 function richieGoHome(){
   clearTimeout(_raHomeTimer);
@@ -6040,7 +6038,8 @@ function _raBubble(msg){
   });
 }
 async function richieCoachNow(){
-  _raBubble('Let me take a look…'); if(_raChar)_raChar.emotion('curious');
+  if(!_raBusy){ _raBusy=true; await new Promise(res=>_raEmerge(res)); }
+  _raBubble('…'); if(_raChar)_raChar.emotion('curious');
   let tip='';
   try{
     const res=await fetch('/api/coach',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -6049,18 +6048,21 @@ async function richieCoachNow(){
   }catch(e){}
   if(!tip){ const q=richieQuips(); tip=q[Math.floor(Math.random()*q.length)]; }
   _aiSeen.push(tip); if(_aiSeen.length>12)_aiSeen.shift();
-  _raBubble(tip);                                  // size + position the bubble to the full tip
-  richieSpeakType(gg('raMsg'), tip, ()=>{ if(_raChar)_raChar.do('point'); });   // type in lockstep with the voice
-  clearTimeout(_raHomeTimer); _raHomeTimer=setTimeout(richieGoHome, 15000);
+  richieShow(tip);                 // funnel types in sync + heads home only when he's done
 }
 window.addEventListener('resize',()=>{ if(_raBusy){ const a=gg('raActor'); const r=_fabRect(); /* keep bubble anchored */ if(gg('raBubble').classList.contains('show')) _raBubble(gg('raMsg').textContent); } });
 function newSbTip(){ const b=richieQuips(); gg('sbRichieTip').textContent=b[Math.floor(Math.random()*b.length)]; }
 function richieSay(msg){
-  gg('richieAssistant').style.display='block';
-  const a=gg('rpAction'); if(a)a.innerHTML='';
-  const pn=gg('richiePanel'); pn.classList.add('open');
-  gg('rpTip').textContent=msg;
-  if(rpChar){rpChar.talk(true);setTimeout(()=>rpChar.talk(false),1400);}
+  // During the one-time goals-first tour, keep the guided panel (it carries action buttons).
+  if((typeof _tourQueue!=='undefined' && _tourQueue.length) || (typeof APP!=='undefined' && APP._goalsFirst)){
+    gg('richieAssistant').style.display='block';
+    const a=gg('rpAction'); if(a)a.innerHTML='';
+    const pn=gg('richiePanel'); if(pn)pn.classList.add('open');
+    gg('rpTip').textContent=msg;
+    if(rpChar){rpChar.talk(true);setTimeout(()=>rpChar.talk(false),1400);}
+    return;
+  }
+  richieShow(msg);   // normal use → Richie comes out of his house (single, unified system)
 }
 // Richie proactively offers to guide the first bank connection
 function richieGuideConnect(){
