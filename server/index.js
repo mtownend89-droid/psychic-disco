@@ -132,6 +132,63 @@ app.post('/api/coach', async (req, res) => {
   }
 });
 
+// ── RICHIE AI ONBOARDING (adaptive interview → profile) ─────────────────────────
+app.post('/api/onboard', async (req, res) => {
+  try {
+    const { history = [], mode = 'next' } = req.body || {};
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(501).json({ error: 'onboard not configured' });
+    }
+    const convo = history.map(h => `Richie: ${h.q}\nUser: ${h.a || ''}`).join('\n') || '(no answers yet)';
+
+    let sys, wantJson = false;
+    if (mode === 'finalize') {
+      wantJson = true;
+      sys = 'You are Richie, a money coach. From this onboarding conversation, infer the user\'s profile. '
+        + 'Return ONLY valid JSON (no markdown, no prose) with exactly these keys: '
+        + '"level" (integer 1-5 for financial literacy/experience), '
+        + '"persona" (one of: coach, crusher, accountant, mascot, retired, investor — the coaching style that fits them best), '
+        + '"goals" (array of 1-4 objects, each {"name": short label under 5 words, "metric": one of emergency, debt, savings, networth, savingsrate, retirement}), '
+        + '"summary" (one short sentence). Base everything strictly on what the user actually said.';
+    } else {
+      sys = 'You are Richie, a warm, sharp money coach onboarding a new user. '
+        + 'Ask ONE short, friendly, specific question (max 25 words) that builds on what they have already said, '
+        + 'to learn their financial literacy, situation, or goals. Adapt to them; never repeat an earlier question; vary the angle. '
+        + 'Output just the question as plain text.';
+    }
+
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_COACH_MODEL || 'gpt-4o-mini',
+        messages: [{ role: 'system', content: sys }, { role: 'user', content: convo }],
+        max_tokens: wantJson ? 260 : 60,
+        temperature: wantJson ? 0.3 : 0.85,
+      }),
+    });
+    if (!r.ok) {
+      const detail = await r.text().catch(() => '');
+      console.error('OpenAI onboard error', r.status, detail);
+      return res.status(502).json({ error: 'onboard upstream', status: r.status });
+    }
+    const data = await r.json();
+    let content = (data.choices?.[0]?.message?.content || '').trim();
+    if (mode === 'finalize') {
+      content = content.replace(/```json|```/g, '').trim();
+      try { return res.json(JSON.parse(content)); }
+      catch (e) { return res.json({}); }   // client falls back to its own heuristic
+    }
+    return res.json({ question: content });
+  } catch (e) {
+    console.error('onboard route error', e);
+    res.status(500).json({ error: String((e && e.message) || e) });
+  }
+});
+
 // ── TOKEN AUTH ────────────────────────────────────────────────────────────────
 // Simple signed token stored in sessionStorage — no cookies needed
 function makeToken() {
