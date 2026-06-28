@@ -737,6 +737,11 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .ri-choice{background:rgba(22,25,32,0.9);border:2px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px 12px;cursor:pointer;transition:all .18s;text-align:center;}
 .ri-quiz-opt{text-align:left;padding:15px 16px;font-size:15px;font-weight:600;line-height:1.3;}
 .ri-quiz .ri-choices-title{grid-column:1/-1;}
+.ri-interview{gap:10px;max-width:520px;margin:0 auto;}
+.ob-input{width:100%;background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.16);border-radius:14px;color:#fff;font-size:15px;font-family:inherit;padding:13px 15px;line-height:1.5;resize:vertical;min-height:54px;outline:none;transition:border-color .15s;}
+.ob-input:focus{border-color:var(--green);}
+.ob-input::placeholder{color:rgba(255,255,255,0.4);}
+.ri-interview .ri-cta-btn{justify-self:end;}
 .ri-choice:hover{transform:translateY(-3px);border-color:rgba(255,255,255,0.2);background:rgba(30,34,44,0.95);}
 .ri-choice-icon{font-size:30px;margin-bottom:6px;}
 .ri-choice-name{font-size:13.5px;font-weight:700;color:var(--text);margin-bottom:3px;}
@@ -3663,6 +3668,7 @@ function renderNav(){
 function closeSidebarMobileLegacy_REMOVED(){}
 function switchPage(id){
   closeSidebarMobile();
+  if(typeof _raSelfNav!=='undefined' && !_raSelfNav){ try{ richieStopForNav(); }catch(e){} }  // hand off: stop this page's Richie
   if(id==='__settings__'){ renderSettings(); APP.activePage='__settings__'; renderNav(); return; }
   let pg=APP.pages.find(p=>p.id===id);
   if(!pg){ pg=APP.pages[0]; }   // stale/invalid id → fall back to first page
@@ -5952,8 +5958,27 @@ async function richieAITip(){
   }catch(e){ fallback(); }
 }
 // ── Richie leaves his house (FAB), interacts, and returns ──
-let _raChar=null, _raBusy=false, _raHomeTimer=null, _raActions=null;
+let _raChar=null, _raBusy=false, _raHomeTimer=null, _raActions=null, _raSelfNav=false;
 function _fabRect(){ const f=document.querySelector('.richie-fab'); return f?f.getBoundingClientRect():{left:window.innerWidth-80,top:window.innerHeight-80,width:58,height:58}; }
+// Leaving a screen: stop this page's Richie instantly so the next page can greet
+function richieStopForNav(){
+  richieStopAllSpeech();
+  clearTimeout(_raHomeTimer);
+  const b=gg('raBubble'); if(b) b.classList.remove('show');
+  const actor=gg('raActor'); if(actor){ actor.classList.remove('out'); actor.style.opacity='0'; actor.style.transform='scale(.3)'; }
+  const fc=gg('fabChar'); if(fc) fc.style.opacity='1';
+  const ff=gg('richieFab'); if(ff) ff.classList.remove('open');
+  _raBusy=false; _raActions=null; _raSnoozeUntil=0; _raLastPop=0;   // a new screen always gets a fresh Richie
+}
+// A short, instant, page-specific greeting (no network) — "More/Tip" fetches the full AI tip
+function richiePageLine(pg){
+  const name=(pg&&pg.name)||'this page';
+  try{ if((pg.widgets||[]).some(w=>w.type==='net_worth_summary'||w.type==='cash_summary'||w.type==='net_worth_chart')){
+    return `Net worth's at ${typeof fmtK==='function'?fmtK(Math.round(engNetWorth())):'$'+Math.round(engNetWorth())}. Want today's focus?`; } }catch(e){}
+  try{ if((pg.widgets||[]).some(w=>w.type==='bills_list')){ const n=(engUpcomingBills()||[]).filter(b=>!b.paid).length; if(n) return `${n} bill${n>1?'s':''} on deck here. Want a hand?`; } }catch(e){}
+  if(pg&&pg.goalMetric) return `Your ${name} goal — want a quick read on progress?`;
+  return `You're on ${name}. Want a quick tip?`;
+}
 // Interactive bubble buttons — Richie can offer real choices the user taps
 function _renderRaActs(){
   const wrap=gg('raActs'); if(!wrap) return;
@@ -5982,8 +6007,7 @@ function richieSpotlight(uid){
 }
 function richieTakeTo(type, line){
   const t=richieFindWidget(type); if(!t){ if(line) richieShow(line); return; }
-  _raSnoozeUntil=Date.now()+4000;                       // don't auto-greet the page he's taking you to
-  if(APP.activePage!==t.pageId) switchPage(t.pageId);
+  if(APP.activePage!==t.pageId){ _raSelfNav=true; switchPage(t.pageId); _raSelfNav=false; }
   setTimeout(()=>{ richieSpotlight(t.uid);
     richieShow(line||'Here it is — take a look. 👇', {actions:[{label:'👍 Got it', on:richieGoHome}]});
   }, 400);
@@ -6036,7 +6060,7 @@ function richieDismiss(){ _raSnoozeUntil=Date.now()+30000; richieGoHome(); }
 
 // ── Proactive: Richie greets when you arrive on a page, and pops for events ──
 let _raProactiveOn=true; try{ const v=LS.getItem('richie_proactive'); if(v!==null)_raProactiveOn=v==='1'; }catch(e){}
-let _raLastPop=0, _raSnoozeUntil=0;
+let _raLastPop=0, _raSnoozeUntil=0, _raOffTrackAt=0;
 function setRichieProactive(on){ _raProactiveOn=!!on; try{ LS.setItem('richie_proactive', on?'1':'0'); }catch(e){} const b=gg('setProactiveBtn'); if(b)b.textContent=_raProactiveOn?'🔔 Pop-in tips: on':'🔕 Pop-in tips: off'; }
 function richieOffTrackSignal(pg){
   try{ const bills=(engUpcomingBills()||[]).filter(b=>!b.paid);
@@ -6047,16 +6071,19 @@ function richieOffTrackSignal(pg){
 function richieMaybeProactive(pg){
   if(!_raProactiveOn || _raBusy || !pg || pg.id==='__settings__') return;
   const now=Date.now();
-  if(now<_raSnoozeUntil || now-_raLastPop<8000) return;     // brief guard against rapid re-fire
+  if(now<_raSnoozeUntil || now-_raLastPop<1500) return;     // debounce duplicate renders only
   _raLastPop=now;
-  const off=richieOffTrackSignal(pg);                        // an event he noticed takes priority
+  const off=(now-_raOffTrackAt>480000) ? richieOffTrackSignal(pg) : null;   // surface off-track at most ~every 8 min
   setTimeout(()=>{ if(_raBusy||document.hidden||APP.activePage!==pg.id) return;
-    if(off){ richieShow(off.msg, {emo:'curious', actions:[
+    if(off){ _raOffTrackAt=Date.now(); richieShow(off.msg, {emo:'curious', actions:[
         {label:off.cta||'Show me', cls:'ra-go', on:()=>richieTakeTo(off.widget, null)},
         {label:'Not now', on:richieDismiss}
       ]}); }
-    else { richieHopOut(); }                                 // else greet with a page tip
-  }, 900);
+    else { richieShow(richiePageLine(pg), {emo:'happy', actions:[      // short + instant; no network
+        {label:'💬 Tip', cls:'ra-go', on:richieCoachNow},
+        {label:'✕', on:richieGoHome}
+      ]}); }
+  }, 280);
 }
 function richieGoHome(){
   clearTimeout(_raHomeTimer);
@@ -6246,7 +6273,7 @@ function riRenderScene(){
   choices.style.display='none'; cta.style.display='none';
   if(scene.choice){
     hint.style.display='none';
-    if(scene.choice==='levelquiz'){ bubble.style.display='block'; if(scene.wake&&riChar&&riChar.sleeping){riChar.sleep(false);} riStartQuiz(); return; }
+    if(scene.choice==='levelquiz'){ bubble.style.display='block'; if(scene.wake&&riChar&&riChar.sleeping){riChar.sleep(false);} riStartInterview(); return; }
     if(scene.choice==='goals'){ bubble.style.display='block'; if(scene.wake&&riChar&&riChar.sleeping){riChar.sleep(false);} riTypeText("Pick up to 3 \u2014 these become your home pages."); riShowChoices('goals'); return; }
     bubble.style.display='none'; riShowChoices(scene.choice); return;
   }
@@ -6327,6 +6354,118 @@ function riAnswerQuiz(oi,e){
   if(riChar) riChar.emotion('excited'); riScene++; gg('riClickHint').style.display='inline';
   riTypeText(`Got it \u2014 you're a ${lv.icon} Lv ${lv.n} \u00b7 ${lv.name}. ${lv.desc} As you hit goals you'll LEVEL UP and unlock more.`);
 }
+/* ── AI-driven onboarding: Richie interviews the user (4 adaptive rounds) ── */
+const OB_ROUNDS=4;
+const OB_FALLBACK_Q=[
+  "How do you keep track of your money right now — an app, a spreadsheet, or mostly in your head?",
+  "When it comes to saving and investing, how confident do you feel — total beginner, getting there, or pretty seasoned?",
+  "What's the one money goal that, if you nailed it this year, would feel like a real win?",
+];
+let _obHistory=[], _obRound=0, _obBusy=false;
+function riStartInterview(){
+  _obHistory=[]; _obRound=0; _obBusy=false;
+  riAskInterview("To start — tell me a bit about your money life right now. What's going well, what's stressing you, and what made you check out Richie?");
+}
+function riAskInterview(q){
+  if(riChar) riChar.emotion(_obRound%2?'curious':'happy');
+  riTypeText(q);
+  _obHistory.push({q});
+  riShowInterviewInput();
+}
+function riShowInterviewInput(){
+  const wrap=gg('riChoices'); wrap.style.display='grid'; wrap.style.gridTemplateColumns='1fr';
+  wrap.classList.remove('ri-quiz','ri-goals'); wrap.classList.add('ri-interview');
+  wrap.innerHTML=`<div class="ri-choices-title">Round ${Math.min(_obRound+1,OB_ROUNDS)} of ${OB_ROUNDS} — just type, however much you like</div>
+    <textarea id="obInput" class="ob-input" rows="2" placeholder="Type your answer…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();riSubmitAnswer(event);}"></textarea>
+    <button class="ri-cta-btn" id="obSend" onclick="riSubmitAnswer(event)">Send \u2192</button>`;
+  setTimeout(()=>{ const ta=gg('obInput'); if(ta) ta.focus(); }, 220);
+}
+async function riSubmitAnswer(e){
+  if(e)e.stopPropagation();
+  if(_obBusy) return;
+  const ta=gg('obInput'); const a=(ta&&ta.value||'').trim();
+  if(!a){ if(ta) ta.focus(); return; }
+  _obBusy=true;
+  _obHistory[_obHistory.length-1].a=a;
+  _obRound++;
+  const wrap=gg('riChoices');
+  if(_obRound>=OB_ROUNDS){
+    wrap.innerHTML=`<div class="ri-choices-title">Reading between the lines\u2026</div>`;
+    if(riChar) riChar.emotion('curious');
+    riTypeText("Love it. Give me a sec \u2014 I'm putting the pieces together\u2026");
+    const profile=await riFetchProfile();
+    _obBusy=false;
+    riApplyProfile(profile);
+    return;
+  }
+  wrap.innerHTML=`<div class="ri-choices-title">\u2026</div>`;
+  if(riChar) riChar.emotion('happy');
+  const q=await riFetchNextQuestion();
+  _obBusy=false;
+  riAskInterview(q);
+}
+async function riFetchNextQuestion(){
+  try{
+    const res=await fetch('/api/onboard',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ history:_obHistory.map(h=>({q:h.q,a:h.a})), mode:'next' })});
+    if(res.ok){ const j=await res.json(); if(j&&j.question) return j.question.trim(); }
+  }catch(e){}
+  return OB_FALLBACK_Q[Math.min(_obRound-1, OB_FALLBACK_Q.length-1)];
+}
+async function riFetchProfile(){
+  try{
+    const res=await fetch('/api/onboard',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ history:_obHistory.map(h=>({q:h.q,a:h.a})), mode:'finalize' })});
+    if(res.ok){ const j=await res.json(); if(j&&(j.level||j.persona||(j.goals&&j.goals.length))) return j; }
+  }catch(e){}
+  return _obFallbackProfile();
+}
+function _obFallbackProfile(){
+  const text=_obHistory.map(h=>(h.a||'')).join(' ').toLowerCase();
+  let level=2;
+  if(/spreadsheet|portfolio|rebalance|net worth|index fund|diversif/.test(text)) level=4;
+  else if(/budget|track|saving|invest/.test(text)) level=3;
+  if(/no idea|don.t know|paycheck to paycheck|struggl|behind|overwhelm/.test(text)) level=1;
+  const goals=[];
+  if(/debt|credit card|loan|owe/.test(text)) goals.push({metric:'debt'});
+  if(/emergency|safety net|cushion|rainy/.test(text)) goals.push({metric:'emergency'});
+  if(/save|saving/.test(text)) goals.push({metric:'savings'});
+  if(/invest|retire|net worth|wealth|fire/.test(text)) goals.push({metric:'networth'});
+  if(!goals.length) goals.push({metric:'emergency'});
+  let persona='coach';
+  if(/debt|behind|stress|owe/.test(text)) persona='crusher';
+  else if(/spreadsheet|precise|number|exact/.test(text)) persona='accountant';
+  else if(/invest|retire|wealth|portfolio/.test(text)) persona='investor';
+  return {level, persona, goals};
+}
+function _aiGoalToPreset(g){
+  const metric=((g&&g.metric)||'').toLowerCase();
+  const map={ emergency:'ef3mo', debt:'debtfree', savings:'save10k', networth:'nw100k', savingsrate:'sr20', retirement:'fire25', invest:'nw100k', budget:'save10k' };
+  let key=map[metric];
+  if(!key && g&&g.name){ const n=g.name.toLowerCase();
+    if(/debt|credit/.test(n))key='debtfree'; else if(/emergency|safety/.test(n))key='ef3mo';
+    else if(/retire|fire|coast/.test(n))key='fire25'; else if(/net.?worth|wealth|six.?figure/.test(n))key='nw100k';
+    else if(/save|saving/.test(n))key='save10k'; }
+  const preset=GOAL_PRESETS.find(p=>p.key===(key||'ef3mo'))||GOAL_PRESETS[0];
+  const clone=Object.assign({}, preset);
+  if(g&&g.name && g.name.length<=34) clone.name=g.name;   // personalize the label
+  return clone;
+}
+function riApplyProfile(profile){
+  profile=profile||_obFallbackProfile();
+  let lv=parseInt(profile.level,10); if(!(lv>=1&&lv<=5)) lv=2; setupConfig.level=lv;
+  const pk=(typeof PERSONA_ORDER!=='undefined'&&PERSONA_ORDER.includes(profile.persona))?profile.persona:'coach';
+  setupConfig.persona=pk; setupConfig._aiPersona=true; introApplyAccent();
+  const seen={}; const goals=(profile.goals||[]).slice(0,4).map(_aiGoalToPreset).filter(g=>{ if(!g||seen[g.key])return false; seen[g.key]=1; return true; });
+  setupConfig.chosenGoals = goals.length?goals:[_aiGoalToPreset({metric:'emergency'})];
+  const wrap=gg('riChoices'); wrap.style.display='none'; wrap.classList.remove('ri-interview');
+  document.querySelector('.ri-bubble-wrap').style.display='block';
+  if(riChar) riChar.emotion('excited');
+  const lvo=LEVELS.find(l=>l.n===lv); const gnames=setupConfig.chosenGoals.map(g=>g.name).join(', ');
+  const gi=RICHIE_STORY.findIndex(s=>s.choice==='goals'); if(gi>=0) riScene=gi; gg('riClickHint').style.display='inline';
+  riTypeText(`Okay \u2014 I've got a real read on you now. You're a ${lvo.icon} Lv ${lv} \u00b7 ${lvo.name}. Based on everything, here's what I think we should work toward: ${gnames}. Tweak below if you want, then we'll build it.`);
+  setTimeout(()=>{ riShowChoices('goals'); }, 320);   // goal picker, pre-filled with the AI's picks
+}
 /* ── Narrated goals picker (now part of the intro, before naming) ── */
 function riRenderGoals(){
   const chosen=setupConfig.chosenGoals||[];
@@ -6352,8 +6491,8 @@ function riGoalsDone(e){
   if(!(setupConfig.chosenGoals||[]).length) return;
   const wrap=gg('riChoices'); wrap.style.display='none'; wrap.classList.remove('ri-goals');
   document.querySelector('.ri-bubble-wrap').style.display='block';
-  // Richie picks his own personality now, from the quiz answers + goals + level
-  const pk=determinePersona(_quizCoach);
+  // Persona: keep the AI's pick from the interview; otherwise derive it
+  const pk = setupConfig._aiPersona ? setupConfig.persona : determinePersona(_quizCoach);
   setupConfig.persona=pk; introApplyAccent();
   const p=RICHIE_PERSONAS[pk];
   if(riChar) riChar.emotion('celebrate'); riScene++; gg('riClickHint').style.display='inline';
@@ -6746,8 +6885,8 @@ function showSwotPanel(swot){
   if(window._wbRichie) window._wbRichie.emotion('proud');
 }
 function wbEnter(){
-  richieStopAllSpeech();              // stop any SWOT greeting/voice that's still going
-  _raSnoozeUntil=Date.now()+4500;    // don't let house Richie greet on top of it
+  richieStopAllSpeech();              // stop the SWOT greeting/voice the moment you move on
+  _raSnoozeUntil=0; _raLastPop=0;     // the first app screen greets right away (no fixed hold)
   gg('welcomeBack').style.display='none';
   enterApp();
 }
