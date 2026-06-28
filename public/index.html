@@ -5992,12 +5992,12 @@ function richiePageLine(pg){
   return `You're on ${name}. Want a quick tip?`;
 }
 // Interactive bubble buttons — Richie can offer real choices the user taps
-// iOS/Android (or small touch screen) → emerging bubble; desktop browser → block panel
+// iOS/Android → emerging bubble; ANY desktop browser (incl. touch laptops) → block panel
 function _richieMobile(){
   try{
-    const ua=navigator.userAgent||'';
+    const ua=navigator.userAgent||navigator.vendor||'';
     if(/iPhone|iPad|iPod|Android/i.test(ua)) return true;
-    if((navigator.maxTouchPoints||0)>1 && Math.min(window.innerWidth,window.innerHeight)<=820) return true;
+    if(/Macintosh/.test(ua) && (navigator.maxTouchPoints||0)>1) return true;   // iPad on iPadOS reports as Mac+touch
   }catch(e){}
   return false;
 }
@@ -6014,6 +6014,7 @@ function _renderRaActs(){ _renderActs('raActs'); }
 // Desktop: show Richie's message in the original bottom-right block panel
 function _panelShow(msg, opts){
   opts=opts||{};
+  const bub=gg('raBubble'); if(bub) bub.classList.remove('show');   // never leave the mobile bubble up on desktop
   const asst=gg('richieAssistant'); if(asst) asst.style.display='block';
   const pn=gg('richiePanel'); if(!pn) return;
   if(opts.celebrate) _raConfetti();
