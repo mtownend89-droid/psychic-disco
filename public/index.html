@@ -1582,6 +1582,12 @@ canvas.chart-interactive{cursor:crosshair;}
 .acct-txn-row:last-child{border-bottom:none;}
 .acct-txn-name{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px;}
 .acct-txn-cat{font-size:10.5px;color:var(--muted);margin-top:2px;}
+.acct-txn-row{align-items:flex-start;}
+.acct-txn-edit{display:flex;gap:6px;align-items:center;margin-top:5px;flex-wrap:wrap;}
+.txn-cat-sel{font-size:10.5px;color:var(--text);background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:3px 5px;max-width:48%;cursor:pointer;font-family:inherit;}
+.txn-note-in{flex:1;min-width:96px;font-size:10.5px;color:var(--text);background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:4px 7px;font-family:inherit;outline:none;}
+.txn-note-in:focus{border-color:var(--green);}
+.txn-note-in::placeholder{color:var(--muted);}
 .cat-pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;transition:all 0.13s;border:1.5px solid transparent;white-space:nowrap;user-select:none;}
 .cat-pill:hover{filter:brightness(1.15);border-color:currentColor;transform:scale(1.04);}
 .inc-grid{display:grid;grid-template-columns:300px 1fr;}
@@ -2151,7 +2157,10 @@ function getCatParent(label){
   return {id:c.id,label:c.label,color:c.color};
 }
 const _catOverrides=JSON.parse(LS.getItem('mdf_cat_overrides')||'{}');
-function getTxnCategory(t){ const id=t.transaction_id||''; if(id&&_catOverrides[id])return _catOverrides[id]; const raw=(t.personal_finance_category&&t.personal_finance_category.primary)||(t.category&&t.category[0])||''; return mapPlaidCategory(raw); }
+const _txnNotes=JSON.parse(LS.getItem('mdf_txn_notes')||'{}');
+function _txnKey(t){ return t.transaction_id || t.id || ((t.date||'')+'|'+(t.merchant_name||t.name||'')+'|'+t.amount); }
+function getTxnCategory(t){ const id=_txnKey(t); if(id&&_catOverrides[id])return _catOverrides[id]; const raw=(t.personal_finance_category&&t.personal_finance_category.primary)||(t.category&&t.category[0])||''; return mapPlaidCategory(raw); }
+function getTxnNote(t){ return _txnNotes[_txnKey(t)]||''; }
 
 /* ── Live data layer (Plaid-backed via server API) ── */
 let allAccts=[], allTxns=[], dataLoaded=false, serverAvailable=true;
@@ -5285,13 +5294,39 @@ function acctMount(w){
   if(!info){ el.innerHTML='<div class="acct-empty">Connect your bank to see transactions for this account.</div>'; return; }
   const net=info.net;
   let html=`<div class="acct-txn-head">${info.count} txns · last 30d · net <b style="color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'+':'-'}${fmt2(Math.abs(net))}</b></div>`;
-  if(!info.txns.length){ html+='<div class="acct-empty">No transactions in last 30 days.</div>'; }
-  else{
-    html+=info.txns.map(t=>{ const pos=t.amount>0; const col=pos?'var(--red)':'var(--green)'; const amt=(pos?'-':'+')+fmt2(Math.abs(t.amount)); const cat=getTxnCategory(t); const name=t.merchant_name||t.name||''; const dt=new Date(t.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
-      return `<div class="acct-txn-row"><div style="flex:1;overflow:hidden"><div class="acct-txn-nm">${esc(name)}</div><div class="acct-txn-cat">${esc(cat)}</div></div><div style="text-align:right;flex-shrink:0"><div class="acct-txn-amt" style="color:${col}">${amt}</div><div class="acct-txn-dt">${dt}</div></div></div>`;
-    }).join('');
-  }
+  if(!info.txns.length){ html+='<div class="acct-empty">No transactions in last 30 days.</div>'; el.innerHTML=html; return; }
+  const cats=getUserCategories().filter(c=>!c.group).map(c=>c.label);
+  const keys=[];
+  html+=info.txns.map((t,i)=>{ const key=_txnKey(t); keys[i]=key; const pos=t.amount>0; const col=pos?'var(--red)':'var(--green)'; const amt=(pos?'-':'+')+fmt2(Math.abs(t.amount)); const cat=getTxnCategory(t); const note=getTxnNote(t); const name=t.merchant_name||t.name||''; const dt=new Date(t.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      const catList=cats.includes(cat)?cats:[cat].concat(cats);
+      const opts=catList.map(c=>`<option value="${esc(c)}"${c===cat?' selected':''}>${esc(c)}</option>`).join('');
+      return `<div class="acct-txn-row">
+        <div style="flex:1;min-width:0">
+          <div class="acct-txn-nm">${esc(name)}</div>
+          <div class="acct-txn-edit">
+            <select class="txn-cat-sel" onclick="event.stopPropagation()" onchange="setAcctTxnCat('${w.uid}',${i},this.value)" title="Change category">${opts}</select>
+            <input class="txn-note-in" type="text" placeholder="📝 note for later…" value="${esc(note)}" onclick="event.stopPropagation()" onchange="setAcctTxnNote('${w.uid}',${i},this.value)" onkeydown="if(event.key==='Enter')this.blur()">
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0"><div class="acct-txn-amt" style="color:${col}">${amt}</div><div class="acct-txn-dt">${dt}</div></div>
+      </div>`;
+  }).join('');
+  _acctTxnKeys[w.uid]=keys;
   el.innerHTML=html;
+}
+let _acctTxnKeys={};
+// Change a transaction's category (writes a persistent override → flows through every widget)
+function setAcctTxnCat(uid, idx, cat){
+  const k=(_acctTxnKeys[uid]||[])[idx]; if(!k) return;
+  if(cat) _catOverrides[k]=cat; else delete _catOverrides[k];
+  try{ LS.setItem('mdf_cat_overrides', JSON.stringify(_catOverrides)); }catch(e){}
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg) renderCanvas(pg);   // re-render so spending/category widgets update too
+}
+// Save a free-text note on a transaction (no re-render, so typing stays smooth)
+function setAcctTxnNote(uid, idx, note){
+  const k=(_acctTxnKeys[uid]||[])[idx]; if(!k) return;
+  if(note&&note.trim()) _txnNotes[k]=note.trim(); else delete _txnNotes[k];
+  try{ LS.setItem('mdf_txn_notes', JSON.stringify(_txnNotes)); }catch(e){}
 }
 
 function fdWidgetBody(w){
@@ -5857,7 +5892,7 @@ function doFullReset(){
   const v=(gg('resetConfirmInput').value||'').trim().toUpperCase();
   if(v!=='YES') return;  // hard guard — only proceeds on an exact YES
   try{
-    ['richie_setup','richie_app','mdf_categories','mdf_cat_overrides','mdf_fire'].forEach(k=>{ try{LS.removeItem(k);}catch(e){} });
+    ['richie_setup','richie_app','mdf_categories','mdf_cat_overrides','mdf_txn_notes','mdf_fire'].forEach(k=>{ try{LS.removeItem(k);}catch(e){} });
     try{ SS.removeItem('mdf_token'); }catch(e){}
     // defensive sweep of any remaining app-scoped keys
     try{ Object.keys(window.localStorage||{}).forEach(k=>{ if(/^(richie_|mdf_)/.test(k)) window.localStorage.removeItem(k); }); }catch(e){}
