@@ -455,6 +455,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 #richieAssistant{
   position:fixed;bottom:24px;right:24px;z-index:900;
 }
+.ra-confetti{position:fixed;z-index:1202;width:8px;height:8px;border-radius:2px;pointer-events:none;animation:ra-conf .95s ease-out forwards;}
+@keyframes ra-conf{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(380deg)}}
 .ra-actor{position:fixed;z-index:1200;width:54px;height:54px;display:flex;align-items:center;justify-content:center;font-size:40px;opacity:0;transform:scale(.3);pointer-events:none;transition:left .52s cubic-bezier(.5,1.3,.5,1),top .52s cubic-bezier(.5,1.3,.5,1),opacity .25s,transform .25s;filter:drop-shadow(0 6px 9px rgba(0,0,0,.55));}
 .ra-actor.out{opacity:1;}
 @keyframes ra-bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-5px) rotate(2deg)}}
@@ -465,16 +467,28 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .ra-acts button{font-size:12px;font-weight:700;border-radius:9px;padding:6px 11px;border:1px solid #dfe2ea;background:#f3f5f8;color:#1b1e26;cursor:pointer;}
 .ra-acts #raMore{background:var(--green);border-color:var(--green);color:#06281c;}
 .richie-fab{
-  width:58px;height:58px;border-radius:50%;
-  background:linear-gradient(135deg,#2ecc8a,#1ba870);
-  display:flex;align-items:center;justify-content:center;
-  font-size:26px;cursor:pointer;border:none;
-  box-shadow:0 4px 20px rgba(46,204,138,0.4);
-  transition:all 0.2s;
+  width:64px;height:70px;background:none;border:none;padding:0;cursor:pointer;position:relative;
+  display:flex;align-items:flex-end;justify-content:center;
   animation:richie-pulse-fab 3s ease-in-out infinite;
-  position:relative;
 }
-.richie-fab:hover{transform:scale(1.08);}
+.rf-house{
+  position:relative;width:52px;height:48px;border-radius:13px;
+  background:linear-gradient(135deg,#2ecc8a,#1ba870);
+  box-shadow:0 4px 20px rgba(46,204,138,0.42);
+  display:flex;align-items:center;justify-content:center;font-size:25px;overflow:hidden;
+}
+.rf-house::after{content:'';position:absolute;bottom:0;width:17px;height:21px;border-radius:9px 9px 0 0;background:rgba(0,0,0,0.16);}
+#fabChar{position:relative;z-index:2;transition:opacity .2s;}
+.rf-roof{
+  position:absolute;top:2px;left:50%;
+  width:0;height:0;border-left:33px solid transparent;border-right:33px solid transparent;border-bottom:23px solid #9a6535;
+  transform:translateX(-50%);transform-origin:bottom center;
+  transition:transform .42s cubic-bezier(.34,1.56,.64,1);z-index:3;
+  filter:drop-shadow(0 -1px 1px rgba(0,0,0,0.25));
+}
+.richie-fab.open .rf-roof{transform:translateX(-50%) translateY(-12px) rotate(-34deg);}
+.richie-fab.open .rf-house{box-shadow:0 4px 26px rgba(46,204,138,0.6);}
+.richie-fab:hover{transform:scale(1.06);}
 .richie-fab-badge{
   position:absolute;top:-2px;right:-2px;
   width:16px;height:16px;border-radius:50%;
@@ -1965,13 +1979,16 @@ canvas.chart-interactive{cursor:crosshair;}
       <button class="rp-new-tip-btn" onclick="newRichieTip()">💬 Tell me something else</button>
     </div>
   </div>
-  <button class="richie-fab" onclick="richieHopOut()"><span id="fabChar">💰</span></button>
+  <button class="richie-fab" id="richieFab" onclick="richieHopOut()" aria-label="Richie's house">
+    <span class="rf-roof"></span>
+    <span class="rf-house"><span id="fabChar">💰</span></span>
+  </button>
 </div>
 <!-- Richie actor (emerges from his house / FAB) -->
 <div class="ra-actor" id="raActor"><span id="raChar">💰</span></div>
 <div class="ra-bubble" id="raBubble">
   <div class="ra-msg" id="raMsg"></div>
-  <div class="ra-acts"><button id="raMore" onclick="richieCoachNow()">💬 More</button><button id="raClose" onclick="richieGoHome()">✕ go home</button></div>
+  <div class="ra-acts"><button id="raMore" onclick="richieCoachNow()">💬 More</button><button id="raClose" onclick="richieDismiss()">✕ go home</button></div>
 </div>
 
 <!-- PAGE EDITOR MODAL -->
@@ -2235,6 +2252,7 @@ function applyBillOverrides(list){
 function toggleBillPaid(key){
   const ov=_billOverrides(); ov[key]=ov[key]||{}; ov[key].paid=!ov[key].paid; saveState();
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+  if(ov[key].paid){ const nm=(key.split('|')[0]||'that').trim(); try{ richieCelebrate(`Boom — ${nm} marked paid! ✅ One less thing on the list.`); }catch(e){} }
 }
 function setBillPay(key,val){
   const ov=_billOverrides(); ov[key]=ov[key]||{}; const n=parseFloat(val); if(!isNaN(n)&&n>=0) ov[key].pay=n; saveState();
@@ -3657,8 +3675,8 @@ function switchPage(id){
 
 function renderPage(pg){
   renderCanvas(pg);
-  // Proactive coaching: when visiting a goal page (not during the guided tour), Richie offers a contextual nudge
-  if(pg.goalMetric && !_tourQueue.length && !APP._goalsFirst){ maybeCoachPage(pg); }
+  // Proactive coaching (frequency-capped): off-track nudge or first-visit tip
+  if(!_tourQueue.length && !APP._goalsFirst){ richieMaybeProactive(pg); }
 }
 let _lastCoachPage=null, _lastCoachTime=0;
 function maybeCoachPage(pg){
@@ -5716,6 +5734,7 @@ function renderSettings(){
         <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
           <button class="btn" onclick="riToggleAudio()" id="setVoiceToggle">${riAudioOn?'🔊 Voice on':'🔇 Voice off'}</button>
           <button class="btn" onclick="riSpeak(currentPreset().sample)">▶ Preview</button>
+          <button class="btn" onclick="setRichieProactive(!_raProactiveOn)" id="setProactiveBtn">${_raProactiveOn?'🔔 Pop-in tips: on':'🔕 Pop-in tips: off'}</button>
         </div>
         <div style="font-size:11px;color:var(--muted);margin-top:8px;opacity:0.8">Richie's voice is AI-generated, not a real person.</div>
       </div>
@@ -5894,7 +5913,7 @@ function awardXp(amount,reason){
 function levelUp(){
   const lv=LEVELS.find(l=>l.n===APP.level);
   if(sbRichie)sbRichie.do('tada');
-  richieSay('🎉 LEVEL UP! You hit '+lv.icon+' '+lv.name+'! New features unlocked.');
+  richieCelebrate('🎉 LEVEL UP! You hit '+lv.icon+' '+lv.name+'! New features unlocked.');
   renderShell();
 }
 
@@ -5940,17 +5959,66 @@ function _fabRect(){ const f=document.querySelector('.richie-fab'); return f?f.g
 function richieHopOut(){
   if(_raBusy){ richieGoHome(); return; }
   _raBusy=true;
+  _raEmerge(()=>{ if(_raChar)_raChar.emotion('happy'); richieCoachNow(); });
+}
+function _raEmerge(then){
   if(!_raChar){ try{ _raChar=new RichieEmoji(gg('raChar')); }catch(e){} }
-  const fc=gg('fabChar'); if(fc) fc.style.opacity='0';            // the bag leaves the house
+  const ff=gg('richieFab'); if(ff) ff.classList.add('open');       // roof opens
+  const fc=gg('fabChar'); if(fc) fc.style.opacity='0';              // the bag leaves the house
   const actor=gg('raActor'); const r=_fabRect();
   actor.style.left=(r.left+2)+'px'; actor.style.top=r.top+'px';
   actor.classList.add('out'); actor.style.transform='scale(1)';
-  setTimeout(()=>{
-    const tx=Math.max(12, r.left-118), ty=Math.max(12, r.top-118);
-    actor.style.left=tx+'px'; actor.style.top=ty+'px';
-    if(_raChar)_raChar.emotion('happy');
-    richieCoachNow();
-  }, 80);
+  setTimeout(()=>{ const tx=Math.max(12, r.left-118), ty=Math.max(12, r.top-118); actor.style.left=tx+'px'; actor.style.top=ty+'px'; if(then)then(); }, 80);
+}
+// Emerge with a fixed message (no AI fetch) — used for off-track nudges & wins
+function richiePopMessage(msg, emo){
+  if(_raBusy) return; _raBusy=true;
+  _raEmerge(()=>{ if(_raChar)_raChar.emotion(emo||'happy'); _raBubble(msg);
+    richieSpeakType(gg('raMsg'), msg, ()=>{ if(_raChar)_raChar.do('point'); });
+    clearTimeout(_raHomeTimer); _raHomeTimer=setTimeout(richieGoHome, 15000); });
+}
+// 🎉 Win celebration — confetti + excited Richie + spoken praise
+function richieCelebrate(msg){
+  _raConfetti();
+  const show=()=>{ if(_raChar){ _raChar.emotion('celebrate'); _raChar.do('tada'); } _raBubble(msg);
+    richieSpeakType(gg('raMsg'), msg, ()=>{ if(_raChar)_raChar.do('celebrate'); });
+    clearTimeout(_raHomeTimer); _raHomeTimer=setTimeout(richieGoHome, 12000); };
+  if(_raBusy){ show(); } else { _raBusy=true; _raEmerge(show); }
+}
+function _raConfetti(){
+  const r=_fabRect(); const cx=r.left-100, cy=r.top-100;
+  const cols=['#2ecc8a','#5b8def','#f0a540','#f05c5c','#a78bfa','#ffd23f'];
+  for(let i=0;i<18;i++){ const d=document.createElement('div'); d.className='ra-confetti';
+    d.style.left=cx+Math.random()*40+'px'; d.style.top=cy+Math.random()*30+'px';
+    d.style.background=cols[i%cols.length];
+    d.style.setProperty('--dx',(Math.random()*180-90)+'px'); d.style.setProperty('--dy',(60+Math.random()*120)+'px');
+    document.body.appendChild(d); setTimeout(()=>{ try{d.remove();}catch(e){} },1000); }
+}
+// User explicitly dismisses → back off for a few minutes (the Clippy lesson)
+function richieDismiss(){ _raSnoozeUntil=Date.now()+180000; richieGoHome(); }
+
+// ── Proactive pop-in (frequency-capped) ──
+let _raProactiveOn=true; try{ const v=LS.getItem('richie_proactive'); if(v!==null)_raProactiveOn=v==='1'; }catch(e){}
+let _raSeenPages=new Set(), _raLastPop=0, _raSnoozeUntil=0;
+const _RA_COOLDOWN=60000;   // ≥60s between unprompted pops
+function setRichieProactive(on){ _raProactiveOn=!!on; try{ LS.setItem('richie_proactive', on?'1':'0'); }catch(e){} const b=gg('setProactiveBtn'); if(b)b.textContent=_raProactiveOn?'🔔 Pop-in tips: on':'🔕 Pop-in tips: off'; }
+function richieOffTrackSignal(pg){
+  try{ const bills=(engUpcomingBills()||[]).filter(b=>!b.paid);
+    if(bills.length>=3){ const tot=bills.reduce((s,b)=>s+(b.pay||b.amount||0),0); return `Heads up — you've got ${bills.length} bills coming up, about ${typeof fmtK==='function'?fmtK(tot):'$'+Math.round(tot)}. Want to run through them?`; } }catch(e){}
+  try{ const inc=engMonthlyIncome(), sp=engSpend30(); if(inc>0 && sp>inc*1.05){ return `Spending's running ahead of income this month. Want a quick look at where it's going?`; } }catch(e){}
+  return null;
+}
+function richieMaybeProactive(pg){
+  if(!_raProactiveOn || _raBusy || !pg || pg.id==='__settings__') return;
+  const now=Date.now();
+  if(now<_raSnoozeUntil || now-_raLastPop<_RA_COOLDOWN) return;
+  const off=richieOffTrackSignal(pg);
+  const firstVisit=!_raSeenPages.has(pg.id);
+  if(!off && !firstVisit) return;
+  _raSeenPages.add(pg.id); _raLastPop=now;
+  setTimeout(()=>{ if(_raBusy||document.hidden||APP.activePage!==pg.id) return;
+    if(off){ richiePopMessage(off,'curious'); } else { richieHopOut(); }
+  }, 1100);
 }
 function richieGoHome(){
   clearTimeout(_raHomeTimer);
@@ -5958,7 +6026,7 @@ function richieGoHome(){
   const actor=gg('raActor'); const r=_fabRect();
   actor.style.left=(r.left+2)+'px'; actor.style.top=r.top+'px';
   actor.style.transform='scale(.3)'; actor.style.opacity='0';
-  setTimeout(()=>{ actor.classList.remove('out'); const fc=gg('fabChar'); if(fc) fc.style.opacity='1'; _raBusy=false; }, 480);
+  setTimeout(()=>{ actor.classList.remove('out'); const fc=gg('fabChar'); if(fc) fc.style.opacity='1'; const ff=gg('richieFab'); if(ff) ff.classList.remove('open'); _raBusy=false; }, 480);
 }
 function _raBubble(msg){
   gg('raMsg').textContent=msg;
@@ -5981,9 +6049,9 @@ async function richieCoachNow(){
   }catch(e){}
   if(!tip){ const q=richieQuips(); tip=q[Math.floor(Math.random()*q.length)]; }
   _aiSeen.push(tip); if(_aiSeen.length>12)_aiSeen.shift();
-  _raBubble(tip); if(_raChar)_raChar.do('point');
-  if(typeof riAudioOn!=='undefined'&&riAudioOn) riSpeak(tip);
-  clearTimeout(_raHomeTimer); _raHomeTimer=setTimeout(richieGoHome, 14000);
+  _raBubble(tip);                                  // size + position the bubble to the full tip
+  richieSpeakType(gg('raMsg'), tip, ()=>{ if(_raChar)_raChar.do('point'); });   // type in lockstep with the voice
+  clearTimeout(_raHomeTimer); _raHomeTimer=setTimeout(richieGoHome, 15000);
 }
 window.addEventListener('resize',()=>{ if(_raBusy){ const a=gg('raActor'); const r=_fabRect(); /* keep bubble anchored */ if(gg('raBubble').classList.contains('show')) _raBubble(gg('raMsg').textContent); } });
 function newSbTip(){ const b=richieQuips(); gg('sbRichieTip').textContent=b[Math.floor(Math.random()*b.length)]; }
@@ -6303,6 +6371,56 @@ async function _ttsCloud(text){
   _ttsAudio=new Audio(url); _ttsAudio.play().catch(()=>{});
   _ttsAudio.onended=()=>{ try{URL.revokeObjectURL(url);}catch(e){} };
 }
+// Fetch a preloaded <audio> for text (current preset voice + persona), or throw
+const _ttsCache=new Map();   // voice|persona|text → Blob (instant replays)
+async function _ttsFetchAudio(text){
+  const pre=currentPreset();
+  const k=setupConfig.persona||(typeof APP!=='undefined'&&APP.persona)||'coach';
+  const instructions=`Speak as Richie, a money coach, in ${pre.style}. ${PERSONA_TTS_STYLE[k]||''}`.trim();
+  const key=(pre.oai||'cedar')+'|'+k+'|'+text;
+  let blob=_ttsCache.get(key);
+  if(!blob){
+    const res=await fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text, voice:pre.oai||'cedar', instructions})});
+    if(!res.ok) throw new Error('tts '+res.status);
+    blob=new Blob([await res.arrayBuffer()],{type:'audio/mpeg'});
+    _ttsCache.set(key, blob); if(_ttsCache.size>40){ _ttsCache.delete(_ttsCache.keys().next().value); }
+  }
+  const url=URL.createObjectURL(blob);
+  const a=new Audio(url); a.preload='auto';
+  a.addEventListener('ended',()=>{ try{URL.revokeObjectURL(url);}catch(e){} });
+  return a;
+}
+function _typeInto(el, text, perMs, done){
+  if(!el) return; el.textContent=''; let i=0; clearTimeout(el._tt);
+  (function step(){ if(i<=text.length){ el.textContent=text.slice(0,i); i++; el._tt=setTimeout(step, perMs); } else if(done) done(); })();
+}
+// Speak + type IN SYNC: type the text at the pace of the spoken audio so the
+// voice tracks the words as they appear (falls back to browser voice / plain type).
+async function richieSpeakType(el, text, doneCb){
+  if(!el) return;
+  const audioOn=(typeof riAudioOn!=='undefined' && riAudioOn);
+  const clean=(text||'').replace(/[\u{1F000}-\u{1FAFF}\u2190-\u27BF\u2B00-\u2BFF\uFE0F\u2022]/gu,'').replace(/\s+/g,' ').trim();
+  if(!audioOn || _ttsMode==='browser'){
+    if(audioOn) _speakBrowser(clean);
+    _typeInto(el, text, 24, doneCb); return;
+  }
+  try{ _stopTts(); }catch(e){}
+  el.textContent='…';
+  let audio=null;
+  try{ audio=await _ttsFetchAudio(clean); }catch(e){ audio=null; }
+  if(!audio){ _ttsMode='browser'; _speakBrowser(clean); _typeInto(el, text, 24, doneCb); return; }
+  _ttsAudio=audio; _ttsMode='cloud';
+  let started=false;
+  const begin=()=>{ if(started) return; started=true;
+    let dur=audio.duration; if(!dur||!isFinite(dur)||dur<=0) dur=Math.max(1.4, clean.length/14);
+    const per=Math.max(13, Math.min(55, (dur*1000)/Math.max(text.length,1)));
+    audio.play().catch(()=>{});
+    _typeInto(el, text, per, doneCb);
+  };
+  if(audio.readyState>=1) begin();
+  else { audio.addEventListener('loadedmetadata', begin, {once:true}); setTimeout(begin, 700); }  // don't stall if metadata is slow
+}
 function _speakBrowser(clean){
   if(typeof window==='undefined' || !window.speechSynthesis) return;
   const pre=currentPreset(); const voice=_resolveVoice(); const mod=_personaMod();
@@ -6549,13 +6667,8 @@ function runWelcomeBack(){
   const name=(JSON.parse(LS.getItem('richie_setup')||'{}').householdName)||(APP&&APP.household)||'friend';
   const swot=buildSWOT();
   const greet=`Welcome back! Here's your money SWOT — a quick read on where ${name} stands today.`;
-  if(typeof riAudioOn!=='undefined'&&riAudioOn) riSpeak(greet);
-  // typewriter greeting
-  let i=0; const el=gg('wbText'); el.innerHTML='';
-  (function type(){
-    if(i<=greet.length){ el.textContent=greet.slice(0,i); i++; setTimeout(type,18); }
-    else { wb.talk(false); showSwotPanel(swot); wbDailyTask(swot, greet); }
-  })();
+  const el=gg('wbText'); el.innerHTML='';
+  richieSpeakType(el, greet, ()=>{ wb.talk(false); showSwotPanel(swot); wbDailyTask(swot, greet); });
   wb.talk(true);
 }
 function suggestDailyTask(swot){
