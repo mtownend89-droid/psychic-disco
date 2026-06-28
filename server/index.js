@@ -151,10 +151,12 @@ app.post('/api/onboard', async (req, res) => {
         + '"goals" (array of 1-4 objects, each {"name": short label under 5 words, "metric": one of emergency, debt, savings, networth, savingsrate, retirement}), '
         + '"summary" (one short sentence). Base everything strictly on what the user actually said.';
     } else {
+      wantJson = true;
       sys = 'You are Richie, a warm, sharp money coach onboarding a new user. '
-        + 'Ask ONE short, friendly, specific question (max 25 words) that builds on what they have already said, '
-        + 'to learn their financial literacy, situation, or goals. Adapt to them; never repeat an earlier question; vary the angle. '
-        + 'Output just the question as plain text.';
+        + 'Based on the conversation so far, ask ONE short, friendly, specific question (max 18 words) to learn their financial literacy, situation, or goals, '
+        + 'AND provide 3-4 short multiple-choice answer options (each max 8 words) spanning the likely range of answers so they can just tap one. '
+        + 'Adapt to what they have already said; never repeat an earlier question; vary the angle. '
+        + 'Return ONLY valid JSON: {"question":"...","options":["...","...","..."]}';
     }
 
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -167,7 +169,7 @@ app.post('/api/onboard', async (req, res) => {
         model: process.env.OPENAI_COACH_MODEL || 'gpt-4o-mini',
         messages: [{ role: 'system', content: sys }, { role: 'user', content: convo }],
         max_tokens: wantJson ? 260 : 60,
-        temperature: wantJson ? 0.3 : 0.85,
+        temperature: mode === 'finalize' ? 0.3 : 0.8,
       }),
     });
     if (!r.ok) {
@@ -177,12 +179,9 @@ app.post('/api/onboard', async (req, res) => {
     }
     const data = await r.json();
     let content = (data.choices?.[0]?.message?.content || '').trim();
-    if (mode === 'finalize') {
-      content = content.replace(/```json|```/g, '').trim();
-      try { return res.json(JSON.parse(content)); }
-      catch (e) { return res.json({}); }   // client falls back to its own heuristic
-    }
-    return res.json({ question: content });
+    content = content.replace(/```json|```/g, '').trim();
+    try { return res.json(JSON.parse(content)); }   // finalize → {level,persona,goals}; next → {question,options}
+    catch (e) { return res.json({}); }               // client falls back to its own questions/heuristic
   } catch (e) {
     console.error('onboard route error', e);
     res.status(500).json({ error: String((e && e.message) || e) });
