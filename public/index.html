@@ -6511,8 +6511,9 @@ function riGoalsDone(e){
 }
 
 /* ── Richie's voice (Web Speech API) — preset-based, persona-inflected ── */
-let riAudioOn = true;
+let riAudioOn = false;   // VOICE DISABLED app-wide for now (text only) — revisit later
 try{ const s=LS.getItem('richie_audio'); if(s!==null) riAudioOn = s==='1'; }catch(e){}
+riAudioOn = false;       // hard override: keep voice off regardless of saved preference
 let riVoiceId='guy';
 try{ const g=LS.getItem('richie_voice'); if(g&&VOICE_PRESETS.some(p=>p.id===g)) riVoiceId=g;
      else { const old=LS.getItem('richie_voice_gender'); if(old==='female') riVoiceId='gal'; } }catch(e){}
@@ -6547,6 +6548,7 @@ let _ttsMode='auto';   // 'auto' | 'cloud' | 'browser'
 let _ttsAudio=null, _ttsSeq=0;
 function _stopTts(){ _ttsSeq++; try{ if(_ttsAudio){ _ttsAudio.pause(); _ttsAudio=null; } }catch(e){} try{ if(window.speechSynthesis) window.speechSynthesis.cancel(); }catch(e){} }
 async function _ttsCloud(text){
+  return;   // VOICE DISABLED app-wide (text only) — revisit later
   const pre=currentPreset();
   const k=setupConfig.persona||(typeof APP!=='undefined'&&APP.persona)||'coach';
   const instructions=`Speak as Richie, a money coach, in ${pre.style}. ${PERSONA_TTS_STYLE[k]||''}`.trim();
@@ -6589,7 +6591,7 @@ function _typeInto(el, text, perMs, done){
 // voice tracks the words as they appear (falls back to browser voice / plain type).
 async function richieSpeakType(el, text, doneCb){
   if(!el) return;
-  const audioOn=(typeof riAudioOn!=='undefined' && riAudioOn);
+  const audioOn=false;   // VOICE DISABLED app-wide (text only) — types without sound
   const clean=(text||'').replace(/[\u{1F000}-\u{1FAFF}\u2190-\u27BF\u2B00-\u2BFF\uFE0F\u2022]/gu,'').replace(/\s+/g,' ').trim();
   try{ _stopTts(); }catch(e){}
   const seq=_ttsSeq;                                  // this line's audio generation
@@ -6623,6 +6625,7 @@ async function richieSpeakType(el, text, doneCb){
   else { audio.addEventListener('loadedmetadata', begin, {once:true}); setTimeout(begin, 700); }
 }
 function _speakBrowser(clean){
+  return;   // VOICE DISABLED app-wide (text only) — revisit later
   if(typeof window==='undefined' || !window.speechSynthesis) return;
   const pre=currentPreset(); const voice=_resolveVoice(); const mod=_personaMod();
   const rate=Math.max(0.6,Math.min(1.8, pre.rate*mod.r));
@@ -6636,6 +6639,7 @@ function _speakBrowser(clean){
   });
 }
 function riSpeak(text){
+  return;   // VOICE DISABLED app-wide (text only) — revisit later
   if(!riAudioOn || typeof window==='undefined') return;
   const clean=(text||'').replace(/[\u{1F000}-\u{1FAFF}\u2190-\u27BF\u2B00-\u2BFF\uFE0F\u2022]/gu,'').replace(/\s+/g,' ').trim();
   if(!clean) return;
