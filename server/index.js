@@ -5,52 +5,12 @@ const cors    = require('cors');
 const path    = require('path');
 const fs      = require('fs');
 const crypto  = require('crypto');
+const { Readable } = require('stream');
 const { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } = require('plaid');
 
 const app = express();
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '50kb' }));
-app.post('/api/tts', async (req, res) => {
-  try {
-    const { text, voice, instructions } = req.body || {};
-    if (!text || !String(text).trim()) {
-      return res.status(400).json({ error: 'no text' });
-    }
-    if (!process.env.OPENAI_API_KEY) {
-      // Not configured yet → the app quietly falls back to the device voice.
-      return res.status(501).json({ error: 'TTS not configured' });
-    }
- 
-    const upstream = await fetch('https://api.openai.com/v1/audio/speech', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini-tts',                 // supports the `instructions` style field
-        voice: voice || 'cedar',                  // cedar/marin are the newest, highest quality
-        input: String(text).slice(0, 1000),       // safety cap
-        instructions: instructions || undefined,  // e.g. "Speak warm and encouraging"
-        response_format: 'mp3',
-      }),
-    });
- 
-    if (!upstream.ok) {
-      const detail = await upstream.text().catch(() => '');
-      console.error('OpenAI TTS error', upstream.status, detail);
-      return res.status(502).json({ error: 'tts upstream', status: upstream.status });
-    }
- 
-    const buf = Buffer.from(await upstream.arrayBuffer());
-    res.set('Content-Type', 'audio/mpeg');
-    res.set('Cache-Control', 'no-store');
-    res.send(buf);
-  } catch (e) {
-    console.error('TTS route error', e);
-    res.status(500).json({ error: String((e && e.message) || e) });
-  }
-});
 app.use(cors({ origin: true, credentials: true }));
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
@@ -62,34 +22,84 @@ if (!APP_USER || !APP_PASS) {
   console.warn('⚠️  APP_USERNAME or APP_PASSWORD not set — login will fail');
   console.warn('   Set them in Render → Environment');
 }
+
+// ── RICHIE VOICE (OpenAI TTS, streamed) ─────────────────────────────────────────
+// Streams the audio straight through so the first bytes reach the browser fast.
+// gpt-4o-mini-tts carries the persona tone via the `instructions` field.
+// Set OPENAI_TTS_MODEL=tts-1 in Render for a faster (flatter) voice if you prefer.
+app.post('/api/tts', async (req, res) => {
+  try {
+    const { text, voice, instructions } = req.body || {};
+    if (!text || !String(text).trim()) {
+      return res.status(400).json({ error: 'no text' });
+    }
+    if (!process.env.OPENAI_API_KEY) {
+      // Not configured → the app quietly falls back to the device voice.
+      return res.status(501).json({ error: 'TTS not configured' });
+    }
+
+    const upstream = await fetch('https://api.openai.com/v1/audio/speech', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_TTS_MODEL || 'gpt-4o-mini-tts',
+        voice: voice || 'cedar',                       // cedar/marin = newest, highest quality
+        input: String(text).slice(0, 1000),            // safety cap
+        instructions: instructions ||
+          'Speak as Richie, a warm, upbeat money coach. Friendly, encouraging, conversational pace.',
+        response_format: 'mp3',
+      }),
+    });
+
+    if (!upstream.ok) {
+      const detail = await upstream.text().catch(() => '');
+      console.error('OpenAI TTS error', upstream.status, detail);
+      return res.status(502).json({ error: 'tts upstream', status: upstream.status });
+    }
+
+    res.set('Content-Type', 'audio/mpeg');
+    res.set('Cache-Control', 'no-store');
+    // Stream the upstream body straight to the client (Node 18+).
+    Readable.fromWeb(upstream.body).pipe(res);
+  } catch (e) {
+    console.error('TTS route error', e);
+    if (!res.headersSent) res.status(500).json({ error: String((e && e.message) || e) });
+  }
+});
+
+// ── RICHIE AI COACH (OpenAI chat) ───────────────────────────────────────────────
 const PERSONA_STYLE = {
-  coach:      "a warm, encouraging coach. Celebrate progress, keep it kind.",
-  crusher:    "a tough-love debt crusher. Punchy, urgent, no excuses — but never mean.",
-  accountant: "a precise, dry, matter-of-fact accountant. Exact and calm.",
-  mascot:     "a hyper, goofy cartoon mascot. Playful, high-energy, a little silly.",
-  retired:    "a relaxed retired millionaire. Big-picture, unhurried, wise.",
-  investor:   "a patient, folksy value investor. Calm, long-term, reassuring.",
+  coach:      'a warm, encouraging coach. Celebrate progress, keep it kind.',
+  crusher:    'a tough-love debt crusher. Punchy, urgent, no excuses — but never mean.',
+  accountant: 'a precise, dry, matter-of-fact accountant. Exact and calm.',
+  mascot:     'a hyper, goofy cartoon mascot. Playful, high-energy, a little silly.',
+  retired:    'a relaxed retired millionaire. Big-picture, unhurried, wise.',
+  investor:   'a patient, folksy value investor. Calm, long-term, reassuring.',
 };
- 
+
 app.post('/api/coach', async (req, res) => {
   try {
     const { context = {}, persona = 'coach', level = 1, seen = [] } = req.body || {};
     if (!process.env.OPENAI_API_KEY) {
       return res.status(501).json({ error: 'coach not configured' });
     }
- 
+
     const style = PERSONA_STYLE[persona] || PERSONA_STYLE.coach;
     const sys = [
       `You are Richie, an in-app money coach. Speak as ${style}`,
       `The user is at knowledge level ${level} of 5 (1 = brand new, 5 = expert).`,
       `Give ONE short, specific, helpful pointer (max 2 sentences) about what is on their screen right now.`,
-      `At low levels explain basics simply; at high levels be sharper and more strategic. No fluff, no greetings every time.`,
+      `Always end with one concrete action. Never shame the user.`,
+      `At low levels explain basics simply; at high levels be sharper and more strategic. No fluff, no greeting every time.`,
       `Ground the tip in the actual numbers provided. Never invent figures. Do not repeat any idea in the "alreadySeen" list.`,
       `Plain text only — no markdown, no emoji unless the persona is the mascot.`,
     ].join(' ');
- 
+
     const user = JSON.stringify({ screen: context, alreadySeen: seen });
- 
+
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -97,7 +107,7 @@ app.post('/api/coach', async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_COACH_MODEL || 'gpt-4o-mini', // cheap + fast; override via env if you like
+        model: process.env.OPENAI_COACH_MODEL || 'gpt-4o-mini',
         messages: [
           { role: 'system', content: sys },
           { role: 'user', content: user },
@@ -106,13 +116,13 @@ app.post('/api/coach', async (req, res) => {
         temperature: 0.7,
       }),
     });
- 
+
     if (!r.ok) {
       const detail = await r.text().catch(() => '');
       console.error('OpenAI coach error', r.status, detail);
       return res.status(502).json({ error: 'coach upstream', status: r.status });
     }
- 
+
     const data = await r.json();
     const tip = (data.choices?.[0]?.message?.content || '').trim();
     res.json({ tip });
@@ -121,18 +131,14 @@ app.post('/api/coach', async (req, res) => {
     res.status(500).json({ error: String((e && e.message) || e) });
   }
 });
- 
 
 // ── TOKEN AUTH ────────────────────────────────────────────────────────────────
 // Simple signed token stored in sessionStorage — no cookies needed
-
 function makeToken() {
   const ts  = Date.now().toString();
   const rnd = crypto.randomBytes(16).toString('hex');
-  const sig  = crypto.createHmac('sha256', APP_SECRET).update(ts + ':' + rnd).digest('hex');
-  // encode as base64 to avoid dot-splitting issues
-  const payload = Buffer.from(ts + ':' + rnd + ':' + sig).toString('base64');
-  return payload;
+  const sig = crypto.createHmac('sha256', APP_SECRET).update(ts + ':' + rnd).digest('hex');
+  return Buffer.from(ts + ':' + rnd + ':' + sig).toString('base64');
 }
 
 function verifyToken(token) {
@@ -140,17 +146,13 @@ function verifyToken(token) {
   try {
     const decoded = Buffer.from(token, 'base64').toString('utf8');
     const parts   = decoded.split(':');
-    // parts: [ts, rnd, sig]  — sig is last 64 chars (sha256 hex)
     if (parts.length < 3) return false;
     const sig      = parts[parts.length - 1];
     const rnd      = parts[parts.length - 2];
     const ts       = parts.slice(0, parts.length - 2).join(':');
     const expected = crypto.createHmac('sha256', APP_SECRET).update(ts + ':' + rnd).digest('hex');
     if (sig.length !== expected.length) return false;
-    const match = crypto.timingSafeEqual(
-      Buffer.from(sig,      'hex'),
-      Buffer.from(expected, 'hex')
-    );
+    const match = crypto.timingSafeEqual(Buffer.from(sig, 'hex'), Buffer.from(expected, 'hex'));
     if (!match) return false;
     const age = Date.now() - parseInt(ts, 10);
     return age < 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -167,13 +169,13 @@ function requireAuth(req, res, next) {
 }
 
 // ── PUBLIC ROUTES ─────────────────────────────────────────────────────────────
-
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     env:    process.env.PLAID_ENV || 'sandbox',
     user_set: !!APP_USER,
     pass_set: !!APP_PASS,
+    openai_set: !!process.env.OPENAI_API_KEY,
     connections: store.accessTokens.length,
     connection_names: store.accessTokens.map(t => t.institutionName),
   });
@@ -181,26 +183,27 @@ app.get('/api/health', (req, res) => {
 
 app.post('/api/login', (req, res) => {
   const { username = '', password = '' } = req.body || {};
-
   const u = String(username).trim();
   const p = String(password);
 
-  // Log attempt (without password) to help debug
   console.log(`Login attempt: "${u}" (pass length: ${p.length})`);
-  console.log(`Expected user: "${APP_USER}" (pass length: ${APP_PASS.length})`);
 
   if (!APP_USER || !APP_PASS) {
     return res.status(500).json({ error: 'Server not configured — set APP_USERNAME and APP_PASSWORD in Render environment.' });
   }
-
   if (u === APP_USER && p === APP_PASS) {
     const token = makeToken();
     console.log('Login successful ✓');
     return res.json({ success: true, token });
   }
-
   console.log('Login failed — credentials did not match');
   return res.status(401).json({ error: 'Incorrect username or password' });
+});
+
+app.post('/api/logout', (req, res) => {
+  // Tokens are stateless; the client clears its copy. Respond OK so the
+  // frontend's logout fetch doesn't fall through to the HTML catch-all.
+  res.json({ success: true });
 });
 
 // ── STATIC FILES ──────────────────────────────────────────────────────────────
@@ -240,7 +243,6 @@ const store = loadTokens();
 console.log(`Loaded ${store.accessTokens.length} saved connection(s)`);
 
 // ── PROTECTED ROUTES ──────────────────────────────────────────────────────────
-
 app.post('/api/create_link_token', requireAuth, async (req, res) => {
   try {
     const r = await plaidClient.linkTokenCreate({
@@ -282,7 +284,6 @@ app.post('/api/exchange_token', requireAuth, async (req, res) => {
   }
 });
 
-// List connected items (banks) — helps debug what's stored
 app.get('/api/items', requireAuth, (req, res) => {
   res.json({
     items: store.accessTokens.map(t => ({
@@ -306,10 +307,7 @@ app.get('/api/accounts', requireAuth, async (req, res) => {
       const code = err.response?.data?.error_code || err.message;
       console.warn(`Accounts error for ${item.institutionName}:`, code);
       errors.push({ institution: item.institutionName, itemId: item.itemId, error: code });
-      // If ITEM_LOGIN_REQUIRED, flag it so frontend can prompt re-link
-      if (code === 'ITEM_LOGIN_REQUIRED') {
-        errors[errors.length-1].needsRelink = true;
-      }
+      if (code === 'ITEM_LOGIN_REQUIRED') errors[errors.length - 1].needsRelink = true;
     }
   }
   res.json({ accounts: all, items: store.accessTokens.map(t => ({ itemId: t.itemId, institutionName: t.institutionName })), errors: errors.length ? errors : undefined });
@@ -349,7 +347,6 @@ app.get('/api/transactions', requireAuth, async (req, res) => {
 
   for (const item of store.accessTokens) {
     try {
-      // Try with existing cursor first; if it fails, reset and retry from scratch
       let cursor = store.cursor[item.itemId] || null;
       let hasMore = true;
       const added = [];
@@ -364,7 +361,6 @@ app.get('/api/transactions', requireAuth, async (req, res) => {
           hasMore = r.data.has_more;
         }
       } catch (syncErr) {
-        // Cursor may be stale — reset and try once from scratch
         console.warn(`Cursor reset for ${item.institutionName}:`, syncErr.response?.data?.error_code);
         delete store.cursor[item.itemId];
         cursor = null;
@@ -385,12 +381,10 @@ app.get('/api/transactions', requireAuth, async (req, res) => {
 
       const acctRes = await plaidClient.accountsGet({ access_token: item.accessToken });
       acctRes.data.accounts.forEach(a => accts.push({ ...a, institution: item.institutionName, itemId: item.itemId }));
-
     } catch (err) {
       const code = err.response?.data?.error_code || err.message;
       console.error(`Transaction error for ${item.institutionName}:`, code);
       errors.push({ institution: item.institutionName, error: code });
-      // Still try to get accounts even if transactions fail
       try {
         const acctRes = await plaidClient.accountsGet({ access_token: item.accessToken });
         acctRes.data.accounts.forEach(a => accts.push({ ...a, institution: item.institutionName, itemId: item.itemId }));
@@ -416,12 +410,14 @@ app.delete('/api/item/:itemId', requireAuth, async (req, res) => {
   }
 });
 
+// ── SPA CATCH-ALL ───────────────────────────────────────────────────────────────
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, '../public/index.html')));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`\n✅ Running on port ${PORT}`);
-  console.log(`   Plaid: ${process.env.PLAID_ENV || 'sandbox'}`);
-  console.log(`   User set:   ${APP_USER  ? '✓ ' + APP_USER : '✗ NOT SET'}`);
-  console.log(`   Pass set:   ${APP_PASS  ? '✓ (length ' + APP_PASS.length + ')' : '✗ NOT SET'}\n`);
+  console.log(`   Plaid:    ${process.env.PLAID_ENV || 'sandbox'}`);
+  console.log(`   OpenAI:   ${process.env.OPENAI_API_KEY ? '✓ set' : '✗ NOT SET (voice + coach will fall back)'}`);
+  console.log(`   User set: ${APP_USER ? '✓ ' + APP_USER : '✗ NOT SET'}`);
+  console.log(`   Pass set: ${APP_PASS ? '✓ (length ' + APP_PASS.length + ')' : '✗ NOT SET'}\n`);
 });
