@@ -80,6 +80,22 @@ const PERSONA_STYLE = {
   investor:   'a patient, folksy value investor. Calm, long-term, reassuring.',
 };
 
+// ── Deep financial-advisor knowledge (folded in from FinClear) ──────────────────
+// Gives Richie real breadth + depth to draw on. Used by the coach (short tips) and
+// the advisor route (full answers). Frontend/persona are unchanged.
+const FINCLEAR_PERSONAL = 'You have deep personal-finance expertise spanning: budgeting (50/30/20, zero-based, envelope), '
+  + 'emergency funds, debt repayment (avalanche vs snowball), investing basics (index funds, ETFs, 401k, IRA, Roth IRA, brokerage, '
+  + 'dollar-cost averaging, diversification), credit scores, insurance, mortgages, tax strategy, and retirement planning '
+  + '(Social Security, safe withdrawal rates, sequence-of-returns risk). Core principles: use plain English and define any term you use; '
+  + 'be warm and non-judgmental (many people feel shame about money — normalize it); when given real numbers, work with them specifically '
+  + 'with concrete examples; NEVER give specific stock/crypto picks — principles only; flag when a licensed CFP or CPA is genuinely warranted; '
+  + 'this is educational guidance, not professional financial advice.';
+const FINCLEAR_BUSINESS = 'You also advise small businesses, freelancers, and LLCs on: separating personal & business finances, '
+  + 'cash-flow management, accounts receivable/payable, P&L statements, balance sheets, pricing for profitability, break-even analysis, '
+  + 'quarterly estimated taxes, deductions (Schedule C, S-corp, home office, mileage, depreciation), business credit, SBA loans, '
+  + 'invoice financing, payroll and bookkeeping basics, and financial forecasting. Always recommend a licensed CPA for actual tax filings; '
+  + 'educational guidance only.';
+
 app.post('/api/coach', async (req, res) => {
   try {
     const { context = {}, persona = 'coach', level = 1, seen = [] } = req.body || {};
@@ -96,6 +112,7 @@ app.post('/api/coach', async (req, res) => {
       `At low levels explain basics simply; at high levels be sharper and more strategic. No fluff, no greeting every time.`,
       `Ground the tip in the actual numbers provided. Never invent figures. Do not repeat any idea in the "alreadySeen" list.`,
       `Plain text only — no markdown, no emoji unless the persona is the mascot.`,
+      `Draw on this expertise so your pointer is genuinely smart and correct (but keep it to the short format above): ${FINCLEAR_PERSONAL}`,
     ].join(' ');
 
     const user = JSON.stringify({ screen: context, alreadySeen: seen });
@@ -128,6 +145,59 @@ app.post('/api/coach', async (req, res) => {
     res.json({ tip });
   } catch (e) {
     console.error('coach route error', e);
+    res.status(500).json({ error: String((e && e.message) || e) });
+  }
+});
+
+// ── RICHIE DEEP ADVISOR (full FinClear-style answers, multi-turn) ───────────────
+// Same Richie voice/persona, but for in-depth questions: multi-turn, personal OR
+// small-business mode, grounded in the user's live numbers when provided.
+app.post('/api/advisor', async (req, res) => {
+  try {
+    const { messages = [], mode = 'personal', persona = 'coach', level = 1, context = null } = req.body || {};
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(501).json({ error: 'advisor not configured' });
+    }
+    const style = PERSONA_STYLE[persona] || PERSONA_STYLE.coach;
+    const domain = mode === 'business' ? (FINCLEAR_PERSONAL + ' ' + FINCLEAR_BUSINESS) : FINCLEAR_PERSONAL;
+    const sys = [
+      `You are Richie, a warm, sharp in-app financial advisor — the money-bag coach. Speak as ${style}`,
+      `The user is at knowledge level ${level} of 5; calibrate how much you explain accordingly.`,
+      domain,
+      context
+        ? `Here is the user's live financial context — ground your answer in these real numbers and never invent figures: ${JSON.stringify(context)}`
+        : `If you genuinely need a number the user has not given, ask ONE short clarifying question rather than guessing.`,
+      `Answer clearly and concretely. You may use **bold** for key terms, short bullet lists, and put a key number or formula on its own line. Keep it focused and actionable with no long preamble. Stay encouraging; never shame.`,
+    ].join(' ');
+
+    const convo = (Array.isArray(messages) ? messages : [])
+      .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+      .slice(-12);
+    if (!convo.length) return res.status(400).json({ error: 'no messages' });
+
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_ADVISOR_MODEL || process.env.OPENAI_COACH_MODEL || 'gpt-4o-mini',
+        messages: [{ role: 'system', content: sys }, ...convo],
+        max_tokens: 700,
+        temperature: 0.6,
+      }),
+    });
+    if (!r.ok) {
+      const detail = await r.text().catch(() => '');
+      console.error('OpenAI advisor error', r.status, detail);
+      return res.status(502).json({ error: 'advisor upstream', status: r.status });
+    }
+    const data = await r.json();
+    const reply = (data.choices?.[0]?.message?.content || '').trim();
+    res.json({ reply });
+  } catch (e) {
+    console.error('advisor route error', e);
     res.status(500).json({ error: String((e && e.message) || e) });
   }
 });
