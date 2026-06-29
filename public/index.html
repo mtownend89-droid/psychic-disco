@@ -1676,6 +1676,15 @@ canvas.chart-interactive{cursor:crosshair;}
 .cele-btns{margin-top:20px;display:flex;flex-direction:column;gap:9px;}
 .cele-share{background:var(--green);border:none;color:#06281c;font-weight:800;font-size:14px;padding:12px;border-radius:13px;cursor:pointer;font-family:inherit;}
 .cele-close{background:transparent;border:1px solid var(--border);color:var(--text);font-weight:700;font-size:13px;padding:10px;border-radius:13px;cursor:pointer;font-family:inherit;}
+.bgate{max-width:440px;margin:6vh auto 0;text-align:center;display:flex;flex-direction:column;align-items:center;padding:0 18px;}
+.bgate-bag{font-size:72px;line-height:1;filter:drop-shadow(0 8px 22px rgba(201,168,76,.4));animation:celePop .6s cubic-bezier(.2,1.4,.3,1) both;}
+.bgate-title{margin-top:18px;font-size:26px;font-weight:900;letter-spacing:-.4px;color:var(--text);}
+.bgate-sub{margin-top:10px;font-size:14px;line-height:1.6;color:var(--muted);}
+.bgate-goals{margin-top:14px;font-size:12.5px;font-weight:700;color:var(--green);background:rgba(46,204,138,.08);border:1px solid rgba(46,204,138,.25);border-radius:12px;padding:9px 14px;}
+.bgate-cta{margin-top:22px;width:100%;max-width:300px;background:var(--green);border:none;color:#06281c;font-weight:800;font-size:15px;padding:14px;border-radius:14px;cursor:pointer;font-family:inherit;box-shadow:0 8px 24px rgba(46,204,138,.3);transition:transform .12s;}
+.bgate-cta:hover{transform:translateY(-1px);}
+.bgate-skip{margin-top:10px;background:none;border:none;color:var(--muted);font-size:12.5px;text-decoration:underline;cursor:pointer;font-family:inherit;}
+.bgate-note{margin-top:18px;font-size:11px;color:var(--muted);}
 .cat-pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;transition:all 0.13s;border:1.5px solid transparent;white-space:nowrap;user-select:none;}
 .cat-pill:hover{filter:brightness(1.15);border-color:currentColor;transform:scale(1.04);}
 .inc-grid{display:grid;grid-template-columns:300px 1fr;}
@@ -2314,7 +2323,6 @@ async function loadEngineData(){
   dataLoaded=(a||b)&&(allAccts.length>0||allTxns.length>0);
   try{ if(typeof checkGoalCompletion==='function') checkGoalCompletion(); }catch(e){}
   try{ if(typeof maybeWarnPromos==='function') maybeWarnPromos(); }catch(e){}
-  try{ if(typeof gamiEvaluate==='function') gamiEvaluate(); }catch(e){}
   return dataLoaded;
 }
 
@@ -3449,10 +3457,10 @@ async function openLinkHandler(){
           showToast(inst+' connected! Loading data...','success');
           await loadEngineData();
           APP.plaidConnected=true; saveState();
-          if(APP.activePage&&APP.activePage!=='__settings__'){ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg) renderCanvas(pg); }
           updateConnectBtn();
-          awardXp(15,'Bank connected!');
           if(sbRichie)sbRichie.do('tada');
+          if(APP._awaitingBuild){ awardXp(15); richieBuildApp(); }   // FIRST WIN → Richie builds the dashboard
+          else { awardXp(15,'Bank connected!'); if(APP.activePage&&APP.activePage!=='__settings__'){ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg) renderCanvas(pg); } }
         }catch(ex){ showToast('Exchange error: '+ex.message,'error'); }
       },
       onExit:(err)=>{ if(err) showToast('Plaid Link: '+(err.error_message||'closed'),'error'); }
@@ -3754,7 +3762,7 @@ function loadState(){
       APP.xp=setup.xp||0;
       APP.proMode=!!setup.proMode;
       if(setup.chosenGoals && setup.chosenGoals.length){
-        // GOALS-FIRST: create goal objects + build pages around them
+        // create the goal objects now; the PAGES get built when a bank connects (first win)
         APP.goals=[];
         setup.chosenGoals.forEach(cg=>{
           const m=GOAL_METRICS[cg.metric];
@@ -3762,13 +3770,11 @@ function loadState(){
           APP.goals.push({ id:'g'+Date.now()+Math.floor(Math.random()*9999), name:cg.name, metric:cg.metric,
             target, icon:cg.icon, start:(cg.metric!=='custom'&&m)?m.get():0, current:0, created:Date.now(), completed:false, presetKey:cg.key });
         });
-        APP.pages=seedPagesFromGoals(setup.chosenGoals);
-        APP._goalsFirst=true;            // flag so Richie runs the goal walkthrough
-        APP._coachQueue=APP.pages.filter(p=>p.goalMetric).map(p=>p.id);
-      } else {
-        APP.pages=seedPages(setup.bundle);
       }
-      APP.activePage=APP.pages[0]?APP.pages[0].id:null;
+      // START BLANK — Richie builds the real dashboard the moment a bank connects.
+      APP._awaitingBuild=true;
+      APP.pages=[{ id:'welcome', name:'Welcome', icon:'👋', color:'#2ecc8a', widgets:[] }];
+      APP.activePage='welcome';
       saveState();
     } else {
       // no setup yet — seed a default world
@@ -4147,9 +4153,44 @@ function setWidgetTf(uid,key){
 // Resolve a widget's window in days (default 30)
 function wDays(w){ return tfDays(w&&w.tf||'30d'); }
 
+// ── Blank start → Richie builds your app when a bank connects (first accomplishment) ──
+function buildGateHTML(){
+  const ic=(RICHIE_PERSONAS[APP.persona]&&RICHIE_PERSONAS[APP.persona].icon)||'💰';
+  const goals=(APP.goals||[]).map(g=>g.icon+' '+g.name).join('  ·  ');
+  return `<div class="canvas-page"><div class="bgate">
+    <div class="bgate-bag">${ic}</div>
+    <div class="bgate-title">Let's build your app</div>
+    <div class="bgate-sub">Connect your bank and I'll build your whole dashboard around your real money${goals?' and your goals':''} — that's your first win. 🎉</div>
+    ${goals?`<div class="bgate-goals">${esc(goals)}</div>`:''}
+    <button class="bgate-cta" onclick="openLinkHandler()">🔗 Connect my bank</button>
+    <button class="bgate-skip" onclick="richieBuildApp({sample:true})">Explore with sample data first</button>
+    <div class="bgate-note">🔒 Bank-level encryption · read-only · disconnect anytime</div>
+  </div></div>`;
+}
+function richieBuildApp(opts){
+  opts=opts||{};
+  let setup=null; try{ setup=JSON.parse(LS.getItem('richie_setup')||'null'); }catch(e){} setup=setup||{};
+  const cg=(setup.chosenGoals&&setup.chosenGoals.length)?setup.chosenGoals:((setupConfig&&setupConfig.chosenGoals)||[]);
+  if(!APP.goals||!APP.goals.length){
+    APP.goals=[];
+    cg.forEach(c=>{ const m=GOAL_METRICS[c.metric]; const target=c.target!=null?c.target:(c.auto?goalAutoTarget(c.auto):0);
+      APP.goals.push({ id:'g'+Date.now()+Math.floor(Math.random()*9999), name:c.name, metric:c.metric, target, icon:c.icon, start:(c.metric!=='custom'&&m)?m.get():0, current:0, created:Date.now(), completed:false, presetKey:c.key }); });
+  }
+  if(cg.length){ APP.pages=seedPagesFromGoals(cg); APP._goalsFirst=true; APP._coachQueue=APP.pages.filter(p=>p.goalMetric).map(p=>p.id); }
+  else { APP.pages=seedPages((setup.bundle)||'overview'); }
+  APP._awaitingBuild=false;
+  APP.activePage=APP.pages[0]?APP.pages[0].id:null;
+  saveState();
+  try{ gamiInit(); }catch(e){}                 // drops in the Journey widget + checks first achievements
+  renderShell();
+  if(APP.activePage) switchPage(APP.activePage);
+  setTimeout(()=>{ try{ gamiCelebrate({icon:'🏗️', title:'Your first win! 🎉', name:'Richie built your app', desc:'Your dashboard is now wired to your real money and your goals. Let\u2019s get after it.', share:'Richie just built my whole finance dashboard around my goals! 💰'}); }catch(e){} }, 480);
+  if(APP._goalsFirst){ setTimeout(()=>{ try{ startGoalWalkthrough(); }catch(e){} }, 2600); }
+}
 function renderCanvas(pg){
   gg('tbIcon').textContent=pg.icon; gg('tbTitle').textContent=pg.name;
   const content=gg('page-content');
+  if(APP._awaitingBuild){ content.innerHTML=buildGateHTML(); return; }
   if(!pg.widgets||pg.widgets.length===0){
     content.innerHTML=`<div class="canvas-page"><div class="canvas-grid"><div class="canvas-empty">
       <div class="canvas-empty-icon" style="background:${pg.color}22;color:${pg.color}">${pg.icon}</div>
@@ -6400,7 +6441,7 @@ let _raChar=null, _raBusy=false, _raHomeTimer=null, _raActions=null, _raSelfNav=
 function _fabRect(){ const f=document.querySelector('.richie-fab'); return f?f.getBoundingClientRect():{left:window.innerWidth-80,top:window.innerHeight-80,width:58,height:58}; }
 // Richie stays out of the way while any full-screen overlay (onboarding / welcome / login) is up
 function _richieBlocked(){
-  if((typeof _tourQueue!=='undefined'&&_tourQueue.length)||(typeof APP!=='undefined'&&APP._goalsFirst)) return true;
+  if((typeof _tourQueue!=='undefined'&&_tourQueue.length)||(typeof APP!=='undefined'&&(APP._goalsFirst||APP._awaitingBuild))) return true;
   const ids=['richieIntro','welcomeBack','setupWizard','loginScreen','richieChat','gamiCele'];
   for(let i=0;i<ids.length;i++){ const el=gg(ids[i]); if(el){ const d=el.style.display; if(d&&d!=='none') return true; } }
   return false;
@@ -6747,6 +6788,7 @@ let setupConfig={ persona:null, level:null, householdName:'', profiles:[{name:''
 function introApplyAccent(){ const p=setupConfig.persona&&RICHIE_PERSONAS[setupConfig.persona]; document.documentElement.style.setProperty('--green', p?p.accent:'#2ecc8a'); }
 
 function runIntro(){
+  _obVoice=true; riAudioOn=true;        // Richie speaks during onboarding only
   const stars=gg('riStars'); if(stars){ let sh=''; for(let i=0;i<40;i++) sh+=`<div class="ri-star" style="left:${Math.random()*100}%;top:${Math.random()*100}%;--dur:${2+Math.random()*3}s;--delay:${Math.random()*3}s"></div>`; stars.innerHTML=sh; }
   gg('riDots').innerHTML=RICHIE_STORY.map((_,i)=>`<div class="ri-dot" id="riDot-${i}"></div>`).join('');
   riChar=new RichieEmoji(gg('riChar'), gg('riZzz')); riChar.sleep(true);
@@ -6998,9 +7040,10 @@ function riGoalsDone(e){
 }
 
 /* ── Richie's voice (Web Speech API) — preset-based, persona-inflected ── */
-let riAudioOn = false;   // VOICE DISABLED app-wide for now (text only) — revisit later
+let riAudioOn = false;   // voice is OFF in the app; ON only during onboarding (see _obVoice)
 try{ const s=LS.getItem('richie_audio'); if(s!==null) riAudioOn = s==='1'; }catch(e){}
-riAudioOn = false;       // hard override: keep voice off regardless of saved preference
+riAudioOn = false;       // start silent; runIntro() turns it on, wizFinish()/enterApp() turn it back off
+let _obVoice = false;    // true ONLY during the onboarding intro/interview/wizard — Richie speaks then, silent after
 let riVoiceId='guy';
 try{ const g=LS.getItem('richie_voice'); if(g&&VOICE_PRESETS.some(p=>p.id===g)) riVoiceId=g;
      else { const old=LS.getItem('richie_voice_gender'); if(old==='female') riVoiceId='gal'; } }catch(e){}
@@ -7035,7 +7078,7 @@ let _ttsMode='auto';   // 'auto' | 'cloud' | 'browser'
 let _ttsAudio=null, _ttsSeq=0;
 function _stopTts(){ _ttsSeq++; try{ if(_ttsAudio){ _ttsAudio.pause(); _ttsAudio=null; } }catch(e){} try{ if(window.speechSynthesis) window.speechSynthesis.cancel(); }catch(e){} }
 async function _ttsCloud(text){
-  return;   // VOICE DISABLED app-wide (text only) — revisit later
+  if(!_obVoice) return;   // voice only during onboarding
   const pre=currentPreset();
   const k=setupConfig.persona||(typeof APP!=='undefined'&&APP.persona)||'coach';
   const instructions=`Speak as Richie, a money coach, in ${pre.style}. ${PERSONA_TTS_STYLE[k]||''}`.trim();
@@ -7112,7 +7155,7 @@ async function richieSpeakType(el, text, doneCb){
   else { audio.addEventListener('loadedmetadata', begin, {once:true}); setTimeout(begin, 700); }
 }
 function _speakBrowser(clean){
-  return;   // VOICE DISABLED app-wide (text only) — revisit later
+  if(!_obVoice) return;   // voice only during onboarding
   if(typeof window==='undefined' || !window.speechSynthesis) return;
   const pre=currentPreset(); const voice=_resolveVoice(); const mod=_personaMod();
   const rate=Math.max(0.6,Math.min(1.8, pre.rate*mod.r));
@@ -7126,7 +7169,7 @@ function _speakBrowser(clean){
   });
 }
 function riSpeak(text){
-  return;   // VOICE DISABLED app-wide (text only) — revisit later
+  if(!_obVoice) return;   // voice only during onboarding
   if(!riAudioOn || typeof window==='undefined') return;
   const clean=(text||'').replace(/[\u{1F000}-\u{1FAFF}\u2190-\u27BF\u2B00-\u2BFF\uFE0F\u2022]/gu,'').replace(/\s+/g,' ').trim();
   if(!clean) return;
@@ -7360,7 +7403,7 @@ function runWelcomeBack(){
   const swot=buildSWOT();
   const greet=`Welcome back! Here's your money SWOT — a quick read on where ${name} stands today.`;
   const el=gg('wbText'); el.innerHTML='';
-  richieSpeakType(el, greet, ()=>{ wb.talk(false); showSwotPanel(swot); wbDailyTask(swot, greet); });
+  richieSpeakType(el, greet, ()=>{ wb.talk(false); showSwotPanel(swot); });   // SWOT only — no daily tip
   wb.talk(true);
 }
 function suggestDailyTask(swot){
@@ -7413,6 +7456,8 @@ function logout(){
 
 /* ═══════════════════════════════════════════════════════════════ */
 function wizFinish(){
+  _obVoice=false; riAudioOn=false;        // onboarding done — Richie goes silent from here on
+  try{ _stopTts(); }catch(e){}
   setupConfig.xp=(setupConfig.level-1)*20;
   try{ LS.setItem('richie_setup',JSON.stringify(setupConfig)); LS.removeItem('richie_app'); }catch(e){}
   gg('setupWizard').style.display='none';
@@ -7424,6 +7469,7 @@ function boot(){
   enterApp();
 }
 function enterApp(){
+  _obVoice=false; riAudioOn=false;        // app is silent (voice was onboarding-only)
   loadState();
   gg('appShell').style.display='block';
   gg('richieAssistant').style.display='block';
@@ -7431,7 +7477,7 @@ function enterApp(){
   fabChar=new RichieEmoji(gg('fabChar'));
   rpChar=new RichieEmoji(gg('rpChar'));
   renderShell();
-  try{ gamiInit(); }catch(e){}
+  try{ if(APP._awaitingBuild){ if(typeof gamiCheckin==='function') gamiCheckin(); } else { gamiInit(); } }catch(e){}
   if(APP.activePage&&APP.activePage!=='__settings__') switchPage(APP.activePage);
   else if(APP.pages[0]) switchPage(APP.pages[0].id);
   handleResize();
@@ -7442,11 +7488,12 @@ function enterApp(){
   updateConnectBtn();
   loadEngineData().then(ok=>{
     updateConnectBtn();
+    try{ if(typeof gamiEvaluate==='function' && !APP._awaitingBuild) gamiEvaluate(); }catch(e){}
     if(ok && APP.activePage && APP.activePage!=='__settings__'){
       const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg) renderCanvas(pg);
     }
     // If no bank is connected yet, have Richie offer to guide the first connect
-    if(!ok && !APP.plaidConnected){
+    if(!ok && !APP.plaidConnected && !APP._awaitingBuild){
       setTimeout(()=>richieGuideConnect(), 1400);
     }
   });
