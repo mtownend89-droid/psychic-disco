@@ -1658,6 +1658,24 @@ canvas.chart-interactive{cursor:crosshair;}
 .jrn-badge.off{opacity:.45;}
 .jrn-badge-ic{font-size:19px;}
 .jrn-badge-nm{font-size:9.5px;color:var(--text);line-height:1.2;}
+.jrn-trend{margin-top:2px;}
+.jrn-trend svg{width:100%;height:42px;display:block;}
+.jrn-trend-lbl{font-weight:800;}
+.jrn-trend-lbl.up{color:var(--green);} .jrn-trend-lbl.down{color:var(--red);}
+.cele{position:fixed;inset:0;z-index:5000;display:flex;align-items:center;justify-content:center;background:rgba(6,10,18,.78);backdrop-filter:blur(6px);opacity:0;transition:opacity .25s;}
+.cele.show{opacity:1;}
+.cele-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+.cele-card{position:relative;z-index:2;width:min(380px,86vw);background:linear-gradient(180deg,var(--surface),var(--bg));border:1px solid var(--border);border-radius:22px;padding:26px 24px 22px;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.6);transform:scale(.85);transition:transform .35s cubic-bezier(.2,1.2,.3,1);}
+.cele.show .cele-card{transform:scale(1);}
+.cele-icon{font-size:64px;line-height:1;filter:drop-shadow(0 6px 18px rgba(201,168,76,.45));animation:celePop .5s cubic-bezier(.2,1.4,.3,1) both;}
+@keyframes celePop{0%{transform:scale(0) rotate(-25deg);}100%{transform:scale(1) rotate(0);}}
+.cele-kicker{margin-top:12px;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--green);}
+.cele-name{margin-top:5px;font-size:24px;font-weight:900;color:var(--text);letter-spacing:-.3px;}
+.cele-desc{margin-top:8px;font-size:13px;color:var(--muted);line-height:1.5;}
+.cele-meta{margin-top:14px;font-size:12px;color:var(--text);font-weight:700;background:var(--surface3);border:1px solid var(--border);border-radius:20px;padding:6px 14px;display:inline-block;}
+.cele-btns{margin-top:20px;display:flex;flex-direction:column;gap:9px;}
+.cele-share{background:var(--green);border:none;color:#06281c;font-weight:800;font-size:14px;padding:12px;border-radius:13px;cursor:pointer;font-family:inherit;}
+.cele-close{background:transparent;border:1px solid var(--border);color:var(--text);font-weight:700;font-size:13px;padding:10px;border-radius:13px;cursor:pointer;font-family:inherit;}
 .cat-pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;transition:all 0.13s;border:1.5px solid transparent;white-space:nowrap;user-select:none;}
 .cat-pill:hover{filter:brightness(1.15);border-color:currentColor;transform:scale(1.04);}
 .inc-grid{display:grid;grid-template-columns:300px 1fr;}
@@ -2060,6 +2078,20 @@ canvas.chart-interactive{cursor:crosshair;}
 </div>
 
 <!-- FLOATING RICHIE -->
+<div id="gamiCele" class="cele" style="display:none">
+  <canvas id="celeCanvas" class="cele-canvas"></canvas>
+  <div class="cele-card">
+    <div class="cele-icon" id="celeIcon">🏆</div>
+    <div class="cele-kicker" id="celeKicker">Achievement unlocked!</div>
+    <div class="cele-name" id="celeName">—</div>
+    <div class="cele-desc" id="celeDesc">—</div>
+    <div class="cele-meta" id="celeMeta"></div>
+    <div class="cele-btns">
+      <button class="cele-share" id="celeShareBtn" onclick="gamiShare()">Share my win</button>
+      <button class="cele-close" onclick="closeGamiCele()">Keep going →</button>
+    </div>
+  </div>
+</div>
 <div id="richieChat" class="rchat" style="display:none">
   <div class="rchat-card">
     <div class="rchat-head">
@@ -3232,9 +3264,9 @@ function checkGoalCompletion(){
     if(g.completed) return;
     const p=goalProgress(g);
     if(p.done){ g.completed=true; g.completedAt=Date.now(); any=true;
-      awardXp(50,'🎉 GOAL COMPLETE: '+g.name+'!');
+      awardXp(50);
       if(sbRichie)sbRichie.do('tada');
-      richieSay(`🎉 You did it \u2014 "${g.name}" is complete! That's a real milestone. +50 XP. What's next?`);
+      try{ gamiGoalCompleted(g); }catch(e){}
     }
   });
   if(any) saveState();
@@ -4192,11 +4224,12 @@ function buildWidgetChart(w, cid){
   if(w.type==='sankey'){ buildSankey(cid, wDays(w)); return; }
   if(w.type==='fire_calc'){ fireRefresh(); return; }
   if(w.type==='net_worth_chart'){
-    // Net worth trend: if no time-series, synthesize a gentle ramp toward current net worth
-    const cur=live?engNetBalance()+engNWAssets()-engNWLiab():engNetWorth();
-    const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const vals=months.map((_,i)=>Math.round(cur*(0.86+0.14*(i/(months.length-1)))));
-    buildChartWidget(cid,'line',months,vals,'#5b8def',{fill:true,tension:0.35,
+    // Real history if we have it; otherwise a gentle ramp toward current net worth
+    let labels, vals;
+    const hist=(typeof nwHistMonthly==='function')?nwHistMonthly(12):[];
+    if(hist && hist.length>=2){ labels=hist.map(h=>h.label); vals=hist.map(h=>Math.round(h.v)); }
+    else { const cur=live?engNetBalance()+engNWAssets()-engNWLiab():engNetWorth(); const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; labels=months; vals=months.map((_,i)=>Math.round(cur*(0.86+0.14*(i/(months.length-1))))); }
+    buildChartWidget(cid,'line',labels,vals,'#5b8def',{fill:true,tension:0.35,
       datasets:[{data:vals,borderColor:'#5b8def',backgroundColor:'rgba(91,141,239,0.12)',fill:true,tension:0.35,pointRadius:0,borderWidth:2}]});
   } else if(w.type==='retirement_proj'){
     const yrs=['Now','+5y','+10y','+15y','+20y','+23y'];
@@ -5658,6 +5691,7 @@ function gamiMetrics(){
     savingsrate: safe(()=>G.savingsrate.get()),
     monthlyExpenses: _gMonthlyExpenses(),
     streak: (gamiLoad().streak||0),
+    nwUpMonths: (typeof nwUpStreak==='function'?nwUpStreak():0),
   };
   m.efFund=Math.max(emer, liquid>0?liquid:0);   // emergency-fund value = bucket OR liquid cash, whichever is higher
   return m;
@@ -5677,12 +5711,16 @@ const ACHIEVEMENTS=[
   {id:'ef1mo',    tier:'major', icon:'🛡️', name:'One Month Strong',desc:'Bank one month of expenses.',           xp:60, cond:m=>m.monthlyExpenses>0&&m.efFund>=m.monthlyExpenses, prog:m=>({cur:m.efFund,target:Math.max(1,m.monthlyExpenses),unit:'$'})},
   {id:'streak7',  tier:'major', icon:'🔥', name:'On a Roll',      desc:'Check in 7 days in a row.',              xp:40, cond:m=>m.streak>=7, prog:m=>({cur:m.streak,target:7,unit:'d'})},
   {id:'goaldone', tier:'major', icon:'🏅', name:'First Victory',  desc:'Complete a goal.',                       xp:60, cond:m=>m.completedGoals>=1},
+  {id:'goals3',   tier:'major', icon:'🏅', name:'Goal Crusher',   desc:'Complete 3 goals.',                      xp:80, cond:m=>m.completedGoals>=3, prog:m=>({cur:m.completedGoals,target:3,unit:''})},
+  {id:'nwup3',    tier:'major', icon:'🌊', name:'Rising Tide',    desc:'Grow net worth 3 months running.',       xp:60, cond:m=>m.nwUpMonths>=3, prog:m=>({cur:m.nwUpMonths,target:3,unit:''})},
   // ── grand: life-changing ──
   {id:'debtfree', tier:'grand', icon:'🚀', name:'Debt-Free',      desc:'Bring all debt to zero.',                xp:150, cond:m=>m.accounts>0&&m.debt<=0},
   {id:'ef3mo',    tier:'grand', icon:'🏰', name:'Fortress Fund',  desc:'Save 3 months of expenses.',             xp:120, cond:m=>m.monthlyExpenses>0&&m.efFund>=m.monthlyExpenses*3, prog:m=>({cur:m.efFund,target:Math.max(1,m.monthlyExpenses*3),unit:'$'})},
   {id:'nw100k',   tier:'grand', icon:'💎', name:'Six Figures',    desc:'Cross $100,000 net worth.',              xp:200, cond:m=>m.networth>=100000, prog:m=>({cur:Math.max(0,m.networth),target:100000,unit:'$'})},
   {id:'sr20',     tier:'grand', icon:'📈', name:'Wealth Builder', desc:'Sustain a 20% savings rate.',            xp:100, cond:m=>m.savingsrate>=20, prog:m=>({cur:m.savingsrate,target:20,unit:'%'})},
   {id:'streak30', tier:'grand', icon:'☄️', name:'Unstoppable',    desc:'Check in 30 days in a row.',             xp:100, cond:m=>m.streak>=30, prog:m=>({cur:m.streak,target:30,unit:'d'})},
+  {id:'nwup6',    tier:'grand', icon:'🏔️', name:'Momentum',       desc:'Grow net worth 6 months running.',       xp:140, cond:m=>m.nwUpMonths>=6, prog:m=>({cur:m.nwUpMonths,target:6,unit:''})},
+  {id:'goals5',   tier:'grand', icon:'👑', name:'Goal Machine',   desc:'Complete 5 goals.',                      xp:160, cond:m=>m.completedGoals>=5, prog:m=>({cur:m.completedGoals,target:5,unit:''})},
 ];
 const ACH_BY_ID=Object.fromEntries(ACHIEVEMENTS.map(a=>[a.id,a]));
 function gamiCheckin(){
@@ -5693,7 +5731,8 @@ function gamiCheckin(){
   s.lastSeen=t; gamiSave();
 }
 function gamiEvaluate(opts){
-  opts=opts||{}; const s=gamiLoad(); const firstRun=!s.seeded; const m=gamiMetrics(); const newly=[];
+  opts=opts||{}; try{ nwHistRecord(); }catch(e){}
+  const s=gamiLoad(); const firstRun=!s.seeded; const m=gamiMetrics(); const newly=[];
   ACHIEVEMENTS.forEach(a=>{
     if(s.unlocked[a.id]) return;
     let ok=false; try{ ok=!!a.cond(m); }catch(e){ ok=false; }
@@ -5706,7 +5745,12 @@ function gamiEvaluate(opts){
     if(!firstRun && !opts.silent){
       const top=newly.slice().sort((a,b)=>TIER_RANK[b.tier]-TIER_RANK[a.tier])[0];
       const extra=newly.length>1?` (+${newly.length-1} more)`:'';
-      try{ richieCelebrate(`${top.icon} Achievement unlocked: ${top.name}!${extra} +${xpSum} XP`); }catch(e){}
+      if(TIER_RANK[top.tier]>=2){   // major/grand → full-screen celebration + share card
+        try{ gamiCelebrate({icon:top.icon, title:top.tier==='grand'?'Grand milestone! 🎉':'Achievement unlocked!', name:top.name, desc:top.desc}); }catch(e){}
+        try{ richieCelebrate(`${top.icon} ${top.name}!${extra} +${xpSum} XP`); }catch(e){}
+      } else {                      // minor → light Richie celebration
+        try{ richieCelebrate(`${top.icon} ${top.name}!${extra} +${xpSum} XP`); }catch(e){}
+      }
     }
   }
   if(firstRun) s.seeded=true;
@@ -5744,6 +5788,7 @@ function journeyBody(w){
     </div>
     <div class="jrn-xp"><i style="width:${APP.proMode?100:xpInLv}%"></i></div>
     <div class="jrn-stats"><span><b>${APP.xp}</b> XP</span><span><b>${unlockedCount}/${totalCount}</b> badges</span><span><b>${m.completedGoals}</b> goals done</span></div>
+    ${(function(){ try{ const h=nwHistMonthly(6); if(h&&h.length>=2){ const vals=h.map(x=>x.v); const diff=vals[vals.length-1]-vals[0]; const up=diff>=0; return `<div class="jrn-sec">Net worth trend <span class="jrn-trend-lbl ${up?'up':'down'}">${up?'▲':'▼'} ${fmtK(Math.abs(diff))} · ${h.length}mo</span></div><div class="jrn-trend">${_sparkline(vals, up?'#2ecc8a':'#e85d75', 260, 42)}</div>`; } }catch(e){} return ''; })()}
     <div class="jrn-sec">Next milestones</div>
     ${milestones}
     <div class="jrn-sec">Recent wins</div>
@@ -5751,6 +5796,76 @@ function journeyBody(w){
     <div class="jrn-sec">Badges <span class="jrn-sec-ct">${unlockedCount}/${totalCount}</span></div>
     <div class="jrn-badges">${badges}</div>
   </div>`;
+}
+
+/* ── Net-worth history (real trend + month-over-month streaks) ── */
+function _nwNow(){ try{ return dataLoaded?engNetBalance()+engNWAssets()-engNWLiab():engNetWorth(); }catch(e){ return 0; } }
+function nwHistLoad(){ try{ const a=JSON.parse(LS.getItem('mdf_nw_history')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function nwHistRecord(){
+  try{
+    const v=_nwNow(); if(v==null||isNaN(v)) return;
+    const d=new Date(); const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    let h=nwHistLoad();
+    if(h.length && h[h.length-1].d===key) h[h.length-1].v=Math.round(v);
+    else h.push({d:key, v:Math.round(v)});
+    if(h.length>420) h=h.slice(h.length-420);
+    LS.setItem('mdf_nw_history', JSON.stringify(h));
+  }catch(e){}
+}
+function nwHistMonthly(n){
+  const h=nwHistLoad(); if(!h.length) return [];
+  const byMonth={};
+  h.forEach(e=>{ const mk=e.d.slice(0,7); byMonth[mk]=e.v; });   // last value seen in each month wins
+  const keys=Object.keys(byMonth).sort();
+  const out=keys.map(k=>{ const [y,m]=k.split('-'); const lbl=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][(+m)-1]; return {label:lbl, key:k, v:byMonth[k]}; });
+  return n?out.slice(-n):out;
+}
+function nwUpStreak(){
+  const mo=nwHistMonthly(); if(mo.length<2) return 0;
+  let streak=0;
+  for(let i=mo.length-1;i>0;i--){ if(mo[i].v>mo[i-1].v) streak++; else break; }
+  return streak;
+}
+/* ── Goal completion → wins + celebration (custom or preset goals) ── */
+function gamiGoalCompleted(g){
+  const s=gamiLoad(); const wid='goal_'+(g.id||g.name);
+  if(!(s.wins||[]).some(w=>w.id===wid)){ s.wins.unshift({id:wid, icon:'🎯', name:'Goal: '+(g.name||'Goal'), tier:'major', ts:Date.now()}); if(s.wins.length>40) s.wins.length=40; gamiSave(); }
+  try{ gamiCelebrate({icon:'🎯', title:'Goal complete!', name:g.name||'Goal complete', desc:'You set this goal and saw it through — that\u2019s real progress.', share:`I just completed my "${g.name}" goal on Richie! 🎯💰`}); }catch(e){}
+  try{ gamiEvaluate(); }catch(e){}   // may unlock Goal Crusher / Goal Machine
+}
+/* ── Full-screen celebration + share card ── */
+let _celeShareText='';
+function gamiCelebrate(opts){
+  opts=opts||{}; const el=gg('gamiCele'); if(!el) return;
+  const set=(id,t)=>{ const n=gg(id); if(n) n.textContent=t; };
+  set('celeIcon', opts.icon||'🏆'); set('celeKicker', opts.title||'Achievement unlocked!');
+  set('celeName', opts.name||''); set('celeDesc', opts.desc||'');
+  const lv=LEVELS.find(l=>l.n===APP.level)||LEVELS[0];
+  set('celeMeta', `${lv.icon} Level ${lv.n} · ${APP.xp} XP`);
+  _celeShareText=opts.share||`I just unlocked "${opts.name}" on Richie! ${lv.icon} Level ${lv.n} · ${APP.xp} XP 💰`;
+  el.style.display='flex';
+  requestAnimationFrame(()=>{ el.classList.add('show'); _celeConfetti(); });
+}
+function closeGamiCele(){ const el=gg('gamiCele'); if(el){ el.classList.remove('show'); el.style.display='none'; } }
+async function gamiShare(){
+  try{ if(navigator.share){ await navigator.share({text:_celeShareText}); return; } }catch(e){}
+  try{ await navigator.clipboard.writeText(_celeShareText); const b=gg('celeShareBtn'); if(b){ const o=b.textContent; b.textContent='Copied! ✓'; setTimeout(()=>{ b.textContent=o; }, 1600); } }catch(e){}
+}
+function _celeConfetti(){
+  const cv=gg('celeCanvas'); if(!cv) return;
+  const W=window.innerWidth, H=window.innerHeight, dpr=window.devicePixelRatio||1;
+  cv.width=W*dpr; cv.height=H*dpr; cv.style.width=W+'px'; cv.style.height=H+'px';
+  const ctx=cv.getContext('2d'); ctx.scale(dpr,dpr);
+  const cols=['#2ecc8a','#7be0b4','#f5a623','#5b8def','#e85d75','#c9a84c'];
+  const parts=[]; for(let i=0;i<150;i++){ parts.push({x:Math.random()*W, y:-20-Math.random()*H*0.5, r:5+Math.random()*7, c:cols[i%cols.length], vy:2.4+Math.random()*4, vx:-2.4+Math.random()*4.8, rot:Math.random()*6.28, vr:-0.25+Math.random()*0.5, shape:Math.random()<0.5?0:1}); }
+  const t0=performance.now(); let raf;
+  function frame(t){
+    const el=gg('gamiCele'); if(!el || el.style.display==='none'){ cancelAnimationFrame(raf); return; }
+    ctx.clearRect(0,0,W,H);
+    parts.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=0.045; p.rot+=p.vr; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot); ctx.fillStyle=p.c; if(p.shape===0) ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r*0.62); else { ctx.beginPath(); ctx.arc(0,0,p.r/2,0,6.28); ctx.fill(); } ctx.restore(); });
+    if(t-t0<4400) raf=requestAnimationFrame(frame); else ctx.clearRect(0,0,W,H);
+  }
+  raf=requestAnimationFrame(frame);
 }
 
 function renderWidgetBody(w){
@@ -6258,6 +6373,10 @@ function richieContext(){
   try{ ctx.monthlyIncome=Math.round(engMonthlyIncome()); }catch(e){}
   try{ ctx.spentLast30=Math.round(engSpend30()); }catch(e){}
   try{ const b=engUpcomingBills()||[]; const unpaid=b.filter(x=>!x.paid); ctx.billsDue=unpaid.length; ctx.billsDueTotal=Math.round(unpaid.reduce((s,x)=>s+(x.pay||x.amount||0),0)); }catch(e){}
+  try{ if(typeof gamiLoad==='function'){ const s=gamiLoad(); const gm=gamiMetrics(); const lv=LEVELS.find(l=>l.n===APP.level)||LEVELS[0];
+    const locked=ACHIEVEMENTS.filter(a=>!s.unlocked[a.id]&&a.prog).map(a=>{ const p=a.prog(gm); return {name:a.name, desc:a.desc, pct:Math.round((p.cur/(p.target||1))*100), progress:_gProgLabel(p)}; }).sort((x,y)=>y.pct-x.pct);
+    ctx.gamification={ level:lv.n, levelName:lv.name, xp:APP.xp, streakDays:s.streak||0, badges:Object.keys(s.unlocked).length+'/'+ACHIEVEMENTS.length, recentWins:(s.wins||[]).slice(0,3).map(w=>w.name), nextMilestone: locked[0]?{name:locked[0].name, needs:locked[0].desc, progress:locked[0].progress}:null };
+  } }catch(e){}
   return ctx;
 }
 async function richieAITip(){
@@ -6282,7 +6401,7 @@ function _fabRect(){ const f=document.querySelector('.richie-fab'); return f?f.g
 // Richie stays out of the way while any full-screen overlay (onboarding / welcome / login) is up
 function _richieBlocked(){
   if((typeof _tourQueue!=='undefined'&&_tourQueue.length)||(typeof APP!=='undefined'&&APP._goalsFirst)) return true;
-  const ids=['richieIntro','welcomeBack','setupWizard','loginScreen','richieChat'];
+  const ids=['richieIntro','welcomeBack','setupWizard','loginScreen','richieChat','gamiCele'];
   for(let i=0;i<ids.length;i++){ const el=gg(ids[i]); if(el){ const d=el.style.display; if(d&&d!=='none') return true; } }
   return false;
 }
