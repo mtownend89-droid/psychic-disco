@@ -1623,6 +1623,41 @@ canvas.chart-interactive{cursor:crosshair;}
 .rchat-input::placeholder{color:var(--muted);}
 .rchat-send{width:42px;height:42px;border-radius:11px;background:var(--green);border:none;color:#06281c;font-size:17px;font-weight:700;cursor:pointer;flex-shrink:0;}
 .rchat-send:disabled{opacity:.5;cursor:default;}
+.jrn{display:flex;flex-direction:column;gap:11px;}
+.jrn-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.jrn-lvl{display:flex;align-items:center;gap:10px;}
+.jrn-lvl-ic{font-size:30px;}
+.jrn-lvl-nm{font-size:14px;font-weight:800;color:var(--text);}
+.jrn-lvl-sub{font-size:11px;color:var(--muted);margin-top:1px;}
+.jrn-streak{display:flex;align-items:baseline;gap:4px;font-size:13px;color:var(--amber,#f5a623);font-weight:800;}
+.jrn-streak b{font-size:19px;}
+.jrn-streak span{font-size:10px;color:var(--muted);font-weight:600;}
+.jrn-xp{height:9px;background:var(--surface3);border-radius:6px;overflow:hidden;}
+.jrn-xp i{display:block;height:100%;background:linear-gradient(90deg,var(--green),#7be0b4);border-radius:6px;transition:width .7s cubic-bezier(.4,0,.2,1);}
+.jrn-stats{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--muted);}
+.jrn-stats b{color:var(--text);font-size:13px;}
+.jrn-sec{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:4px;display:flex;justify-content:space-between;align-items:center;}
+.jrn-sec-ct{color:var(--green);font-weight:700;}
+.jrn-ms{background:var(--surface3);border:1px solid var(--border);border-radius:10px;padding:9px 11px;}
+.jrn-ms-top{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;font-weight:600;color:var(--text);}
+.jrn-ms-top b{color:var(--green);font-weight:700;font-size:12px;white-space:nowrap;}
+.jrn-ms-bar{height:7px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;margin:6px 0 4px;}
+.jrn-ms-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--green),#7be0b4);border-radius:4px;}
+.jrn-ms-desc{font-size:10.5px;color:var(--muted);}
+.jrn-wins{display:flex;flex-direction:column;gap:6px;}
+.jrn-win{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);}
+.jrn-win-ic{font-size:15px;}
+.jrn-win-nm{flex:1;font-weight:600;}
+.jrn-win-dt{font-size:10.5px;color:var(--muted);}
+.jrn-empty{font-size:11.5px;color:var(--muted);padding:4px 0;}
+.jrn-badges{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
+.jrn-badge{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 5px;border-radius:9px;border:1px solid var(--border);text-align:center;}
+.jrn-badge.on{background:rgba(46,204,138,.08);border-color:rgba(46,204,138,.32);}
+.jrn-badge.on.t-major{background:rgba(96,165,245,.08);border-color:rgba(96,165,245,.32);}
+.jrn-badge.on.t-grand{background:rgba(201,168,76,.1);border-color:rgba(201,168,76,.4);}
+.jrn-badge.off{opacity:.45;}
+.jrn-badge-ic{font-size:19px;}
+.jrn-badge-nm{font-size:9.5px;color:var(--text);line-height:1.2;}
 .cat-pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;transition:all 0.13s;border:1.5px solid transparent;white-space:nowrap;user-select:none;}
 .cat-pill:hover{filter:brightness(1.15);border-color:currentColor;transform:scale(1.04);}
 .inc-grid{display:grid;grid-template-columns:300px 1fr;}
@@ -2247,6 +2282,7 @@ async function loadEngineData(){
   dataLoaded=(a||b)&&(allAccts.length>0||allTxns.length>0);
   try{ if(typeof checkGoalCompletion==='function') checkGoalCompletion(); }catch(e){}
   try{ if(typeof maybeWarnPromos==='function') maybeWarnPromos(); }catch(e){}
+  try{ if(typeof gamiEvaluate==='function') gamiEvaluate(); }catch(e){}
   return dataLoaded;
 }
 
@@ -3792,6 +3828,7 @@ function maybeCoachPage(pg){
    minLevel gates a widget behind a knowledge level (Pro Mode unlocks all). */
 const WIDGET_CATALOG=[
   {id:'net_worth_summary',name:'Net Worth',icon:'📈',cat:'Overview',span:1,minLevel:1,desc:'Total assets minus liabilities.'},
+  {id:'journey',name:'Your Journey',icon:'🏆',cat:'Overview',span:2,minLevel:1,desc:'Your level, streak, badges, and milestone progress — real-money goals, gamified.'},
   {id:'cash_summary',name:'Cash on Hand',icon:'💵',cat:'Overview',span:1,minLevel:1,desc:'Combined account balances.'},
   {id:'spending_month',name:"Current Spending",icon:'🛒',cat:'Overview',span:1,minLevel:1,desc:'Discretionary spending vs budget — your quick "how are we doing" marker (bills & savings excluded).'},
   {id:'income_month',name:"This Month's Income",icon:'💰',cat:'Overview',span:1,minLevel:1,desc:'Money in this month.'},
@@ -5590,11 +5627,138 @@ function buildSankey(cid, days){
   ctx.textAlign='left'; ctx.fillText('CATEGORY',xC,9);
 }
 
+/* ═══════════════ GAMIFICATION: THE JOURNEY (real-money achievements) ═══════════════
+   Minor → grand milestones tied to ACTUAL financial data. XP + levels + a daily
+   streak + a wins log, surfaced in the "Your Journey" widget. Richie celebrates. */
+let _gami=null;
+const TIER_RANK={minor:1,major:2,grand:3};
+function gamiLoad(){
+  if(_gami) return _gami;
+  try{ _gami=JSON.parse(LS.getItem('mdf_gami')||'null'); }catch(e){ _gami=null; }
+  if(!_gami) _gami={ unlocked:{}, wins:[], streak:0, lastSeen:null, seeded:false, widgetSeeded:false };
+  return _gami;
+}
+function gamiSave(){ try{ LS.setItem('mdf_gami', JSON.stringify(_gami)); }catch(e){} }
+function _gMonthlyExpenses(){ try{ return dataLoaded?engSpend30():engMonthlyBills(); }catch(e){ return 0; } }
+function gamiMetrics(){
+  const G=GOAL_METRICS; const safe=(f,d)=>{ try{ const v=f(); return (v==null||isNaN(v))?(d||0):v; }catch(e){ return d||0; } };
+  const liquid=safe(()=>dataLoaded?allAccts.filter(a=>a.type==='depository').reduce((s,a)=>s+((a.balances&&(a.balances.available??a.balances.current))||0),0):0);
+  const emer=safe(()=>G.emergency.get());
+  const m={
+    accounts: safe(()=>allAccts.length),
+    goals: safe(()=>_goals().length),
+    completedGoals: safe(()=>_goals().filter(x=>x.completed).length),
+    catEdits: safe(()=>Object.keys(_catOverrides).length),
+    notes: safe(()=>Object.keys(_txnNotes).length),
+    cash: safe(()=>dataLoaded?engNetBalance():engNetWorth()),
+    liquidCash: liquid,
+    networth: safe(()=>G.networth.get()),
+    debt: safe(()=>G.debt.get()),
+    savings: safe(()=>G.savings.get()),
+    savingsrate: safe(()=>G.savingsrate.get()),
+    monthlyExpenses: _gMonthlyExpenses(),
+    streak: (gamiLoad().streak||0),
+  };
+  m.efFund=Math.max(emer, liquid>0?liquid:0);   // emergency-fund value = bucket OR liquid cash, whichever is higher
+  return m;
+}
+const ACHIEVEMENTS=[
+  // ── minor: get going ──
+  {id:'connect',  tier:'minor', icon:'🔗', name:'Linked Up',     desc:'Connect your first account.',            xp:20, cond:m=>m.accounts>0},
+  {id:'firstgoal',tier:'minor', icon:'🎯', name:'Goal Setter',    desc:'Set your first goal.',                   xp:15, cond:m=>m.goals>0},
+  {id:'cat10',    tier:'minor', icon:'🏷️', name:'Tidy Books',     desc:'Re-categorize 10 transactions.',         xp:15, cond:m=>m.catEdits>=10, prog:m=>({cur:m.catEdits,target:10,unit:''})},
+  {id:'note1',    tier:'minor', icon:'📝', name:'Note to Self',   desc:'Add your first transaction note.',        xp:10, cond:m=>m.notes>0},
+  {id:'streak3',  tier:'minor', icon:'🔥', name:'Warming Up',     desc:'Check in 3 days in a row.',               xp:20, cond:m=>m.streak>=3, prog:m=>({cur:m.streak,target:3,unit:'d'})},
+  {id:'cashpos',  tier:'minor', icon:'💵', name:'In the Green',   desc:'Hold a positive cash balance.',           xp:10, cond:m=>m.cash>0},
+  // ── major: real traction ──
+  {id:'ef1k',     tier:'major', icon:'🛟', name:'Safety Net',     desc:'Save your first $1,000.',                xp:50, cond:m=>m.efFund>=1000, prog:m=>({cur:m.efFund,target:1000,unit:'$'})},
+  {id:'nwpos',    tier:'major', icon:'⚖️', name:'Above Water',    desc:'Reach a positive net worth.',            xp:40, cond:m=>m.networth>0},
+  {id:'sr10',     tier:'major', icon:'📊', name:'Saver',          desc:'Hit a 10% savings rate.',                xp:50, cond:m=>m.savingsrate>=10, prog:m=>({cur:m.savingsrate,target:10,unit:'%'})},
+  {id:'ef1mo',    tier:'major', icon:'🛡️', name:'One Month Strong',desc:'Bank one month of expenses.',           xp:60, cond:m=>m.monthlyExpenses>0&&m.efFund>=m.monthlyExpenses, prog:m=>({cur:m.efFund,target:Math.max(1,m.monthlyExpenses),unit:'$'})},
+  {id:'streak7',  tier:'major', icon:'🔥', name:'On a Roll',      desc:'Check in 7 days in a row.',              xp:40, cond:m=>m.streak>=7, prog:m=>({cur:m.streak,target:7,unit:'d'})},
+  {id:'goaldone', tier:'major', icon:'🏅', name:'First Victory',  desc:'Complete a goal.',                       xp:60, cond:m=>m.completedGoals>=1},
+  // ── grand: life-changing ──
+  {id:'debtfree', tier:'grand', icon:'🚀', name:'Debt-Free',      desc:'Bring all debt to zero.',                xp:150, cond:m=>m.accounts>0&&m.debt<=0},
+  {id:'ef3mo',    tier:'grand', icon:'🏰', name:'Fortress Fund',  desc:'Save 3 months of expenses.',             xp:120, cond:m=>m.monthlyExpenses>0&&m.efFund>=m.monthlyExpenses*3, prog:m=>({cur:m.efFund,target:Math.max(1,m.monthlyExpenses*3),unit:'$'})},
+  {id:'nw100k',   tier:'grand', icon:'💎', name:'Six Figures',    desc:'Cross $100,000 net worth.',              xp:200, cond:m=>m.networth>=100000, prog:m=>({cur:Math.max(0,m.networth),target:100000,unit:'$'})},
+  {id:'sr20',     tier:'grand', icon:'📈', name:'Wealth Builder', desc:'Sustain a 20% savings rate.',            xp:100, cond:m=>m.savingsrate>=20, prog:m=>({cur:m.savingsrate,target:20,unit:'%'})},
+  {id:'streak30', tier:'grand', icon:'☄️', name:'Unstoppable',    desc:'Check in 30 days in a row.',             xp:100, cond:m=>m.streak>=30, prog:m=>({cur:m.streak,target:30,unit:'d'})},
+];
+const ACH_BY_ID=Object.fromEntries(ACHIEVEMENTS.map(a=>[a.id,a]));
+function gamiCheckin(){
+  const s=gamiLoad(); const today=new Date(); today.setHours(0,0,0,0); const t=today.getTime();
+  if(s.lastSeen===t) return;
+  if(s.lastSeen!=null){ const diff=Math.round((t-s.lastSeen)/86400000); if(diff===1) s.streak=(s.streak||0)+1; else if(diff>1) s.streak=1; else s.streak=s.streak||1; }
+  else s.streak=1;
+  s.lastSeen=t; gamiSave();
+}
+function gamiEvaluate(opts){
+  opts=opts||{}; const s=gamiLoad(); const firstRun=!s.seeded; const m=gamiMetrics(); const newly=[];
+  ACHIEVEMENTS.forEach(a=>{
+    if(s.unlocked[a.id]) return;
+    let ok=false; try{ ok=!!a.cond(m); }catch(e){ ok=false; }
+    if(ok){ s.unlocked[a.id]=Date.now(); s.wins.unshift({id:a.id,icon:a.icon,name:a.name,tier:a.tier,ts:Date.now()}); newly.push(a); }
+  });
+  if(s.wins.length>40) s.wins.length=40;
+  if(newly.length){
+    let xpSum=0; newly.forEach(a=>xpSum+=a.xp);
+    try{ awardXp(xpSum); }catch(e){ try{ APP.xp=(APP.xp||0)+xpSum; saveState(); }catch(_){} }
+    if(!firstRun && !opts.silent){
+      const top=newly.slice().sort((a,b)=>TIER_RANK[b.tier]-TIER_RANK[a.tier])[0];
+      const extra=newly.length>1?` (+${newly.length-1} more)`:'';
+      try{ richieCelebrate(`${top.icon} Achievement unlocked: ${top.name}!${extra} +${xpSum} XP`); }catch(e){}
+    }
+  }
+  if(firstRun) s.seeded=true;
+  gamiSave();
+  return newly;
+}
+function gamiInit(){
+  gamiCheckin();
+  const s=gamiLoad();
+  if(!s.widgetSeeded){
+    try{ const has=(APP.pages||[]).some(p=>(p.widgets||[]).some(w=>w.type==='journey')); if(!has && APP.pages && APP.pages[0]){ APP.pages[0].widgets=APP.pages[0].widgets||[]; APP.pages[0].widgets.unshift(makeWidget('journey')); saveState(); } }catch(e){}
+    s.widgetSeeded=true; gamiSave();
+  }
+  gamiEvaluate();
+}
+function _gProgLabel(p){ if(p.unit==='$') return fmtK(p.cur)+' / '+fmtK(p.target); if(p.unit==='%') return Math.round(p.cur)+'% / '+p.target+'%'; if(p.unit==='d') return p.cur+' / '+p.target+'d'; return p.cur+' / '+p.target; }
+function _gRelDate(ts){ const d=Math.floor((Date.now()-ts)/86400000); if(d<=0) return 'today'; if(d===1) return 'yesterday'; if(d<7) return d+'d ago'; return new Date(ts).toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+function journeyBody(w){
+  try{ gamiCheckin(); gamiEvaluate(); }catch(e){}
+  const s=gamiLoad(); const m=gamiMetrics();
+  const lv=LEVELS.find(l=>l.n===APP.level)||LEVELS[0];
+  const xpInLv=APP.proMode?100:(APP.xp%100);
+  const nextLv=LEVELS.find(l=>l.n===APP.level+1);
+  const locked=ACHIEVEMENTS.filter(a=>!s.unlocked[a.id]);
+  const withProg=locked.filter(a=>a.prog).map(a=>{ const p=a.prog(m); const pct=Math.max(0,Math.min(100,Math.round((p.cur/(p.target||1))*100))); return {a,p,pct}; }).sort((x,y)=>y.pct-x.pct);
+  const nextThree=withProg.slice(0,3);
+  const unlockedCount=Object.keys(s.unlocked).length, totalCount=ACHIEVEMENTS.length;
+  const milestones = nextThree.length ? nextThree.map(o=>`<div class="jrn-ms"><div class="jrn-ms-top"><span>${o.a.icon} ${esc(o.a.name)}</span><b>${_gProgLabel(o.p)}</b></div><div class="jrn-ms-bar"><i style="width:${o.pct}%"></i></div><div class="jrn-ms-desc">${esc(o.a.desc)}</div></div>`).join('') : `<div class="jrn-empty">🎉 You've cleared every tracked milestone — grand work!</div>`;
+  const wins=(s.wins||[]).slice(0,4).map(wn=>`<div class="jrn-win"><span class="jrn-win-ic">${wn.icon}</span><span class="jrn-win-nm">${esc(wn.name)}</span><span class="jrn-win-dt">${_gRelDate(wn.ts)}</span></div>`).join('') || `<div class="jrn-empty">Your wins will show up here as you hit milestones.</div>`;
+  const badges=ACHIEVEMENTS.map(a=>{ const on=!!s.unlocked[a.id]; return `<div class="jrn-badge ${on?'on':'off'} t-${a.tier}" title="${esc(a.name)} — ${esc(a.desc)}"><span class="jrn-badge-ic">${on?a.icon:'🔒'}</span><span class="jrn-badge-nm">${esc(a.name)}</span></div>`; }).join('');
+  return `<div class="jrn">
+    <div class="jrn-head">
+      <div class="jrn-lvl"><span class="jrn-lvl-ic">${lv.icon}</span><div><div class="jrn-lvl-nm">Level ${lv.n} · ${esc(lv.name)}</div><div class="jrn-lvl-sub">${APP.proMode?'Pro Mode — maxed out':(nextLv?((100-xpInLv)+' XP to '+esc(nextLv.name)):'Top level reached')}</div></div></div>
+      <div class="jrn-streak" title="Daily check-in streak">🔥 <b>${s.streak||0}</b><span>day${(s.streak||0)===1?'':'s'}</span></div>
+    </div>
+    <div class="jrn-xp"><i style="width:${APP.proMode?100:xpInLv}%"></i></div>
+    <div class="jrn-stats"><span><b>${APP.xp}</b> XP</span><span><b>${unlockedCount}/${totalCount}</b> badges</span><span><b>${m.completedGoals}</b> goals done</span></div>
+    <div class="jrn-sec">Next milestones</div>
+    ${milestones}
+    <div class="jrn-sec">Recent wins</div>
+    <div class="jrn-wins">${wins}</div>
+    <div class="jrn-sec">Badges <span class="jrn-sec-ct">${unlockedCount}/${totalCount}</span></div>
+    <div class="jrn-badges">${badges}</div>
+  </div>`;
+}
+
 function renderWidgetBody(w){
   const def=WIDGET_BY_ID[w.type]; if(!def) return '';
   if(!widgetUnlocked(def)) return `<div class="wph-lock"><div class="wph-lock-icon">🔒</div><div style="font-size:12.5px">Unlocks at level ${def.minLevel}</div></div>`;
   const bars=n=>`<div class="wph-bars">${Array.from({length:n}).map(()=>`<div class="wph-bar" style="height:${30+Math.random()*70}%"></div>`).join('')}</div>`;
   switch(w.type){
+    case 'journey': return journeyBody(w);
     case 'net_worth_summary': { const a=engNWAssets(), l=engNWLiab(); const nw=dataLoaded?(engNetBalance()+a-l):(a-l); const tot=a+l; const aPct=tot>0?Math.round(a/tot*100):100; return `<div class="wph"><div class="wph-stat ${nw>=0?'':'red'}" style="${nw<0?'color:var(--red)':''}">${fmtK(nw)}</div><div class="wph-sub">net worth · ${aPct}% assets</div><div class="ds-budget"><div class="ds-budget-top"><span style="color:var(--green);font-weight:700">Assets ${fmtK(a)}</span><span style="color:var(--red)">Debts ${fmtK(l)}</span></div><div class="ds-bar" style="background:rgba(240,92,92,.35)"><div class="ds-bar-fill" style="width:${aPct}%;background:var(--green)"></div></div></div></div>`; }
     case 'cash_summary': { const bal=a=>((a.balances&&(a.balances.available??a.balances.current))||0); if(dataLoaded){ const dep=allAccts.filter(a=>a.type==='depository'); const cash=dep.reduce((s,a)=>s+bal(a),0); const top=dep.slice().sort((x,y)=>bal(y)-bal(x)).slice(0,3); const mx=Math.max(...top.map(bal),1); const rows=top.map(acc=>`<div class="cash-row"><span class="cash-nm">${esc(acc.name||'Account')}</span><span class="cash-track"><i style="width:${Math.max(5,Math.round(bal(acc)/mx*100))}%"></i></span><b>${fmtK(bal(acc))}</b></div>`).join(''); return `<div class="wph"><div class="wph-stat">${fmtK(cash)}</div><div class="wph-sub">across ${dep.length||allAccts.length} account${(dep.length||allAccts.length)!==1?'s':''}</div><div class="cash-list">${rows}</div></div>`; } const sample=[['Ally Savings',8030],['Checking',180],['Cash',30]]; const mx=8030; const rows=sample.map(r=>`<div class="cash-row"><span class="cash-nm">${r[0]}</span><span class="cash-track"><i style="width:${Math.max(5,Math.round(r[1]/mx*100))}%"></i></span><b>${fmtK(r[1])}</b></div>`).join(''); return `<div class="wph"><div class="wph-stat">$8,240</div><div class="wph-sub">across 3 accounts \u00b7 sample</div><div class="cash-list">${rows}</div></div>`; }
     case 'spending_month': return discretionarySpendBody(w);
@@ -7148,6 +7312,7 @@ function enterApp(){
   fabChar=new RichieEmoji(gg('fabChar'));
   rpChar=new RichieEmoji(gg('rpChar'));
   renderShell();
+  try{ gamiInit(); }catch(e){}
   if(APP.activePage&&APP.activePage!=='__settings__') switchPage(APP.activePage);
   else if(APP.pages[0]) switchPage(APP.pages[0].id);
   handleResize();
