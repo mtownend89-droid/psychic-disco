@@ -113,6 +113,7 @@ app.post('/api/coach', async (req, res) => {
       `Ground the tip in the actual numbers provided. Never invent figures. Do not repeat any idea in the "alreadySeen" list.`,
       `Plain text only — no markdown, no emoji unless the persona is the mascot.`,
       `Draw on this expertise so your pointer is genuinely smart and correct (but keep it to the short format above): ${FINCLEAR_PERSONAL}`,
+      `If the context has a "gamification" block with a nextMilestone, you may occasionally nudge the user one concrete step toward it (e.g. their next badge or streak) — only when it fits naturally.`,
     ].join(' ');
 
     const user = JSON.stringify({ screen: context, alreadySeen: seen });
@@ -168,6 +169,7 @@ app.post('/api/advisor', async (req, res) => {
         ? `Here is the user's live financial context — ground your answer in these real numbers and never invent figures: ${JSON.stringify(context)}`
         : `If you genuinely need a number the user has not given, ask ONE short clarifying question rather than guessing.`,
       `Answer clearly and concretely. You may use **bold** for key terms, short bullet lists, and put a key number or formula on its own line. Keep it focused and actionable with no long preamble. Stay encouraging; never shame.`,
+      `If the context includes a "gamification" block, you may motivate the user by referencing their level, streak, or how close they are to their next milestone — and offer a concrete step to reach it. Keep it natural, not gimmicky.`,
     ].join(' ');
 
     const convo = (Array.isArray(messages) ? messages : [])
