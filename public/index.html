@@ -1008,8 +1008,30 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .promo-add-chips{display:flex;flex-wrap:wrap;gap:6px;}
 .promo-add-chip{font-size:11px;padding:5px 10px;border-radius:8px;background:var(--green-dim);border:1px solid rgba(46,204,138,0.25);color:var(--green);cursor:pointer;font-family:var(--font);}
 .promo-add-chip:hover{background:rgba(46,204,138,0.2);}
-/* ── Credit Utilization + DTI ── */
-.cu-wrap{padding:2px;}
+/* ── Account-category picker (per widget) + editor (settings) ── */
+.cash-pick{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 2px;line-height:1;vertical-align:middle;opacity:.7}
+.cash-pick:hover{opacity:1;color:var(--text)}
+.acp-list{display:flex;flex-direction:column;gap:5px;}
+.acp-row{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--border);border-radius:9px;cursor:pointer;background:var(--surface2);transition:border-color .15s,background .15s;}
+.acp-row.on{border-color:var(--green);background:var(--green-dim);}
+.acp-row input{accent-color:var(--green);width:16px;height:16px;flex-shrink:0;}
+.acp-ic{font-size:16px;}
+.acp-nm{flex:1;font-size:13.5px;font-weight:600;color:var(--text);display:flex;flex-direction:column;gap:1px;}
+.acp-kind{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+.acp-ct{font-size:12px;font-weight:700;color:var(--muted);background:var(--surface3);border-radius:20px;min-width:24px;text-align:center;padding:2px 7px;}
+.ace-wrap{display:flex;flex-direction:column;gap:14px;max-height:56vh;overflow:auto;}
+.ace-group{border:1px solid var(--border);border-radius:11px;overflow:hidden;}
+.ace-gh{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);font-size:13px;font-weight:700;color:var(--text);}
+.ace-kind{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:2px 7px;border-radius:5px;}
+.ace-kind.asset{color:var(--green);background:var(--green-dim);}
+.ace-kind.liability{color:#f0846c;background:rgba(240,92,92,.14);}
+.ace-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border);}
+.ace-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
+.ace-nm{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ace-sub{font-size:11px;color:var(--muted);}
+.ace-bal{font-size:12.5px;font-weight:700;color:var(--text);flex-shrink:0;font-variant-numeric:tabular-nums;}
+.ace-sel{width:auto;flex-shrink:0;padding:5px 8px;font-size:12px;}
+/* ── Credit Utilization + DTI ── */.cu-wrap{padding:2px;}
 .cu-top{display:flex;gap:16px;align-items:center;margin-bottom:14px;}
 @media(max-width:480px){.cu-top{flex-direction:column;}}
 .cu-gauge{flex-shrink:0;}
@@ -2277,6 +2299,40 @@ const DEFAULT_CATEGORIES=[
   {id:'other',label:'Other',color:'#94a3b8',plaid:[]},
 ];
 function getUserCategories(){ try{ const s=JSON.parse(LS.getItem('mdf_categories')); return (s&&s.length)?s:DEFAULT_CATEGORIES.map(c=>({...c})); }catch(e){ return DEFAULT_CATEGORIES.map(c=>({...c})); } }
+
+/* ══ ACCOUNT CATEGORY TREE — a taxonomy for ACCOUNTS, separate from spending categories.
+   Auto-detected from Plaid type/subtype; user can override per-account in Settings.
+   Widgets that use accounts filter by these category ids. ══ */
+const ACCOUNT_CATEGORIES=[
+  {id:'cash',       label:'Cash',        icon:'💵', kind:'asset',     liquid:true},
+  {id:'savings',    label:'Savings',     icon:'🛟', kind:'asset',     liquid:true},
+  {id:'investment', label:'Investment',  icon:'📈', kind:'asset',     liquid:false},
+  {id:'retirement', label:'Retirement',  icon:'🏦', kind:'asset',     liquid:false},
+  {id:'hsa',        label:'HSA',         icon:'🩺', kind:'asset',     liquid:false},
+  {id:'property',   label:'Property',    icon:'🏠', kind:'asset',     liquid:false},
+  {id:'credit',     label:'Credit Card', icon:'💳', kind:'liability', liquid:false},
+  {id:'loan',       label:'Loan',        icon:'📄', kind:'liability', liquid:false},
+  {id:'mortgage',   label:'Mortgage',    icon:'🏡', kind:'liability', liquid:false},
+  {id:'other',      label:'Other',       icon:'📦', kind:'asset',     liquid:false},
+];
+const ACCT_CAT_BY_ID={}; ACCOUNT_CATEGORIES.forEach(c=>ACCT_CAT_BY_ID[c.id]=c);
+function acctCatDef(id){ return ACCT_CAT_BY_ID[id]||ACCT_CAT_BY_ID.other; }
+function _acctKey(a){ return (a&&(a.id||a.account_id||a.name))||'?'; }
+function _acctCatOverrides(){ try{ return JSON.parse(LS.getItem('mdf_acct_cats'))||{}; }catch(e){ return {}; } }
+function setAccountCategory(a, catId){ const o=_acctCatOverrides(); const k=(typeof a==='string')?a:_acctKey(a); if(catId)o[k]=catId; else delete o[k]; try{ LS.setItem('mdf_acct_cats',JSON.stringify(o)); }catch(e){} }
+function _autoAcctCat(a){
+  const t=(a&&a.type||'').toLowerCase(), s=(a&&a.subtype||'').toLowerCase(), nm=(a&&a.name||'').toLowerCase(), blob=s+' '+nm;
+  if(/hsa|health\s?savings/.test(blob)) return 'hsa';
+  if(t==='credit') return 'credit';
+  if(t==='loan') return /mortgage|home\s?loan|heloc/.test(blob)?'mortgage':'loan';
+  if(/mortgage/.test(blob)) return 'mortgage';
+  if(t==='depository') return /saving|cd\b|money\s?market|mmkt/.test(s)?'savings':'cash';
+  if(t==='investment') return /401|403|457|ira|roth|pension|retire|sep|thrift|tsp|annuit/.test(blob)?'retirement':'investment';
+  if(/real\s?estate|property|\bhome\b|\bhouse\b|vehicle|\bcar\b|\bauto\b/.test(blob)) return 'property';
+  return (a&&a.bal<0)?'loan':'other';
+}
+function getAccountCategory(a){ const o=_acctCatOverrides(); const k=_acctKey(a); if(o[k]&&ACCT_CAT_BY_ID[o[k]]) return o[k]; return _autoAcctCat(a); }
+function _findWidget(uid){ for(const p of (APP.pages||[])){ const w=(p.widgets||[]).find(x=>x&&x.uid===uid); if(w) return w; } return null; }
 function mapPlaidCategory(plaidPrimary){ const cats=getUserCategories(); const p=(plaidPrimary||'').toUpperCase().replace(/\s+/g,'_'); for(const cat of cats){ if(cat.plaid&&cat.plaid.some(k=>p.includes(k)||k.includes(p))) return cat.label; } return 'Other'; }
 function getCatColor(label){ const cats=getUserCategories(); const f=cats.find(c=>c.label===label); return f?f.color:'#94a3b8'; }
 // Map a (child) category label to its first-tier parent group {id,label,color}.
@@ -4727,6 +4783,64 @@ function maybeWarnPromos(){
   }, 1600);
 }
 
+/* ═══ CASH ON HAND — now filters by ACCOUNT CATEGORY (user-selectable) ═══ */
+function cashSummaryBody(w){
+  const cats=(w.acctCats&&w.acctCats.length)?w.acctCats:['cash','savings'];
+  const accts=engAccounts().filter(a=>cats.includes(getAccountCategory(a)));
+  const total=accts.reduce((s,a)=>s+(a.bal||0),0);
+  const top=accts.slice().sort((x,y)=>Math.abs(y.bal)-Math.abs(x.bal)).slice(0,3);
+  const mx=Math.max(...top.map(a=>Math.abs(a.bal||0)),1);
+  const label=cats.map(c=>acctCatDef(c).label).join(' + ')||'account';
+  const gear=`<button class="cash-pick" onclick="event.stopPropagation();openAcctCatPicker('${w.uid}')" title="Choose account types">⚙︎</button>`;
+  if(!accts.length) return `<div class="wph"><div class="wph-sub">No ${esc(label)} accounts.</div><div style="text-align:center;margin-top:10px"><button class="manual-add-btn" style="width:auto;display:inline-block" onclick="event.stopPropagation();openAcctCatPicker('${w.uid}')">⚙︎ Choose account types</button></div></div>`;
+  const rows=top.map(a=>`<div class="cash-row"><span class="cash-nm">${esc(a.name||'Account')}</span><span class="cash-track"><i style="width:${Math.max(5,Math.round(Math.abs(a.bal||0)/mx*100))}%"></i></span><b>${fmtK(a.bal)}</b></div>`).join('');
+  return `<div class="wph"><div class="wph-stat">${fmtK(total)}</div><div class="wph-sub">${accts.length} ${esc(label)} account${accts.length!==1?'s':''}${dataLoaded?'':' · sample'} ${gear}</div><div class="cash-list">${rows}</div></div>`;
+}
+/* Per-widget picker: which ACCOUNT CATEGORIES this widget counts */
+let _acctPick={uid:null, sel:[]};
+function openAcctCatPicker(uid){
+  const w=_findWidget(uid); if(!w) return;
+  _acctPick={uid, sel:(w.acctCats&&w.acctCats.length?w.acctCats.slice():['cash','savings'])};
+  gg('manualModal').style.display='flex';
+  gg('manualTitle').textContent='Account types to include';
+  gg('manualSub').textContent='Pick which kinds of accounts this widget counts.';
+  acctPickRender();
+}
+function acctPickRender(){
+  const counts={}; engAccounts().forEach(a=>{ const c=getAccountCategory(a); counts[c]=(counts[c]||0)+1; });
+  const rows=ACCOUNT_CATEGORIES.map(c=>{
+    const on=_acctPick.sel.includes(c.id), n=counts[c.id]||0;
+    return `<label class="acp-row${on?' on':''}"><input type="checkbox" ${on?'checked':''} onchange="acctPickToggle('${c.id}')"><span class="acp-ic">${c.icon}</span><span class="acp-nm">${c.label}<span class="acp-kind">${c.kind}</span></span><span class="acp-ct">${n}</span></label>`;
+  }).join('');
+  gg('manualBody').innerHTML=`<div class="acp-list">${rows}</div><div class="ws-hint" style="margin-top:9px">Numbers show how many of your accounts fall in each type. Change an account's type in Settings → Account categories.</div><div class="mf-actions"><span></span><button class="btn primary" onclick="acctPickSave()">Done</button></div>`;
+}
+function acctPickToggle(id){ const i=_acctPick.sel.indexOf(id); if(i<0)_acctPick.sel.push(id); else _acctPick.sel.splice(i,1); acctPickRender(); }
+function acctPickSave(){ const w=_findWidget(_acctPick.uid); if(w){ w.acctCats=_acctPick.sel.slice(); saveState(); } closeManual(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+
+/* Settings: assign each account to a category (auto-detected unless overridden) */
+function openAcctCatEditor(){
+  gg('manualModal').style.display='flex';
+  gg('manualTitle').textContent='Account categories';
+  gg('manualSub').textContent='Assign each account to a category. Auto-detected unless you change it.';
+  acctCatEditorRender();
+}
+function acctCatEditorRender(){
+  const accts=engAccounts();
+  const opts=(sel)=>ACCOUNT_CATEGORIES.map(c=>`<option value="${c.id}"${sel===c.id?' selected':''}>${c.icon} ${c.label}</option>`).join('');
+  const ov=_acctCatOverrides();
+  const byCat={}; accts.forEach(a=>{ const c=getAccountCategory(a); (byCat[c]=byCat[c]||[]).push(a); });
+  const groups=ACCOUNT_CATEGORIES.filter(c=>byCat[c.id]&&byCat[c.id].length).map(c=>{
+    const rows=byCat[c.id].map(a=>{
+      const k=_acctKey(a), auto=!ov[k];
+      return `<div class="ace-row"><span class="ace-meta"><span class="ace-nm">${esc(a.name||'Account')}</span><span class="ace-sub">${esc(a.institution||a.subtype||a.type||'')}${auto?' · auto':''}</span></span><span class="ace-bal">${fmtK(a.bal)}</span><select class="mf-in ace-sel" onchange="acctCatSet('${esc(k).replace(/'/g,"\\\\'")}',this.value)">${opts(c.id)}</select></div>`;
+    }).join('');
+    return `<div class="ace-group"><div class="ace-gh"><span>${c.icon} ${esc(c.label)}</span><span class="ace-kind ${c.kind}">${c.kind}</span></div>${rows}</div>`;
+  }).join('');
+  gg('manualBody').innerHTML=`<div class="ace-wrap">${groups||'<div class="ws-hint">No accounts yet. Connect a bank or add a manual account first.</div>'}</div><div class="mf-actions"><button class="btn" onclick="acctCatResetAll()">Reset to auto</button><button class="btn primary" onclick="closeManual()">Done</button></div>`;
+}
+function acctCatSet(key, catId){ setAccountCategory(key, catId); acctCatEditorRender(); }
+function acctCatResetAll(){ try{ LS.removeItem('mdf_acct_cats'); }catch(e){} acctCatEditorRender(); }
+
 /* ═══ CREDIT UTILIZATION + DTI WIDGET ═══ */
 function creditUtilBody(w){
   const u=engCreditUtil();
@@ -5930,7 +6044,7 @@ function renderWidgetBody(w){
   switch(w.type){
     case 'journey': return journeyBody(w);
     case 'net_worth_summary': { const a=engNWAssets(), l=engNWLiab(); const nw=dataLoaded?(engNetBalance()+a-l):(a-l); const tot=a+l; const aPct=tot>0?Math.round(a/tot*100):100; return `<div class="wph"><div class="wph-stat ${nw>=0?'':'red'}" style="${nw<0?'color:var(--red)':''}">${fmtK(nw)}</div><div class="wph-sub">net worth · ${aPct}% assets</div><div class="ds-budget"><div class="ds-budget-top"><span style="color:var(--green);font-weight:700">Assets ${fmtK(a)}</span><span style="color:var(--red)">Debts ${fmtK(l)}</span></div><div class="ds-bar" style="background:rgba(240,92,92,.35)"><div class="ds-bar-fill" style="width:${aPct}%;background:var(--green)"></div></div></div></div>`; }
-    case 'cash_summary': { const bal=a=>((a.balances&&(a.balances.available??a.balances.current))||0); if(dataLoaded){ const dep=allAccts.filter(a=>a.type==='depository'); const cash=dep.reduce((s,a)=>s+bal(a),0); const top=dep.slice().sort((x,y)=>bal(y)-bal(x)).slice(0,3); const mx=Math.max(...top.map(bal),1); const rows=top.map(acc=>`<div class="cash-row"><span class="cash-nm">${esc(acc.name||'Account')}</span><span class="cash-track"><i style="width:${Math.max(5,Math.round(bal(acc)/mx*100))}%"></i></span><b>${fmtK(bal(acc))}</b></div>`).join(''); return `<div class="wph"><div class="wph-stat">${fmtK(cash)}</div><div class="wph-sub">across ${dep.length||allAccts.length} account${(dep.length||allAccts.length)!==1?'s':''}</div><div class="cash-list">${rows}</div></div>`; } const sample=[['Ally Savings',8030],['Checking',180],['Cash',30]]; const mx=8030; const rows=sample.map(r=>`<div class="cash-row"><span class="cash-nm">${r[0]}</span><span class="cash-track"><i style="width:${Math.max(5,Math.round(r[1]/mx*100))}%"></i></span><b>${fmtK(r[1])}</b></div>`).join(''); return `<div class="wph"><div class="wph-stat">$8,240</div><div class="wph-sub">across 3 accounts \u00b7 sample</div><div class="cash-list">${rows}</div></div>`; }
+    case 'cash_summary': return cashSummaryBody(w);
     case 'spending_month': return discretionarySpendBody(w);
     case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); const now=Date.now(), ps=new Date(now-2*days*86400000), pe=new Date(now-days*86400000); const prev=allTxns.filter(t=>{const d=new Date(t.date);return d>=ps&&d<pe&&t.amount<0;}).reduce((s,t)=>s+Math.abs(t.amount),0); const dl=prev>0?Math.round((inc-prev)/prev*100):null; const up=dl!==null&&dl>=0; const trend=dl===null?'':`<div class="ds-trend-label" style="color:${up?'var(--green)':'var(--amber)'};margin-top:9px">${up?'▲':'▼'} ${Math.abs(dl)}% vs prior ${tfLabel(w.tf||'30d')}</div>`; const rec=engRecent(days).filter(t=>t.amount<0); const byC={}; rec.forEach(t=>{const c=getTxnCategory(t);byC[c]=(byC[c]||0)+Math.abs(t.amount);}); const top=Object.entries(byC).sort((a,b)=>b[1]-a[1])[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${trend}${top?`<div class="wph-inline"><span>Top source: ${esc(top[0])}</span><b style="color:var(--green)">${fmtK(top[1])}</b></div>`:''}</div>`; } const top=incomeSources.slice().sort((a,b)=>b.amt*(FREQ_TO_MONTHLY[b.freq]||1)-a.amt*(FREQ_TO_MONTHLY[a.freq]||1))[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">${incomeSources.length} sources \u00b7 sample</div><div class="ds-trend-label" style="color:var(--green);margin-top:9px">▲ 6% vs prior 30d</div><div class="wph-inline"><span>Top source: ${top.name}</span><b style="color:var(--green)">${fmtK(Math.round(top.amt*(FREQ_TO_MONTHLY[top.freq]||1)))}/mo</b></div></div>`; }
     case 'debt_summary': { const debts=engBills().filter(b=>b.bal<0); const d=debts.reduce((s,b)=>s+Math.abs(b.bal),0); const hi=debts.slice().sort((a,b)=>(b.apr||0)-(a.apr||0))[0]; if(dataLoaded||plaidHasLiab()){ return `<div class="wph"><div class="wph-stat" style="color:var(--red)">${fmtK(d)}</div><div class="wph-sub">across ${debts.length} balance${debts.length!==1?'s':''}</div>${hi&&hi.apr?`<div class="wph-inline"><span>Highest APR: ${esc(hi.name)}</span><b style="color:var(--amber)">${hi.apr.toFixed(1)}%</b></div>`:''}</div>`; } return `<div class="wph"><div class="wph-stat" style="color:var(--red)">${fmtK(d)}</div><div class="wph-sub">across ${debts.length} balances</div>${hi&&hi.apr?`<div class="wph-inline"><span>Highest APR: ${esc(hi.name)}</span><b style="color:var(--amber)">${hi.apr.toFixed(1)}%</b></div>`:''}</div>`; }
@@ -6221,6 +6335,15 @@ function renderSettings(){
           <button class="btn" onclick="openCatEditor()">Edit categories</button>
         </div>
       </div>
+      <div class="set-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
+          <div>
+            <div class="set-card-label" style="margin:0">🏦 Account Categories</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Group accounts by type — Cash, Savings, Investment, Retirement, HSA, Credit, Loans, Mortgage — so widgets can include or exclude them.</div>
+          </div>
+          <button class="btn" onclick="openAcctCatEditor()">Manage accounts</button>
+        </div>
+      </div>
 
       <div class="set-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
@@ -6282,7 +6405,7 @@ function doFullReset(){
   const v=(gg('resetConfirmInput').value||'').trim().toUpperCase();
   if(v!=='YES') return;  // hard guard — only proceeds on an exact YES
   try{
-    ['richie_setup','richie_app','mdf_categories','mdf_cat_overrides','mdf_txn_notes','mdf_fire'].forEach(k=>{ try{LS.removeItem(k);}catch(e){} });
+    ['richie_setup','richie_app','mdf_categories','mdf_cat_overrides','mdf_txn_notes','mdf_fire','mdf_acct_cats'].forEach(k=>{ try{LS.removeItem(k);}catch(e){} });
     try{ SS.removeItem('mdf_token'); }catch(e){}
     // defensive sweep of any remaining app-scoped keys
     try{ Object.keys(window.localStorage||{}).forEach(k=>{ if(/^(richie_|mdf_)/.test(k)) window.localStorage.removeItem(k); }); }catch(e){}
