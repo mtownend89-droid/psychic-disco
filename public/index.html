@@ -2421,15 +2421,16 @@ function setBillPayCommit(){ const pg=APP.pages.find(p=>p.id===APP.activePage); 
 /* ── Manual bills & accounts editor (items not linked to Plaid) ── */
 let _manualEdit={kind:'bill', idx:null};
 function openManualBill(idx){ _manualEdit={kind:'bill', idx:(idx==null?null:idx)}; gg('manualModal').style.display='flex'; manualRender(); }
+function openManualCard(){ _manualEdit={kind:'bill', idx:null, preset:'card'}; gg('manualModal').style.display='flex'; manualRender(); }
 function openManualAccount(idx){ _manualEdit={kind:'account', idx:(idx==null?null:idx)}; gg('manualModal').style.display='flex'; manualRender(); }
 function closeManual(){ gg('manualModal').style.display='none'; }
 function manualRender(){
-  const k=_manualEdit.kind, editing=_manualEdit.idx!=null;
-  gg('manualTitle').textContent=(editing?'Edit ':'Add ')+(k==='bill'?'a bill':'an account');
-  gg('manualSub').textContent=k==='bill'?'A bill or recurring payment you manage manually.':'An account or balance not linked to a bank.';
+  const k=_manualEdit.kind, editing=_manualEdit.idx!=null, card=(_manualEdit.preset==='card');
+  gg('manualTitle').textContent=(editing?'Edit ':'Add ')+(k==='bill'?(card?'a credit card':'a bill'):'an account');
+  gg('manualSub').textContent=k==='bill'?(card?'Enter its balance, limit, and any 0% promo end date.':'A bill or recurring payment you manage manually.'):'An account or balance not linked to a bank.';
   const body=gg('manualBody');
   if(k==='bill'){
-    const b=editing?(APP.manualBills||[])[_manualEdit.idx]:{name:'',pay:'',min:'',bal:'',apr:'',due:1,cat:'OTHER',note:''};
+    const b=editing?(APP.manualBills||[])[_manualEdit.idx]:{name:'',pay:'',min:'',bal:'',apr:'',due:1,cat:(_manualEdit.preset==='card'?'CC':'OTHER'),note:''};
     body.innerHTML=`
       <label class="mf-label">Name</label><input class="mf-in" id="mfName" value="${esc(b.name||'')}" placeholder="e.g. Car insurance">
       <div class="mf-row">
@@ -3521,6 +3522,17 @@ const LEVELS=[
   {n:4,key:'investor',icon:'📈',name:'Investor',desc:"Growing wealth. Minimal hand-holding."},
   {n:5,key:'mogul',icon:'🏦',name:'Mogul',desc:"Power user. Everything on, pro mode."},
 ];
+// Exponential XP ladder — cumulative XP needed to REACH each level (Mogul at 5,000)
+const LEVEL_XP=[0, 500, 1250, 2500, 5000];
+function xpToLevel(xp){ let lv=1; for(let i=0;i<LEVEL_XP.length;i++){ if((xp||0)>=LEVEL_XP[i]) lv=i+1; } return Math.min(5,lv); }
+function levelProgress(){
+  const lv=APP.level||xpToLevel(APP.xp||0);
+  const cur=LEVEL_XP[lv-1]||0; const next=(LEVEL_XP[lv]!=null)?LEVEL_XP[lv]:null;
+  const into=Math.max(0,(APP.xp||0)-cur); const span=(next!=null)?(next-cur):1;
+  const pct=(next!=null)?Math.max(0,Math.min(100,Math.round(into/span*100))):100;
+  const toNext=(next!=null)?Math.max(0,next-(APP.xp||0)):0;
+  return {lv,cur,next,into,span,pct,toNext};
+}
 // Quiz Richie uses to DETERMINE the starting level (no self-selection).
 // Each option carries points 1–5; the average maps to a level.
 const LEVEL_QUIZ=[
@@ -4655,11 +4667,12 @@ function promoTrackerBody(w){
   const head = urgent.length?`<div class="promo-alert">⚠️ ${urgent.length} promo${urgent.length>1?'s':''} expiring within 45 days — pay these down first.</div>`:'';
   // Cards WITHOUT a promo date — let the user attach one (works for live Plaid cards too)
   const noPromo=engBills().filter(b=>b.cat==='CC' && Math.abs(b.bal||0)>0.5 && !b.promoEnd);
-  let addSection='';
-  if(noPromo.length){
-    const opts=noPromo.map(b=>`<button class="promo-add-chip" onclick="event.stopPropagation();openPromoEditor('${esc(b.name).replace(/'/g,"\\\\'")}')">+ ${esc(b.name)}</button>`).join('');
-    addSection=`<div class="promo-add-wrap"><div class="ws-hint" style="margin:0 0 6px">Attach a 0% promo end date to a card${plaidHasLiab()?' (works for your live cards too)':''}:</div><div class="promo-add-chips">${opts}</div></div>`;
-  }
+  const chips=noPromo.map(b=>`<button class="promo-add-chip" onclick="event.stopPropagation();openPromoEditor('${esc(b.name).replace(/'/g,"\\\\'")}')">+ ${esc(b.name)}</button>`).join('');
+  const addBtn=`<button class="promo-add-chip" style="background:var(--surface3);border-color:var(--border);color:var(--muted)" onclick="event.stopPropagation();openManualCard()">➕ Add a card</button>`;
+  const addHint = noPromo.length
+    ? `Attach a 0% promo end date to a card${plaidHasLiab()?' (works for your live cards too)':''}:`
+    : `Have a card on a 0% intro offer? Add it and I'll count down to the day the rate jumps:`;
+  const addSection=`<div class="promo-add-wrap"><div class="ws-hint" style="margin:0 0 6px">${addHint}</div><div class="promo-add-chips">${chips}${addBtn}</div></div>`;
   const empty = !promos.length ? `<div class="wph"><div class="wph-sub">No active 0%/intro-rate promos with a balance yet. 🎉</div></div>` : '';
   return `<div class="promo-wrap">${head}${rows}${empty}${addSection}</div>`;
 }
@@ -4718,7 +4731,7 @@ function maybeWarnPromos(){
 function creditUtilBody(w){
   const u=engCreditUtil();
   const dti=engDTI();
-  if(u.limit<=0) return `<div class="wph"><div class="wph-sub">No credit limits set yet.</div><div class="ws-hint" style="margin-top:6px">Add credit limits to your cards and I'll show your utilization here.</div></div>`;
+  if(u.limit<=0) return `<div class="wph"><div class="wph-sub">No credit cards with a limit yet.</div><div class="ws-hint" style="margin-top:6px">Add a card with its limit${plaidHasLiab()?' (or set limits on your live cards)':''} and I'll show utilization + DTI here.</div><div style="text-align:center;margin-top:11px"><button class="manual-add-btn" style="width:auto;display:inline-block" onclick="event.stopPropagation();openManualCard()">➕ Add a card</button></div></div>`;
   // utilization color: <10% green, <30% amber-green, <50% amber, else red
   const uPct=u.pct;
   const uColor = uPct<10?'var(--green)' : uPct<30?'#7bc96f' : uPct<50?'var(--amber)' : 'var(--red)';
@@ -4757,6 +4770,7 @@ function creditUtilBody(w){
     </div>
     <div class="cu-cards-label">Per-card utilization <span class="ws-hint" style="margin:0">(dotted line = 30%)</span></div>
     <div class="cu-cards">${cardBars}</div>
+    <div style="text-align:center;margin-top:11px"><button class="manual-add-btn" style="width:auto;display:inline-block" onclick="event.stopPropagation();openManualCard()">➕ Add a card</button></div>
   </div>`;
 }
 
@@ -5813,7 +5827,7 @@ function journeyBody(w){
   try{ gamiCheckin(); gamiEvaluate(); }catch(e){}
   const s=gamiLoad(); const m=gamiMetrics();
   const lv=LEVELS.find(l=>l.n===APP.level)||LEVELS[0];
-  const xpInLv=APP.proMode?100:(APP.xp%100);
+  const lp=levelProgress();
   const nextLv=LEVELS.find(l=>l.n===APP.level+1);
   const locked=ACHIEVEMENTS.filter(a=>!s.unlocked[a.id]);
   const withProg=locked.filter(a=>a.prog).map(a=>{ const p=a.prog(m); const pct=Math.max(0,Math.min(100,Math.round((p.cur/(p.target||1))*100))); return {a,p,pct}; }).sort((x,y)=>y.pct-x.pct);
@@ -5824,10 +5838,10 @@ function journeyBody(w){
   const badges=ACHIEVEMENTS.map(a=>{ const on=!!s.unlocked[a.id]; return `<div class="jrn-badge ${on?'on':'off'} t-${a.tier}" title="${esc(a.name)} — ${esc(a.desc)}"><span class="jrn-badge-ic">${on?a.icon:'🔒'}</span><span class="jrn-badge-nm">${esc(a.name)}</span></div>`; }).join('');
   return `<div class="jrn">
     <div class="jrn-head">
-      <div class="jrn-lvl"><span class="jrn-lvl-ic">${lv.icon}</span><div><div class="jrn-lvl-nm">Level ${lv.n} · ${esc(lv.name)}</div><div class="jrn-lvl-sub">${APP.proMode?'Pro Mode — maxed out':(nextLv?((100-xpInLv)+' XP to '+esc(nextLv.name)):'Top level reached')}</div></div></div>
+      <div class="jrn-lvl"><span class="jrn-lvl-ic">${lv.icon}</span><div><div class="jrn-lvl-nm">Level ${lv.n} · ${esc(lv.name)}</div><div class="jrn-lvl-sub">${APP.proMode?'Pro Mode — maxed out':(nextLv?(lp.toNext.toLocaleString()+' XP to '+esc(nextLv.name)):'Top level reached')}</div></div></div>
       <div class="jrn-streak" title="Daily check-in streak">🔥 <b>${s.streak||0}</b><span>day${(s.streak||0)===1?'':'s'}</span></div>
     </div>
-    <div class="jrn-xp"><i style="width:${APP.proMode?100:xpInLv}%"></i></div>
+    <div class="jrn-xp"><i style="width:${APP.proMode?100:lp.pct}%"></i></div>
     <div class="jrn-stats"><span><b>${APP.xp}</b> XP</span><span><b>${unlockedCount}/${totalCount}</b> badges</span><span><b>${m.completedGoals}</b> goals done</span></div>
     ${(function(){ try{ const h=nwHistMonthly(6); if(h&&h.length>=2){ const vals=h.map(x=>x.v); const diff=vals[vals.length-1]-vals[0]; const up=diff>=0; return `<div class="jrn-sec">Net worth trend <span class="jrn-trend-lbl ${up?'up':'down'}">${up?'▲':'▼'} ${fmtK(Math.abs(diff))} · ${h.length}mo</span></div><div class="jrn-trend">${_sparkline(vals, up?'#2ecc8a':'#e85d75', 260, 42)}</div>`; } }catch(e){} return ''; })()}
     <div class="jrn-sec">Next milestones</div>
@@ -6245,9 +6259,9 @@ function renderSettings(){
   }).join('');
   const lv=LEVELS.find(l=>l.n===APP.level)||LEVELS[0];
   gg('setLevelBadge').textContent=lv.icon+' Lv '+lv.n+' · '+lv.name;
-  const pct=APP.proMode?100:(APP.xp%100);
+  const pct=APP.proMode?100:levelProgress().pct;
   gg('setXpFill').style.width=pct+'%';
-  gg('setXpText').textContent=APP.proMode?'Pro Mode active — all features unlocked':(APP.xp+' XP · '+(100-(APP.xp%100))+' to next level');
+  gg('setXpText').textContent=APP.proMode?'Pro Mode active — all features unlocked':(APP.xp.toLocaleString()+' XP'+(levelProgress().next!=null?(' · '+levelProgress().toNext.toLocaleString()+' to next level'):' · max level'));
 }
 
 function setPersona(key){ APP.persona=key; saveState(); applyAccent(); renderShell(); renderSettings(); if(sbRichie)sbRichie.do('bounce'); richieSay(RICHIE_PERSONAS[key].quips[0]); }
@@ -6334,7 +6348,7 @@ function deletePage(id){
 /* ═══════════════ XP / LEVEL UP ═══════════════ */
 function awardXp(amount,reason){
   APP.xp+=amount;
-  const newLevel=Math.min(5,Math.floor(APP.xp/100)+1);
+  const newLevel=xpToLevel(APP.xp);
   if(newLevel>APP.level){ APP.level=newLevel; levelUp(); }
   saveState();
   gg('sbXp').textContent=APP.xp+' XP';
@@ -7458,7 +7472,8 @@ function logout(){
 function wizFinish(){
   _obVoice=false; riAudioOn=false;        // onboarding done — Richie goes silent from here on
   try{ _stopTts(); }catch(e){}
-  setupConfig.xp=(setupConfig.level-1)*20;
+  const _seedLv=Math.min(Math.max(1,setupConfig.level||1),2);   // head-start up to Saver; Budgeter+ must be earned
+  setupConfig.xp=LEVEL_XP[_seedLv-1]||0;
   try{ LS.setItem('richie_setup',JSON.stringify(setupConfig)); LS.removeItem('richie_app'); }catch(e){}
   gg('setupWizard').style.display='none';
   // After first-run setup, require login before entering (server auth + Plaid).
