@@ -359,7 +359,39 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.post('/api/login', (req, res) => {
+// ── Login rate limiting (in-memory, per-IP; no dependency) ──
+const LOGIN_MAX_FAILS = 5;                  // failed attempts allowed within the window
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;     // rolling window
+const LOGIN_BLOCK_MS  = 15 * 60 * 1000;     // lockout length once tripped
+const loginAttempts = new Map();            // ip -> { fails, first, blockedUntil }
+
+function loginRateGate(req, res, next) {
+  const ip = req.ip || 'unknown';
+  const now = Date.now();
+  if (loginAttempts.size > 1000) {          // opportunistic prune
+    for (const [k, v] of loginAttempts)
+      if ((now - v.first) > LOGIN_WINDOW_MS && (!v.blockedUntil || v.blockedUntil < now)) loginAttempts.delete(k);
+  }
+  const rec = loginAttempts.get(ip);
+  if (rec && rec.blockedUntil > now) {
+    const secs = Math.ceil((rec.blockedUntil - now) / 1000);
+    res.setHeader('Retry-After', String(secs));
+    return res.status(429).json({ error: `Too many attempts. Try again in about ${Math.ceil(secs / 60)} min.` });
+  }
+  next();
+}
+function recordLoginFail(req) {
+  const ip = req.ip || 'unknown';
+  const now = Date.now();
+  let rec = loginAttempts.get(ip);
+  if (!rec || (now - rec.first) > LOGIN_WINDOW_MS) rec = { fails: 0, first: now, blockedUntil: 0 };
+  rec.fails += 1;
+  if (rec.fails >= LOGIN_MAX_FAILS) rec.blockedUntil = now + LOGIN_BLOCK_MS;
+  loginAttempts.set(ip, rec);
+}
+function recordLoginSuccess(req) { loginAttempts.delete(req.ip || 'unknown'); }
+
+app.post('/api/login', loginRateGate, (req, res) => {
   const { username = '', password = '' } = req.body || {};
   const u = String(username).trim();
   const p = String(password);
@@ -380,9 +412,11 @@ app.post('/api/login', (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
     console.log('Login successful ✓');
+    recordLoginSuccess(req);
     return res.json({ success: true, ok: true });   // no token in the body
   }
   console.log('Login failed — credentials did not match');
+  recordLoginFail(req);
   return res.status(401).json({ error: 'Incorrect username or password' });
 });
 
