@@ -11,7 +11,55 @@ const { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } = re
 const app = express();
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '50kb' }));
-app.use(cors({ origin: true, credentials: true }));
+// ── CORS: locked to an allowlist. Set ALLOWED_ORIGINS in env (comma-separated) if
+//    you ever call the API from a different domain. Same-origin app calls are
+//    unaffected — browsers don't enforce CORS on same-origin requests.
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+app.use(cors({
+  origin(origin, cb) {
+    if (!origin) return cb(null, true);                    // same-origin / server-to-server
+    return cb(null, ALLOWED_ORIGINS.includes(origin));     // cross-origin only if allowlisted
+  },
+  credentials: true,
+}));
+
+// ── Minimal cookie parser (no extra dependency) ──
+app.use((req, _res, next) => {
+  req.cookies = {};
+  const raw = req.headers.cookie;
+  if (raw) raw.split(';').forEach(part => {
+    const i = part.indexOf('=');
+    if (i < 0) return;
+    const k = part.slice(0, i).trim();
+    if (k) req.cookies[k] = decodeURIComponent(part.slice(i + 1).trim());
+  });
+  next();
+});
+
+// ── Security headers on every response ──
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.plaid.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "img-src 'self' data: https:",
+  "media-src 'self' data: blob:",
+  "connect-src 'self' https://*.plaid.com",
+  "frame-src https://cdn.plaid.com https://*.plaid.com",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'self'",
+].join('; ');
+app.use((_req, res, next) => {
+  res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Content-Security-Policy', CSP);
+  next();
+});
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const APP_USER   = (process.env.APP_USERNAME || '').trim();
@@ -290,6 +338,8 @@ function verifyToken(token) {
 }
 
 function requireAuth(req, res, next) {
+  const cookieTok = req.cookies && req.cookies.sid;
+  if (cookieTok && verifyToken(cookieTok)) return next();
   const header = (req.headers['authorization'] || '').trim();
   const token  = header.startsWith('Bearer ') ? header.slice(7) : header;
   if (verifyToken(token)) return next();
@@ -321,16 +371,23 @@ app.post('/api/login', (req, res) => {
   }
   if (u === APP_USER && p === APP_PASS) {
     const token = makeToken();
+    // Auth secret lives in an httpOnly cookie the browser JS can't read (XSS-safe).
+    res.cookie('sid', token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
     console.log('Login successful ✓');
-    return res.json({ success: true, token });
+    return res.json({ success: true, ok: true });   // no token in the body
   }
   console.log('Login failed — credentials did not match');
   return res.status(401).json({ error: 'Incorrect username or password' });
 });
 
 app.post('/api/logout', (req, res) => {
-  // Tokens are stateless; the client clears its copy. Respond OK so the
-  // frontend's logout fetch doesn't fall through to the HTML catch-all.
+  res.clearCookie('sid', { path: '/', httpOnly: true, secure: true, sameSite: 'lax' });
   res.json({ success: true });
 });
 
@@ -351,10 +408,33 @@ const plaidClient = new PlaidApi(new Configuration({
 // ── TOKEN STORE ───────────────────────────────────────────────────────────────
 const TOKEN_FILE = path.join(__dirname, '../.data/tokens.json');
 
+// Encrypt the Plaid access tokens at rest (AES-256-GCM). Key is derived from
+// TOKEN_ENC_KEY (or SESSION_SECRET). Set one of those in Render so the key is
+// stable across restarts, otherwise saved connections can't be decrypted later.
+if (!process.env.TOKEN_ENC_KEY && !process.env.SESSION_SECRET) {
+  console.warn('⚠️  No TOKEN_ENC_KEY/SESSION_SECRET set — encrypted connections won\'t survive a restart.');
+}
+const ENC_KEY = crypto.createHash('sha256').update(process.env.TOKEN_ENC_KEY || APP_SECRET).digest();
+function encryptJSON(obj) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', ENC_KEY, iv);
+  const ct = Buffer.concat([cipher.update(JSON.stringify(obj), 'utf8'), cipher.final()]);
+  return { v: 1, iv: iv.toString('base64'), tag: cipher.getAuthTag().toString('base64'), data: ct.toString('base64') };
+}
+function decryptJSON(blob) {
+  const decipher = crypto.createDecipheriv('aes-256-gcm', ENC_KEY, Buffer.from(blob.iv, 'base64'));
+  decipher.setAuthTag(Buffer.from(blob.tag, 'base64'));
+  const pt = Buffer.concat([decipher.update(Buffer.from(blob.data, 'base64')), decipher.final()]);
+  return JSON.parse(pt.toString('utf8'));
+}
+
 function loadTokens() {
   try {
-    if (fs.existsSync(TOKEN_FILE))
-      return JSON.parse(fs.readFileSync(TOKEN_FILE, 'utf8'));
+    if (fs.existsSync(TOKEN_FILE)) {
+      const raw = JSON.parse(fs.readFileSync(TOKEN_FILE, 'utf8'));
+      if (raw && raw.v === 1 && raw.data) return decryptJSON(raw);   // encrypted store
+      return raw;                                                    // legacy plaintext → re-encrypted on next save
+    }
   } catch (e) { console.warn('Token load:', e.message); }
   return { accessTokens: [], cursor: {} };
 }
@@ -363,7 +443,7 @@ function saveTokens(store) {
   try {
     const dir = path.dirname(TOKEN_FILE);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(TOKEN_FILE, JSON.stringify(store), 'utf8');
+    fs.writeFileSync(TOKEN_FILE, JSON.stringify(encryptJSON(store)), 'utf8');
   } catch (e) { console.warn('Token save (ok on free tier):', e.message); }
 }
 
