@@ -3493,7 +3493,7 @@ function buildChartWidget(canvasId, type, labels, values, colors, opts){
 
 
 /* ── Plaid connection (ported, adapted) ── */
-function authToken(){ return SS.getItem('mdf_token')||''; }
+function authToken(){ return ''; }  // auth rides in an httpOnly cookie the browser sends automatically
 let _toastT=null;
 function showToast(msg,type){
   let el=gg('appToast');
@@ -6428,7 +6428,7 @@ function doFullReset(){
   if(v!=='YES') return;  // hard guard — only proceeds on an exact YES
   try{
     ['richie_setup','richie_app','mdf_categories','mdf_cat_overrides','mdf_txn_notes','mdf_fire','mdf_acct_cats'].forEach(k=>{ try{LS.removeItem(k);}catch(e){} });
-    try{ SS.removeItem('mdf_token'); }catch(e){}
+    try{ SS.removeItem('mdf_token'); SS.removeItem('mdf_auth'); }catch(e){}
     // defensive sweep of any remaining app-scoped keys
     try{ Object.keys(window.localStorage||{}).forEach(k=>{ if(/^(richie_|mdf_)/.test(k)) window.localStorage.removeItem(k); }); }catch(e){}
   }catch(e){}
@@ -7456,9 +7456,11 @@ function wizShake(id){const el=gg(id);if(!el)return;el.style.borderColor='#f05c5
 /* ═══════════════════════════════════════════════════════════════
    AUTH (server login) + WELCOME-BACK SWOT
 ═══════════════════════════════════════════════════════════════ */
-function setToken(t){ try{ SS.setItem('mdf_token',t||''); }catch(e){} }
-function clearToken(){ try{ SS.removeItem('mdf_token'); }catch(e){} }
-function isLoggedIn(){ return !!authToken(); }
+// The auth secret lives in an httpOnly cookie (set by /api/login) that page JS can't
+// read. We only keep a non-secret "signed-in this session" flag for UI gating.
+function setToken(t){ try{ SS.setItem('mdf_auth','1'); }catch(e){} }
+function clearToken(){ try{ SS.removeItem('mdf_auth'); SS.removeItem('mdf_token'); }catch(e){} }
+function isLoggedIn(){ return SS.getItem('mdf_auth')==='1'; }
 
 // Wrap fetch so every /api/ call carries the Bearer token automatically.
 (function installAuthFetch(){
@@ -7466,6 +7468,7 @@ function isLoggedIn(){ return !!authToken(); }
   window.fetch=function(url,opts){
     opts=opts||{};
     if(typeof url==='string' && url.indexOf('/api/')===0){
+      opts.credentials=opts.credentials||'same-origin';   // send the httpOnly auth cookie
       const tok=authToken();
       if(tok){ opts.headers=Object.assign({}, opts.headers||{}, {'Authorization':'Bearer '+tok}); }
     }
@@ -7489,8 +7492,8 @@ async function doLogin(){
       if(loginRichie) loginRichie.emotion('no');
       return;
     }
-    // server may return {token} or {ok:true, token}; store whatever it gives
-    if(d.token) setToken(d.token);
+    // server sets an httpOnly auth cookie; we just record that we're signed in
+    if(d.token || d.ok || d.success) setToken(1);
     btn.disabled=false; btn.textContent='Sign in';
     gg('loginScreen').style.display='none';
     gg('loginPass').value='';
