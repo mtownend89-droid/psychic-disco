@@ -1019,18 +1019,22 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .acp-nm{flex:1;font-size:13.5px;font-weight:600;color:var(--text);display:flex;flex-direction:column;gap:1px;}
 .acp-kind{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
 .acp-ct{font-size:12px;font-weight:700;color:var(--muted);background:var(--surface3);border-radius:20px;min-width:24px;text-align:center;padding:2px 7px;}
-.ace-wrap{display:flex;flex-direction:column;gap:14px;max-height:56vh;overflow:auto;}
+.ace-hint{font-size:12px;color:var(--muted);margin-bottom:11px;line-height:1.5;}
+.ace-wrap{display:flex;flex-direction:column;gap:13px;max-height:52vh;overflow:auto;padding-right:2px;}
 .ace-group{border:1px solid var(--border);border-radius:11px;overflow:hidden;}
-.ace-gh{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);font-size:13px;font-weight:700;color:var(--text);}
+.ace-gh{display:flex;align-items:center;justify-content:space-between;padding:9px 13px;background:var(--surface2);font-size:13px;font-weight:700;color:var(--text);}
 .ace-kind{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:2px 7px;border-radius:5px;}
 .ace-kind.asset{color:var(--green);background:var(--green-dim);}
 .ace-kind.liability{color:#f0846c;background:rgba(240,92,92,.14);}
-.ace-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--border);}
-.ace-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;}
-.ace-nm{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ace-row{display:flex;align-items:center;gap:11px;padding:11px 13px;border-top:1px solid var(--border);background:var(--surface);}
+.ace-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.ace-nm{font-size:13.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ace-sub{font-size:11px;color:var(--muted);}
 .ace-bal{font-size:12.5px;font-weight:700;color:var(--text);flex-shrink:0;font-variant-numeric:tabular-nums;}
-.ace-sel{width:auto;flex-shrink:0;padding:5px 8px;font-size:12px;}
+.ace-selwrap{position:relative;flex-shrink:0;}
+.ace-sel{appearance:none;-webkit-appearance:none;width:auto;min-width:120px;height:36px;padding:0 28px 0 11px;font-size:12.5px;font-weight:600;font-family:var(--font);color:var(--text);background:var(--surface3);border:1.5px solid var(--green);border-radius:8px;cursor:pointer;outline:none;}
+.ace-sel:hover{background:var(--green-dim);}
+.ace-caret{position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;font-size:10px;color:var(--green);}
 /* ── Credit Utilization + DTI ── */.cu-wrap{padding:2px;}
 .cu-top{display:flex;gap:16px;align-items:center;margin-bottom:14px;}
 @media(max-width:480px){.cu-top{flex-direction:column;}}
@@ -1103,6 +1107,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .goal-wiz-review .grow:last-child{border-bottom:none;}
 .goal-wiz-review .grow span{color:var(--muted);}
 /* ── Cash Flow Planner ── */
+.cfp-scope{font-size:11.5px;color:var(--muted);margin:2px 0 10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.cfp-scope b{color:var(--text);font-weight:700;}
+.cfp-scope-edit{font-size:10.5px;padding:2px 8px;border-radius:6px;background:var(--surface3);border:1px solid var(--border);color:var(--green);cursor:pointer;font-family:var(--font);font-weight:600;}
+.cfp-scope-edit:hover{background:var(--green-dim);}
 .cfp-wrap{padding:2px;}
 .cfp-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
 .cfp-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:12px;}
@@ -2861,7 +2869,8 @@ function engMonthlyIncome(){ return (APP&&APP.incomeSources&&APP.incomeSources.l
 
 /* ── Cash Flow Projection: build dated income/expense events forward N days,
    then compute a running daily balance starting from current cash. ── */
-function engStartCash(){
+function engStartCash(cats){
+  if(cats && cats.length){ return engAccounts().filter(a=>cats.includes(getAccountCategory(a))).reduce((s,a)=>s+(a.bal||0),0); }
   if(dataLoaded){ return allAccts.filter(a=>a.type==='depository').reduce((s,a)=>s+((a.balances&&(a.balances.available??a.balances.current))||0),0); }
   return nwAssets.filter(a=>a.cat==='Cash & Bank').reduce((s,a)=>s+(a.value||0),0);
 }
@@ -2927,8 +2936,8 @@ function _billEvents(days){
   });
   return out;
 }
-function engCashFlowProjection(days){
-  const start=engStartCash();
+function engCashFlowProjection(days, cats){
+  const start=engStartCash(cats);
   const events=[..._incomeEvents(days), ..._billEvents(days)].sort((a,b)=>a.day-b.day);
   let bal=start; const series=[{day:0, bal:start, label:'Today'}];
   let low={day:0, bal:start}; const byDay={};
@@ -4831,12 +4840,16 @@ function acctCatEditorRender(){
   const byCat={}; accts.forEach(a=>{ const c=getAccountCategory(a); (byCat[c]=byCat[c]||[]).push(a); });
   const groups=ACCOUNT_CATEGORIES.filter(c=>byCat[c.id]&&byCat[c.id].length).map(c=>{
     const rows=byCat[c.id].map(a=>{
-      const k=_acctKey(a), auto=!ov[k];
-      return `<div class="ace-row"><span class="ace-meta"><span class="ace-nm">${esc(a.name||'Account')}</span><span class="ace-sub">${esc(a.institution||a.subtype||a.type||'')}${auto?' · auto':''}</span></span><span class="ace-bal">${fmtK(a.bal)}</span><select class="mf-in ace-sel" onchange="acctCatSet('${esc(k).replace(/'/g,"\\\\'")}',this.value)">${opts(c.id)}</select></div>`;
+      const k=_acctKey(a), auto=!ov[k], cur=getAccountCategory(a);
+      return `<div class="ace-row">
+        <span class="ace-meta"><span class="ace-nm">${esc(a.name||'Account')}</span><span class="ace-sub">${esc(a.institution||a.subtype||a.type||'')}${auto?' · auto-detected':' · custom'}</span></span>
+        <span class="ace-bal">${fmtK(a.bal)}</span>
+        <span class="ace-selwrap"><select class="ace-sel" onchange="acctCatSet('${esc(k).replace(/'/g,"\\\\'")}',this.value)">${opts(cur)}</select><span class="ace-caret">▾</span></span>
+      </div>`;
     }).join('');
     return `<div class="ace-group"><div class="ace-gh"><span>${c.icon} ${esc(c.label)}</span><span class="ace-kind ${c.kind}">${c.kind}</span></div>${rows}</div>`;
   }).join('');
-  gg('manualBody').innerHTML=`<div class="ace-wrap">${groups||'<div class="ws-hint">No accounts yet. Connect a bank or add a manual account first.</div>'}</div><div class="mf-actions"><button class="btn" onclick="acctCatResetAll()">Reset to auto</button><button class="btn primary" onclick="closeManual()">Done</button></div>`;
+  gg('manualBody').innerHTML=`<div class="ace-hint">Tap the dropdown on any account to move it to a different category.</div><div class="ace-wrap">${groups||'<div class="ws-hint">No accounts yet. Connect a bank or add a manual account first.</div>'}</div><div class="mf-actions"><button class="btn" onclick="acctCatResetAll()">Reset to auto</button><button class="btn primary" onclick="closeManual()">Done</button></div>`;
 }
 function acctCatSet(key, catId){ setAccountCategory(key, catId); acctCatEditorRender(); }
 function acctCatResetAll(){ try{ LS.removeItem('mdf_acct_cats'); }catch(e){} acctCatEditorRender(); }
@@ -5373,8 +5386,10 @@ function cfpWidgetBody(w){
       <span class="pl-grp-label">Project</span>
       <div class="pl-toggle">${CFP_RANGES.map(r=>`<button class="pl-gbtn${range===r.k?' active':''}" onclick="setCfpRange('${w.uid}',${r.k})">${r.l}</button>`).join('')}</div>
       <button class="cfp-income-btn" onclick="event.stopPropagation();openIncomeEditor()">💵 Income</button>
+      <button class="cfp-income-btn" onclick="event.stopPropagation();openAcctCatPicker('${w.uid}')" title="Choose which accounts pay your bills">🏦 Accounts</button>
       <button class="wx-export" onclick="event.stopPropagation();exportWidget('cashflow_planner')" title="Export to Excel">⬇ Excel</button>
     </div>
+    <div class="cfp-scope" id="cfpscope_${w.uid}"></div>
     <div class="cfp-summary" id="cfpsum_${w.uid}"></div>
     <div class="cfp-chart" id="cfpchart_${w.uid}"></div>
     <div class="cfp-lowflag" id="cfplow_${w.uid}"></div>
@@ -5385,7 +5400,10 @@ function cfpWidgetBody(w){
 function setCfpRange(uid,k){ _cfpRange[uid]=k; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function cfpMount(w){
   const range=_cfpRange[w.uid]||30;
-  const p=engCashFlowProjection(range);
+  const cats=(w.acctCats&&w.acctCats.length)?w.acctCats:['cash','savings'];
+  const p=engCashFlowProjection(range, cats);
+  const scope=gg('cfpscope_'+w.uid);
+  if(scope){ scope.innerHTML=`💳 Paying bills from: <b>${cats.map(c=>acctCatDef(c).label).join(' + ')||'—'}</b> <button class="cfp-scope-edit" onclick="event.stopPropagation();openAcctCatPicker('${w.uid}')">change</button>`; }
   // summary stats
   const sum=gg('cfpsum_'+w.uid);
   if(sum){ sum.innerHTML=`
