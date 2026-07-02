@@ -4541,25 +4541,29 @@ function fdSetScenario(id){
 /* ═══ ZERO-BASED BUDGET WIDGET (interactive sliders) ═══ */
 // Budgetable categories = tier-2 (children) + Other, excluding Income
 function _zbBudgetableCats(){
-  return getUserCategories().filter(c=>(c.parent || c.id==='other') && c.id!=='income');
+  // Every spendable category the user actually has — leaf categories, custom top-level
+  // categories, and "Other". Excludes group headers (group:true) and Income.
+  return getUserCategories().filter(c=>!c.group && c.id!=='income');
 }
 function _zbBuckets(){
   if(!APP.zeroBuckets){ APP.zeroBuckets=zeroBuckets.map(b=>({...b})); }
-  // migrate plain envelopes → category-linked (each bucket gets a catId from the tree)
-  if(!APP._zbCatLinked){
-    const cats=_zbBudgetableCats();
-    const matched=APP.zeroBuckets.map(b=>{
-      if(b.catId) return b;
-      const nm=(b.name||'').toLowerCase();
-      const m=cats.find(c=>c.label.toLowerCase()===nm)
-            || cats.find(c=>c.label.toLowerCase().includes(nm)||nm.includes(c.label.toLowerCase()));
-      return m?{catId:m.id, name:m.label, amt:b.amt}:{catId:'other', name:'Other', amt:b.amt};
-    });
-    // dedupe by category (sum amounts if two old envelopes mapped to the same category)
-    const byId={}; matched.forEach(b=>{ if(byId[b.catId]) byId[b.catId].amt+=b.amt; else byId[b.catId]={...b}; });
-    APP.zeroBuckets=Object.values(byId);
-    APP._zbCatLinked=true; saveState();
-  }
+  const cats=_zbBudgetableCats();
+  const byId={}; cats.forEach(c=>byId[c.id]=c);
+  const other=byId['other']||cats[cats.length-1]||{id:'other',label:'Other'};
+  const matchName=(nm)=>{ nm=(nm||'').toLowerCase().trim(); if(!nm) return null;
+    return cats.find(c=>c.label.toLowerCase()===nm)
+        || cats.find(c=>{ const l=c.label.toLowerCase(); return l && (l.includes(nm)||nm.includes(l)); }) || null; };
+  // Reconcile EVERY render against the CURRENT tree: a valid catId always adopts the
+  // category's current label (so renames propagate); a stale/missing catId is re-matched
+  // by name, else sent to Other. Legacy plain-name envelopes get linked here too.
+  const reconciled=APP.zeroBuckets.map(b=>{
+    const cat=(b.catId && byId[b.catId]) || matchName(b.name) || other;
+    return {catId:cat.id, name:cat.label, amt:Math.max(0, b.amt||0)};
+  });
+  // Dedupe by category (sum amounts if two envelopes resolve to the same category)
+  const out={}; reconciled.forEach(b=>{ if(out[b.catId]) out[b.catId].amt+=b.amt; else out[b.catId]={...b}; });
+  const next=Object.values(out);
+  if(JSON.stringify(next)!==JSON.stringify(APP.zeroBuckets)){ APP.zeroBuckets=next; APP._zbCatLinked=true; saveState(); }
   return APP.zeroBuckets;
 }
 function zbWidgetBody(w){
