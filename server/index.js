@@ -348,11 +348,13 @@ function requireAuth(req, res, next) {
 
 // ── PUBLIC ROUTES ─────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
+  const a = loadAuth();
   res.json({
     status: 'ok',
-    env:    process.env.PLAID_ENV || 'sandbox',
+    env:    (process.env.PLAID_ENV || 'sandbox').trim().toLowerCase(),
     user_set: !!APP_USER,
     pass_set: !!APP_PASS,
+    login_configured: !!(a && a.pwHash),
     openai_set: !!process.env.OPENAI_API_KEY,
     connections: store.accessTokens.length,
     connection_names: store.accessTokens.map(t => t.institutionName),
@@ -398,19 +400,13 @@ app.post('/api/login', loginRateGate, (req, res) => {
 
   console.log(`Login attempt: "${u}" (pass length: ${p.length})`);
 
-  if (!APP_USER || !APP_PASS) {
-    return res.status(500).json({ error: 'Server not configured — set APP_USERNAME and APP_PASSWORD in Render environment.' });
+  const a0 = loadAuth();
+  if ((!a0 || !a0.pwHash) && (!APP_USER || !APP_PASS)) {
+    return res.status(500).json({ error: 'Server not configured — set a login, or set APP_USERNAME and APP_PASSWORD in Render.' });
   }
-  if (u === APP_USER && p === APP_PASS) {
+  if (checkCredentials(u, p)) {
     const token = makeToken();
-    // Auth secret lives in an httpOnly cookie the browser JS can't read (XSS-safe).
-    res.cookie('sid', token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setLoginCookie(res, token);
     console.log('Login successful ✓');
     recordLoginSuccess(req);
     return res.json({ success: true, ok: true });   // no token in the body
@@ -418,6 +414,58 @@ app.post('/api/login', loginRateGate, (req, res) => {
   console.log('Login failed — credentials did not match');
   recordLoginFail(req);
   return res.status(401).json({ error: 'Incorrect username or password' });
+});
+
+// Has a user-set login been created yet? (drives first-run "create login" screen)
+app.get('/api/auth_status', (req, res) => {
+  const a = loadAuth();
+  res.json({ configured: !!(a && a.pwHash) });
+});
+
+// First-run: create the login. Allowed only when none is set yet.
+app.post('/api/set_password', loginRateGate, (req, res) => {
+  const a = loadAuth();
+  if (a && a.pwHash) return res.status(409).json({ error: 'A login already exists. Use Change password or Forgot password.' });
+  const u = String((req.body || {}).username || '').trim();
+  const p = String((req.body || {}).password || '');
+  if (u.length < 3) return res.status(400).json({ error: 'Username must be at least 3 characters.' });
+  if (p.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+  const recovery = genRecoveryCode();
+  saveAuth({ username: u, pwHash: hashSecret(p), recoveryHash: hashSecret(recovery) });
+  setLoginCookie(res, makeToken());   // auto sign-in
+  console.log('Login created for:', u);
+  return res.json({ ok: true, recovery_code: recovery });
+});
+
+// Change password (must be signed in; verify current — user password or env master).
+app.post('/api/change_password', requireAuth, (req, res) => {
+  const cur = String((req.body || {}).current || '');
+  const nw  = String((req.body || {}).new || '');
+  if (nw.length < 8) return res.status(400).json({ error: 'New password must be at least 8 characters.' });
+  const a = loadAuth();
+  const okCur = (a && a.pwHash && verifySecret(cur, a.pwHash)) || (APP_PASS && cur === APP_PASS);
+  if (!okCur) return res.status(403).json({ error: 'Current password is incorrect.' });
+  const username = (a && a.username) || APP_USER || 'user';
+  const recovery = genRecoveryCode();
+  saveAuth({ username, pwHash: hashSecret(nw), recoveryHash: hashSecret(recovery) });
+  return res.json({ ok: true, recovery_code: recovery });
+});
+
+// Forgot password: reset with the recovery code shown when the password was set.
+app.post('/api/reset_password', loginRateGate, (req, res) => {
+  const u    = String((req.body || {}).username || '').trim();
+  const code = String((req.body || {}).recovery_code || '').trim().toUpperCase().replace(/\s+/g, '');
+  const nw   = String((req.body || {}).new_password || '');
+  if (nw.length < 8) return res.status(400).json({ error: 'New password must be at least 8 characters.' });
+  const a = loadAuth();
+  if (!(a && a.recoveryHash && u === a.username && verifySecret(code, a.recoveryHash))) {
+    recordLoginFail(req);
+    return res.status(403).json({ error: 'Username or recovery code is incorrect.' });
+  }
+  const recovery = genRecoveryCode();
+  saveAuth({ username: a.username, pwHash: hashSecret(nw), recoveryHash: hashSecret(recovery) });
+  setLoginCookie(res, makeToken());   // auto sign-in
+  return res.json({ ok: true, recovery_code: recovery });
 });
 
 app.post('/api/logout', (req, res) => {
@@ -429,12 +477,22 @@ app.post('/api/logout', (req, res) => {
 app.use(express.static(path.join(__dirname, '../public')));
 
 // ── PLAID ─────────────────────────────────────────────────────────────────────
+const PLAID_ENV       = (process.env.PLAID_ENV || 'sandbox').trim().toLowerCase();
+const PLAID_CLIENT_ID = (process.env.PLAID_CLIENT_ID || '').trim();   // trim: stray newline/space in the env value is a common cause of "invalid client_id or secret"
+const PLAID_SECRET    = (process.env.PLAID_SECRET || '').trim();
+if (!PlaidEnvironments[PLAID_ENV]) {
+  console.warn(`⚠️  PLAID_ENV="${PLAID_ENV}" is not valid — use exactly "sandbox" or "production". Falling back to sandbox.`);
+}
+if (!PLAID_CLIENT_ID || !PLAID_SECRET) {
+  console.warn('⚠️  PLAID_CLIENT_ID or PLAID_SECRET is missing in the environment.');
+}
+console.log(`Plaid config → env: ${PLAID_ENV} | client_id: ${PLAID_CLIENT_ID ? PLAID_CLIENT_ID.slice(0,6)+'…(len '+PLAID_CLIENT_ID.length+')' : 'MISSING'} | secret: ${PLAID_SECRET ? 'set (len '+PLAID_SECRET.length+')' : 'MISSING'}`);
 const plaidClient = new PlaidApi(new Configuration({
-  basePath: PlaidEnvironments[process.env.PLAID_ENV || 'sandbox'],
+  basePath: PlaidEnvironments[PLAID_ENV] || PlaidEnvironments.sandbox,
   baseOptions: {
     headers: {
-      'PLAID-CLIENT-ID': process.env.PLAID_CLIENT_ID,
-      'PLAID-SECRET':    process.env.PLAID_SECRET,
+      'PLAID-CLIENT-ID': PLAID_CLIENT_ID,
+      'PLAID-SECRET':    PLAID_SECRET,
     },
   },
 }));
@@ -481,6 +539,58 @@ function saveTokens(store) {
   } catch (e) { console.warn('Token save (ok on free tier):', e.message); }
 }
 
+// ── USER CREDENTIALS (scrypt-hashed, encrypted at rest) ─────────────────────────
+// A user-set password lives in .data/auth.json (AES-GCM encrypted, scrypt-hashed).
+// APP_USERNAME/APP_PASSWORD from env always remain valid as a permanent master /
+// recovery credential, so you can never be locked out of your own server.
+const AUTH_FILE = path.join(__dirname, '../.data/auth.json');
+function hashSecret(secret) {
+  const salt = crypto.randomBytes(16);
+  const dk = crypto.scryptSync(String(secret), salt, 32);
+  return salt.toString('hex') + ':' + dk.toString('hex');
+}
+function verifySecret(secret, stored) {
+  if (!stored || typeof stored !== 'string' || !stored.includes(':')) return false;
+  const [saltHex, hashHex] = stored.split(':');
+  try {
+    const dk = crypto.scryptSync(String(secret), Buffer.from(saltHex, 'hex'), 32);
+    const a = Buffer.from(hashHex, 'hex');
+    return a.length === dk.length && crypto.timingSafeEqual(a, dk);
+  } catch (e) { return false; }
+}
+function genRecoveryCode() {
+  return crypto.randomBytes(10).toString('hex').toUpperCase().match(/.{1,4}/g).join('-'); // XXXX-XXXX-XXXX-XXXX-XXXX
+}
+function loadAuth() {
+  try {
+    if (fs.existsSync(AUTH_FILE)) {
+      const raw = JSON.parse(fs.readFileSync(AUTH_FILE, 'utf8'));
+      if (raw && raw.v === 1 && raw.data) return decryptJSON(raw);
+      return raw;
+    }
+  } catch (e) { console.warn('Auth load:', e.message); }
+  return null;
+}
+function saveAuth(a) {
+  try {
+    const dir = path.dirname(AUTH_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(AUTH_FILE, JSON.stringify(encryptJSON(a)), 'utf8');
+  } catch (e) { console.warn('Auth save (ok on free tier):', e.message); }
+}
+// True if the supplied username/password match the user-set login OR the env master.
+function checkCredentials(username, password) {
+  const u = String(username || '').trim();
+  const p = String(password || '');
+  const a = loadAuth();
+  if (a && a.pwHash && u === a.username && verifySecret(p, a.pwHash)) return true;
+  if (APP_USER && APP_PASS && u === APP_USER && p === APP_PASS) return true;   // permanent master
+  return false;
+}
+function setLoginCookie(res, token) {
+  res.cookie('sid', token, { httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge: 7 * 24 * 60 * 60 * 1000 });
+}
+
 const store = loadTokens();
 console.log(`Loaded ${store.accessTokens.length} saved connection(s)`);
 
@@ -506,7 +616,9 @@ app.post('/api/create_link_token', requireAuth, async (req, res) => {
       });
       res.json({ link_token: r.data.link_token });
     } catch (e) {
-      res.status(500).json({ error: e.response?.data?.error_message || e.message });
+      const pd = (e.response && e.response.data) || {};
+      console.error('Link token failed:', PLAID_ENV, pd.error_code || '', pd.error_message || e.message);
+      res.status(500).json({ error: (pd.error_message || e.message) + ` (Plaid env: ${PLAID_ENV})`, error_code: pd.error_code });
     }
   }
 });
@@ -658,7 +770,7 @@ app.get('*', (req, res) => res.sendFile(path.join(__dirname, '../public/index.ht
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`\n✅ Running on port ${PORT}`);
-  console.log(`   Plaid:    ${process.env.PLAID_ENV || 'sandbox'}`);
+  console.log(`   Plaid:    ${PLAID_ENV}`);
   console.log(`   OpenAI:   ${process.env.OPENAI_API_KEY ? '✓ set' : '✗ NOT SET (voice + coach will fall back)'}`);
   console.log(`   User set: ${APP_USER ? '✓ ' + APP_USER : '✗ NOT SET'}`);
   console.log(`   Pass set: ${APP_PASS ? '✓ (length ' + APP_PASS.length + ')' : '✗ NOT SET'}\n`);
