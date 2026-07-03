@@ -1069,16 +1069,32 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .ace-kind{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:2px 7px;border-radius:5px;}
 .ace-kind.asset{color:var(--green);background:var(--green-dim);}
 .ace-kind.liability{color:#f0846c;background:rgba(240,92,92,.14);}
-.ace-row{display:flex;align-items:center;gap:11px;padding:11px 13px;border-top:1px solid var(--border);background:var(--surface);}
+.ace-row{display:flex;align-items:center;gap:11px;padding:12px 13px;border-top:1px solid var(--border);background:var(--surface);}
+.ace-tap{width:100%;border:none;border-top:1px solid var(--border);font-family:var(--font);text-align:left;cursor:pointer;transition:background .12s;}
+.ace-tap:hover,.ace-tap:active{background:var(--surface2);}
 .ace-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
 .ace-nm{font-size:13.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ace-sub{font-size:11px;color:var(--muted);}
 .ace-bal{font-size:12.5px;font-weight:700;color:var(--text);flex-shrink:0;font-variant-numeric:tabular-nums;}
-.ace-selwrap{position:relative;flex-shrink:0;}
-.ace-sel{appearance:none;-webkit-appearance:none;width:auto;min-width:120px;height:36px;padding:0 28px 0 11px;font-size:12.5px;font-weight:600;font-family:var(--font);color:var(--text);background:var(--surface3);border:1.5px solid var(--green);border-radius:8px;cursor:pointer;outline:none;}
-.ace-sel:hover{background:var(--green-dim);}
-.ace-caret{position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;font-size:10px;color:var(--green);}
-/* ── Credit Utilization + DTI ── */.cu-wrap{padding:2px;}
+.ace-chevron{font-size:20px;color:var(--green);flex-shrink:0;line-height:1;}
+/* Per-account category picker */
+.ace-pick-head{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.ace-back{background:none;border:none;color:var(--green);font-family:var(--font);font-size:13.5px;font-weight:600;cursor:pointer;padding:4px 0;flex-shrink:0;}
+.ace-pick-name{font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ace-opts{display:flex;flex-direction:column;gap:6px;max-height:52vh;overflow:auto;}
+.ace-opt{display:flex;align-items:center;gap:11px;width:100%;padding:12px 13px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);font-family:var(--font);cursor:pointer;transition:border-color .12s,background .12s;}
+.ace-opt:hover,.ace-opt:active{background:var(--surface3);}
+.ace-opt.on{border-color:var(--green);background:var(--green-dim);}
+.ace-opt-ic{font-size:18px;flex-shrink:0;}
+.ace-opt-lbl{flex:1;text-align:left;font-size:14px;font-weight:600;color:var(--text);display:flex;flex-direction:column;gap:1px;}
+.ace-opt-kind{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;}
+.ace-opt-kind.asset{color:var(--green);}
+.ace-opt-kind.liability{color:#f0846c;}
+.ace-opt-check{color:var(--green);font-size:17px;font-weight:800;flex-shrink:0;}
+/* ── Credit Utilization + DTI ── */
+.cu-nolimit{display:flex;flex-direction:column;gap:6px;}
+.cu-setlimit{width:100%;text-align:left;padding:10px 12px;border:1px dashed var(--amber);background:var(--amber-dim);color:var(--text);border-radius:9px;font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;}
+.cu-setlimit:hover{background:var(--surface3);}.cu-wrap{padding:2px;}
 .cu-top{display:flex;gap:16px;align-items:center;margin-bottom:14px;}
 @media(max-width:480px){.cu-top{flex-direction:column;}}
 .cu-gauge{flex-shrink:0;}
@@ -3016,23 +3032,32 @@ function plaidHasLiab(){ return !!(plaidLiabilities && ((plaidLiabilities.credit
 function _dueDay(dateStr){ if(!dateStr) return 1; const d=new Date(dateStr); return isNaN(d)?1:d.getDate(); }
 function engBills(){
   const manual=(APP.manualBills||[]).map(b=>({...b, manual:true, min:b.min!=null?b.min:b.pay}));
-  if(!plaidHasLiab()) return _applyCardData(applyBillOverrides(bills.concat(manual)));
-  // Build a lookup of live account credit limits by account_id (Plaid puts limit on the account)
-  const limitById={};
-  (allAccts||[]).forEach(a=>{ if(a&&a.account_id&&a.balances&&a.balances.limit!=null) limitById[a.account_id]=a.balances.limit; });
+  // Not connected → show the example seed so widgets have something to learn from.
+  if(!dataLoaded || !(allAccts||[]).length) return _applyCardData(applyBillOverrides(bills.concat(manual)));
+  // Connected → drive off the ACTUAL accounts (source of truth for what cards/loans exist),
+  // and enrich each with Plaid liabilities detail (APR, min payment, due date) when available.
+  // This way a credit card shows even when the institution returns no liabilities data.
+  const liabByAcct={}; (plaidLiabilities&&plaidLiabilities.credit_cards||[]).forEach(c=>{ if(c.account_id) liabByAcct[c.account_id]=c; });
+  const mortByAcct={}; (plaidLiabilities&&plaidLiabilities.mortgages||[]).forEach(m=>{ if(m.account_id) mortByAcct[m.account_id]=m; });
   const out=[];
-  (plaidLiabilities.credit_cards||[]).forEach(c=>{
-    out.push({ name:c.name||'Credit Card', note:c.institution||'', cat:'CC',
-      bal:-(Math.abs(c.current_balance||0)), apr:(c.apr!=null?c.apr:0),
-      min:(c.minimum_payment||0), pay:(c.minimum_payment||0),
-      limit:(c.limit!=null?c.limit:(limitById[c.account_id]||0)),  // live credit limit from Plaid
-      due:_dueDay(c.next_payment_due_date), promo:'', promoEnd:'', paid:false, source:'plaid' });
-  });
-  (plaidLiabilities.mortgages||[]).forEach(m=>{
-    out.push({ name:m.name||'Mortgage', note:m.institution||'', cat:'HM',
-      bal:-(Math.abs(m.current_balance||0)), apr:(m.interest_rate!=null?m.interest_rate:0),
-      min:(m.minimum_payment||0), pay:(m.minimum_payment||0), limit:0,
-      due:_dueDay(m.next_payment_due_date), promo:'', promoEnd:'', paid:false, source:'plaid' });
+  (allAccts||[]).forEach(a=>{
+    const cur=(a.balances&&(a.balances.current))??0;
+    if(a.type==='credit'){
+      const c=liabByAcct[a.account_id]||{};
+      out.push({ name:a.name||c.name||'Credit Card', note:a.institution||'', cat:'CC', account_id:a.account_id,
+        bal:-(Math.abs(cur||c.current_balance||0)), apr:(c.apr!=null?c.apr:0),
+        min:(c.minimum_payment||0), pay:(c.minimum_payment||0),
+        limit:((a.balances&&a.balances.limit!=null)?a.balances.limit:(c.limit!=null?c.limit:0)),  // limit from the account, then liabilities
+        due:_dueDay(c.next_payment_due_date), promo:'', promoEnd:'', paid:false, source:'plaid' });
+    } else if(a.type==='loan'){
+      const m=mortByAcct[a.account_id]||{};
+      const sub=(a.subtype||'').toLowerCase();
+      const cat=(sub==='mortgage'||m.account_id)?'HM':(sub==='auto'?'CAR':'LOAN');
+      out.push({ name:a.name||m.name||'Loan', note:a.institution||'', cat, account_id:a.account_id,
+        bal:-(Math.abs(cur||m.current_balance||0)), apr:(m.interest_rate!=null?m.interest_rate:0),
+        min:(m.minimum_payment||0), pay:(m.minimum_payment||0), limit:0,
+        due:_dueDay(m.next_payment_due_date), promo:'', promoEnd:'', paid:false, source:'plaid' });
+    }
   });
   return _applyCardData(applyBillOverrides(out.concat(manual)));
 }
@@ -4887,38 +4912,64 @@ function acctPickToggle(id){ const i=_acctPick.sel.indexOf(id); if(i<0)_acctPick
 function acctPickSave(){ const w=_findWidget(_acctPick.uid); if(w){ w.acctCats=_acctPick.sel.slice(); saveState(); } closeManual(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 
 /* Settings: assign each account to a category (auto-detected unless overridden) */
+let _acePick=null;   // {key,name} when choosing a category for one account
 function openAcctCatEditor(){
+  _acePick=null;
   gg('manualModal').style.display='flex';
   gg('manualTitle').textContent='Account categories';
   gg('manualSub').textContent='Assign each account to a category. Auto-detected unless you change it.';
   acctCatEditorRender();
 }
 function acctCatEditorRender(){
+  if(_acePick){ return acctCatPickerRender(); }
   const accts=engAccounts();
-  const opts=(sel)=>ACCOUNT_CATEGORIES.map(c=>`<option value="${c.id}"${sel===c.id?' selected':''}>${c.icon} ${c.label}</option>`).join('');
   const ov=_acctCatOverrides();
   const byCat={}; accts.forEach(a=>{ const c=getAccountCategory(a); (byCat[c]=byCat[c]||[]).push(a); });
   const groups=ACCOUNT_CATEGORIES.filter(c=>byCat[c.id]&&byCat[c.id].length).map(c=>{
     const rows=byCat[c.id].map(a=>{
-      const k=_acctKey(a), auto=!ov[k], cur=getAccountCategory(a);
-      return `<div class="ace-row">
+      const k=_acctKey(a), auto=!ov[k];
+      const kEsc=esc(k).replace(/'/g,"\\'"), nEsc=esc(a.name||'Account').replace(/'/g,"\\'");
+      return `<button type="button" class="ace-row ace-tap" onclick="acctCatPick('${kEsc}','${nEsc}')">
         <span class="ace-meta"><span class="ace-nm">${esc(a.name||'Account')}</span><span class="ace-sub">${esc(a.institution||a.subtype||a.type||'')}${auto?' · auto-detected':' · custom'}</span></span>
         <span class="ace-bal">${fmtK(a.bal)}</span>
-        <span class="ace-selwrap"><select class="ace-sel" onchange="acctCatSet('${esc(k).replace(/'/g,"\\\\'")}',this.value)">${opts(cur)}</select><span class="ace-caret">▾</span></span>
-      </div>`;
+        <span class="ace-chevron">›</span>
+      </button>`;
     }).join('');
     return `<div class="ace-group"><div class="ace-gh"><span>${c.icon} ${esc(c.label)}</span><span class="ace-kind ${c.kind}">${c.kind}</span></div>${rows}</div>`;
   }).join('');
-  gg('manualBody').innerHTML=`<div class="ace-hint">Tap the dropdown on any account to move it to a different category.</div><div class="ace-wrap">${groups||'<div class="ws-hint">No accounts yet. Connect a bank or add a manual account first.</div>'}</div><div class="mf-actions"><button class="btn" onclick="acctCatResetAll()">Reset to auto</button><button class="btn primary" onclick="closeManual()">Done</button></div>`;
+  gg('manualBody').innerHTML=`<div class="ace-hint">Tap any account to move it to a different category.</div><div class="ace-wrap">${groups||'<div class="ws-hint">No accounts yet. Connect a bank or add a manual account first.</div>'}</div><div class="mf-actions"><button class="btn" onclick="acctCatResetAll()">Reset to auto</button><button class="btn primary" onclick="closeManual()">Done</button></div>`;
 }
-function acctCatSet(key, catId){ setAccountCategory(key, catId); acctCatEditorRender(); }
-function acctCatResetAll(){ try{ LS.removeItem('mdf_acct_cats'); }catch(e){} acctCatEditorRender(); }
+function acctCatPickerRender(){
+  const cur=getAccountCategory({id:_acePick.key, name:_acePick.name});   // key drives override lookup
+  const curOv=_acctCatOverrides()[_acePick.key];
+  const curId=curOv||cur;
+  const opts=ACCOUNT_CATEGORIES.map(c=>{
+    const on=c.id===curId;
+    return `<button type="button" class="ace-opt${on?' on':''}" onclick="acctCatChoose('${c.id}')">
+      <span class="ace-opt-ic">${c.icon}</span>
+      <span class="ace-opt-lbl">${esc(c.label)}<span class="ace-opt-kind ${c.kind}">${c.kind}</span></span>
+      ${on?'<span class="ace-opt-check">✓</span>':''}
+    </button>`;
+  }).join('');
+  gg('manualBody').innerHTML=`<div class="ace-pick-head"><button type="button" class="ace-back" onclick="acctCatBack()">‹ Back</button><div class="ace-pick-name">${esc(_acePick.name)}</div></div><div class="ace-hint" style="margin-bottom:9px">Choose a category for this account.</div><div class="ace-opts">${opts}</div><div class="mf-actions"><span></span><button class="btn primary" onclick="acctCatBack()">Done</button></div>`;
+}
+function acctCatPick(key,name){ _acePick={key,name}; acctCatEditorRender(); }
+function acctCatBack(){ _acePick=null; acctCatEditorRender(); }
+function acctCatChoose(catId){ if(_acePick){ setAccountCategory(_acePick.key, catId); } _acePick=null; acctCatEditorRender(); }
+function acctCatResetAll(){ try{ LS.removeItem('mdf_acct_cats'); }catch(e){} _acePick=null; acctCatEditorRender(); }
 
 /* ═══ CREDIT UTILIZATION + DTI WIDGET ═══ */
 function creditUtilBody(w){
   const u=engCreditUtil();
   const dti=engDTI();
-  if(u.limit<=0) return `<div class="wph"><div class="wph-sub">No credit cards with a limit yet.</div><div class="ws-hint" style="margin-top:6px">Add a card with its limit${plaidHasLiab()?' (or set limits on your live cards)':''} and I'll show utilization + DTI here.</div><div style="text-align:center;margin-top:11px"><button class="manual-add-btn" style="width:auto;display:inline-block" onclick="event.stopPropagation();openManualCard()">➕ Add a card</button></div></div>`;
+  if(u.limit<=0){
+    const noLimit=engBills().filter(b=>b.cat==='CC' && Math.abs(b.bal||0)>0 && !(b.limit>0));
+    if(noLimit.length){
+      const btns=noLimit.map(b=>`<button class="cu-setlimit" onclick="event.stopPropagation();openPromoEditor('${esc(b.name).replace(/'/g,"\\\\'")}')">${esc(b.name)} · Set limit ›</button>`).join('');
+      return `<div class="wph"><div class="wph-sub">Found ${noLimit.length} card${noLimit.length>1?'s':''}, but your bank didn't report the credit limit${noLimit.length>1?'s':''}.</div><div class="ws-hint" style="margin-top:6px">Many issuers (Amex especially) don't send limits to Plaid. Enter yours and I'll track utilization:</div><div class="cu-nolimit" style="margin-top:11px">${btns}</div></div>`;
+    }
+    return `<div class="wph"><div class="wph-sub">No credit cards with a limit yet.</div><div class="ws-hint" style="margin-top:6px">Add a card with its limit${plaidHasLiab()?' (or set limits on your live cards)':''} and I'll show utilization + DTI here.</div><div style="text-align:center;margin-top:11px"><button class="manual-add-btn" style="width:auto;display:inline-block" onclick="event.stopPropagation();openManualCard()">➕ Add a card</button></div></div>`;
+  }
   // utilization color: <10% green, <30% amber-green, <50% amber, else red
   const uPct=u.pct;
   const uColor = uPct<10?'var(--green)' : uPct<30?'#7bc96f' : uPct<50?'var(--amber)' : 'var(--red)';
@@ -4957,6 +5008,7 @@ function creditUtilBody(w){
     </div>
     <div class="cu-cards-label">Per-card utilization <span class="ws-hint" style="margin:0">(dotted line = 30%)</span></div>
     <div class="cu-cards">${cardBars}</div>
+    ${(()=>{ const nl=engBills().filter(b=>b.cat==='CC'&&Math.abs(b.bal||0)>0&&!(b.limit>0)); return nl.length?`<div class="cu-nolimit" style="margin-top:10px">${nl.map(b=>`<button class="cu-setlimit" onclick="event.stopPropagation();openPromoEditor('${esc(b.name).replace(/'/g,"\\\\'")}')">${esc(b.name)} · Set limit ›</button>`).join('')}</div>`:''; })()}
     <div style="text-align:center;margin-top:11px"><button class="manual-add-btn" style="width:auto;display:inline-block" onclick="event.stopPropagation();openManualCard()">➕ Add a card</button></div>
   </div>`;
 }
