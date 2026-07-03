@@ -1317,6 +1317,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .manual-add-btn{width:100%;margin-top:10px;padding:9px;border-radius:9px;background:var(--surface2);border:1px dashed var(--border2);color:var(--muted);font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .13s;}
 .manual-add-btn:hover{border-color:var(--green);color:var(--green);background:var(--green-dim);}
 .bill-edit{background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:0 0 0 6px;opacity:.6;}
+.acct-badge{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.3px;color:var(--green);background:var(--green-dim);border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:middle;}
 .bill-edit:hover{opacity:1;color:var(--green);}
 .mf-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:12px 0 5px;}
 .mf-in{width:100%;height:40px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:0 12px;color:var(--text);font-size:14px;font-family:var(--font);outline:none;}
@@ -3070,9 +3071,13 @@ function _applyCardData(list){
     const d=data[_cardKey(b.name)];
     if(!d) return b;
     const merged={...b};
+    if(d.nickname) merged.name=d.nickname;
     if(d.promoEnd) { merged.promoEnd=d.promoEnd; if(!merged.promo) merged.promo='0% APR'; }
+    if(d.promoAmt!=null && d.promoAmt>0) merged.promoAmt=d.promoAmt;
     if(d.limit!=null && d.limit>0 && !(merged.limit>0)) merged.limit=d.limit;
     if(d.apr!=null && d.apr>0 && !(merged.apr>0)) merged.apr=d.apr;
+    if(d.minPay!=null && d.minPay>0){ merged.min=d.minPay; if(!(merged.pay>0)) merged.pay=d.minPay; }
+    if(d.note) merged.note=d.note;
     return merged;
   });
 }
@@ -3235,13 +3240,15 @@ function engPromos(){
     const end=_parsePromoEnd(b.promoEnd);
     if(!end) return;
     const days=Math.round((end-today)/86400000);
+    const full=Math.abs(b.bal||0);
+    const amt=((b.promoAmt||0)>0)?Math.min(b.promoAmt,full||b.promoAmt):full;   // amount actually under 0% (defaults to full balance)
     out.push({
       name:b.name, note:b.note||'', promo:b.promo||'0% promo',
-      end, days, bal:Math.abs(b.bal||0), apr:(b.apr||0),
-      // monthly cost once the promo expires, at the standard APR on the remaining balance
-      monthlyAfter: Math.abs(b.bal||0)*((b.apr||0)/100)/12,
-      // at current pay, will it be cleared before the promo ends?
-      payoffMonths: (b.pay>0 && Math.abs(b.bal||0)>0) ? Math.ceil(Math.abs(b.bal||0)/b.pay) : Infinity,
+      end, days, bal:full, promoAmt:(b.promoAmt||0), amt, apr:(b.apr||0),
+      // monthly cost once the promo expires, at the standard APR on the amount that was at 0%
+      monthlyAfter: amt*((b.apr||0)/100)/12,
+      // at current pay, will the promo amount be cleared before the promo ends?
+      payoffMonths: (b.pay>0 && amt>0) ? Math.ceil(amt/b.pay) : Infinity,
     });
   });
   return out.sort((a,b)=>a.days-b.days);
@@ -4802,7 +4809,7 @@ function promoTrackerBody(w){
       return `<div class="promo-row">
         <div class="promo-main">
           <div class="promo-nm">${esc(p.name)} <span class="promo-tag">${esc(p.promo)}</span></div>
-          <div class="promo-sub">ends ${fmtDate(p.end)} \u00b7 ${fmtK(p.bal)} balance \u00b7 jumps to <b style="color:var(--amber)">${p.apr.toFixed(2)}%</b></div>
+          <div class="promo-sub">ends ${fmtDate(p.end)} \u00b7 ${p.promoAmt>0?fmtK(p.promoAmt)+' at 0%':fmtK(p.bal)+' balance'} \u00b7 jumps to <b style="color:var(--amber)">${p.apr.toFixed(2)}%</b></div>
           <div class="promo-bar"><div class="promo-bar-fill" style="width:${Math.max(3,Math.min(100,100-(p.days/365*100)))}%;background:${color}"></div></div>
         </div>
         <div class="promo-side">
@@ -4827,7 +4834,50 @@ function promoTrackerBody(w){
   return `<div class="promo-wrap">${head}${rows}${empty}${addSection}</div>`;
 }
 // Editor to attach/clear a promo end date, credit limit, and standard APR on any card
-function openPromoEditor(name){
+function openPromoEditor(name){ return openAccountEditor(name); }   // alias — the editor now covers limit/APR/promo/etc.
+function openAccountEditor(name){
+  const acct=engAccounts().find(a=>a.name===name || a.name===((APP.cardData||{})[_cardKey(name)]||{}).nickname);
+  const bill=engBills().find(b=>b.name===name)||{};
+  const cd=(APP.cardData||{})[_cardKey(name)]||{};
+  const type=(acct&&acct.type)||'';
+  const isCredit = type==='credit' || bill.cat==='CC';
+  const isLoan   = type==='loan'   || ['HM','CAR','LOAN'].includes(bill.cat);
+  const nEsc=esc(name).replace(/'/g,"\\'");
+  gg('manualModal').style.display='flex';
+  gg('manualTitle').textContent='Edit account';
+  gg('manualSub').textContent=esc(cd.nickname||name);
+  let f=`<label class="mf-label">Nickname</label><input class="mf-in" id="aeNick" value="${esc(cd.nickname||'')}" placeholder="${esc(name)}">`;
+  if(isCredit){
+    f+=`<div class="mf-row"><div><label class="mf-label">Credit limit</label><input class="mf-in" id="aeLimit" type="number" inputmode="decimal" value="${cd.limit||bill.limit||''}" placeholder="e.g. 5000"></div>`
+      +`<div><label class="mf-label">APR %</label><input class="mf-in" id="aeApr" type="number" inputmode="decimal" value="${cd.apr||bill.apr||''}" placeholder="e.g. 24.99"></div></div>`;
+    f+=`<div class="mf-row"><div><label class="mf-label">0% promo ends</label><input class="mf-in" id="aePromoEnd" type="date" value="${cd.promoEnd||bill.promoEnd||''}"></div>`
+      +`<div><label class="mf-label">Amount at 0%</label><input class="mf-in" id="aePromoAmt" type="number" inputmode="decimal" value="${cd.promoAmt||''}" placeholder="blank = full balance"></div></div>`;
+    f+=`<label class="mf-label">Minimum payment</label><input class="mf-in" id="aeMinPay" type="number" inputmode="decimal" value="${cd.minPay||bill.min||''}" placeholder="monthly minimum">`;
+  } else if(isLoan){
+    f+=`<div class="mf-row"><div><label class="mf-label">Interest rate (APR) %</label><input class="mf-in" id="aeApr" type="number" inputmode="decimal" value="${cd.apr||bill.apr||''}" placeholder="e.g. 6.5"></div>`
+      +`<div><label class="mf-label">Monthly payment</label><input class="mf-in" id="aeMinPay" type="number" inputmode="decimal" value="${cd.minPay||bill.min||''}" placeholder="e.g. 450"></div></div>`;
+  }
+  f+=`<label class="mf-label">Note</label><input class="mf-in" id="aeNote" value="${esc(cd.note||'')}" placeholder="optional">`;
+  gg('manualBody').innerHTML=f
+    +`<div class="ws-hint">These stay attached to this account even when balances refresh live from your bank — perfect for anything Plaid doesn't send (credit line, APR, 0% promos).</div>`
+    +`<div class="mf-actions"><button class="btn danger-btn" onclick="clearAccountEdits('${nEsc}')">Clear</button><button class="btn primary" onclick="saveAccountEditor('${nEsc}')">Save</button></div>`;
+}
+function saveAccountEditor(name){
+  const g=id=>gg(id), f={};
+  if(g('aeNick'))     f.nickname=g('aeNick').value.trim();
+  if(g('aeLimit'))    f.limit=_num('aeLimit');
+  if(g('aeApr'))      f.apr=_num('aeApr');
+  if(g('aePromoEnd')) f.promoEnd=g('aePromoEnd').value||'';
+  if(g('aePromoAmt')) f.promoAmt=_num('aePromoAmt');
+  if(g('aeMinPay'))   f.minPay=_num('aeMinPay');
+  if(g('aeNote'))     f.note=g('aeNote').value.trim();
+  setCardData(name, f);
+  closeManual();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+  if(sbRichie)sbRichie.do('nod');
+}
+function clearAccountEdits(name){ if(APP.cardData) delete APP.cardData[_cardKey(name)]; saveState(); closeManual(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+function _openPromoEditorLegacy(name){
   const bill=engBills().find(b=>b.name===name) || {name, promoEnd:'', limit:0, apr:0};
   const cd=(APP.cardData||{})[_cardKey(name)]||{};
   gg('manualModal').style.display='flex';
@@ -5686,9 +5736,16 @@ function acctWidgetBody(w){
     const col=a.bal<0?'var(--red)':'var(--green)';
     const balStr=(a.bal<0?'-':'+')+fmtK(Math.abs(a.bal));
     const open=_acctOpen[w.uid]===a.id;
+    const cd=(APP.cardData||{})[_cardKey(a.name)]||{};
+    const dispName=cd.nickname||a.name;
+    const nEsc=esc(a.name).replace(/'/g,"\\'");
+    const editBtn = a.manual
+      ? `<button class="bill-edit" onclick="event.stopPropagation();openManualAccount(${(APP.manualAccounts||[]).findIndex(x=>x.id===a.id)})" title="Edit">\u270E</button>`
+      : `<button class="bill-edit" onclick="event.stopPropagation();openAccountEditor('${nEsc}')" title="Edit details">\u270E</button>`;
+    const promoBadge = (cd.promoEnd||a._promoEnd) ? `<span class="acct-badge">0%</span>` : '';
     return `<div class="acct-chip${open?' open':''}" onclick="toggleAcct('${w.uid}','${a.id}')">
         <span class="acct-ic">${_acctIcon(a)}</span>
-        <div class="acct-meta"><div class="acct-nm">${esc(a.name)}${a.manual?`<button class="bill-edit" onclick="event.stopPropagation();openManualAccount(${(APP.manualAccounts||[]).findIndex(x=>x.id===a.id)})" title="Edit">\u270E</button>`:''}</div><div class="acct-sub">${esc(a.institution||a.subtype||a.type)}${a.manual?' · manual':''}</div></div>
+        <div class="acct-meta"><div class="acct-nm">${esc(dispName)}${promoBadge}${editBtn}</div><div class="acct-sub">${esc(a.institution||a.subtype||a.type)}${a.manual?' · manual':''}</div></div>
         <div class="acct-bal" style="color:${col}">${balStr}</div>
         <span class="acct-arr">${open?'▲':'▼'}</span>
       </div>${open?`<div class="acct-txns" id="acdt_${w.uid}"></div>`:''}`;
