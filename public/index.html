@@ -406,7 +406,23 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 }
 .sb-utility-btn:hover{color:var(--text);background:rgba(255,255,255,0.04);}
 .sb-utility-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
-.sb-footer{padding:10px 10px;border-top:1px solid var(--border);}
+.sb-footer{padding:10px 10px;border-top:1px solid var(--border);position:relative;}
+.sb-user:hover{background:rgba(255,255,255,0.04);}
+.sb-user-caret{font-size:13px;color:var(--muted);flex-shrink:0;}
+.user-menu{position:absolute;left:8px;right:8px;bottom:62px;background:var(--surface1,var(--surface2));border:1px solid var(--border);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.4);padding:6px;z-index:60;}
+.um-head{display:flex;align-items:center;gap:10px;padding:8px 8px 10px;border-bottom:1px solid var(--border);margin-bottom:5px;}
+.um-name{font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.um-sub{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.um-item{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:9px 10px;border:none;background:none;color:var(--text);font-family:var(--font);font-size:13px;font-weight:500;border-radius:8px;cursor:pointer;}
+.um-item span{font-size:14px;width:18px;text-align:center;}
+.um-item:hover{background:rgba(255,255,255,0.05);}
+.um-danger{color:#f0846c;}
+.um-danger:hover{background:rgba(240,92,92,.12);}
+.uinfo{display:flex;flex-direction:column;gap:2px;}
+.uinfo-row{display:flex;justify-content:space-between;gap:14px;padding:10px 2px;border-bottom:1px solid var(--border);font-size:13px;}
+.uinfo-row:last-child{border-bottom:none;}
+.uinfo-row span{color:var(--muted);}
+.uinfo-row b{color:var(--text);font-weight:600;text-align:right;}
 .sb-user{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;}
 .sb-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--blue));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;}
 .sb-uname{font-size:12.5px;font-weight:600;}
@@ -442,6 +458,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .topbar-right{display:flex;align-items:center;gap:8px;}
 .env-badge{font-size:10px;padding:3px 8px;border-radius:20px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;}
 .env-sandbox{background:var(--amber-dim);color:var(--amber);}
+.login-links{display:flex;justify-content:space-between;gap:10px;margin-top:12px;}
+.login-links a{font-size:12.5px;color:var(--muted);cursor:pointer;text-decoration:none;}
+.login-links a:hover{color:var(--green);text-decoration:underline;}
+.login-recovery{margin-top:14px;padding:14px;border:1px solid var(--green);background:var(--green-dim);border-radius:12px;text-align:left;}
+.lrec-h{font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;}
+.lrec-code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:16px;font-weight:700;letter-spacing:1px;color:var(--green);background:var(--surface);border:1px dashed var(--green);border-radius:8px;padding:10px;text-align:center;word-break:break-all;}
+.lrec-note{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.5;}
+.cpw-form{display:flex;flex-direction:column;gap:9px;}
 .env-production{background:var(--green-dim);color:var(--green);}
 #page-content{
   padding:24px 28px;flex:1;min-height:0;
@@ -1983,8 +2007,15 @@ canvas.chart-interactive{cursor:crosshair;}
     <div class="login-fields">
       <input type="text" id="loginUser" placeholder="Username" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
       <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      <input type="password" id="loginPass2" placeholder="Confirm password" autocomplete="new-password" style="display:none" onkeydown="if(event.key==='Enter')doLogin()">
+      <input type="text" id="loginRecovery" placeholder="Recovery code (XXXX-XXXX-…)" autocomplete="off" style="display:none" onkeydown="if(event.key==='Enter')doLogin()">
       <div class="login-err" id="loginErr"></div>
       <button class="btn primary login-btn" id="loginBtn" onclick="doLogin()">Sign in</button>
+      <div class="login-links">
+        <a id="loginForgotLink" onclick="setLoginMode('forgot')">Forgot password?</a>
+        <a id="loginBackLink" style="display:none" onclick="setLoginMode('signin')">Back to sign in</a>
+      </div>
+      <div id="loginRecoveryBox" class="login-recovery" style="display:none"></div>
     </div>
   </div>
 </div>
@@ -2090,12 +2121,26 @@ canvas.chart-interactive{cursor:crosshair;}
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         Settings
       </button>
-      <div class="sb-user">
+      <div class="sb-user" id="sbUserBtn" onclick="toggleUserMenu(event)" style="cursor:pointer">
         <div class="sb-avatar" id="sbAvatar">💰</div>
         <div style="flex:1;min-width:0">
           <div class="sb-uname" id="sbUserName">Profile</div>
           <div class="sb-ulabel" id="sbXp">0 XP</div>
         </div>
+        <span class="sb-user-caret">⌄</span>
+      </div>
+      <div id="userMenu" class="user-menu" style="display:none">
+        <div class="um-head">
+          <div class="sb-avatar" id="umAvatar">💰</div>
+          <div style="min-width:0">
+            <div class="um-name" id="umName">—</div>
+            <div class="um-sub" id="umSub">—</div>
+          </div>
+        </div>
+        <button class="um-item" onclick="openUserInfo()"><span>👤</span> User info</button>
+        <button class="um-item" onclick="closeUserMenu();openChangePassword()"><span>🔑</span> Change password</button>
+        <button class="um-item" onclick="switchUser()"><span>🔄</span> Switch user</button>
+        <button class="um-item um-danger" onclick="logout()"><span>🚪</span> Sign out</button>
       </div>
     </div>
   </aside>
@@ -6366,6 +6411,15 @@ function renderSettings(){
           <button class="btn" onclick="openAcctCatEditor()">Manage accounts</button>
         </div>
       </div>
+      <div class="set-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
+          <div>
+            <div class="set-card-label" style="margin:0">🔒 Password</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Change your sign-in password. You'll get a new recovery code.</div>
+          </div>
+          <button class="btn" onclick="openChangePassword()">Change password</button>
+        </div>
+      </div>
 
       <div class="set-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
@@ -7461,6 +7515,46 @@ function wizShake(id){const el=gg(id);if(!el)return;el.style.borderColor='#f05c5
 function setToken(t){ try{ SS.setItem('mdf_auth','1'); }catch(e){} }
 function clearToken(){ try{ SS.removeItem('mdf_auth'); SS.removeItem('mdf_token'); }catch(e){} }
 function isLoggedIn(){ return SS.getItem('mdf_auth')==='1'; }
+function refreshEnvBadge(){
+  const b=gg('envBadge'); if(!b) return;
+  fetch('/api/health').then(r=>r.json()).then(d=>{
+    const env=((d&&d.env)||'sandbox').toLowerCase();
+    if(env==='production'){ b.style.display='none'; }
+    else { b.style.display=''; b.textContent=env.charAt(0).toUpperCase()+env.slice(1); }
+  }).catch(()=>{});
+}
+// ── Change password (Settings) ──
+function openChangePassword(){
+  gg('manualModal').style.display='flex';
+  gg('manualTitle').textContent='Change password';
+  gg('manualSub').textContent='Enter your current password and choose a new one.';
+  gg('manualBody').innerHTML=
+    '<div class="cpw-form">'
+    +'<input type="password" class="mf-in" id="cpwCur" placeholder="Current password" autocomplete="current-password">'
+    +'<input type="password" class="mf-in" id="cpwNew" placeholder="New password (8+ characters)" autocomplete="new-password">'
+    +'<input type="password" class="mf-in" id="cpwNew2" placeholder="Confirm new password" autocomplete="new-password">'
+    +'<div class="login-err" id="cpwErr"></div>'
+    +'<div id="cpwRecovery" class="login-recovery" style="display:none"></div>'
+    +'</div>'
+    +'<div class="mf-actions"><button class="btn" onclick="closeManual()">Cancel</button><button class="btn primary" id="cpwBtn" onclick="doChangePassword()">Update password</button></div>';
+  setTimeout(()=>{ const el=gg('cpwCur'); if(el) el.focus(); },80);
+}
+async function doChangePassword(){
+  const cur=gg('cpwCur').value, nw=gg('cpwNew').value, nw2=gg('cpwNew2').value;
+  const err=gg('cpwErr'), btn=gg('cpwBtn'); err.textContent='';
+  if(nw.length<8){ err.textContent='New password must be at least 8 characters.'; return; }
+  if(nw!==nw2){ err.textContent='New passwords don\u2019t match.'; return; }
+  btn.disabled=true; btn.textContent='Updating…';
+  try{
+    const r=await fetch('/api/change_password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({current:cur,new:nw})});
+    const d=await r.json().catch(()=>({}));
+    btn.disabled=false; btn.textContent='Update password';
+    if(!r.ok || !d.ok){ err.textContent=d.error||'Could not update your password.'; return; }
+    const rb=gg('cpwRecovery');
+    ['cpwCur','cpwNew','cpwNew2'].forEach(id=>{ const el=gg(id); if(el) el.value=''; });
+    if(rb){ rb.style.display='block'; rb.innerHTML='<div class="lrec-h">✅ Password updated · new recovery code</div><div class="lrec-code">'+esc(d.recovery_code)+'</div><div class="lrec-note">Your old recovery code no longer works. Save this new one somewhere safe.</div><button class="btn primary" style="width:100%;margin-top:10px" onclick="closeManual()">Done</button>'; }
+  }catch(e){ btn.disabled=false; btn.textContent='Update password'; err.textContent='Could not reach the server. Try again.'; }
+}
 
 // Wrap fetch so every /api/ call carries the Bearer token automatically.
 (function installAuthFetch(){
@@ -7476,7 +7570,52 @@ function isLoggedIn(){ return SS.getItem('mdf_auth')==='1'; }
   };
 })();
 
+let _loginMode='signin';
+function setLoginMode(m){
+  _loginMode=m;
+  const err=gg('loginErr'); if(err) err.textContent='';
+  const show=(id,on)=>{ const el=gg(id); if(el) el.style.display=on?'':'none'; };
+  const rb=gg('loginRecoveryBox'); if(rb){ rb.style.display='none'; rb.innerHTML=''; }
+  show('loginPass2', m==='create');
+  show('loginRecovery', m==='forgot');
+  show('loginForgotLink', m==='signin');
+  show('loginBackLink', m==='forgot');
+  const scr=gg('loginScreen'), title=scr&&scr.querySelector('.login-title'), sub=gg('loginSub'), btn=gg('loginBtn'), pass=gg('loginPass');
+  if(m==='create'){
+    if(title) title.textContent='Create your login';
+    if(sub) sub.textContent='Set a username and password to secure your dashboard.';
+    if(btn) btn.textContent='Create login';
+    if(pass){ pass.placeholder='Password (8+ characters)'; pass.setAttribute('autocomplete','new-password'); }
+  } else if(m==='forgot'){
+    if(title) title.textContent='Reset password';
+    if(sub) sub.textContent='Enter your username, recovery code, and a new password.';
+    if(btn) btn.textContent='Reset password';
+    if(pass){ pass.placeholder='New password (8+ characters)'; pass.setAttribute('autocomplete','new-password'); }
+  } else {
+    if(title) title.textContent='Welcome back';
+    if(sub) sub.textContent="Richie's been keeping an eye on things. Sign in to see where you stand.";
+    if(btn) btn.textContent='Sign in';
+    if(pass){ pass.placeholder='Password'; pass.setAttribute('autocomplete','current-password'); }
+  }
+}
+async function initLoginScreen(){
+  try{ const r=await fetch('/api/auth_status'); const d=await r.json().catch(()=>({})); setLoginMode(d&&d.configured?'signin':'create'); }
+  catch(e){ setLoginMode('signin'); }
+}
+function _afterAuthedEnter(){
+  gg('loginScreen').style.display='none';
+  ['loginPass','loginPass2','loginRecovery'].forEach(id=>{ const el=gg(id); if(el) el.value=''; });
+  setToken(1);
+  loadEngineData().then(()=>runWelcomeBack());
+}
+function _showRecovery(code,contLabel){
+  const rb=gg('loginRecoveryBox'); if(!rb) return;
+  rb.style.display='block';
+  rb.innerHTML='<div class="lrec-h">🔑 Save your recovery code</div><div class="lrec-code">'+esc(code)+'</div><div class="lrec-note">This is the only way to reset your password if you forget it. Store it somewhere safe — you won\u2019t see it again.</div><button class="btn primary" style="width:100%;margin-top:10px" onclick="_afterAuthedEnter()">'+(contLabel||'I saved it — continue')+'</button>';
+}
 async function doLogin(){
+  if(_loginMode==='create') return doCreateLogin();
+  if(_loginMode==='forgot') return doResetPassword();
   const u=gg('loginUser').value.trim(), p=gg('loginPass').value;
   const err=gg('loginErr'), btn=gg('loginBtn');
   err.textContent='';
@@ -7492,12 +7631,10 @@ async function doLogin(){
       if(loginRichie) loginRichie.emotion('no');
       return;
     }
-    // server sets an httpOnly auth cookie; we just record that we're signed in
-    if(d.token || d.ok || d.success) setToken(1);
+    if(d.token || d.ok || d.success){ setToken(1); try{ SS.setItem('mdf_user',u); }catch(e){} }
     btn.disabled=false; btn.textContent='Sign in';
     gg('loginScreen').style.display='none';
     gg('loginPass').value='';
-    // load data, then show Richie's welcome-back + SWOT
     await loadEngineData();
     runWelcomeBack();
   }catch(e){
@@ -7505,13 +7642,45 @@ async function doLogin(){
     btn.disabled=false; btn.textContent='Sign in';
   }
 }
+async function doCreateLogin(){
+  const u=gg('loginUser').value.trim(), p=gg('loginPass').value, p2=gg('loginPass2').value;
+  const err=gg('loginErr'), btn=gg('loginBtn'); err.textContent='';
+  if(u.length<3){ err.textContent='Username must be at least 3 characters.'; return; }
+  if(p.length<8){ err.textContent='Password must be at least 8 characters.'; return; }
+  if(p!==p2){ err.textContent='Passwords don\u2019t match.'; return; }
+  btn.disabled=true; btn.textContent='Creating…';
+  try{
+    const r=await fetch('/api/set_password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+    const d=await r.json().catch(()=>({}));
+    btn.disabled=false; btn.textContent='Create login';
+    if(!r.ok || !d.ok){ err.textContent=d.error||'Could not create your login.'; return; }
+    try{ SS.setItem('mdf_user',u); }catch(e){}
+    _showRecovery(d.recovery_code,'I saved it — enter my dashboard');
+  }catch(e){ btn.disabled=false; btn.textContent='Create login'; err.textContent='Could not reach the server. Try again.'; }
+}
+async function doResetPassword(){
+  const u=gg('loginUser').value.trim(), code=gg('loginRecovery').value.trim(), p=gg('loginPass').value;
+  const err=gg('loginErr'), btn=gg('loginBtn'); err.textContent='';
+  if(!u||!code){ err.textContent='Enter your username and recovery code.'; return; }
+  if(p.length<8){ err.textContent='New password must be at least 8 characters.'; return; }
+  btn.disabled=true; btn.textContent='Resetting…';
+  try{
+    const r=await fetch('/api/reset_password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,recovery_code:code,new_password:p})});
+    const d=await r.json().catch(()=>({}));
+    btn.disabled=false; btn.textContent='Reset password';
+    if(!r.ok || !d.ok){ err.textContent=d.error||'Could not reset your password.'; return; }
+    try{ SS.setItem('mdf_user',u); }catch(e){}
+    _showRecovery(d.recovery_code,'I saved it — enter my dashboard');
+  }catch(e){ btn.disabled=false; btn.textContent='Reset password'; err.textContent='Could not reach the server. Try again.'; }
+}
 
 function showLogin(greet){
   gg('appShell').style.display='none';
   gg('richieAssistant').style.display='none';
   gg('welcomeBack').style.display='none';
   gg('loginScreen').style.display='flex';
-  if(greet) gg('loginSub').textContent=greet;
+  if(greet){ setLoginMode('signin'); gg('loginSub').textContent=greet; }
+  else { initLoginScreen(); }
   if(!window._loginRichie) window._loginRichie=new RichieEmoji(gg('loginRichie'));
   setTimeout(()=>{ if(window._loginRichie) window._loginRichie.wave(); },300);
   setTimeout(()=>{ const el=gg('loginUser'); if(el) el.focus(); },400);
@@ -7608,12 +7777,50 @@ function wbEnter(){
   gg('welcomeBack').style.display='none';
   enterApp();
 }
-function logout(){
-  // Revoke the token server-side so it can't be reused even if it was copied.
-  const tok=authToken();
-  if(tok){ try{ fetch('/api/logout',{method:'POST',headers:{'Authorization':'Bearer '+tok}}).catch(()=>{}); }catch(e){} }
+function _doSignOut(greet){
+  // Revoke the session cookie server-side (sent automatically), then return to login.
+  try{ fetch('/api/logout',{method:'POST'}).catch(()=>{}); }catch(e){}
   clearToken();
-  showLogin("Signed out. Sign back in when you're ready.");
+  try{ SS.removeItem('mdf_user'); }catch(e){}
+  closeUserMenu();
+  showLogin(greet||"Signed out. Sign back in when you're ready.");
+}
+function logout(){ _doSignOut("Signed out. Sign back in when you're ready."); }
+function switchUser(){ _doSignOut('Switch user — sign in below.'); }
+
+function _loginUsername(){ try{ return SS.getItem('mdf_user')||''; }catch(e){ return ''; } }
+function toggleUserMenu(e){
+  if(e) e.stopPropagation();
+  const m=gg('userMenu'); if(!m) return;
+  if(m.style.display==='none' || !m.style.display){ populateUserMenu(); m.style.display='block'; setTimeout(()=>document.addEventListener('click',_umOutside),0); }
+  else closeUserMenu();
+}
+function closeUserMenu(){ const m=gg('userMenu'); if(m) m.style.display='none'; document.removeEventListener('click',_umOutside); }
+function _umOutside(ev){ const m=gg('userMenu'), b=gg('sbUserBtn'); if(m && !m.contains(ev.target) && b && !b.contains(ev.target)) closeUserMenu(); }
+function populateUserMenu(){
+  const prof=(APP.profiles&&APP.profiles[0])||{name:'Me',avatar:'💰'};
+  const lv=LEVELS.find(l=>l.n===APP.level)||LEVELS[0];
+  const av=gg('umAvatar'); if(av) av.textContent=prof.avatar||'💰';
+  const nm=gg('umName'); if(nm) nm.textContent=_loginUsername()||prof.name||'Me';
+  const sb=gg('umSub'); if(sb) sb.textContent=(APP.household||'My Finance World')+' · '+lv.icon+' '+lv.name;
+}
+function openUserInfo(){
+  closeUserMenu();
+  const prof=(APP.profiles&&APP.profiles[0])||{name:'Me',avatar:'💰'};
+  const lv=LEVELS.find(l=>l.n===APP.level)||LEVELS[0];
+  gg('manualModal').style.display='flex';
+  gg('manualTitle').textContent='User info';
+  gg('manualSub').textContent='Your account at a glance.';
+  const rows=[
+    ['Username', _loginUsername()||'—'],
+    ['Household', APP.household||'—'],
+    ['Profile', prof.name||'—'],
+    ['Level', lv.icon+' '+lv.n+' · '+lv.name],
+    ['XP', (APP.xp||0).toLocaleString()],
+    ['Bank data', dataLoaded?'Connected':'Not connected'],
+  ];
+  gg('manualBody').innerHTML='<div class="uinfo">'+rows.map(r=>'<div class="uinfo-row"><span>'+esc(r[0])+'</span><b>'+esc(String(r[1]))+'</b></div>').join('')
+    +'</div><div class="mf-actions"><button class="btn" onclick="closeManual()">Close</button><button class="btn primary" onclick="closeManual();switchPage(\'__settings__\')">Open settings</button></div>';
 }
 
 /* ═══════════════════════════════════════════════════════════════ */
@@ -7640,6 +7847,7 @@ function enterApp(){
   fabChar=new RichieEmoji(gg('fabChar'));
   rpChar=new RichieEmoji(gg('rpChar'));
   renderShell();
+  try{ refreshEnvBadge(); }catch(e){}
   try{ if(APP._awaitingBuild){ if(typeof gamiCheckin==='function') gamiCheckin(); } else { gamiInit(); } }catch(e){}
   if(APP.activePage&&APP.activePage!=='__settings__') switchPage(APP.activePage);
   else if(APP.pages[0]) switchPage(APP.pages[0].id);
