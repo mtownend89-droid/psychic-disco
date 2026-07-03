@@ -676,7 +676,7 @@ app.get('/api/liabilities', requireAuth, async (req, res) => {
       r.data.accounts.forEach(a => { acctMap[a.account_id] = a; });
       r.data.liabilities.credit?.forEach(cc => {
         const a = acctMap[cc.account_id] || {};
-        cards.push({ account_id: cc.account_id, name: a.name || 'Credit Card', institution: item.institutionName, mask: a.mask, current_balance: a.balances?.current ?? 0, minimum_payment: cc.minimum_payment_amount ?? 0, last_payment_date: cc.last_payment_date, last_payment_amount: cc.last_payment_amount ?? 0, next_payment_due_date: cc.next_payment_due_date, aprs: cc.aprs || [], apr: cc.aprs?.find(x => x.apr_type === 'purchase_apr')?.apr_percentage ?? null, is_overdue: cc.is_overdue ?? false });
+        cards.push({ account_id: cc.account_id, name: a.name || 'Credit Card', institution: item.institutionName, mask: a.mask, current_balance: a.balances?.current ?? 0, limit: a.balances?.limit ?? null, available: a.balances?.available ?? null, minimum_payment: cc.minimum_payment_amount ?? 0, last_payment_date: cc.last_payment_date, last_payment_amount: cc.last_payment_amount ?? 0, next_payment_due_date: cc.next_payment_due_date, aprs: cc.aprs || [], apr: cc.aprs?.find(x => x.apr_type === 'purchase_apr')?.apr_percentage ?? null, is_overdue: cc.is_overdue ?? false });
       });
       r.data.liabilities.mortgage?.forEach(m => {
         const a = acctMap[m.account_id] || {};
@@ -686,7 +686,7 @@ app.get('/api/liabilities', requireAuth, async (req, res) => {
       try {
         const r = await plaidClient.accountsGet({ access_token: item.accessToken });
         r.data.accounts.filter(a => a.type === 'credit').forEach(a => {
-          cards.push({ account_id: a.account_id, name: a.name, institution: item.institutionName, mask: a.mask, current_balance: a.balances?.current ?? 0, minimum_payment: null, apr: null, aprs: [], limited_data: true });
+          cards.push({ account_id: a.account_id, name: a.name, institution: item.institutionName, mask: a.mask, current_balance: a.balances?.current ?? 0, limit: a.balances?.limit ?? null, available: a.balances?.available ?? null, minimum_payment: null, apr: null, aprs: [], limited_data: true });
         });
       } catch (_) {}
     }
