@@ -498,7 +498,8 @@ const plaidClient = new PlaidApi(new Configuration({
 }));
 
 // ── TOKEN STORE ───────────────────────────────────────────────────────────────
-const TOKEN_FILE = path.join(__dirname, '../.data/tokens.json');
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '../.data');   // point at a Render Persistent Disk mount (e.g. /var/data) so tokens/auth survive redeploys
+const TOKEN_FILE = path.join(DATA_DIR, 'tokens.json');
 
 // Encrypt the Plaid access tokens at rest (AES-256-GCM). Key is derived from
 // TOKEN_ENC_KEY (or SESSION_SECRET). Set one of those in Render so the key is
@@ -543,7 +544,7 @@ function saveTokens(store) {
 // A user-set password lives in .data/auth.json (AES-GCM encrypted, scrypt-hashed).
 // APP_USERNAME/APP_PASSWORD from env always remain valid as a permanent master /
 // recovery credential, so you can never be locked out of your own server.
-const AUTH_FILE = path.join(__dirname, '../.data/auth.json');
+const AUTH_FILE = path.join(DATA_DIR, 'auth.json');
 function hashSecret(secret) {
   const salt = crypto.randomBytes(16);
   const dk = crypto.scryptSync(String(secret), salt, 32);
