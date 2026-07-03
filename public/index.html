@@ -2480,7 +2480,8 @@ async function loadEngineData(){
 }
 
 /* ── Metric computations (ported formulas) ── */
-function engNetBalance(){ return allAccts.reduce((s,a)=>a.type==='credit'?s-((a.balances&&a.balances.current)??0):s+((a.balances&&a.balances.current)??0),0); }
+function _isDebtAcct(a){ return !!(a && (a.type==='credit' || a.type==='loan')); }   // Plaid loans (mortgage/auto/student) carry positive balances = money OWED
+function engNetBalance(){ return allAccts.reduce((s,a)=>_isDebtAcct(a)?s-((a.balances&&a.balances.current)??0):s+((a.balances&&a.balances.current)??0),0); }
 function engRecent(days){ const cut=new Date(Date.now()-days*86400000); return allTxns.filter(t=>new Date(t.date)>=cut); }
 
 /* ── P&L engine: group income vs spending by day/week/month with full stats ── */
@@ -2519,7 +2520,7 @@ function engPLSample(group){
 }
 
 /* ── Accounts engine: list with type icons + per-account 30d net ── */
-function _acctIcon(a){ if(a.type==='credit')return '💳'; if(a.subtype==='savings')return '🏦'; if(a.subtype==='checking')return '🏧'; if(a.type==='investment')return '📈'; return '💰'; }
+function _acctIcon(a){ if(a.type==='credit')return '💳'; if(a.type==='loan')return '📄'; if(a.subtype==='savings')return '🏦'; if(a.subtype==='checking')return '🏧'; if(a.type==='investment')return '📈'; return '💰'; }
 function engAccounts(){
   const manual=(APP.manualAccounts||[]).map(a=>({...a, manual:true}));
   if(!dataLoaded||!allAccts.length){
@@ -2532,7 +2533,7 @@ function engAccounts(){
   }
   return allAccts.map((a,i)=>({
     name:(a.name||a.official_name||a.type), type:a.type, subtype:a.subtype,
-    bal:(a.type==='credit'?-(Math.abs(a.balances.current||0)):(a.balances.current??a.balances.available??0)),
+    bal:(_isDebtAcct(a)?-(Math.abs(a.balances.current||0)):(a.balances.current??a.balances.available??0)),
     institution:a.institution||'', id:a.account_id||('a'+i), _acct:a
   })).concat(manual);
 }
@@ -2545,7 +2546,7 @@ function engAcctNet30(acct){
 }
 function engAcctTypeTotals(){
   const accts=engAccounts(); const t={cash:0,investment:0,credit:0};
-  accts.forEach(a=>{ if(a.type==='credit')t.credit+=Math.abs(a.bal); else if(a.type==='investment')t.investment+=a.bal; else t.cash+=a.bal; });
+  accts.forEach(a=>{ if(_isDebtAcct(a))t.credit+=Math.abs(a.bal); else if(a.type==='investment')t.investment+=a.bal; else t.cash+=a.bal; });
   return t;
 }
 
@@ -2750,7 +2751,7 @@ function engIncome(days){ return engRecent(days).filter(t=>t.amount<0).reduce((s
 const TIMEFRAMES=[{key:'1w',label:'1 wk',days:7},{key:'30d',label:'30 days',days:30},{key:'3m',label:'3 mo',days:90},{key:'1y',label:'1 yr',days:365}];
 function tfDays(key){ const t=TIMEFRAMES.find(x=>x.key===key); return t?t.days:30; }
 function tfLabel(key){ const t=TIMEFRAMES.find(x=>x.key===key); return t?t.label:'30 days'; }
-function engTotalDebt(){ return allAccts.filter(a=>a.type==='credit').reduce((s,a)=>s+Math.abs((a.balances&&a.balances.current)||0),0); }
+function engTotalDebt(){ return allAccts.filter(a=>_isDebtAcct(a)).reduce((s,a)=>s+Math.abs((a.balances&&a.balances.current)||0),0); }
 function engCategoryBreakdown(days){
   const rec=engRecent(days).filter(t=>t.amount>0); const byCat={};
   rec.forEach(t=>{ const c=getTxnCategory(t); byCat[c]=(byCat[c]||0)+t.amount; });
@@ -6237,7 +6238,7 @@ function widgetDetailContent(type, days){
       return { title:'Income sources', sub:`${fmtK(tot)}/mo from ${items.length} sources`, body:`<div class="wdt-total" style="color:var(--green)">${fmtK(tot)}<span>per month</span></div>${_detailRows(items,tot)}` };
     }
     case 'net_worth_summary': case 'net_worth_chart': {
-      if(live){ const acctA=allAccts.filter(a=>a.type!=='credit').map(a=>({label:(a.name||a.official_name||a.type),value:(a.balances&&a.balances.current)||0,note:a.institution||'bank'})); const acctD=allAccts.filter(a=>a.type==='credit').map(a=>({label:(a.name||'Credit'),value:Math.abs((a.balances&&a.balances.current)||0),note:a.institution||'bank'})); const manA=nwAssets.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat||'manual'})); const manL=nwLiab.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat||'manual'})); const assets=acctA.concat(manA); const debts=acctD.concat(manL); const aTot=assets.reduce((s,a)=>s+a.value,0); const dTot=debts.reduce((s,d)=>s+d.value,0); const net=engNetBalance()+engNWAssets()-engNWLiab();
+      if(live){ const acctA=allAccts.filter(a=>!_isDebtAcct(a)).map(a=>({label:(a.name||a.official_name||a.type),value:(a.balances&&a.balances.current)||0,note:a.institution||'bank'})); const acctD=allAccts.filter(a=>_isDebtAcct(a)).map(a=>({label:(a.name||'Debt'),value:Math.abs((a.balances&&a.balances.current)||0),note:a.institution||'bank'})); const manA=nwAssets.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat||'manual'})); const manL=nwLiab.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat||'manual'})); const assets=acctA.concat(manA); const debts=acctD.concat(manL); const aTot=assets.reduce((s,a)=>s+a.value,0); const dTot=debts.reduce((s,d)=>s+d.value,0); const net=engNetBalance()+engNWAssets()-engNWLiab();
         return { title:'Net worth breakdown', sub:`${fmtK(net)} net · ${fmtK(aTot)} assets − ${fmtK(dTot)} debts`, body:`<div class="wdt-total">${fmtK(net)}<span>net worth</span></div><div class="wdt-section">Assets</div>${_detailRows(assets,aTot)}<div class="wdt-section">Debts</div>${_detailRows(debts,dTot)}` }; }
       const a=nwAssets.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat})); const l=nwLiab.map(x=>({label:x.name,value:x.value,note:x.cat})); const aT=engNWAssets(),lT=engNWLiab();
       return { title:'Net worth breakdown', sub:`${fmtK(aT-lT)} net`, body:`<div class="wdt-total">${fmtK(aT-lT)}<span>net worth</span></div><div class="wdt-section">Assets</div>${_detailRows(a,aT)}<div class="wdt-section">Liabilities</div>${_detailRows(l,lT)}` };
