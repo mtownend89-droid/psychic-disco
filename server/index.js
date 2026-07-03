@@ -597,24 +597,22 @@ console.log(`Loaded ${store.accessTokens.length} saved connection(s)`);
 
 // ── PROTECTED ROUTES ──────────────────────────────────────────────────────────
 app.post('/api/create_link_token', requireAuth, async (req, res) => {
+  const base = {
+    user: { client_user_id: 'matt-dana' },
+    client_name: 'Matt & Dana Finance',
+    country_codes: [CountryCode.Us],
+    language: 'en',
+  };
   try {
     const r = await plaidClient.linkTokenCreate({
-      user: { client_user_id: 'matt-dana' },
-      client_name: 'Matt & Dana Finance',
-      products: [Products.Transactions, Products.Liabilities],
-      country_codes: [CountryCode.Us],
-      language: 'en',
+      ...base,
+      products: [Products.Transactions],              // widely supported → asset-only banks connect
+      optional_products: [Products.Liabilities],       // fetched when the bank has them, never blocks linking
     });
     res.json({ link_token: r.data.link_token });
   } catch (err) {
-    try {
-      const r = await plaidClient.linkTokenCreate({
-        user: { client_user_id: 'matt-dana' },
-        client_name: 'Matt & Dana Finance',
-        products: [Products.Transactions],
-        country_codes: [CountryCode.Us],
-        language: 'en',
-      });
+    try {   // fallback for environments that reject optional_products
+      const r = await plaidClient.linkTokenCreate({ ...base, products: [Products.Transactions] });
       res.json({ link_token: r.data.link_token });
     } catch (e) {
       const pd = (e.response && e.response.data) || {};
