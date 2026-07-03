@@ -466,6 +466,25 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .lrec-code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:16px;font-weight:700;letter-spacing:1px;color:var(--green);background:var(--surface);border:1px dashed var(--green);border-radius:8px;padding:10px;text-align:center;word-break:break-all;}
 .lrec-note{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.5;}
 .cpw-form{display:flex;flex-direction:column;gap:9px;}
+/* ── Richie step-by-step wizard ── */
+.rwiz-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:20px;}
+.rwiz-card{width:100%;max-width:440px;background:var(--surface1,var(--surface2));border:1px solid var(--border);border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.5);padding:22px;position:relative;}
+.rwiz-x{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;}
+.rwiz-x:hover{color:var(--text);}
+.rwiz-head{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+.rwiz-char{font-size:46px;line-height:1;flex-shrink:0;display:inline-block;}
+.rwiz-title{font-size:16px;font-weight:700;color:var(--text);}
+.rwiz-step-label{font-size:11.5px;color:var(--muted);margin-top:2px;}
+.rwiz-dots{display:flex;gap:6px;margin:0 0 16px;}
+.rwiz-dot{height:5px;flex:1;border-radius:3px;background:var(--surface3);transition:background .25s;}
+.rwiz-dot.active{background:var(--green);}
+.rwiz-dot.done{background:var(--green-dim);}
+.rwiz-steptitle{font-size:15px;font-weight:600;color:var(--text);margin-bottom:7px;}
+.rwiz-msg{font-size:13.5px;color:var(--text-secondary,var(--muted));line-height:1.6;}
+.rwiz-action{margin-top:14px;}
+.rwiz-actbtn{width:100%;}
+.rwiz-nav{display:flex;justify-content:space-between;gap:10px;margin-top:20px;}
+.rwiz-nav .btn{min-width:96px;}
 .env-production{background:var(--green-dim);color:var(--green);}
 #page-content{
   padding:24px 28px;flex:1;min-height:0;
@@ -2020,6 +2039,30 @@ canvas.chart-interactive{cursor:crosshair;}
   </div>
 </div>
 
+<!-- ═══ RICHIE STEP-BY-STEP WIZARD (reusable) ═══ -->
+<div id="richieWiz" class="rwiz-overlay" style="display:none">
+  <div class="rwiz-card">
+    <button class="rwiz-x" onclick="rwizClose()" title="Close">×</button>
+    <div class="rwiz-head">
+      <span class="rwiz-char" id="rwizChar">💰</span>
+      <div style="min-width:0">
+        <div class="rwiz-title" id="rwizTitle">Step by step</div>
+        <div class="rwiz-step-label" id="rwizStepLabel">Step 1</div>
+      </div>
+    </div>
+    <div class="rwiz-dots" id="rwizDots"></div>
+    <div class="rwiz-body">
+      <div class="rwiz-steptitle" id="rwizStepTitle"></div>
+      <div class="rwiz-msg" id="rwizMsg"></div>
+      <div class="rwiz-action" id="rwizAction" style="display:none"></div>
+    </div>
+    <div class="rwiz-nav">
+      <button class="btn" id="rwizBack" onclick="rwizPrev()">Back</button>
+      <button class="btn primary" id="rwizNext" onclick="rwizNext()">Next</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ RICHIE WELCOME-BACK + SWOT ═══ -->
 <div id="welcomeBack" style="display:none">
   <div class="ri-bg"></div>
@@ -2137,6 +2180,7 @@ canvas.chart-interactive{cursor:crosshair;}
             <div class="um-sub" id="umSub">—</div>
           </div>
         </div>
+        <button class="um-item" onclick="startGettingStarted()"><span>🧭</span> Getting started</button>
         <button class="um-item" onclick="openUserInfo()"><span>👤</span> User info</button>
         <button class="um-item" onclick="closeUserMenu();openChangePassword()"><span>🔑</span> Change password</button>
         <button class="um-item" onclick="switchUser()"><span>🔄</span> Switch user</button>
@@ -2480,10 +2524,10 @@ function engAccounts(){
   const manual=(APP.manualAccounts||[]).map(a=>({...a, manual:true}));
   if(!dataLoaded||!allAccts.length){
     return [
-      {name:'Chase Checking',type:'depository',subtype:'checking',bal:5240,institution:'Chase',id:'s1'},
-      {name:'Ally Savings',type:'depository',subtype:'savings',bal:8030,institution:'Ally',id:'s2'},
-      {name:'Fidelity 401k',type:'investment',subtype:'401k',bal:142800,institution:'Fidelity',id:'s3'},
-      {name:'Sapphire Card',type:'credit',subtype:'credit card',bal:-2400,institution:'Chase',id:'s4'},
+      {name:'Checking (example)',type:'depository',subtype:'checking',bal:2500,institution:'Example Bank',id:'s1'},
+      {name:'Savings (example)',type:'depository',subtype:'savings',bal:6000,institution:'Example Bank',id:'s2'},
+      {name:'Retirement (example)',type:'investment',subtype:'401k',bal:15000,institution:'Example',id:'s3'},
+      {name:'Credit Card (example)',type:'credit',subtype:'credit card',bal:-750,institution:'Example',id:'s4'},
     ].concat(manual);
   }
   return allAccts.map((a,i)=>({
@@ -2624,7 +2668,7 @@ function editIncome(i){
   gg('manualSub').textContent='How much, how often, and when the next one lands.';
   gg('manualBody').innerHTML=`
     <label class="mf-label">Name</label>
-    <input class="mf-in" id="incName" value="${esc(s.name||'')}" placeholder="e.g. Matt Paycheck">
+    <input class="mf-in" id="incName" value="${esc(s.name||'')}" placeholder="e.g. Paycheck">
     <div class="mf-row">
       <div><label class="mf-label">Amount per check</label><input class="mf-in" id="incAmt" type="number" value="${s.amt||''}" placeholder="0"></div>
       <div><label class="mf-label">Frequency</label><select class="mf-in" id="incFreq" onchange="incFreqChange()">${freqOpts.map(o=>`<option value="${o[0]}"${s.freq===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select></div>
@@ -2842,70 +2886,36 @@ function engBudgetVsActual(days){
 
 /* ── Real financial data (ported from live app) ── */
 let bills=[
-  {cat:'HM',name:"M&T Mortgage",note:'Mortgage',apr:2.625,due:5,bal:-292452.38,min:2638.46,pay:2638.46,promo:'',promoEnd:'',limit:0,paid:false},
-  {cat:'LOAN',name:'Navy HELOC',note:'Navy Federal',apr:7.75,due:1,bal:-45427.90,min:454.28,pay:461.64,promo:'',promoEnd:'',limit:0,paid:false},
-  {cat:'LOAN',name:'Windows Loan',note:'0% Promo',apr:0,due:12,bal:-11339.55,min:315.00,pay:315.00,promo:'0% 3yr',promoEnd:'2027-12-01',limit:0,paid:false},
-  {cat:'CAR',name:'Dana Auto',note:'Capitol 1',apr:7.86,due:15,bal:-6430.19,min:300.61,pay:300.61,promo:'',promoEnd:'',limit:0,paid:false},
-  {cat:'CAR',name:'Matt Auto',note:'Wells Fargo',apr:5.14,due:28,bal:-11865.37,min:451.50,pay:451.50,promo:'',promoEnd:'',limit:0,paid:false},
-  {cat:'CAR',name:'State Farm Ins',note:'Insurance',apr:0,due:15,bal:0,min:265.93,pay:265.93,promo:'',promoEnd:'',limit:0,paid:false},
-  {cat:'PH',name:'T-Mobile',note:'Phone',apr:0,due:1,bal:0,min:274.94,pay:274.94,promo:'',promoEnd:'',limit:0,paid:false},
-  {cat:'HM',name:'Lake Worth Utilities',note:'Utilities',apr:0,due:10,bal:0,min:321.00,pay:321.00,promo:'',promoEnd:'',limit:0,paid:false},
-  {cat:'TV',name:'Xfinity',note:'Cable',apr:0,due:29,bal:0,min:319.66,pay:319.66,promo:'',promoEnd:'',limit:0,paid:false},
-  {cat:'CC',name:'Amex Blue Cash',note:'AMEX',apr:24.49,due:3,bal:-1134.61,min:53.41,pay:256.00,promo:'0% APR',promoEnd:'2026-08-01',limit:15000,paid:false},
-  {cat:'CC',name:'Savor',note:'Capitol 1',apr:29.49,due:3,bal:-678.59,min:29.00,pay:100.00,promo:'3% Food',promoEnd:'',limit:10000,paid:false},
-  {cat:'CC',name:'Chase Freedom',note:'Chase',apr:0,due:3,bal:-803.71,min:40.00,pay:100.00,promo:'3% Food',promoEnd:'',limit:8000,paid:false},
-  {cat:'CC',name:'Wells Fargo Reflect',note:'Wells Fargo',apr:0,due:12,bal:-2908.35,min:73.00,pay:287.93,promo:'0% APR',promoEnd:'2027-05-01',limit:12000,paid:false},
-  {cat:'CC',name:'Best Buy CC',note:'CITI',apr:28.74,due:12,bal:-434.10,min:29.00,pay:92.61,promo:'0% APR',promoEnd:'2026-09-17',limit:5000,paid:false},
-  {cat:'CC',name:'Home Depot',note:'CITI',apr:29.99,due:6,bal:-903.68,min:29.00,pay:82.15,promo:'0% APR',promoEnd:'2027-04-01',limit:7500,paid:false},
-  {cat:'CC',name:'Harbor Freight',note:'Synchrony',apr:0,due:20,bal:-238.15,min:44.00,pay:44.00,promo:'0% APR',promoEnd:'2026-10-01',limit:3000,paid:false},
-  {cat:'CC',name:'Amazon CC',note:'Synchrony',apr:29.74,due:8,bal:-585.57,min:81.00,pay:100.00,promo:'',promoEnd:'',limit:10000,paid:false},
-  {cat:'CC',name:'Costco CC',note:'CITI',apr:18.74,due:28,bal:-152.70,min:29.00,pay:152.70,promo:'',promoEnd:'',limit:16000,paid:false},
-  {cat:'CC',name:'Double Cash Back',note:'CITI',apr:26.49,due:16,bal:-21.69,min:29.00,pay:21.69,promo:'',promoEnd:'',limit:9000,paid:false},
-  {cat:'CC',name:'Hilton Honors',note:'AMEX',apr:28.49,due:2,bal:-1268.93,min:29.00,pay:29.00,promo:'HH Points',promoEnd:'',limit:20000,paid:false},
-  {cat:'CC',name:'Platinum',note:'Capitol 1',apr:28.74,due:14,bal:-118.14,min:29.00,pay:150.00,promo:'',promoEnd:'',limit:6000,paid:false},
-  {cat:'FAM',name:'Ana Mom',note:'Family',apr:0,due:30,bal:-2500,min:204.99,pay:204.99,promo:'',promoEnd:'',limit:0,paid:false},
+  {cat:'HM',name:'Rent / Mortgage',note:'Example',apr:0,due:1,bal:0,min:1500,pay:1500,promo:'',promoEnd:'',limit:0,paid:false},
+  {cat:'CAR',name:'Car Loan',note:'Example',apr:5.9,due:15,bal:-12000,min:325,pay:325,promo:'',promoEnd:'',limit:0,paid:false},
+  {cat:'HM',name:'Utilities',note:'Example',apr:0,due:10,bal:0,min:180,pay:180,promo:'',promoEnd:'',limit:0,paid:false},
+  {cat:'CC',name:'Credit Card',note:'Example · 0% promo',apr:19.99,due:5,bal:-850,min:35,pay:150,promo:'0% APR',promoEnd:'2026-12-01',limit:5000,paid:false},
 ];
 let incomeSources=[
-  {name:'Matt Paycheck',freq:'biweekly',amt:2088.50,anchor:'2026-01-09'},
-  {name:'Dana Paycheck',freq:'weekly',amt:788.01,anchor:'2026-01-02'},
-  {name:'Auto Allowance',freq:'monthly',amt:1650.00,day:1},
-  {name:'Quarterly Bonus',freq:'quarterly',amt:3594.23,anchor:'2026-03-15'},
+  {name:'Paycheck (example)',freq:'biweekly',amt:2000,anchor:'2026-01-09'},
 ];
 let zeroBuckets=[
-  {name:'Groceries',amt:350},{name:'Dining out',amt:200},{name:'Gas',amt:300},
-  {name:'Medical',amt:150},{name:'Clothing',amt:100},{name:'Entertainment',amt:100},
-  {name:'Savings',amt:500},{name:'Emergency fund',amt:200},{name:'Misc',amt:100},
+  {name:'Groceries',amt:400},{name:'Dining out',amt:150},
+  {name:'Gas',amt:120},{name:'Savings',amt:300},
 ];
-// Sinking funds / savings buckets — each a named fund with a balance, target, and
-// optional monthly contribution. Mirrors the workbook's Savings Accounts sheet.
+// Sinking funds / savings buckets — a couple of generic examples to learn from.
 let savingsBuckets=[
-  {name:'Reserve / Opportunity',icon:'🛟',balance:4978.96,target:30000,monthly:100,note:'Amex HYSA'},
-  {name:'Home Improvement',icon:'🔨',balance:16492.05,target:30000,monthly:0,note:'Amex HYSA'},
-  {name:'Event / Family',icon:'🎉',balance:2200,target:3000,monthly:100,note:'Amex HYSA'},
-  {name:'Medical',icon:'🏥',balance:300,target:3000,monthly:0,note:'Amex HYSA'},
+  {name:'Emergency Fund',icon:'🛟',balance:1000,target:10000,monthly:100,note:'Example'},
+  {name:'Vacation',icon:'🏖️',balance:400,target:3000,monthly:50,note:'Example'},
 ];
+// Net-worth: Plaid-linked rows fill in when you connect; manual example rows start at 0 for you to edit.
 let nwAssets=[
   {cat:'Cash & Bank',name:'Checking accounts',value:0,note:'From Plaid',plaid:true},
   {cat:'Cash & Bank',name:'Savings accounts',value:0,note:'From Plaid',plaid:true},
-  {cat:'Cash & Bank',name:'Cash on hand',value:500,note:''},
-  {cat:'Investments',name:'401k / Retirement',value:0,note:'From Plaid',plaid:true},
-  {cat:'Investments',name:'IRA (Roth/Traditional)',value:0,note:'From Plaid',plaid:true},
+  {cat:'Investments',name:'Retirement (401k / IRA)',value:0,note:'From Plaid',plaid:true},
   {cat:'Investments',name:'Brokerage accounts',value:0,note:'From Plaid',plaid:true},
-  {cat:'Real Estate',name:'Primary home (est. value)',value:485000,note:'Lake Worth, FL'},
-  {cat:'Vehicles',name:"Matt's vehicle",value:18000,note:'Wells Fargo'},
-  {cat:'Vehicles',name:"Dana's vehicle",value:12000,note:'Capitol 1'},
-  {cat:'Personal Property',name:'Jewelry & collectibles',value:0,note:''},
-  {cat:'Other Assets',name:'Life insurance (cash value)',value:0,note:''},
-  {cat:'Other Assets',name:'HSA balance',value:0,note:''},
+  {cat:'Real Estate',name:'Home (example)',value:0,note:'Add your estimate'},
+  {cat:'Vehicles',name:'Vehicle (example)',value:0,note:'Add your estimate'},
 ];
 let nwLiab=[
-  {cat:'Mortgage',name:'M&T Mortgage',value:292452.38,note:'2.625%'},
-  {cat:'HELOC',name:'Navy HELOC',value:45427.90,note:'7.75%'},
-  {cat:'Auto Loans',name:'Matt Auto',value:11865.37,note:'5.14%'},
-  {cat:'Auto Loans',name:'Dana Auto',value:6430.19,note:'7.86%'},
-  {cat:'Personal Loans',name:'Windows Loan',value:11339.55,note:'0%'},
-  {cat:'Credit Cards',name:'Total CC debt',value:9248.22,note:'See bills'},
-  {cat:'Family',name:'Ana Mom',value:14000,note:'Family'},
+  {cat:'Mortgage',name:'Mortgage (example)',value:0,note:'Add your balance'},
+  {cat:'Auto Loans',name:'Car loan (example)',value:0,note:'Add your balance'},
+  {cat:'Credit Cards',name:'Credit cards (example)',value:0,note:'From bills'},
 ];
 
 /* ── Derived metrics from bills/income/net worth ── */
@@ -7787,6 +7797,59 @@ function _doSignOut(greet){
 }
 function logout(){ _doSignOut("Signed out. Sign back in when you're ready."); }
 function switchUser(){ _doSignOut('Switch user — sign in below.'); }
+
+/* ── Reusable Richie step-by-step wizard ──
+   richieWizard({ title, steps:[{title, body, action?:{label, fn, advance?}}], onDone }) */
+let _rwiz={steps:[],i:0,onDone:null}, _rwizChar=null;
+function richieWizard(cfg){
+  cfg=cfg||{};
+  _rwiz={steps:(cfg.steps||[]).filter(Boolean), i:0, onDone:cfg.onDone||null, title:cfg.title||'Step by step'};
+  if(!_rwiz.steps.length) return;
+  gg('richieWiz').style.display='flex';
+  gg('rwizTitle').textContent=_rwiz.title;
+  gg('rwizDots').innerHTML=_rwiz.steps.map((_,i)=>'<span class="rwiz-dot" id="rwizDot-'+i+'"></span>').join('');
+  try{ if(!_rwizChar) _rwizChar=new RichieEmoji(gg('rwizChar')); }catch(e){}
+  rwizRender();
+}
+function rwizRender(){
+  const st=_rwiz.steps[_rwiz.i]; if(!st) return;
+  gg('rwizStepLabel').textContent='Step '+(_rwiz.i+1)+' of '+_rwiz.steps.length;
+  gg('rwizStepTitle').textContent=st.title||'';
+  gg('rwizMsg').textContent=st.body||'';
+  const a=gg('rwizAction');
+  if(st.action && st.action.label){ a.style.display='block'; a.innerHTML='<button class="btn primary rwiz-actbtn" onclick="rwizDoAction()">'+esc(st.action.label)+'</button>'; }
+  else { a.style.display='none'; a.innerHTML=''; }
+  _rwiz.steps.forEach((_,i)=>{ const d=gg('rwizDot-'+i); if(d) d.className='rwiz-dot'+(i===_rwiz.i?' active':i<_rwiz.i?' done':''); });
+  gg('rwizBack').style.visibility=_rwiz.i>0?'visible':'hidden';
+  gg('rwizNext').textContent=_rwiz.i>=_rwiz.steps.length-1?'Done':'Next';
+  try{ if(_rwizChar) _rwizChar.do(_rwiz.i===0?'wave':'nod'); }catch(e){}
+}
+function rwizNext(){ if(_rwiz.i>=_rwiz.steps.length-1) rwizFinish(); else { _rwiz.i++; rwizRender(); } }
+function rwizPrev(){ if(_rwiz.i>0){ _rwiz.i--; rwizRender(); } }
+function rwizDoAction(){
+  const st=_rwiz.steps[_rwiz.i]; if(!st||!st.action) return;
+  if(typeof st.action.fn==='function'){ try{ st.action.fn(); }catch(e){} }
+  if(st.action.advance!==false) rwizNext();
+}
+function rwizFinish(){ const cb=_rwiz.onDone; rwizClose(); if(typeof cb==='function'){ try{ cb(); }catch(e){} } }
+function rwizClose(){ const w=gg('richieWiz'); if(w) w.style.display='none'; }
+
+/* Example flow built on the engine — the "Getting started" walkthrough. */
+function startGettingStarted(){
+  closeUserMenu();
+  richieWizard({
+    title:"Getting started with Richie",
+    steps:[
+      { title:"Hey, I'm Richie 💰", body:"I'll walk you through the basics in a few quick steps. You can leave anytime with the ✕ and come back from the user menu." },
+      { title:"Connect a bank (or explore first)", body:"Connecting a bank lets me build your dashboard from real balances and transactions. Not ready? Skip this and explore with the sample examples — nothing's real until you connect.",
+        action:{ label:"🔗 Connect a bank", fn:()=>{ try{ openLinkHandler(); }catch(e){} }, advance:false } },
+      { title:"Set a goal", body:"Richie is goals-first. Pick something to aim at — an emergency fund, paying off a card, hitting a savings rate — and I'll track it and cheer you on.",
+        action:{ label:"🎯 Add a goal", fn:()=>{ try{ rwizClose(); if(typeof openGoalCreator==='function') openGoalCreator(); else switchPage('__settings__'); }catch(e){} }, advance:false } },
+      { title:"Make it yours", body:"Add pages and drag widgets to build the dashboard you want. Tap me (the 💰 in the sidebar) anytime for a tip, or open Ask Richie for real questions about your money." },
+      { title:"You're set 🎉", body:"That's the tour. Everything's saved as you go. Head to your dashboard and start exploring — I'll be right here in the sidebar." }
+    ]
+  });
+}
 
 function _loginUsername(){ try{ return SS.getItem('mdf_user')||''; }catch(e){ return ''; } }
 function toggleUserMenu(e){
