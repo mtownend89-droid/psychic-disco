@@ -700,36 +700,20 @@ app.get('/api/transactions', requireAuth, async (req, res) => {
 
   for (const item of store.accessTokens) {
     try {
-      let cursor = store.cursor[item.itemId] || null;
-      let hasMore = true;
+      // Full sync every request (cursor from scratch) so we always return the COMPLETE
+      // transaction history — not just what changed since a stored cursor. Storing the
+      // cursor made later loads return nothing (it only reports NEW activity). transactionsSync
+      // paginates; a handful of pages covers a couple of years.
+      let cursor = null, hasMore = true, guard = 0;
       const added = [];
-
-      try {
-        while (hasMore) {
-          const params = { access_token: item.accessToken };
-          if (cursor) params.cursor = cursor;
-          const r = await plaidClient.transactionsSync(params);
-          added.push(...r.data.added);
-          cursor = r.data.next_cursor;
-          hasMore = r.data.has_more;
-        }
-      } catch (syncErr) {
-        console.warn(`Cursor reset for ${item.institutionName}:`, syncErr.response?.data?.error_code);
-        delete store.cursor[item.itemId];
-        cursor = null;
-        hasMore = true;
-        added.length = 0;
-        while (hasMore) {
-          const params = { access_token: item.accessToken };
-          const r = await plaidClient.transactionsSync(params);
-          added.push(...r.data.added);
-          cursor = r.data.next_cursor;
-          hasMore = r.data.has_more;
-        }
+      while (hasMore && guard++ < 80) {
+        const params = { access_token: item.accessToken };
+        if (cursor) params.cursor = cursor;
+        const r = await plaidClient.transactionsSync(params);
+        added.push(...r.data.added);
+        cursor = r.data.next_cursor;
+        hasMore = r.data.has_more;
       }
-
-      store.cursor[item.itemId] = cursor;
-      saveTokens(store);
       added.forEach(t => txns.push({ ...t, institution: item.institutionName }));
 
       const acctRes = await plaidClient.accountsGet({ access_token: item.accessToken });
