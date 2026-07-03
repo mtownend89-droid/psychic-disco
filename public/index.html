@@ -1318,6 +1318,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .manual-add-btn:hover{border-color:var(--green);color:var(--green);background:var(--green-dim);}
 .bill-edit{background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:0 0 0 6px;opacity:.6;}
 .acct-badge{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.3px;color:var(--green);background:var(--green-dim);border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:middle;}
+.acct-excluded{opacity:.5;}
+.acct-excluded .acct-bal{text-decoration:line-through;}
+.ae-toggle{display:flex;align-items:center;gap:9px;margin-top:14px;padding:11px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text);}
+.ae-toggle input{width:17px;height:17px;accent-color:var(--green);flex-shrink:0;}
 .bill-edit:hover{opacity:1;color:var(--green);}
 .mf-label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:12px 0 5px;}
 .mf-in{width:100%;height:40px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:0 12px;color:var(--text);font-size:14px;font-family:var(--font);outline:none;}
@@ -2498,7 +2502,7 @@ async function loadEngineData(){
 
 /* ── Metric computations (ported formulas) ── */
 function _isDebtAcct(a){ return !!(a && (a.type==='credit' || a.type==='loan')); }   // Plaid loans (mortgage/auto/student) carry positive balances = money OWED
-function engNetBalance(){ return allAccts.reduce((s,a)=>_isDebtAcct(a)?s-((a.balances&&a.balances.current)??0):s+((a.balances&&a.balances.current)??0),0); }
+function engNetBalance(){ return allAccts.reduce((s,a)=>{ if(_acctExcluded(a.name||a.official_name||a.type)) return s; const c=(a.balances&&a.balances.current)??0; return _isDebtAcct(a)?s-c:s+c; },0); }
 function engRecent(days){ const cut=new Date(Date.now()-days*86400000); return allTxns.filter(t=>new Date(t.date)>=cut); }
 
 /* ── P&L engine: group income vs spending by day/week/month with full stats ── */
@@ -2538,8 +2542,9 @@ function engPLSample(group){
 
 /* ── Accounts engine: list with type icons + per-account 30d net ── */
 function _acctIcon(a){ if(a.type==='credit')return '💳'; if(a.type==='loan')return '📄'; if(a.subtype==='savings')return '🏦'; if(a.subtype==='checking')return '🏧'; if(a.type==='investment')return '📈'; return '💰'; }
+function _acctExcluded(nameOrObj){ const nm=(typeof nameOrObj==='string')?nameOrObj:(nameOrObj&&nameOrObj.name); return !!((APP.cardData||{})[_cardKey(nm)]||{}).excluded; }
 function engAccounts(){
-  const manual=(APP.manualAccounts||[]).map(a=>({...a, manual:true}));
+  const manual=(APP.manualAccounts||[]).map(a=>({...a, manual:true, excluded:_acctExcluded(a.name)}));
   if(!dataLoaded||!allAccts.length){
     return [
       {name:'Checking (example)',type:'depository',subtype:'checking',bal:2500,institution:'Example Bank',id:'s1'},
@@ -2548,11 +2553,15 @@ function engAccounts(){
       {name:'Credit Card (example)',type:'credit',subtype:'credit card',bal:-750,institution:'Example',id:'s4'},
     ].concat(manual);
   }
-  return allAccts.map((a,i)=>({
-    name:(a.name||a.official_name||a.type), type:a.type, subtype:a.subtype,
-    bal:(_isDebtAcct(a)?-(Math.abs(a.balances.current||0)):(a.balances.current??a.balances.available??0)),
-    institution:a.institution||'', id:a.account_id||('a'+i), _acct:a
-  })).concat(manual);
+  return allAccts.map((a,i)=>{
+    const nm=(a.name||a.official_name||a.type);
+    const cd=(APP.cardData||{})[_cardKey(nm)]||{};
+    return {
+      name:(cd.nickname||nm), rawName:nm, type:a.type, subtype:a.subtype,
+      bal:(_isDebtAcct(a)?-(Math.abs(a.balances.current||0)):(a.balances.current??a.balances.available??0)),
+      institution:a.institution||'', id:a.account_id||('a'+i), excluded:!!cd.excluded, _acct:a
+    };
+  }).concat(manual);
 }
 function engAcctNet30(acct){
   if(!dataLoaded||!acct._acct) return null;
@@ -2563,7 +2572,7 @@ function engAcctNet30(acct){
 }
 function engAcctTypeTotals(){
   const accts=engAccounts(); const t={cash:0,investment:0,credit:0};
-  accts.forEach(a=>{ if(_isDebtAcct(a))t.credit+=Math.abs(a.bal); else if(a.type==='investment')t.investment+=a.bal; else t.cash+=a.bal; });
+  accts.forEach(a=>{ if(a.excluded)return; if(_isDebtAcct(a))t.credit+=Math.abs(a.bal); else if(a.type==='investment')t.investment+=a.bal; else t.cash+=a.bal; });
   return t;
 }
 
@@ -2943,7 +2952,7 @@ function engMonthlyIncome(){ return (APP&&APP.incomeSources&&APP.incomeSources.l
 /* ── Cash Flow Projection: build dated income/expense events forward N days,
    then compute a running daily balance starting from current cash. ── */
 function engStartCash(cats){
-  if(cats && cats.length){ return engAccounts().filter(a=>cats.includes(getAccountCategory(a))).reduce((s,a)=>s+(a.bal||0),0); }
+  if(cats && cats.length){ return engAccounts().filter(a=>!a.excluded && cats.includes(getAccountCategory(a))).reduce((s,a)=>s+(a.bal||0),0); }
   if(dataLoaded){ return allAccts.filter(a=>a.type==='depository').reduce((s,a)=>s+((a.balances&&(a.balances.available??a.balances.current))||0),0); }
   return nwAssets.filter(a=>a.cat==='Cash & Bank').reduce((s,a)=>s+(a.value||0),0);
 }
@@ -3077,6 +3086,7 @@ function _applyCardData(list){
     if(d.limit!=null && d.limit>0 && !(merged.limit>0)) merged.limit=d.limit;
     if(d.apr!=null && d.apr>0 && !(merged.apr>0)) merged.apr=d.apr;
     if(d.minPay!=null && d.minPay>0){ merged.min=d.minPay; if(!(merged.pay>0)) merged.pay=d.minPay; }
+    if(d.dueDay!=null && d.dueDay>0) merged.due=d.dueDay;
     if(d.note) merged.note=d.note;
     return merged;
   });
@@ -4857,7 +4867,9 @@ function openAccountEditor(name){
     f+=`<div class="mf-row"><div><label class="mf-label">Interest rate (APR) %</label><input class="mf-in" id="aeApr" type="number" inputmode="decimal" value="${cd.apr||bill.apr||''}" placeholder="e.g. 6.5"></div>`
       +`<div><label class="mf-label">Monthly payment</label><input class="mf-in" id="aeMinPay" type="number" inputmode="decimal" value="${cd.minPay||bill.min||''}" placeholder="e.g. 450"></div></div>`;
   }
+  if(isCredit||isLoan) f+=`<label class="mf-label">Statement due day (1–31)</label><input class="mf-in" id="aeDue" type="number" inputmode="numeric" min="1" max="31" value="${cd.dueDay||bill.due||''}" placeholder="e.g. 15">`;
   f+=`<label class="mf-label">Note</label><input class="mf-in" id="aeNote" value="${esc(cd.note||'')}" placeholder="optional">`;
+  f+=`<label class="ae-toggle"><input type="checkbox" id="aeExcl" ${cd.excluded?'checked':''}><span>Exclude from totals &amp; net worth</span></label>`;
   gg('manualBody').innerHTML=f
     +`<div class="ws-hint">These stay attached to this account even when balances refresh live from your bank — perfect for anything Plaid doesn't send (credit line, APR, 0% promos).</div>`
     +`<div class="mf-actions"><button class="btn danger-btn" onclick="clearAccountEdits('${nEsc}')">Clear</button><button class="btn primary" onclick="saveAccountEditor('${nEsc}')">Save</button></div>`;
@@ -4870,7 +4882,9 @@ function saveAccountEditor(name){
   if(g('aePromoEnd')) f.promoEnd=g('aePromoEnd').value||'';
   if(g('aePromoAmt')) f.promoAmt=_num('aePromoAmt');
   if(g('aeMinPay'))   f.minPay=_num('aeMinPay');
+  if(g('aeDue'))      f.dueDay=_num('aeDue');
   if(g('aeNote'))     f.note=g('aeNote').value.trim();
+  f.excluded = !!(g('aeExcl') && g('aeExcl').checked);
   setCardData(name, f);
   closeManual();
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
@@ -4930,7 +4944,7 @@ function maybeWarnPromos(){
 /* ═══ CASH ON HAND — now filters by ACCOUNT CATEGORY (user-selectable) ═══ */
 function cashSummaryBody(w){
   const cats=(w.acctCats&&w.acctCats.length)?w.acctCats:['cash','savings'];
-  const accts=engAccounts().filter(a=>cats.includes(getAccountCategory(a)));
+  const accts=engAccounts().filter(a=>!a.excluded && cats.includes(getAccountCategory(a)));
   const total=accts.reduce((s,a)=>s+(a.bal||0),0);
   const top=accts.slice().sort((x,y)=>Math.abs(y.bal)-Math.abs(x.bal)).slice(0,3);
   const mx=Math.max(...top.map(a=>Math.abs(a.bal||0)),1);
@@ -5730,22 +5744,23 @@ function plLineSVG(buckets, avgNet, opts){
 let _acctOpen={};  // per-widget expanded account id
 function acctWidgetBody(w){
   const accts=engAccounts();
-  const tot=accts.reduce((s,a)=>s+a.bal,0);
+  const tot=accts.reduce((s,a)=>s+(a.excluded?0:a.bal),0);
   const tt=engAcctTypeTotals();
   const rows=accts.map((a,i)=>{
     const col=a.bal<0?'var(--red)':'var(--green)';
     const balStr=(a.bal<0?'-':'+')+fmtK(Math.abs(a.bal));
     const open=_acctOpen[w.uid]===a.id;
-    const cd=(APP.cardData||{})[_cardKey(a.name)]||{};
-    const dispName=cd.nickname||a.name;
-    const nEsc=esc(a.name).replace(/'/g,"\\'");
+    const raw=a.rawName||a.name;
+    const cd=(APP.cardData||{})[_cardKey(raw)]||{};
+    const rEsc=esc(raw).replace(/'/g,"\\'");
     const editBtn = a.manual
       ? `<button class="bill-edit" onclick="event.stopPropagation();openManualAccount(${(APP.manualAccounts||[]).findIndex(x=>x.id===a.id)})" title="Edit">\u270E</button>`
-      : `<button class="bill-edit" onclick="event.stopPropagation();openAccountEditor('${nEsc}')" title="Edit details">\u270E</button>`;
-    const promoBadge = (cd.promoEnd||a._promoEnd) ? `<span class="acct-badge">0%</span>` : '';
-    return `<div class="acct-chip${open?' open':''}" onclick="toggleAcct('${w.uid}','${a.id}')">
+      : `<button class="bill-edit" onclick="event.stopPropagation();openAccountEditor('${rEsc}')" title="Edit details">\u270E</button>`;
+    const promoBadge = cd.promoEnd ? `<span class="acct-badge">0%</span>` : '';
+    const exclBadge = a.excluded ? `<span class="acct-badge" style="color:var(--muted);background:var(--surface3)">excluded</span>` : '';
+    return `<div class="acct-chip${open?' open':''}${a.excluded?' acct-excluded':''}" onclick="toggleAcct('${w.uid}','${a.id}')">
         <span class="acct-ic">${_acctIcon(a)}</span>
-        <div class="acct-meta"><div class="acct-nm">${esc(dispName)}${promoBadge}${editBtn}</div><div class="acct-sub">${esc(a.institution||a.subtype||a.type)}${a.manual?' · manual':''}</div></div>
+        <div class="acct-meta"><div class="acct-nm">${esc(a.name)}${promoBadge}${exclBadge}${editBtn}</div><div class="acct-sub">${esc(a.institution||a.subtype||a.type)}${a.manual?' · manual':''}</div></div>
         <div class="acct-bal" style="color:${col}">${balStr}</div>
         <span class="acct-arr">${open?'▲':'▼'}</span>
       </div>${open?`<div class="acct-txns" id="acdt_${w.uid}"></div>`:''}`;
