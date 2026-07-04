@@ -1681,6 +1681,27 @@ canvas.chart-interactive{cursor:crosshair;}
 .txn-cat-sel{font-size:10.5px;color:var(--text);background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:3px 5px;max-width:48%;cursor:pointer;font-family:inherit;}
 .txn-note-in{flex:1;min-width:96px;font-size:10.5px;color:var(--text);background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:4px 7px;font-family:inherit;outline:none;}
 .txn-note-in:focus{border-color:var(--green);}
+.txf-wrap{display:flex;flex-direction:column;gap:9px;}
+.txf-search{width:100%;font-size:13px;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:9px 12px;font-family:inherit;outline:none;}
+.txf-search:focus{border-color:var(--green);}
+.txf-chips{display:flex;gap:6px;flex-wrap:wrap;}
+.txf-chip{font-size:11px;font-weight:600;padding:5px 10px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-family:inherit;white-space:nowrap;}
+.txf-chip.on{background:var(--green-dim);border-color:var(--green);color:var(--green);}
+.txf-summary{display:flex;gap:12px;font-size:11.5px;color:var(--muted);padding:2px 2px 4px;}
+.txf-summary .txf-in{color:var(--green);font-weight:700;}
+.txf-summary .txf-out{color:var(--red);font-weight:700;}
+.txf-list{display:flex;flex-direction:column;}
+.txf-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);}
+.txf-row:last-child{border-bottom:none;}
+.txf-main{flex:1;min-width:0;}
+.txf-nm{font-size:13px;font-weight:600;color:var(--text);margin-bottom:5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.txf-tag{font-size:9.5px;font-weight:700;color:var(--green);background:var(--green-dim);border-radius:5px;padding:1px 6px;}
+.txf-edit{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+.txf-tagsel{max-width:none;}
+.txf-side{text-align:right;flex-shrink:0;}
+.txf-amt{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;}
+.txf-dt{font-size:10.5px;color:var(--muted);margin-top:2px;}
+.txf-more{text-align:center;font-size:11px;color:var(--muted);padding:10px 0 2px;}
 .txn-note-in::placeholder{color:var(--muted);}
 .rchat{position:fixed;inset:0;z-index:4000;background:rgba(8,12,20,.62);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center;}
 @media(min-width:721px){ .rchat{align-items:center;} }
@@ -2464,6 +2485,23 @@ function getCatParent(label){
 }
 const _catOverrides=JSON.parse(LS.getItem('mdf_cat_overrides')||'{}');
 const _txnNotes=JSON.parse(LS.getItem('mdf_txn_notes')||'{}');
+let _txnTags=JSON.parse(LS.getItem('mdf_txn_tags')||'{}');
+const TXN_TAGS=[
+  {id:'paycheck',   label:'Paycheck',      icon:'💵'},
+  {id:'transfer',   label:'Transfer',      icon:'🔁'},
+  {id:'refund',     label:'Refund',        icon:'↩️'},
+  {id:'business',   label:'Business',      icon:'💼'},
+  {id:'reimburse',  label:'Reimbursement', icon:'🧾'},
+  {id:'subscription',label:'Subscription', icon:'🔄'},
+  {id:'ignore',     label:'Ignore',        icon:'🚫'},
+];
+const TXN_TAG_BY_ID={}; TXN_TAGS.forEach(t=>TXN_TAG_BY_ID[t.id]=t);
+function getTxnTag(t){ return _txnTags[_txnKey(t)]||''; }
+function setTxnTag(key, tag){ if(!key) return; if(tag) _txnTags[key]=tag; else delete _txnTags[key]; try{ LS.setItem('mdf_txn_tags', JSON.stringify(_txnTags)); }catch(e){} }
+// Tags that mean "not real spending" (transfers, paybacks, ignored) — excluded from spend totals.
+function _txnExcludedFromSpend(t){ const g=getTxnTag(t); return g==='transfer'||g==='ignore'||g==='reimburse'; }
+// Tags that mean "not real income" (a transfer in, a refund, etc.) — excluded from income totals.
+function _txnExcludedFromIncome(t){ const g=getTxnTag(t); return g==='transfer'||g==='ignore'||g==='refund'||g==='reimburse'; }
 function _txnKey(t){ return t.transaction_id || t.id || ((t.date||'')+'|'+(t.merchant_name||t.name||'')+'|'+t.amount); }
 function getTxnCategory(t){ const id=_txnKey(t); if(id&&_catOverrides[id])return _catOverrides[id]; const raw=(t.personal_finance_category&&t.personal_finance_category.primary)||(t.category&&t.category[0])||''; return mapPlaidCategory(raw); }
 function getTxnNote(t){ return _txnNotes[_txnKey(t)]||''; }
@@ -2771,8 +2809,8 @@ function deleteManualAccount(idx){ if(!confirm('Delete this account?'))return; A
 function engSpend30(){ return engRecent(30).filter(t=>t.amount>0).reduce((s,t)=>s+t.amount,0); }
 function engIncome30(){ return engRecent(30).filter(t=>t.amount<0).reduce((s,t)=>s+Math.abs(t.amount),0); }
 // Generalized windowed spend/income (any day count)
-function engSpend(days){ return engRecent(days).filter(t=>t.amount>0).reduce((s,t)=>s+t.amount,0); }
-function engIncome(days){ return engRecent(days).filter(t=>t.amount<0).reduce((s,t)=>s+Math.abs(t.amount),0); }
+function engSpend(days){ return engRecent(days).filter(t=>t.amount>0 && !_txnExcludedFromSpend(t)).reduce((s,t)=>s+t.amount,0); }
+function engIncome(days){ return engRecent(days).filter(t=>t.amount<0 && !_txnExcludedFromIncome(t)).reduce((s,t)=>s+Math.abs(t.amount),0); }
 // Timeframe options: label, days, and a noun for "per period"
 const TIMEFRAMES=[{key:'1w',label:'1 wk',days:7},{key:'30d',label:'30 days',days:30},{key:'3m',label:'3 mo',days:90},{key:'1y',label:'1 yr',days:365}];
 function tfDays(key){ const t=TIMEFRAMES.find(x=>x.key===key); return t?t.days:30; }
@@ -4055,6 +4093,7 @@ const WIDGET_CATALOG=[
   {id:'cashflow_planner',name:'Cash Flow Planner',icon:'📅',cat:'Cash Flow',span:2,minLevel:1,desc:'Project your running balance forward — edit bills, see your low point before it hits.'},
   {id:'goals',name:'Financial Goals',icon:'🎯',cat:'Overview',span:2,minLevel:1,desc:'Set goals, track progress automatically, and let Richie coach you to the finish.'},
   {id:'accounts_list',name:'All Accounts',icon:'🏦',cat:'Overview',span:2,minLevel:1,desc:'Every account with balances — tap to see transactions.'},
+  {id:'all_transactions',name:'All Transactions',icon:'🧾',cat:'Cash Flow',span:2,minLevel:1,desc:'Every transaction — search, categorize, and tag (paycheck, transfer, business…).'},
   {id:'sankey',name:'Money Flow (Sankey)',icon:'🔀',cat:'Cash Flow',span:2,minLevel:2,desc:'Income → category group → category, flowing left to right through your category tree.'},
   {id:'top_categories',name:'Top Categories',icon:'📊',cat:'Cash Flow',span:1,minLevel:1,desc:'Where your money goes most.'},
   {id:'category_heatmap',name:'Category Heatmap',icon:'🗓️',cat:'Cash Flow',span:2,minLevel:2,desc:'Spending by category across months — spot seasonal patterns at a glance.'},
@@ -4426,6 +4465,7 @@ function mountWidgetCharts(pg){
       if(w.type==='cashflow_planner'){ cfpMount(w); }
       if(w.type==='cashflow_chart'){ cfcMount(w); }
       if(w.type==='accounts_list'){ acctMount(w); }
+      if(w.type==='all_transactions'){ txnFeedMount(w); }
     }catch(e){ /* ignore */ }
   });
   if(typeof Chart==='undefined') return;
@@ -5826,6 +5866,88 @@ function setAcctTxnNote(uid, idx, note){
   try{ LS.setItem('mdf_txn_notes', JSON.stringify(_txnNotes)); }catch(e){}
 }
 
+/* ═══ ALL TRANSACTIONS widget — searchable feed with per-txn category, note & tag ═══ */
+let _txnFeed={}, _txnFeedKeys={};
+const TXF_FILTERS=[{id:'all',label:'All'},{id:'income',label:'Income'},{id:'spending',label:'Spending'},{id:'paycheck',label:'💵 Paychecks'},{id:'tagged',label:'Tagged'},{id:'untagged',label:'Untagged'}];
+function txnFeedBody(w){
+  const st=_txnFeed[w.uid]||(_txnFeed[w.uid]={q:'',filter:'all'});
+  return `<div class="txf-wrap">
+    <input class="txf-search" id="txfq_${w.uid}" placeholder="🔍 Search transactions…" value="${esc(st.q)}" oninput="txnFeedSearch('${w.uid}',this.value)" onclick="event.stopPropagation()">
+    <div class="txf-chips" id="txfchips_${w.uid}"></div>
+    <div class="txf-summary" id="txfsum_${w.uid}"></div>
+    <div class="txf-list" id="txflist_${w.uid}"></div>
+  </div>`;
+}
+function _txnFeedData(w){
+  const st=_txnFeed[w.uid]||{q:'',filter:'all'};
+  let list = dataLoaded ? allTxns.slice() : [
+    {date:'2026-01-08',name:'Paycheck — Employer',amount:-2000,transaction_id:'ex1',institution:'Example'},
+    {date:'2026-01-07',name:'Grocery Store',amount:82.14,transaction_id:'ex2',institution:'Example'},
+    {date:'2026-01-06',name:'Coffee Shop',amount:5.75,transaction_id:'ex3',institution:'Example'},
+    {date:'2026-01-05',name:'Electric Bill',amount:120,transaction_id:'ex4',institution:'Example'},
+    {date:'2026-01-04',name:'Transfer to Savings',amount:300,transaction_id:'ex5',institution:'Example'},
+  ];
+  const q=(st.q||'').toLowerCase().trim();
+  list=list.filter(t=>{
+    if(q){ const name=(t.merchant_name||t.name||'').toLowerCase(); const cat=getTxnCategory(t).toLowerCase(); if(!(name.includes(q)||cat.includes(q))) return false; }
+    const tag=getTxnTag(t);
+    switch(st.filter){
+      case 'income':    return t.amount<0;
+      case 'spending':  return t.amount>0;
+      case 'paycheck':  return tag==='paycheck';
+      case 'tagged':    return !!tag;
+      case 'untagged':  return !tag;
+      default:          return true;
+    }
+  });
+  list.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  return list;
+}
+function txnFeedMount(w){
+  const st=_txnFeed[w.uid]||{q:'',filter:'all'};
+  const chipsEl=gg('txfchips_'+w.uid);
+  if(chipsEl) chipsEl.innerHTML=TXF_FILTERS.map(f=>`<button class="txf-chip${st.filter===f.id?' on':''}" onclick="event.stopPropagation();txnFeedFilter('${w.uid}','${f.id}')">${esc(f.label)}</button>`).join('');
+  txnFeedRender(w);
+}
+function txnFeedRender(w){
+  const list=_txnFeedData(w);
+  const inTot=list.filter(t=>t.amount<0).reduce((s,t)=>s+Math.abs(t.amount),0);
+  const outTot=list.filter(t=>t.amount>0).reduce((s,t)=>s+t.amount,0);
+  const sumEl=gg('txfsum_'+w.uid);
+  if(sumEl) sumEl.innerHTML=`<span>${list.length} txn${list.length!==1?'s':''}</span><span class="txf-in">+${fmtK(inTot)} in</span><span class="txf-out">−${fmtK(outTot)} out</span>`;
+  const el=gg('txflist_'+w.uid); if(!el) return;
+  if(!list.length){ el.innerHTML='<div class="acct-empty">No transactions match.</div>'; _txnFeedKeys[w.uid]=[]; return; }
+  const cats=getUserCategories().filter(c=>!c.group).map(c=>c.label);
+  const keys=[]; const capped=list.slice(0,300);
+  el.innerHTML=capped.map((t,i)=>{
+    const key=_txnKey(t); keys[i]=key;
+    const pos=t.amount>0, col=pos?'var(--red)':'var(--green)', amt=(pos?'-':'+')+fmt2(Math.abs(t.amount));
+    const cat=getTxnCategory(t), note=getTxnNote(t), tag=getTxnTag(t);
+    const name=t.merchant_name||t.name||'', dt=new Date(t.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    const catList=cats.includes(cat)?cats:[cat].concat(cats);
+    const opts=catList.map(c=>`<option value="${esc(c)}"${c===cat?' selected':''}>${esc(c)}</option>`).join('');
+    const tagOpts=`<option value="">🏷️ tag…</option>`+TXN_TAGS.map(tg=>`<option value="${tg.id}"${tag===tg.id?' selected':''}>${tg.icon} ${tg.label}</option>`).join('');
+    const tagChip = tag&&TXN_TAG_BY_ID[tag]?`<span class="txf-tag">${TXN_TAG_BY_ID[tag].icon} ${esc(TXN_TAG_BY_ID[tag].label)}</span>`:'';
+    return `<div class="txf-row">
+      <div class="txf-main">
+        <div class="txf-nm">${esc(name)} ${tagChip}</div>
+        <div class="txf-edit">
+          <select class="txn-cat-sel" onclick="event.stopPropagation()" onchange="txnFeedSetCat('${w.uid}',${i},this.value)" title="Category">${opts}</select>
+          <select class="txn-cat-sel txf-tagsel" onclick="event.stopPropagation()" onchange="txnFeedSetTag('${w.uid}',${i},this.value)" title="Tag">${tagOpts}</select>
+          <input class="txn-note-in" type="text" placeholder="📝 note…" value="${esc(note)}" onclick="event.stopPropagation()" onchange="txnFeedSetNote('${w.uid}',${i},this.value)" onkeydown="if(event.key==='Enter')this.blur()">
+        </div>
+      </div>
+      <div class="txf-side"><div class="txf-amt" style="color:${col}">${amt}</div><div class="txf-dt">${dt}${t.institution?' · '+esc(t.institution):''}</div></div>
+    </div>`;
+  }).join('') + (list.length>capped.length?`<div class="txf-more">Showing 300 of ${list.length} — search to narrow.</div>`:'');
+  _txnFeedKeys[w.uid]=keys;
+}
+function txnFeedSearch(uid,val){ (_txnFeed[uid]=_txnFeed[uid]||{q:'',filter:'all'}).q=val; const w=_findWidget(uid); if(w) txnFeedRender(w); }
+function txnFeedFilter(uid,f){ (_txnFeed[uid]=_txnFeed[uid]||{q:'',filter:'all'}).filter=f; const w=_findWidget(uid); if(w) txnFeedMount(w); }
+function txnFeedSetCat(uid,idx,cat){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; if(cat)_catOverrides[k]=cat; else delete _catOverrides[k]; try{LS.setItem('mdf_cat_overrides',JSON.stringify(_catOverrides));}catch(e){} const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+function txnFeedSetNote(uid,idx,note){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; if(note&&note.trim())_txnNotes[k]=note.trim(); else delete _txnNotes[k]; try{LS.setItem('mdf_txn_notes',JSON.stringify(_txnNotes));}catch(e){} }
+function txnFeedSetTag(uid,idx,tag){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; setTxnTag(k,tag); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+
 function fdWidgetBody(w){
   if(!_fd.scenario) _fd.scenario='job';
   const cards=Object.entries(FD_SCENARIOS).map(([id,sc])=>`<div class="fd-scen${_fd.scenario===id?' active':''}" onclick="fdSetScenario('${id}')">
@@ -6293,6 +6415,7 @@ function renderWidgetBody(w){
     case 'cashflow_planner': return cfpWidgetBody(w);
     case 'goals': return goalsWidgetBody(w);
     case 'accounts_list': return acctWidgetBody(w);
+    case 'all_transactions': return txnFeedBody(w);
     case 'sankey': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Income → group → category${dataLoaded?' · last '+tfLabel(w.tf||'30d'):' · sample'}</div><div style="position:relative"><canvas id="cv_${w.uid}"></canvas></div></div>`;
     case 'net_worth_chart': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Net worth trend${dataLoaded?'':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
     case 'fire_progress': { const target=engMonthlyBills()*12*25; const cur=dataLoaded?Math.max(engNWAssets(),engNetBalance()):engNWAssets(); const pct=target>0?Math.min(100,Math.round(cur/target*100)):0; return `<div class="wph"><div class="wph-stat">${pct}%</div><div class="wph-sub">to FI (${fmtM(target)} target)</div><div class="xp-bar" style="margin-top:8px"><div class="xp-fill" style="width:${pct}%"></div></div></div>`; }
@@ -6616,7 +6739,7 @@ function doFullReset(){
   const v=(gg('resetConfirmInput').value||'').trim().toUpperCase();
   if(v!=='YES') return;  // hard guard — only proceeds on an exact YES
   try{
-    ['richie_setup','richie_app','mdf_categories','mdf_cat_overrides','mdf_txn_notes','mdf_fire','mdf_acct_cats'].forEach(k=>{ try{LS.removeItem(k);}catch(e){} });
+    ['richie_setup','richie_app','mdf_categories','mdf_cat_overrides','mdf_txn_notes','mdf_fire','mdf_acct_cats','mdf_txn_tags'].forEach(k=>{ try{LS.removeItem(k);}catch(e){} });
     try{ SS.removeItem('mdf_token'); SS.removeItem('mdf_auth'); }catch(e){}
     // defensive sweep of any remaining app-scoped keys
     try{ Object.keys(window.localStorage||{}).forEach(k=>{ if(/^(richie_|mdf_)/.test(k)) window.localStorage.removeItem(k); }); }catch(e){}
