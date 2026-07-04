@@ -1681,6 +1681,11 @@ canvas.chart-interactive{cursor:crosshair;}
 .txn-cat-sel{font-size:10.5px;color:var(--text);background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:3px 5px;max-width:48%;cursor:pointer;font-family:inherit;}
 .txn-note-in{flex:1;min-width:96px;font-size:10.5px;color:var(--text);background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:4px 7px;font-family:inherit;outline:none;}
 .txn-note-in:focus{border-color:var(--green);}
+.acct-txn-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:3px;}
+.acct-txn-cat{font-size:10.5px;font-weight:600;color:var(--muted);background:var(--surface3);border-radius:5px;padding:1px 7px;}
+.acct-txn-note{font-size:10.5px;color:var(--muted);font-style:italic;}
+.acct-txn-hint{font-size:10.5px;color:var(--muted);text-align:center;padding:9px 0 2px;}
+.acct-txn-hint b{color:var(--text);}
 .txf-wrap{display:flex;flex-direction:column;gap:9px;}
 .txf-search{width:100%;font-size:13px;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:9px 12px;font-family:inherit;outline:none;}
 .txf-search:focus{border-color:var(--green);}
@@ -2985,7 +2990,7 @@ let nwLiab=[
 
 /* ── Derived metrics from bills/income/net worth ── */
 const FREQ_TO_MONTHLY={weekly:52/12, biweekly:26/12, monthly:1, quarterly:1/3, annual:1/12, yearly:1/12};
-function engMonthlyIncome(){ return (APP&&APP.incomeSources&&APP.incomeSources.length?APP.incomeSources:incomeSources).reduce((s,i)=>s+i.amt*(FREQ_TO_MONTHLY[i.freq]||1),0); }
+function engMonthlyIncome(){ return _effectiveIncomeSources().reduce((s,i)=>s+i.amt*(FREQ_TO_MONTHLY[i.freq]||1),0); }
 
 /* ── Cash Flow Projection: build dated income/expense events forward N days,
    then compute a running daily balance starting from current cash. ── */
@@ -2994,10 +2999,28 @@ function engStartCash(cats){
   if(dataLoaded){ return allAccts.filter(a=>a.type==='depository').reduce((s,a)=>s+((a.balances&&(a.balances.available??a.balances.current))||0),0); }
   return nwAssets.filter(a=>a.cat==='Cash & Bank').reduce((s,a)=>s+(a.value||0),0);
 }
-// Allow user to override income source amounts/cadence (persisted in APP)
+// Build a recurring income source from transactions the user tagged "Paycheck" in the
+// All Transactions widget — the single source of truth for pay. Detects amount + cadence.
+function _paycheckSource(){
+  const pcs=(dataLoaded?allTxns:[]).filter(t=>getTxnTag(t)==='paycheck' && t.amount<0)
+                                    .sort((a,b)=>new Date(a.date)-new Date(b.date));
+  if(!pcs.length) return null;
+  const amt=Math.round(pcs.reduce((s,t)=>s+Math.abs(t.amount),0)/pcs.length);
+  let freq='biweekly', anchor=pcs[pcs.length-1].date;
+  if(pcs.length>=2){
+    const gaps=[]; for(let i=1;i<pcs.length;i++) gaps.push((new Date(pcs[i].date)-new Date(pcs[i-1].date))/86400000);
+    gaps.sort((a,b)=>a-b); const med=gaps[Math.floor(gaps.length/2)]||14;
+    freq = med<=8?'weekly' : med<=18?'biweekly' : med<=45?'monthly' : med<=100?'quarterly' : 'monthly';
+  }
+  return {name:'Paycheck (tagged)', amt, freq, anchor, fromTags:true};
+}
+// Income sources: tagged paychecks win for the paycheck stream (keeping any other manual
+// streams like freelance); otherwise fall back to the user's manual sources / seed.
 function _effectiveIncomeSources(){
-  if(APP.incomeSources && APP.incomeSources.length) return APP.incomeSources;
-  return incomeSources;
+  const base = (APP.incomeSources && APP.incomeSources.length) ? APP.incomeSources : incomeSources;
+  const pc=_paycheckSource();
+  if(pc) return [pc, ...base.filter(s=>!/pay ?check/i.test(s.name||''))];
+  return base;
 }
 // generate income events with REAL date-anchored cadence within the window.
 // Walking actual calendar dates makes biweekly streams naturally land 3x in some
@@ -5832,22 +5855,18 @@ function acctMount(w){
   const net=info.net;
   let html=`<div class="acct-txn-head">${info.count} txns · last 30d · net <b style="color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'+':'-'}${fmt2(Math.abs(net))}</b></div>`;
   if(!info.txns.length){ html+='<div class="acct-empty">No transactions in last 30 days.</div>'; el.innerHTML=html; return; }
-  const cats=getUserCategories().filter(c=>!c.group).map(c=>c.label);
   const keys=[];
-  html+=info.txns.map((t,i)=>{ const key=_txnKey(t); keys[i]=key; const pos=t.amount>0; const col=pos?'var(--red)':'var(--green)'; const amt=(pos?'-':'+')+fmt2(Math.abs(t.amount)); const cat=getTxnCategory(t); const note=getTxnNote(t); const name=t.merchant_name||t.name||''; const dt=new Date(t.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
-      const catList=cats.includes(cat)?cats:[cat].concat(cats);
-      const opts=catList.map(c=>`<option value="${esc(c)}"${c===cat?' selected':''}>${esc(c)}</option>`).join('');
+  html+=info.txns.map((t,i)=>{ const key=_txnKey(t); keys[i]=key; const pos=t.amount>0; const col=pos?'var(--red)':'var(--green)'; const amt=(pos?'-':'+')+fmt2(Math.abs(t.amount)); const cat=getTxnCategory(t); const note=getTxnNote(t); const tag=getTxnTag(t); const name=t.merchant_name||t.name||''; const dt=new Date(t.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      const tagChip = tag&&TXN_TAG_BY_ID[tag]?`<span class="txf-tag">${TXN_TAG_BY_ID[tag].icon} ${esc(TXN_TAG_BY_ID[tag].label)}</span>`:'';
       return `<div class="acct-txn-row">
         <div style="flex:1;min-width:0">
-          <div class="acct-txn-nm">${esc(name)}</div>
-          <div class="acct-txn-edit">
-            <select class="txn-cat-sel" onclick="event.stopPropagation()" onchange="setAcctTxnCat('${w.uid}',${i},this.value)" title="Change category">${opts}</select>
-            <input class="txn-note-in" type="text" placeholder="📝 note for later…" value="${esc(note)}" onclick="event.stopPropagation()" onchange="setAcctTxnNote('${w.uid}',${i},this.value)" onkeydown="if(event.key==='Enter')this.blur()">
-          </div>
+          <div class="acct-txn-nm">${esc(name)} ${tagChip}</div>
+          <div class="acct-txn-meta"><span class="acct-txn-cat">${esc(cat)}</span>${note?`<span class="acct-txn-note">📝 ${esc(note)}</span>`:''}</div>
         </div>
         <div style="text-align:right;flex-shrink:0"><div class="acct-txn-amt" style="color:${col}">${amt}</div><div class="acct-txn-dt">${dt}</div></div>
       </div>`;
   }).join('');
+  html+='<div class="acct-txn-hint">Edit categories, notes &amp; tags in the <b>All Transactions</b> widget.</div>';
   _acctTxnKeys[w.uid]=keys;
   el.innerHTML=html;
 }
