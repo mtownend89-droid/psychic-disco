@@ -1091,6 +1091,27 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .ace-opt-kind.asset{color:var(--green);}
 .ace-opt-kind.liability{color:#f0846c;}
 .ace-opt-check{color:var(--green);font-size:17px;font-weight:800;flex-shrink:0;}
+/* ── Consolidated hub widgets (tabs) ── */
+.hub-wrap{display:flex;flex-direction:column;gap:11px;}
+.hub-tabs{display:flex;gap:5px;background:var(--surface2);border-radius:10px;padding:4px;}
+.hub-tab{flex:1;font-size:12px;font-weight:600;padding:7px 6px;border-radius:7px;background:none;border:none;color:var(--muted);cursor:pointer;font-family:inherit;white-space:nowrap;transition:background .12s,color .12s;}
+.hub-tab.on{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.15);}
+.hub-body{min-height:40px;}
+.sts-break{margin-top:11px;border-top:1px solid var(--border);padding-top:9px;display:flex;flex-direction:column;gap:5px;}
+.sts-break div{display:flex;justify-content:space-between;font-size:12px;}
+.sts-break span{color:var(--muted);}
+.sts-break b{font-variant-numeric:tabular-nums;}
+.rec-wrap{display:flex;flex-direction:column;}
+.rec-total{font-size:13px;color:var(--muted);padding-bottom:8px;margin-bottom:4px;border-bottom:1px solid var(--border);}
+.rec-total b{color:var(--text);font-size:16px;font-weight:800;}
+.rec-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+.rec-row:last-of-type{border-bottom:none;}
+.rec-main{flex:1;min-width:0;}
+.rec-nm{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rec-sub{font-size:11px;color:var(--muted);margin-top:2px;text-transform:capitalize;}
+.rec-side{text-align:right;flex-shrink:0;}
+.rec-amt{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;}
+.rec-mo{font-size:10.5px;color:var(--muted);}
 /* ── Credit Utilization + DTI ── */
 .cu-nolimit{display:flex;flex-direction:column;gap:6px;}
 .cu-setlimit{width:100%;text-align:left;padding:10px 12px;border:1px dashed var(--amber);background:var(--amber-dim);color:var(--text);border-radius:9px;font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;}
@@ -1703,6 +1724,8 @@ canvas.chart-interactive{cursor:crosshair;}
 .txf-tag{font-size:9.5px;font-weight:700;color:var(--green);background:var(--green-dim);border-radius:5px;padding:1px 6px;}
 .txf-edit{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
 .txf-tagsel{max-width:none;}
+.txf-rulebtn{background:var(--surface3);border:1px solid var(--border);color:var(--muted);border-radius:7px;width:30px;height:30px;font-size:14px;font-weight:800;cursor:pointer;flex-shrink:0;}
+.txf-rulebtn.on{background:rgba(91,141,239,.16);border-color:#5b8def;color:#5b8def;}
 .txf-side{text-align:right;flex-shrink:0;}
 .txf-amt{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;}
 .txf-dt{font-size:10.5px;color:var(--muted);margin-top:2px;}
@@ -2508,7 +2531,16 @@ function _txnExcludedFromSpend(t){ const g=getTxnTag(t); return g==='transfer'||
 // Tags that mean "not real income" (a transfer in, a refund, etc.) — excluded from income totals.
 function _txnExcludedFromIncome(t){ const g=getTxnTag(t); return g==='transfer'||g==='ignore'||g==='refund'||g==='reimburse'; }
 function _txnKey(t){ return t.transaction_id || t.id || ((t.date||'')+'|'+(t.merchant_name||t.name||'')+'|'+t.amount); }
-function getTxnCategory(t){ const id=_txnKey(t); if(id&&_catOverrides[id])return _catOverrides[id]; const raw=(t.personal_finance_category&&t.personal_finance_category.primary)||(t.category&&t.category[0])||''; return mapPlaidCategory(raw); }
+let _catRules=JSON.parse(LS.getItem('mdf_cat_rules')||'{}');   // merchant key → category (auto-apply)
+function setCatRule(mk, cat){ if(!mk) return; if(cat) _catRules[mk]=cat; else delete _catRules[mk]; try{ LS.setItem('mdf_cat_rules', JSON.stringify(_catRules)); }catch(e){} }
+function getTxnCategory(t){
+  const id=_txnKey(t);
+  if(id&&_catOverrides[id]) return _catOverrides[id];               // 1) per-transaction override wins
+  const mk=(typeof _merchKey==='function')?_merchKey(t):'';
+  if(mk&&_catRules[mk]) return _catRules[mk];                        // 2) merchant rule ("always X")
+  const raw=(t.personal_finance_category&&t.personal_finance_category.primary)||(t.category&&t.category[0])||'';
+  return mapPlaidCategory(raw);                                      // 3) auto from Plaid
+}
 function getTxnNote(t){ return _txnNotes[_txnKey(t)]||''; }
 
 /* ── Live data layer (Plaid-backed via server API) ── */
@@ -2919,11 +2951,28 @@ function engSavingsTotal(){ return _savingsBuckets().reduce((s,b)=>s+_bucketBala
 /* ═══ BUDGET vs ACTUAL ═══
    Compares each zero-based budget envelope against actual spending in that category
    over the selected window. Falls back to sample data when no live txns. */
+// Is any category spending ahead of pace this month? (actual vs budget × fraction of month elapsed)
+function engPaceAlert(){
+  if(!dataLoaded) return null;
+  const now=new Date();
+  const dom=now.getDate(), dim=new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const frac=dom/dim;
+  if(frac<0.2) return null;   // too early in the month to judge
+  const buckets=_zbBuckets();
+  const actual={}; try{ engCategoryBreakdown(dom).forEach(r=>{ actual[r.label]=r.value; }); }catch(e){ return null; }
+  let worst=null;
+  buckets.forEach(b=>{
+    const budget=b.amt||0; if(budget<=0) return;
+    const spent=actual[b.name]||0; if(spent<25) return;
+    const expected=budget*frac;
+    if(spent>expected*1.25){ const over=spent-expected; if(!worst||over>worst.over) worst={name:b.name, spent, budget, over, daysLeft:dim-dom}; }
+  });
+  return worst;
+}
 function engBudgetVsActual(days){
   days = days||30;
   const buckets = _zbBuckets();  // category-linked envelopes ({catId,name,amt})
   const scale = days/30;
-  // actual spend by category label (live txns windowed, or a monthly sample we scale)
   let actualByLabel={}, live=false;
   if(dataLoaded){
     live=true;
@@ -3158,6 +3207,78 @@ function setCardData(name, fields){
   saveState();
 }
 function engMonthlyBills(){ return engBills().reduce((s,b)=>s+(b.pay||0),0); }
+// How much is safe to spend today: liquid cash, minus bills due before the next paycheck,
+// minus a prorated slice of goal contributions and a small buffer, spread over the days until pay.
+function engSafeToSpend(){
+  const cash=engStartCash();
+  const proj=engCashFlowProjection(35);
+  const inc=(proj.events||[]).filter(e=>e.type==='income').sort((a,b)=>a.day-b.day)[0];
+  const horizon=inc?Math.max(1,inc.day):14;
+  const billsDue=(proj.events||[]).filter(e=>e.type!=='income'&&e.day<=horizon).reduce((s,e)=>s+Math.abs(e.amt),0);
+  const goalMonthly=(typeof engSavingsBuckets==='function')?engSavingsBuckets().reduce((s,b)=>s+(b.monthly||0),0):0;
+  const goalPortion=goalMonthly*(horizon/30.44);
+  const buffer=50;
+  const pool=Math.max(0,cash-billsDue-goalPortion-buffer);
+  const perDay=horizon>0?pool/horizon:pool;
+  return {pool,perDay,horizon,cash,billsDue,goalPortion,buffer,nextIncomeDay:inc?inc.day:null};
+}
+// Detect recurring charges / subscriptions — groups outflows by merchant, keeps those
+// that repeat at a regular cadence with consistent amounts.
+function _merchKey(t){
+  let s=(t.merchant_name||t.name||'').toLowerCase();
+  s=s.replace(/\d[\d,.]*/g,' ').replace(/[^a-z ]+/g,' ')
+     .replace(/\b(com|inc|llc|co|ltd|www|http|https|pos|purchase|payment|pmt|recurring|autopay|auto|bill|debit|card|ach)\b/g,' ')
+     .replace(/\s+/g,' ').trim();
+  return s.split(' ').slice(0,2).join(' ').slice(0,26);
+}
+function engRecurring(){
+  if(!dataLoaded) return [
+    {merchant:'Streaming Service (example)',amount:15.99,cadence:'monthly',count:3,monthly:15.99,category:'Subscriptions'},
+    {merchant:'Gym (example)',amount:39.00,cadence:'monthly',count:4,monthly:39.00,category:'Health'},
+  ];
+  const groups={};
+  allTxns.filter(t=>t.amount>0 && getTxnTag(t)!=='ignore').forEach(t=>{ const k=_merchKey(t); if(k.length<3)return; (groups[k]=groups[k]||[]).push(t); });
+  const out=[];
+  Object.keys(groups).forEach(k=>{
+    const txns=groups[k]; if(txns.length<2) return;
+    txns.sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const amts=txns.map(t=>t.amount).slice().sort((a,b)=>a-b);
+    const med=amts[Math.floor(amts.length/2)];
+    if(txns.filter(t=>Math.abs(t.amount-med)<=med*0.2).length < Math.max(2,Math.ceil(txns.length*0.6))) return;
+    const gaps=[]; for(let i=1;i<txns.length;i++) gaps.push((new Date(txns[i].date)-new Date(txns[i-1].date))/86400000);
+    gaps.sort((a,b)=>a-b); const g=gaps[Math.floor(gaps.length/2)]||30;
+    let cad=null, per=0;
+    if(g>=25&&g<=35){cad='monthly';per=30.44;} else if(g>=12&&g<=18){cad='biweekly';per=14;}
+    else if(g>=5&&g<=9){cad='weekly';per=7;} else if(g>=80&&g<=100){cad='quarterly';per=91;}
+    else if(g>=350&&g<=385){cad='yearly';per=365;}
+    if(!cad) return;
+    const last=txns[txns.length-1];
+    out.push({merchant:(last.merchant_name||last.name||k), amount:med, cadence:cad, count:txns.length, lastDate:last.date, monthly:med*(30.44/per), category:getTxnCategory(last), key:_txnKey(last)});
+  });
+  return out.sort((a,b)=>b.monthly-a.monthly);
+}
+function recurringBody(w){
+  const rec=engRecurring();
+  if(!rec.length) return `<div class="wph"><div class="wph-sub">No recurring charges detected yet.</div><div class="ws-hint" style="margin-top:6px">Once you've got a couple months of transactions, Richie spots subscriptions and recurring bills automatically.</div></div>`;
+  const monthlyTot=rec.reduce((s,r)=>s+r.monthly,0);
+  const rows=rec.slice(0,20).map(r=>`<div class="rec-row">
+    <div class="rec-main"><div class="rec-nm">${esc(r.merchant)}</div><div class="rec-sub">${r.cadence} · ${esc(r.category)} · seen ${r.count}×</div></div>
+    <div class="rec-side"><div class="rec-amt">${fmtK(r.amount)}</div><div class="rec-mo">${fmtK(r.monthly)}/mo</div></div>
+  </div>`).join('');
+  return `<div class="rec-wrap"><div class="rec-total"><b>${fmtK(monthlyTot)}</b> est. recurring / month · ${rec.length} found</div>${rows}<div class="ws-hint" style="margin-top:9px">Spot one you forgot? Cancel it — or tag it <b>Subscription</b> or <b>Ignore</b> in the All Transactions widget.</div></div>`;
+}
+function safeToSpendBody(w){
+  const s=engSafeToSpend();
+  const perDay=Math.max(0,s.perDay);
+  return `<div class="wph"><div class="wph-sub">Safe to spend today</div>
+    <div class="wph-stat" style="color:${perDay>0?'var(--green)':'var(--red)'}">${fmtK(perDay)}</div>
+    <div class="wph-sub">${fmtK(s.pool)} free ${s.nextIncomeDay!=null?`until pay in ${s.horizon}d`:`over ${s.horizon} days`}</div>
+    <div class="sts-break">
+      <div><span>Cash on hand</span><b>${fmtK(s.cash)}</b></div>
+      <div><span>− Bills before pay</span><b style="color:var(--red)">${fmtK(s.billsDue)}</b></div>
+      ${s.goalPortion>0.5?`<div><span>− Goal savings</span><b style="color:var(--amber)">${fmtK(s.goalPortion)}</b></div>`:''}
+    </div></div>`;
+}
 function engBillsDebt(){ return engBills().reduce((s,b)=>s+Math.abs(b.bal||0),0); }
 
 /* ═══════════════ EXCEL EXPORT ═══════════════
@@ -4044,7 +4165,7 @@ function renderNav(){
   nav.innerHTML=APP.pages.map(pg=>`
     <div class="page-nav-btn${pg.id===APP.activePage?' active':''}" style="--page-color:${pg.color}" onclick="switchPage('${pg.id}')" role="button" tabindex="0">
       <span class="pnb-icon" style="${pg.id===APP.activePage?'background:'+pg.color:''}">${pg.icon}</span>
-      <span class="pnb-label">${pg.name}</span>
+      <span class="pnb-label">${esc(pg.name)}</span>
       <span class="pnb-actions">
         <span class="pnb-act" onclick="event.stopPropagation();openPageEditor('${pg.id}')" title="Edit" role="button">✎</span>
         <span class="pnb-act" onclick="event.stopPropagation();deletePage('${pg.id}')" title="Delete" role="button">🗑</span>
@@ -4117,17 +4238,14 @@ const WIDGET_CATALOG=[
   {id:'goals',name:'Financial Goals',icon:'🎯',cat:'Overview',span:2,minLevel:1,desc:'Set goals, track progress automatically, and let Richie coach you to the finish.'},
   {id:'accounts_list',name:'All Accounts',icon:'🏦',cat:'Overview',span:2,minLevel:1,desc:'Every account with balances — tap to see transactions.'},
   {id:'all_transactions',name:'All Transactions',icon:'🧾',cat:'Cash Flow',span:2,minLevel:1,desc:'Every transaction — search, categorize, and tag (paycheck, transfer, business…).'},
+  {id:'safe_to_spend',name:'Safe to Spend',icon:'🟢',cat:'Cash Flow',span:1,minLevel:1,desc:'How much you can spend today without touching upcoming bills or goals.'},
+  {id:'recurring',name:'Recurring & Subscriptions',icon:'🔁',cat:'Cash Flow',span:2,minLevel:1,desc:'Auto-detected subscriptions and recurring charges, with a monthly total.'},
   {id:'sankey',name:'Money Flow (Sankey)',icon:'🔀',cat:'Cash Flow',span:2,minLevel:2,desc:'Income → category group → category, flowing left to right through your category tree.'},
   {id:'top_categories',name:'Top Categories',icon:'📊',cat:'Cash Flow',span:1,minLevel:1,desc:'Where your money goes most.'},
   {id:'category_heatmap',name:'Category Heatmap',icon:'🗓️',cat:'Cash Flow',span:2,minLevel:2,desc:'Spending by category across months — spot seasonal patterns at a glance.'},
   {id:'net_worth_chart',name:'Net Worth Trend',icon:'📈',cat:'Wealth',span:2,minLevel:2,desc:'Net worth over months.'},
-  {id:'fire_progress',name:'FIRE Progress',icon:'🔥',cat:'Wealth',span:1,minLevel:3,desc:'Path to financial independence.'},
-  {id:'retirement_proj',name:'Retirement Projection',icon:'🏖\uFE0F',cat:'Wealth',span:2,minLevel:3,desc:"Where you're headed."},
-  {id:'fire_calc',name:'FIRE Calculator',icon:'🧮',cat:'Wealth',span:2,minLevel:3,desc:'Interactive retirement projection — adjust and watch it update.'},
-  {id:'debt_payoff',name:'Debt Payoff Planner',icon:'🚨',cat:'Debt',span:2,minLevel:2,desc:'Snowball or avalanche.'},
-  {id:'debt_summary',name:'Total Debt',icon:'💳',cat:'Debt',span:1,minLevel:1,desc:'What you owe at a glance.'},
-  {id:'promo_tracker',name:'0% Promo Tracker',icon:'⏳',cat:'Debt',span:2,minLevel:1,desc:'Track 0%-APR promo expirations so you pay them off before the rate jumps.'},
-  {id:'credit_util',name:'Credit Utilization',icon:'📊',cat:'Debt',span:2,minLevel:1,desc:'Utilization gauge + debt-to-income — the two numbers lenders watch.'},
+  {id:'fire_hub',name:'Wealth & FIRE',icon:'🔥',cat:'Wealth',span:2,minLevel:3,desc:'Financial-independence progress, long-term projection, and an interactive calculator — in tabs.'},
+  {id:'debt_hub',name:'Debt',icon:'💳',cat:'Debt',span:2,minLevel:1,desc:'Everything you owe in one place — balances, payoff timeline, credit utilization, and 0% promos, in tabs.'},
   {id:'fire_drill',name:'Fire Drill Simulator',icon:'🧯',cat:'Playground',span:2,minLevel:2,desc:'Stress-test your finances against job loss, disasters & more.'},
   {id:'debt_planner',name:'Debt Payoff Lab',icon:'🏔️',cat:'Playground',span:2,minLevel:2,desc:'Interactive avalanche vs. snowball with extra-payment slider.'},
 ];
@@ -4237,7 +4355,7 @@ function wsRenderPreview(){
   let body; try{ body=renderWidgetBody(_ws.w); }catch(e){ body='<div class="wph"><div class="wph-sub">preview error</div></div>'; }
   const cfg=widgetConfig(_ws.w);
   stage.innerHTML=`<div class="canvas-widget-card ${_ws.w.span===2?'span-2':''}" style="max-width:${_ws.w.span===2?'100%':'280px'};margin:0 auto">
-    <div class="canvas-widget-header"><div class="cwh-left"><span>${def.icon}</span><span class="cwh-title">${cfg.title||def.name}</span></div></div>
+    <div class="canvas-widget-header"><div class="cwh-left"><span>${def.icon}</span><span class="cwh-title">${esc(cfg.title||def.name)}</span></div></div>
     <div class="canvas-widget-body" style="${cfg.height==='tall'?'min-height:220px':''}">${body}</div>
   </div>`;
   // mount chart-type previews
@@ -4287,7 +4405,7 @@ function wsDisplayStep(){
   const accents=['','#2ecc8a','#5b8def','#f0a540','#f05c5c','#a78bfa','#38bdf8','#f472b6','#fbbf24','#34d399'];
   const seg=(label,key,opts,fn)=>`<div class="ws-section-label">${label}</div><div class="ws-seg">${opts.map(o=>`<button class="ws-segbtn${(fn?fn(c):c[key])===o[0]?' active':''}" onclick="wsSet('${key}','${o[0]}');wsRender()">${o[1]}</button>`).join('')}</div>`;
   let html=`<div class="ws-section-label">Custom title <span class="ws-hint">(blank = default)</span></div>
-    <input type="text" class="ws-input" value="${(c.title||'').replace(/"/g,'&quot;')}" placeholder="${WIDGET_BY_ID[_ws.type].name}" oninput="wsSet('title',this.value)">
+    <input type="text" class="ws-input" value="${esc(c.title||'')}" placeholder="${WIDGET_BY_ID[_ws.type].name}" oninput="wsSet('title',this.value)">
     <div class="ws-section-label">Subtitle <span class="ws-hint">(blank = default)</span></div>
     <input type="text" class="ws-input" value="${(c.subtitle||'').replace(/"/g,'&quot;')}" placeholder="optional caption" oninput="wsSet('subtitle',this.value)">
     <div class="ws-section-label">Icon <span class="ws-hint">(paste an emoji, blank = default)</span></div>
@@ -4431,7 +4549,7 @@ function renderCanvas(pg){
   if(!pg.widgets||pg.widgets.length===0){
     content.innerHTML=`<div class="canvas-page"><div class="canvas-grid"><div class="canvas-empty">
       <div class="canvas-empty-icon" style="background:${pg.color}22;color:${pg.color}">${pg.icon}</div>
-      <h2 style="margin:14px 0 6px;font-size:20px">${pg.name}</h2>
+      <h2 style="margin:14px 0 6px;font-size:20px">${esc(pg.name)}</h2>
       <p style="color:var(--muted);font-size:13.5px;max-width:380px;margin:0 auto 18px;line-height:1.6">This page is empty. Add widgets from the library to build it out.</p>
       <button class="add-widget-fab" onclick="openWidgetDrawer()">+ Add a widget</button>
     </div></div></div>`;
@@ -4456,7 +4574,7 @@ function renderCanvas(pg){
     const _bodyCls=_cfg.height==='tall'?' cwb-tall':_cfg.height==='short'?' cwb-short':'';
     return `<div class="canvas-widget-card${w.span===2?' span-2':''}${hasDetail?' has-detail':''}${_cardCls}" data-uid="${w.uid}" data-idx="${idx}">
       <div class="canvas-widget-header">
-        <div class="cwh-left"><span class="cwh-drag" title="Drag to move this widget">\u283F</span><span>${_icon}</span><div><span class="cwh-title">${(w.config&&w.config.title)||def.name}</span>${_subtitle}</div></div>
+        <div class="cwh-left"><span class="cwh-drag" title="Drag to move this widget">\u283F</span><span>${_icon}</span><div><span class="cwh-title">${esc((w.config&&w.config.title)||def.name)}</span>${_subtitle}</div></div>
         <div class="cwh-actions">
           ${detailBtn}
           <button class="cwh-btn" onclick="event.stopPropagation();toggleWidgetSpan('${w.uid}')" title="Edit widget">\u270E</button>
@@ -4489,6 +4607,8 @@ function mountWidgetCharts(pg){
       if(w.type==='cashflow_chart'){ cfcMount(w); }
       if(w.type==='accounts_list'){ acctMount(w); }
       if(w.type==='all_transactions'){ txnFeedMount(w); }
+      if(w.type==='debt_hub'){ debtHubMount(w); }
+      if(w.type==='fire_hub'){ fireHubMount(w); }
     }catch(e){ /* ignore */ }
   });
   if(typeof Chart==='undefined') return;
@@ -4618,6 +4738,37 @@ function fireSlider(id,label,min,max,step,val,fmt){
   return `<div class="fc-slider"><div class="fc-slider-hdr"><span>${label}</span><strong id="fcv_${id}">${fmt(val)}</strong></div>
     <input type="range" id="fc_${id}" min="${min}" max="${max}" step="${step}" value="${val}" oninput="fireOnInput('${id}',this.value)"></div>`;
 }
+/* ═══ WEALTH / FIRE: extracted bodies + consolidated hub ═══ */
+function fireProgressBody(w){
+  const target=engMonthlyBills()*12*25;
+  const cur=dataLoaded?Math.max(engNWAssets(),engNetBalance()):engNWAssets();
+  const pct=target>0?Math.min(100,Math.round(cur/target*100)):0;
+  return `<div class="wph"><div class="wph-stat">${pct}%</div><div class="wph-sub">to FI (${fmtM(target)} target)</div><div class="xp-bar" style="margin-top:8px"><div class="xp-fill" style="width:${pct}%"></div></div></div>`;
+}
+function retirementProjBody(w){
+  return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Projected growth</div><div style="height:140px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
+}
+// One "Wealth" widget with tabs — replaces FIRE Progress / Retirement Projection / FIRE Calculator.
+const FIRE_TABS=[{id:'fi',label:'FI Progress',fn:'fireProgressBody'},{id:'proj',label:'Projection',fn:'retirementProjBody',chart:'retirement_proj'},{id:'calc',label:'Calculator',fn:'fireWidgetBody',chart:'fire_calc'}];
+let _fireHub={};
+function fireHubBody(w){
+  const cur=_fireHub[w.uid]||'fi';
+  const tabs=FIRE_TABS.map(t=>`<button class="hub-tab${cur===t.id?' on':''}" onclick="event.stopPropagation();fireHubTab('${w.uid}','${t.id}')">${esc(t.label)}</button>`).join('');
+  return `<div class="hub-wrap"><div class="hub-tabs">${tabs}</div><div class="hub-body" id="fhub_${w.uid}"></div></div>`;
+}
+function fireHubTab(uid,tab){ _fireHub[uid]=tab; const w=_findWidget(uid); if(w) fireHubMount(w); }
+function fireHubMount(w){
+  const cur=_fireHub[w.uid]||'fi';
+  const wrap=gg('fhub_'+w.uid); if(!wrap) return;
+  const t=FIRE_TABS.find(x=>x.id===cur)||FIRE_TABS[0];
+  try{ wrap.innerHTML=window[t.fn](w); }catch(e){ wrap.innerHTML='<div class="acct-empty">—</div>'; }
+  const btns=wrap.parentElement.querySelectorAll('.hub-tab');
+  FIRE_TABS.forEach((x,i)=>{ if(btns[i]) btns[i].classList.toggle('on', x.id===cur); });
+  // draw the tab's chart if it has one (canvas is cv_<uid>, shared with fireRefresh/buildWidgetChart)
+  if(t.chart==='fire_calc'){ try{ fireRefresh(); }catch(e){} }
+  else if(t.chart==='retirement_proj'){ try{ buildWidgetChart({...w, type:'retirement_proj'}, 'cv_'+w.uid); }catch(e){} }
+}
+
 function fireWidgetBody(w){
   const U=fireState();
   return `<div class="fc-wrap">
@@ -4646,7 +4797,7 @@ function fireOnInput(id,value){
 function fireRefresh(){
   // find the active fire_calc widget canvas
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(!pg) return;
-  const w=(pg.widgets||[]).find(x=>x.type==='fire_calc'); if(!w) return;
+  const w=(pg.widgets||[]).find(x=>x.type==='fire_calc' || x.type==='fire_hub'); if(!w) return;
   const U=fireState(), proj=fireProject(U);
   const fEl=gg('fc_final'); if(fEl) fEl.textContent=fmtM(proj.finalBal);
   const mEl=gg('fc_monthly'); if(mEl) mEl.textContent=fmtK(proj.monthly)+'/mo';
@@ -5031,7 +5182,7 @@ function acctPickRender(){
   const counts={}; engAccounts().forEach(a=>{ const c=getAccountCategory(a); counts[c]=(counts[c]||0)+1; });
   const rows=ACCOUNT_CATEGORIES.map(c=>{
     const on=_acctPick.sel.includes(c.id), n=counts[c.id]||0;
-    return `<label class="acp-row${on?' on':''}"><input type="checkbox" ${on?'checked':''} onchange="acctPickToggle('${c.id}')"><span class="acp-ic">${c.icon}</span><span class="acp-nm">${c.label}<span class="acp-kind">${c.kind}</span></span><span class="acp-ct">${n}</span></label>`;
+    return `<label class="acp-row${on?' on':''}"><input type="checkbox" ${on?'checked':''} onchange="acctPickToggle('${c.id}')"><span class="acp-ic">${c.icon}</span><span class="acp-nm">${esc(c.label)}<span class="acp-kind">${c.kind}</span></span><span class="acp-ct">${n}</span></label>`;
   }).join('');
   gg('manualBody').innerHTML=`<div class="acp-list">${rows}</div><div class="ws-hint" style="margin-top:9px">Numbers show how many of your accounts fall in each type. Change an account's type in Settings → Account categories.</div><div class="mf-actions"><span></span><button class="btn primary" onclick="acctPickSave()">Done</button></div>`;
 }
@@ -5086,6 +5237,40 @@ function acctCatChoose(catId){ if(_acePick){ setAccountCategory(_acePick.key, ca
 function acctCatResetAll(){ try{ LS.removeItem('mdf_acct_cats'); }catch(e){} _acePick=null; acctCatEditorRender(); }
 
 /* ═══ CREDIT UTILIZATION + DTI WIDGET ═══ */
+/* ═══ DEBT: extracted bodies + consolidated hub ═══ */
+function debtSummaryBody(w){
+  const debts=engBills().filter(b=>b.bal<0);
+  const d=debts.reduce((s,b)=>s+Math.abs(b.bal),0);
+  const hi=debts.slice().sort((a,b)=>(b.apr||0)-(a.apr||0))[0];
+  return `<div class="wph"><div class="wph-stat" style="color:var(--red)">${fmtK(d)}</div><div class="wph-sub">across ${debts.length} balance${debts.length!==1?'s':''}</div>${hi&&hi.apr?`<div class="wph-inline"><span>Highest APR: ${esc(hi.name)}</span><b style="color:var(--amber)">${hi.apr.toFixed(1)}%</b></div>`:''}</div>`;
+}
+function debtPayoffBody(w){
+  const _b=engBills(); const totDebt=engBillsDebt(); const totPay=engMonthlyBills();
+  const avgApr=_b.filter(b=>b.bal<0&&b.apr>0).reduce((s,b,_,a)=>s+b.apr/a.length,0)||5;
+  const r=avgApr/100/12; const months=(totPay>totDebt*r)?Math.ceil(Math.log(totPay/(totPay-totDebt*r))/Math.log(1+r)):999;
+  const yrs=Math.floor(months/12), mo=months%12;
+  return `<div class="wph"><div class="wph-sub">Debt-free in (avalanche)${plaidHasLiab()?' · live':''}</div><div class="wph-stat">${months>=999?'—':yrs+' yr '+mo+' mo'}</div><div class="wph-sub">${fmtM(totDebt)} at ${avgApr.toFixed(1)}% avg APR</div></div>`;
+}
+// One "Debt" widget with tabs — replaces the separate Total Debt / Payoff / Credit / Promo cards.
+const DEBT_TABS=[{id:'owed',label:'Owed',fn:'debtSummaryBody'},{id:'payoff',label:'Payoff',fn:'debtPayoffBody'},{id:'credit',label:'Credit',fn:'creditUtilBody'},{id:'promo',label:'0% Promo',fn:'promoTrackerBody'}];
+let _debtHub={};
+function debtHubBody(w){
+  const cur=_debtHub[w.uid]||'owed';
+  const tabs=DEBT_TABS.map(t=>`<button class="hub-tab${cur===t.id?' on':''}" onclick="event.stopPropagation();debtHubTab('${w.uid}','${t.id}')">${esc(t.label)}</button>`).join('');
+  return `<div class="hub-wrap"><div class="hub-tabs">${tabs}</div><div class="hub-body" id="dhub_${w.uid}"></div></div>`;
+}
+function debtHubTab(uid,tab){ _debtHub[uid]=tab; const w=_findWidget(uid); if(w) debtHubMount(w); }
+function debtHubMount(w){
+  const cur=_debtHub[w.uid]||'owed';
+  // reflect active tab (in case body was re-rendered)
+  const wrap=gg('dhub_'+w.uid); if(!wrap) return;
+  const t=DEBT_TABS.find(x=>x.id===cur)||DEBT_TABS[0];
+  try{ wrap.innerHTML=window[t.fn](w); }catch(e){ wrap.innerHTML='<div class="acct-empty">—</div>'; }
+  // sync tab button states
+  const btns=wrap.parentElement.querySelectorAll('.hub-tab');
+  DEBT_TABS.forEach((x,i)=>{ if(btns[i]) btns[i].classList.toggle('on', x.id===cur); });
+}
+
 function creditUtilBody(w){
   const u=engCreditUtil();
   const dti=engDTI();
@@ -5376,7 +5561,7 @@ function categoryHeatmapBody(w){
   };
   const head=`<div class="hm-row hm-head"><div class="hm-cat"></div>${g.months.map(mo=>`<div class="hm-cell hm-mlabel">${mo}</div>`).join('')}<div class="hm-cell hm-avg-h">avg</div></div>`;
   const rows=cats.map(c=>{
-    const cells=c.vals.map(v=>`<div class="hm-cell" style="background:${heat(v)}" title="${c.label}: ${fmtK(v)}">${v>0?`<span class="hm-v">${v>=1000?(v/1000).toFixed(1)+'k':Math.round(v)}</span>`:''}</div>`).join('');
+    const cells=c.vals.map(v=>`<div class="hm-cell" style="background:${heat(v)}" title="${esc(c.label)}: ${fmtK(v)}">${v>0?`<span class="hm-v">${v>=1000?(v/1000).toFixed(1)+'k':Math.round(v)}</span>`:''}</div>`).join('');
     return `<div class="hm-row"><div class="hm-cat" title="${esc(c.label)}"><span class="hm-dot" style="background:${c.color}"></span>${esc(c.label)}</div>${cells}<div class="hm-cell hm-avg">${fmtK(c.avg)}</div></div>`;
   }).join('');
   return `<div class="hm-wrap">
@@ -5886,7 +6071,7 @@ function setAcctTxnNote(uid, idx, note){
 }
 
 /* ═══ ALL TRANSACTIONS widget — searchable feed with per-txn category, note & tag ═══ */
-let _txnFeed={}, _txnFeedKeys={};
+let _txnFeed={}, _txnFeedKeys={}, _txnFeedRows={};
 const TXF_FILTERS=[{id:'all',label:'All'},{id:'income',label:'Income'},{id:'spending',label:'Spending'},{id:'paycheck',label:'💵 Paychecks'},{id:'tagged',label:'Tagged'},{id:'untagged',label:'Untagged'}];
 function txnFeedBody(w){
   const st=_txnFeed[w.uid]||(_txnFeed[w.uid]={q:'',filter:'all'});
@@ -5937,22 +6122,25 @@ function txnFeedRender(w){
   const el=gg('txflist_'+w.uid); if(!el) return;
   if(!list.length){ el.innerHTML='<div class="acct-empty">No transactions match.</div>'; _txnFeedKeys[w.uid]=[]; return; }
   const cats=getUserCategories().filter(c=>!c.group).map(c=>c.label);
-  const keys=[]; const capped=list.slice(0,300);
+  const keys=[]; const capped=list.slice(0,300); _txnFeedRows[w.uid]=capped;
   el.innerHTML=capped.map((t,i)=>{
     const key=_txnKey(t); keys[i]=key;
     const pos=t.amount>0, col=pos?'var(--red)':'var(--green)', amt=(pos?'-':'+')+fmt2(Math.abs(t.amount));
     const cat=getTxnCategory(t), note=getTxnNote(t), tag=getTxnTag(t);
     const name=t.merchant_name||t.name||'', dt=new Date(t.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    const mk=_merchKey(t), hasRule=!!(mk&&_catRules[mk]);
     const catList=cats.includes(cat)?cats:[cat].concat(cats);
     const opts=catList.map(c=>`<option value="${esc(c)}"${c===cat?' selected':''}>${esc(c)}</option>`).join('');
     const tagOpts=`<option value="">🏷️ tag…</option>`+TXN_TAGS.map(tg=>`<option value="${tg.id}"${tag===tg.id?' selected':''}>${tg.icon} ${tg.label}</option>`).join('');
     const tagChip = tag&&TXN_TAG_BY_ID[tag]?`<span class="txf-tag">${TXN_TAG_BY_ID[tag].icon} ${esc(TXN_TAG_BY_ID[tag].label)}</span>`:'';
+    const ruleChip = hasRule?`<span class="txf-tag" style="color:var(--blue,#5b8def);background:rgba(91,141,239,.14)">＝ rule</span>`:'';
     return `<div class="txf-row">
       <div class="txf-main">
-        <div class="txf-nm">${esc(name)} ${tagChip}</div>
+        <div class="txf-nm">${esc(name)} ${tagChip}${ruleChip}</div>
         <div class="txf-edit">
           <select class="txn-cat-sel" onclick="event.stopPropagation()" onchange="txnFeedSetCat('${w.uid}',${i},this.value)" title="Category">${opts}</select>
           <select class="txn-cat-sel txf-tagsel" onclick="event.stopPropagation()" onchange="txnFeedSetTag('${w.uid}',${i},this.value)" title="Tag">${tagOpts}</select>
+          <button class="txf-rulebtn${hasRule?' on':''}" onclick="event.stopPropagation();txnFeedRule('${w.uid}',${i})" title="Always categorize this merchant this way">＝</button>
           <input class="txn-note-in" type="text" placeholder="📝 note…" value="${esc(note)}" onclick="event.stopPropagation()" onchange="txnFeedSetNote('${w.uid}',${i},this.value)" onkeydown="if(event.key==='Enter')this.blur()">
         </div>
       </div>
@@ -5966,6 +6154,7 @@ function txnFeedFilter(uid,f){ (_txnFeed[uid]=_txnFeed[uid]||{q:'',filter:'all'}
 function txnFeedSetCat(uid,idx,cat){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; if(cat)_catOverrides[k]=cat; else delete _catOverrides[k]; try{LS.setItem('mdf_cat_overrides',JSON.stringify(_catOverrides));}catch(e){} const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function txnFeedSetNote(uid,idx,note){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; if(note&&note.trim())_txnNotes[k]=note.trim(); else delete _txnNotes[k]; try{LS.setItem('mdf_txn_notes',JSON.stringify(_txnNotes));}catch(e){} }
 function txnFeedSetTag(uid,idx,tag){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; setTxnTag(k,tag); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+function txnFeedRule(uid,idx){ const t=(_txnFeedRows[uid]||[])[idx]; if(!t)return; const mk=_merchKey(t); if(!mk)return; if(_catRules[mk]){ setCatRule(mk,''); } else { setCatRule(mk, getTxnCategory(t)); } const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 
 function fdWidgetBody(w){
   if(!_fd.scenario) _fd.scenario='job';
@@ -6390,7 +6579,7 @@ function renderWidgetBody(w){
     case 'cash_summary': return cashSummaryBody(w);
     case 'spending_month': return discretionarySpendBody(w);
     case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); const now=Date.now(), ps=new Date(now-2*days*86400000), pe=new Date(now-days*86400000); const prev=allTxns.filter(t=>{const d=new Date(t.date);return d>=ps&&d<pe&&t.amount<0;}).reduce((s,t)=>s+Math.abs(t.amount),0); const dl=prev>0?Math.round((inc-prev)/prev*100):null; const up=dl!==null&&dl>=0; const trend=dl===null?'':`<div class="ds-trend-label" style="color:${up?'var(--green)':'var(--amber)'};margin-top:9px">${up?'▲':'▼'} ${Math.abs(dl)}% vs prior ${tfLabel(w.tf||'30d')}</div>`; const rec=engRecent(days).filter(t=>t.amount<0); const byC={}; rec.forEach(t=>{const c=getTxnCategory(t);byC[c]=(byC[c]||0)+Math.abs(t.amount);}); const top=Object.entries(byC).sort((a,b)=>b[1]-a[1])[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${trend}${top?`<div class="wph-inline"><span>Top source: ${esc(top[0])}</span><b style="color:var(--green)">${fmtK(top[1])}</b></div>`:''}</div>`; } const top=incomeSources.slice().sort((a,b)=>b.amt*(FREQ_TO_MONTHLY[b.freq]||1)-a.amt*(FREQ_TO_MONTHLY[a.freq]||1))[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">${incomeSources.length} sources \u00b7 sample</div><div class="ds-trend-label" style="color:var(--green);margin-top:9px">▲ 6% vs prior 30d</div><div class="wph-inline"><span>Top source: ${top.name}</span><b style="color:var(--green)">${fmtK(Math.round(top.amt*(FREQ_TO_MONTHLY[top.freq]||1)))}/mo</b></div></div>`; }
-    case 'debt_summary': { const debts=engBills().filter(b=>b.bal<0); const d=debts.reduce((s,b)=>s+Math.abs(b.bal),0); const hi=debts.slice().sort((a,b)=>(b.apr||0)-(a.apr||0))[0]; if(dataLoaded||plaidHasLiab()){ return `<div class="wph"><div class="wph-stat" style="color:var(--red)">${fmtK(d)}</div><div class="wph-sub">across ${debts.length} balance${debts.length!==1?'s':''}</div>${hi&&hi.apr?`<div class="wph-inline"><span>Highest APR: ${esc(hi.name)}</span><b style="color:var(--amber)">${hi.apr.toFixed(1)}%</b></div>`:''}</div>`; } return `<div class="wph"><div class="wph-stat" style="color:var(--red)">${fmtK(d)}</div><div class="wph-sub">across ${debts.length} balances</div>${hi&&hi.apr?`<div class="wph-inline"><span>Highest APR: ${esc(hi.name)}</span><b style="color:var(--amber)">${hi.apr.toFixed(1)}%</b></div>`:''}</div>`; }
+    case 'debt_summary': return debtSummaryBody(w);
     case 'category_heatmap': return categoryHeatmapBody(w);
     case 'budget_doughnut': return budgetTiersBody(w);
     case 'top_categories': { const cfg=widgetConfig(w); const days=wDays(w);
@@ -6404,7 +6593,7 @@ function renderWidgetBody(w){
       const style = cfg.chartStyle==='auto' ? (w.type==='budget_doughnut'?'doughnut':'list') : cfg.chartStyle;
       // value/pct display per item
       const itemVal=(c)=>{ const parts=[]; if(cfg.showValues&&cfg.numFormat!=='hidden') parts.push(fmtCfg(c.value,cfg,tot)); if(cfg.showPct&&tot>0) parts.push(Math.round(c.value/tot*100)+'%'); return parts.join(' · ')||fmtCfg(c.value,cfg,tot); };
-      const legendItems=cats.map((c,i)=>`<div class="cwl-item"><span class="cwl-dot" style="background:${col(c,i)}"></span><span class="cwl-label">${c.label}</span><span class="cwl-amt">${itemVal(c)}</span></div>`).join('');
+      const legendItems=cats.map((c,i)=>`<div class="cwl-item"><span class="cwl-dot" style="background:${col(c,i)}"></span><span class="cwl-label">${esc(c.label)}</span><span class="cwl-amt">${itemVal(c)}</span></div>`).join('');
       const legendOn = cfg.legend&&cfg.legendPos!=='none';
       if(style==='doughnut'||style==='pie'){
         const thick=cfg.donutThickness;
@@ -6423,10 +6612,10 @@ function renderWidgetBody(w){
       }
       if(style==='bar'){
         const mx=Math.max(...cats.map(c=>c.value),1);
-        return `<div class="wph wph-${cfg.density}">${cats.map((c,i)=>`<div class="cwl-barrow"><div class="cwl-barlabel">${c.label}</div><div class="cwl-bartrack"><div class="cwl-barfill" style="width:${Math.round(c.value/mx*100)}%;background:${col(c,i)}"></div></div><div class="cwl-barval">${itemVal(c)}</div></div>`).join('')}</div>`;
+        return `<div class="wph wph-${cfg.density}">${cats.map((c,i)=>`<div class="cwl-barrow"><div class="cwl-barlabel">${esc(c.label)}</div><div class="cwl-bartrack"><div class="cwl-barfill" style="width:${Math.round(c.value/mx*100)}%;background:${col(c,i)}"></div></div><div class="cwl-barval">${itemVal(c)}</div></div>`).join('')}</div>`;
       }
       // list
-      return `<div class="wph wph-${cfg.density}">${cats.map((c,i)=>`<div class="wph-row"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col(c,i)};margin-right:7px"></span>${c.label}</span><b>${itemVal(c)}</b></div>`).join('')}</div>`;
+      return `<div class="wph wph-${cfg.density}">${cats.map((c,i)=>`<div class="wph-row"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col(c,i)};margin-right:7px"></span>${esc(c.label)}</span><b>${itemVal(c)}</b></div>`).join('')}</div>`;
     }
     case 'bills_list': { return billsWidgetBody(w); }
     case 'cashflow_chart': return cashflowChartBody(w);
@@ -6435,12 +6624,16 @@ function renderWidgetBody(w){
     case 'goals': return goalsWidgetBody(w);
     case 'accounts_list': return acctWidgetBody(w);
     case 'all_transactions': return txnFeedBody(w);
+    case 'safe_to_spend': return safeToSpendBody(w);
+    case 'recurring': return recurringBody(w);
     case 'sankey': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Income → group → category${dataLoaded?' · last '+tfLabel(w.tf||'30d'):' · sample'}</div><div style="position:relative"><canvas id="cv_${w.uid}"></canvas></div></div>`;
     case 'net_worth_chart': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Net worth trend${dataLoaded?'':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
-    case 'fire_progress': { const target=engMonthlyBills()*12*25; const cur=dataLoaded?Math.max(engNWAssets(),engNetBalance()):engNWAssets(); const pct=target>0?Math.min(100,Math.round(cur/target*100)):0; return `<div class="wph"><div class="wph-stat">${pct}%</div><div class="wph-sub">to FI (${fmtM(target)} target)</div><div class="xp-bar" style="margin-top:8px"><div class="xp-fill" style="width:${pct}%"></div></div></div>`; }
+    case 'fire_progress': return fireProgressBody(w);
+    case 'fire_hub': return fireHubBody(w);
     case 'retirement_proj': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Projected growth</div><div style="height:140px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
     case 'fire_calc': return fireWidgetBody(w);
-    case 'debt_payoff': { const _b=engBills(); const totDebt=engBillsDebt(); const totPay=engMonthlyBills(); const avgApr=_b.filter(b=>b.bal<0&&b.apr>0).reduce((s,b,_,a)=>s+b.apr/a.length,0)||5; const r=avgApr/100/12; const months=(totPay>totDebt*r)?Math.ceil(Math.log(totPay/(totPay-totDebt*r))/Math.log(1+r)):999; const yrs=Math.floor(months/12), mo=months%12; return `<div class="wph"><div class="wph-sub">Debt-free in (avalanche)${plaidHasLiab()?' · live':''}</div><div class="wph-stat">${months>=999?'—':yrs+' yr '+mo+' mo'}</div><div class="wph-sub">${fmtM(totDebt)} at ${avgApr.toFixed(1)}% avg APR</div></div>`; }
+    case 'debt_payoff': return debtPayoffBody(w);
+    case 'debt_hub': return debtHubBody(w);
     case 'zero_budget': return zbWidgetBody(w);
     case 'budget_actual': return budgetActualBody(w);
     case 'savings_buckets': return savingsBucketsBody(w);
@@ -6630,15 +6823,13 @@ function renderSettings(){
       </div>
 
       <div class="set-card">
-        <div class="set-card-label">Richie's voice</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Pick a voice style. Tap to hear a sample. Falls back to your device's built-in voices if premium voices aren't set up.</div>
-        <div class="ri-vchips" id="setVoiceChips">${voiceChipsHTML()}</div>
-        <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
-          <button class="btn" onclick="riToggleAudio()" id="setVoiceToggle">${riAudioOn?'🔊 Voice on':'🔇 Voice off'}</button>
-          <button class="btn" onclick="riSpeak(currentPreset().sample)">▶ Preview</button>
-          <button class="btn" onclick="setRichieProactive(!_raProactiveOn)" id="setProactiveBtn">${_raProactiveOn?'🔔 Pop-in tips: on':'🔕 Pop-in tips: off'}</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
+          <div>
+            <div class="set-card-label" style="margin:0">💬 Richie auto-responses</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Let Richie pop in with a tip as you move around the app. Turn this off to keep him quiet — he'll still respond when you tap him or use Ask Richie.</div>
+          </div>
+          <button class="toggle${_raProactiveOn?' on':''}" id="proactiveToggle" onclick="setRichieProactive(!_raProactiveOn)" aria-label="Toggle Richie auto-responses"><span class="toggle-knob"></span></button>
         </div>
-        <div style="font-size:11px;color:var(--muted);margin-top:8px;opacity:0.8">Richie's voice is AI-generated, not a real person.</div>
       </div>
 
       <div class="set-card">
@@ -6758,7 +6949,7 @@ function doFullReset(){
   const v=(gg('resetConfirmInput').value||'').trim().toUpperCase();
   if(v!=='YES') return;  // hard guard — only proceeds on an exact YES
   try{
-    ['richie_setup','richie_app','mdf_categories','mdf_cat_overrides','mdf_txn_notes','mdf_fire','mdf_acct_cats','mdf_txn_tags'].forEach(k=>{ try{LS.removeItem(k);}catch(e){} });
+    ['richie_setup','richie_app','mdf_categories','mdf_cat_overrides','mdf_txn_notes','mdf_fire','mdf_acct_cats','mdf_txn_tags','mdf_cat_rules'].forEach(k=>{ try{LS.removeItem(k);}catch(e){} });
     try{ SS.removeItem('mdf_token'); SS.removeItem('mdf_auth'); }catch(e){}
     // defensive sweep of any remaining app-scoped keys
     try{ Object.keys(window.localStorage||{}).forEach(k=>{ if(/^(richie_|mdf_)/.test(k)) window.localStorage.removeItem(k); }); }catch(e){}
@@ -7065,8 +7256,9 @@ function richieDismiss(){ _raSnoozeUntil=Date.now()+30000; richieGoHome(); }
 // ── Proactive: Richie greets when you arrive on a page, and pops for events ──
 let _raProactiveOn=true; try{ const v=LS.getItem('richie_proactive'); if(v!==null)_raProactiveOn=v==='1'; }catch(e){}
 let _raLastPop=0, _raSnoozeUntil=0, _raOffTrackAt=0;
-function setRichieProactive(on){ _raProactiveOn=!!on; try{ LS.setItem('richie_proactive', on?'1':'0'); }catch(e){} const b=gg('setProactiveBtn'); if(b)b.textContent=_raProactiveOn?'🔔 Pop-in tips: on':'🔕 Pop-in tips: off'; }
+function setRichieProactive(on){ _raProactiveOn=!!on; try{ LS.setItem('richie_proactive', on?'1':'0'); }catch(e){} const b=gg('setProactiveBtn'); if(b)b.textContent=_raProactiveOn?'🔔 Pop-in tips: on':'🔕 Pop-in tips: off'; const t=gg('proactiveToggle'); if(t)t.classList.toggle('on',_raProactiveOn); if(_raProactiveOn && typeof richieSay==='function') richieSay("I'll pop in with a tip now and then. Tap me anytime too!"); else if(!_raProactiveOn){ try{ richieGoHome(); }catch(e){} } }
 function richieOffTrackSignal(pg){
+  try{ const pace=engPaceAlert(); if(pace){ return {msg:`You're moving fast on ${esc(pace.name)} — ${fmtK(pace.spent)} spent of a ${fmtK(pace.budget)} budget, with ${pace.daysLeft} day${pace.daysLeft!==1?'s':''} left this month. Want to ease off or adjust it?`, widget:'budget_actual', cta:'Show me'}; } }catch(e){}
   try{ const bills=(engUpcomingBills()||[]).filter(b=>!b.paid);
     if(bills.length>=3){ const tot=bills.reduce((s,b)=>s+(b.pay||b.amount||0),0); return {msg:`Heads up — you've got ${bills.length} bills coming up, about ${typeof fmtK==='function'?fmtK(tot):'$'+Math.round(tot)}. Want to run through them?`, widget:'bills_list', cta:'Show me'}; } }catch(e){}
   try{ const inc=engMonthlyIncome(), sp=engSpend30(); if(inc>0 && sp>inc*1.05){ return {msg:`Spending's running ahead of income this month. Want a quick look at where it's going?`, widget:'top_categories', cta:'Show me'}; } }catch(e){}
@@ -7309,8 +7501,8 @@ function riTypeText(txt){
   riSpeak(txt);
   const el=gg('riText'); let i=0; el.innerHTML='<span class="ri-cursor"></span>';
   (function step(){
-    if(i<=txt.length){ el.innerHTML=txt.slice(0,i)+'<span class="ri-cursor"></span>'; i++; riTypeTimer=setTimeout(step,20+Math.random()*28); }
-    else { el.innerHTML=txt; riTyping=false; if(riChar)riChar.talk(false);
+    if(i<=txt.length){ el.innerHTML=esc(txt.slice(0,i))+'<span class="ri-cursor"></span>'; i++; riTypeTimer=setTimeout(step,20+Math.random()*28); }
+    else { el.innerHTML=esc(txt); riTyping=false; if(riChar)riChar.talk(false);
       if(riScene===RICHIE_STORY.length-1){ gg('riCta').style.display='block'; gg('riCtaBtn').textContent="Let's build it \u2192"; } }
   })();
 }
@@ -7730,7 +7922,7 @@ function wizRenderBody(){
   const b=gg('wizBody');
   if(wizStep===1){
     b.innerHTML=`<div class="wiz-field"><label>What should I call this household?</label>
-      <input type="text" id="wizHousehold" placeholder="e.g. The Smith Household" value="${setupConfig.householdName}" oninput="setupConfig.householdName=this.value"></div>
+      <input type="text" id="wizHousehold" placeholder="e.g. The Smith Household" value="${esc(setupConfig.householdName||'')}" oninput="setupConfig.householdName=this.value"></div>
       <div class="wiz-field"><label>Who's in it? (add at least one)</label><div id="wizProfiles"></div>
       <button class="btn" onclick="wizAddProfile()" style="margin-top:6px">+ Add a person</button></div>`;
     wizRenderProfiles();
@@ -7739,7 +7931,7 @@ function wizRenderBody(){
     const p=RICHIE_PERSONAS[setupConfig.persona]; const lv=LEVELS.find(l=>l.n===setupConfig.level);
     b.innerHTML=`<div class="wiz-success">
       <span class="richie e-idle" id="wizSuccessChar" style="font-size:64px">💰</span>
-      <h2>Your plan is ready, ${setupConfig.householdName||'friend'}!</h2>
+      <h2>Your plan is ready, ${esc(setupConfig.householdName||'friend')}!</h2>
       <p>I've built your app around <strong style="color:var(--green)">${chosen.length} goal${chosen.length!==1?'s':''}</strong> — a Goals home page plus a focused page with the right widgets for each.</p>
       <div class="wiz-goal-list">${chosen.map(g=>`<div class="wiz-goal-chip">${g.icon} ${g.name}</div>`).join('')||'<div style="color:var(--muted);font-size:13px">No goals picked — I will start you with a Goals page you can fill in.</div>'}</div>
       <div class="summary-row">
@@ -7754,7 +7946,7 @@ function wizRenderProfiles(){
   const el=gg('wizProfiles'); if(!el)return; const cols=['#2ecc8a','#5b8def','#a78bfa','#f0a540'];
   el.innerHTML=setupConfig.profiles.map((p,i)=>`<div class="profile-row">
     <div class="profile-avatar-pick" style="background:${cols[i%4]}33;border-color:${cols[i%4]}" onclick="wizCycleAvatar(${i})">${p.avatar}</div>
-    <input type="text" placeholder="Name (e.g. Alex)" value="${p.name}" oninput="setupConfig.profiles[${i}].name=this.value">
+    <input type="text" placeholder="Name (e.g. Alex)" value="${esc(p.name||'')}" oninput="setupConfig.profiles[${i}].name=this.value">
     ${setupConfig.profiles.length>1?`<button class="btn" onclick="wizRemoveProfile(${i})">\u2715</button>`:''}</div>`).join('');
 }
 function wizAddProfile(){if(setupConfig.profiles.length>=6)return;setupConfig.profiles.push({name:'',avatar:'💰'});wizRenderProfiles();}
