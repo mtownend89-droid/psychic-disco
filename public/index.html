@@ -1110,6 +1110,27 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .sts-break div{display:flex;justify-content:space-between;font-size:12px;}
 .sts-break span{color:var(--muted);}
 .sts-break b{font-variant-numeric:tabular-nums;}
+.nw-manage{width:100%;margin-top:11px;padding:9px;border:1px dashed var(--green);background:var(--green-dim);color:var(--green);border-radius:9px;font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;}
+.nw-manage:hover{background:var(--surface3);}
+.nw-sec-h{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700;color:var(--text);margin-bottom:7px;}
+.nw-sec-h b{font-variant-numeric:tabular-nums;}
+.nw-list{display:flex;flex-direction:column;}
+.nw-row{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid var(--border);}
+.nw-row:last-child{border-bottom:none;}
+.nw-ic{font-size:17px;flex-shrink:0;width:22px;text-align:center;}
+.nw-nm{flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--text);display:flex;flex-direction:column;gap:1px;}
+.nw-cat{font-size:10.5px;color:var(--muted);font-weight:500;}
+.nw-val{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0;}
+.nw-ed{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:0 3px;flex-shrink:0;}
+.nw-ed:hover{color:var(--text);}
+.nw-add{width:100%;margin-top:9px;padding:9px;border:1px dashed var(--border);background:var(--surface2);color:var(--text);border-radius:9px;font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;}
+.nw-add:hover{border-color:var(--green);}
+.nw-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;}
+.nw-chip{font-size:12px;font-weight:600;padding:7px 11px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-family:var(--font);}
+.nw-chip.on{background:var(--green-dim);border-color:var(--green);color:var(--green);}
+.nw-est{display:flex;gap:7px;}
+.nw-est .mf-in{flex:1;}
+.nw-est .btn{flex-shrink:0;white-space:nowrap;}
 .rec-wrap{display:flex;flex-direction:column;}
 .rec-total{font-size:13px;color:var(--muted);padding-bottom:8px;margin-bottom:4px;border-bottom:1px solid var(--border);}
 .rec-total b{color:var(--text);font-size:16px;font-weight:800;}
@@ -1439,6 +1460,9 @@ select.mf-in{appearance:none;cursor:pointer;}
 .ce-foot{display:flex;align-items:center;gap:8px;padding:14px 20px;border-top:1px solid var(--border);}
 .wph-sub{font-size:11.5px;color:var(--muted);margin-top:2px;}
 .wph-inline{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:9px;border-top:1px solid var(--border);font-size:11.5px;color:var(--muted);}
+.cash-safe{margin:10px 0 4px;padding:9px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;}
+.cash-safe-top{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:3px;}
+.cash-safe-top b{font-size:16px;font-variant-numeric:tabular-nums;}
 .cash-list{margin-top:10px;display:flex;flex-direction:column;gap:7px;}
 .cash-row{display:flex;align-items:center;gap:8px;font-size:11.5px;}
 .cash-nm{flex:0 0 33%;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -1719,6 +1743,9 @@ canvas.chart-interactive{cursor:crosshair;}
 .txf-wrap{display:flex;flex-direction:column;gap:9px;}
 .txf-search{width:100%;font-size:13px;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:9px 12px;font-family:inherit;outline:none;}
 .txf-search:focus{border-color:var(--green);}
+.txf-tf{display:flex;gap:5px;flex-wrap:wrap;}
+.txf-tfchip{font-size:11px;font-weight:600;padding:5px 11px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-family:inherit;}
+.txf-tfchip.on{background:var(--surface3);border-color:var(--green);color:var(--green);}
 .txf-chips{display:flex;gap:6px;flex-wrap:wrap;}
 .txf-chip{font-size:11px;font-weight:600;padding:5px 10px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);cursor:pointer;font-family:inherit;white-space:nowrap;}
 .txf-chip.on{background:var(--green-dim);border-color:var(--green);color:var(--green);}
@@ -2587,7 +2614,13 @@ async function loadEngineData(){
 /* ── Metric computations (ported formulas) ── */
 function _isDebtAcct(a){ return !!(a && (a.type==='credit' || a.type==='loan')); }   // Plaid loans (mortgage/auto/student) carry positive balances = money OWED
 function engNetBalance(){ return allAccts.reduce((s,a)=>{ if(_acctExcluded(a.name||a.official_name||a.type)) return s; const c=(a.balances&&a.balances.current)??0; return _isDebtAcct(a)?s-c:s+c; },0); }
-function engRecent(days){ const cut=new Date(Date.now()-days*86400000); return allTxns.filter(t=>new Date(t.date)>=cut); }
+// Account IDs whose account the user excluded — their transactions drop out of ALL analytics.
+function _excludedAcctIds(){
+  const set=new Set();
+  (allAccts||[]).forEach(a=>{ if(_acctExcluded(a.name||a.official_name)) set.add(a.account_id); });
+  return set;
+}
+function engRecent(days){ const cut=new Date(Date.now()-days*86400000); const ex=_excludedAcctIds(); return allTxns.filter(t=>new Date(t.date)>=cut && !ex.has(t.account_id)); }
 
 /* ── P&L engine: group income vs spending by day/week/month with full stats ── */
 function engPLBuckets(days, group){
@@ -3247,7 +3280,8 @@ function engRecurring(){
     {merchant:'Gym (example)',amount:39.00,cadence:'monthly',count:4,monthly:39.00,category:'Health'},
   ];
   const groups={};
-  allTxns.filter(t=>t.amount>0 && getTxnTag(t)!=='ignore').forEach(t=>{ const k=_merchKey(t); if(k.length<3)return; (groups[k]=groups[k]||[]).push(t); });
+  const _ex=_excludedAcctIds();
+  allTxns.filter(t=>t.amount>0 && getTxnTag(t)!=='ignore' && !_ex.has(t.account_id)).forEach(t=>{ const k=_merchKey(t); if(k.length<3)return; (groups[k]=groups[k]||[]).push(t); });
   const out=[];
   Object.keys(groups).forEach(k=>{
     const txns=groups[k]; if(txns.length<2) return;
@@ -3675,8 +3709,10 @@ function goalCadenceNudge(g, cadence){
   const plan=GOAL_CADENCE[g.metric]||GOAL_CADENCE.custom;
   return plan[cadence]||plan.weekly;
 }
-function engNWAssets(){ return nwAssets.reduce((s,a)=>s+(a.value||0),0); }
-function engNWLiab(){ return nwLiab.reduce((s,l)=>s+(l.value||0),0); }
+function engNWAssets(){ return nwAssets.reduce((s,a)=>s+(a.value||0),0) + (APP.nwManualAssets||[]).reduce((s,a)=>s+(+a.value||0),0); }
+function engNWLiab(){ return nwLiab.reduce((s,l)=>s+(l.value||0),0) + (APP.nwManualLiab||[]).reduce((s,l)=>s+(+l.value||0),0); }
+function _nwManA(){ return (APP.nwManualAssets||[]).filter(x=>+x.value>0).map(x=>({label:x.name||x.cat,value:+x.value,note:x.cat||'manual'})); }
+function _nwManL(){ return (APP.nwManualLiab||[]).filter(x=>+x.value>0).map(x=>({label:x.name||x.cat,value:+x.value,note:x.cat||'manual'})); }
 function engNetWorth(){ return engNWAssets()-engNWLiab(); }
 function engUpcomingBills(){
   const today=new Date().getDate();
@@ -4014,7 +4050,7 @@ const BUNDLE_PAGES={
 };
 let _uidSeq=0;
 // Old widget types that were folded into the tabbed hubs — remap so they never render as "? Widget".
-const WIDGET_MIGRATE={debt_summary:'debt_hub',debt_payoff:'debt_hub',credit_util:'debt_hub',promo_tracker:'debt_hub',fire_progress:'fire_hub',retirement_proj:'fire_hub',fire_calc:'fire_hub'};
+const WIDGET_MIGRATE={debt_summary:'debt_hub',debt_payoff:'debt_hub',credit_util:'debt_hub',promo_tracker:'debt_hub',fire_progress:'fire_hub',retirement_proj:'fire_hub',fire_calc:'fire_hub',safe_to_spend:'cash_summary'};
 function makeWidget(type){ type=WIDGET_MIGRATE[type]||type; return {uid:'w'+Date.now()+'_'+(_uidSeq++),type:type,span:(WIDGET_BY_ID[type]&&WIDGET_BY_ID[type].span)||1}; }
 // Heal existing/seeded pages: remap folded widget types to hubs, drop unknown/removed types, and
 // collapse duplicate hubs (e.g. a page that had 4 separate debt widgets becomes one Debt hub).
@@ -4308,7 +4344,7 @@ function maybeCoachPage(pg){
 const WIDGET_CATALOG=[
   {id:'net_worth_summary',name:'Net Worth',icon:'📈',cat:'Overview',span:1,minLevel:1,desc:'Total assets minus liabilities.'},
   {id:'journey',name:'Your Journey',icon:'🏆',cat:'Overview',span:2,minLevel:1,desc:'Your level, streak, badges, and milestone progress — real-money goals, gamified.'},
-  {id:'cash_summary',name:'Cash on Hand',icon:'💵',cat:'Overview',span:1,minLevel:1,desc:'Combined account balances.'},
+  {id:'cash_summary',name:'Cash on Hand',icon:'💵',cat:'Overview',span:1,minLevel:1,desc:'Liquid balances + how much is safe to spend today after upcoming bills & goals.'},
   {id:'spending_month',name:"Current Spending",icon:'🛒',cat:'Overview',span:1,minLevel:1,desc:'Discretionary spending vs budget — your quick "how are we doing" marker (bills & savings excluded).'},
   {id:'income_month',name:"This Month's Income",icon:'💰',cat:'Overview',span:1,minLevel:1,desc:'Money in this month.'},
   {id:'budget_doughnut',name:'Budget by Category',icon:'🎯',cat:'Budget',span:2,minLevel:1,desc:'Two donuts side by side — spending by group and by category (stacked on mobile).'},
@@ -4322,7 +4358,6 @@ const WIDGET_CATALOG=[
   {id:'goals',name:'Financial Goals',icon:'🎯',cat:'Overview',span:2,minLevel:1,desc:'Set goals, track progress automatically, and let Richie coach you to the finish.'},
   {id:'accounts_list',name:'All Accounts',icon:'🏦',cat:'Overview',span:2,minLevel:1,desc:'Every account with balances — tap to see transactions.'},
   {id:'all_transactions',name:'All Transactions',icon:'🧾',cat:'Cash Flow',span:2,minLevel:1,desc:'Every transaction — search, categorize, and tag (paycheck, transfer, business…).'},
-  {id:'safe_to_spend',name:'Safe to Spend',icon:'🟢',cat:'Cash Flow',span:1,minLevel:1,desc:'How much you can spend today without touching upcoming bills or goals.'},
   {id:'recurring',name:'Recurring & Subscriptions',icon:'🔁',cat:'Cash Flow',span:2,minLevel:1,desc:'Auto-detected subscriptions and recurring charges, with a monthly total.'},
   {id:'sankey',name:'Money Flow (Sankey)',icon:'🔀',cat:'Cash Flow',span:2,minLevel:2,desc:'Income → category group → category, flowing left to right through your category tree.'},
   {id:'top_categories',name:'Top Categories',icon:'📊',cat:'Cash Flow',span:1,minLevel:1,desc:'Where your money goes most.'},
@@ -5144,6 +5179,86 @@ function promoTrackerBody(w){
 }
 // Editor to attach/clear a promo end date, credit limit, and standard APR on any card
 function openPromoEditor(name){ return openAccountEditor(name); }   // alias — the editor now covers limit/APR/promo/etc.
+/* ═══ NET WORTH — manual assets (home, car, valuables) + debts, with Richie estimate ═══ */
+let _nwForm=null;
+const NW_ASSET_CATS=[{id:'Real Estate',icon:'🏠',est:'home'},{id:'Vehicle',icon:'🚗',est:'vehicle'},{id:'Investment',icon:'📈'},{id:'Valuables',icon:'💎'},{id:'Other',icon:'📦'}];
+const NW_DEBT_CATS=[{id:'Loan',icon:'💵'},{id:'Mortgage',icon:'🏦'},{id:'Other',icon:'📄'}];
+function _nwIcon(cat,isDebt){ const c=(isDebt?NW_DEBT_CATS:NW_ASSET_CATS).find(x=>x.id===cat); return c?c.icon:(isDebt?'📄':'📦'); }
+function openNetWorthEditor(){
+  APP.nwManualAssets=APP.nwManualAssets||[]; APP.nwManualLiab=APP.nwManualLiab||[]; _nwForm=null;
+  gg('manualModal').style.display='flex';
+  gg('manualTitle').textContent='Home, car & assets';
+  gg('manualSub').textContent="Add what a bank can't see — property, vehicles, valuables — plus debts not linked to a bank.";
+  nwEditorRender();
+}
+function nwEditorRender(){
+  if(_nwForm) return nwFormRender();
+  const A=APP.nwManualAssets||[], L=APP.nwManualLiab||[];
+  const row=(x,isDebt)=>`<div class="nw-row"><span class="nw-ic">${_nwIcon(x.cat,isDebt)}</span><span class="nw-nm">${esc(x.name||x.cat)}<span class="nw-cat">${esc(x.cat)}</span></span><span class="nw-val"${isDebt?' style="color:var(--red)"':''}>${fmtK(+x.value||0)}</span><button class="nw-ed" onclick="nwOpenForm('${isDebt?'debt':'asset'}','${x.id}')" title="Edit">✎</button><button class="nw-ed" onclick="nwDel('${isDebt?'debt':'asset'}','${x.id}')" title="Delete">🗑</button></div>`;
+  gg('manualBody').innerHTML=
+    `<div class="nw-sec-h"><span>💚 Assets</span><b style="color:var(--green)">${fmtK(A.reduce((s,x)=>s+(+x.value||0),0))}</b></div>`
+    +`<div class="nw-list">${A.length?A.map(x=>row(x,false)).join(''):'<div class="ws-hint">No manual assets yet — add your home, car, etc.</div>'}</div>`
+    +`<button class="nw-add" onclick="nwOpenForm('asset')">＋ Add asset</button>`
+    +`<div class="nw-sec-h" style="margin-top:16px"><span>❤️ Debts (not linked to a bank)</span><b style="color:var(--red)">${fmtK(L.reduce((s,x)=>s+(+x.value||0),0))}</b></div>`
+    +`<div class="nw-list">${L.length?L.map(x=>row(x,true)).join(''):'<div class="ws-hint">No manual debts yet.</div>'}</div>`
+    +`<button class="nw-add" onclick="nwOpenForm('debt')">＋ Add debt</button>`
+    +`<div class="mf-actions"><span></span><button class="btn primary" onclick="closeManual()">Done</button></div>`;
+}
+function nwOpenForm(kind,id){
+  const arr=kind==='asset'?APP.nwManualAssets:APP.nwManualLiab; const item=id?(arr||[]).find(x=>x.id===id):null;
+  _nwForm={ kind, id:id||null, cat:item?item.cat:(kind==='asset'?'Real Estate':'Loan'), name:item?item.name:'', value:item&&item.value!=null?item.value:'', vin:(item&&item.vin)||'', address:(item&&item.address)||'' };
+  nwEditorRender();
+}
+function nwFormRender(){
+  const f=_nwForm, cats=f.kind==='asset'?NW_ASSET_CATS:NW_DEBT_CATS;
+  const chips=cats.map(c=>`<button class="nw-chip${f.cat===c.id?' on':''}" onclick="nwSetCat('${c.id}')">${c.icon} ${esc(c.id)}</button>`).join('');
+  const estCat=NW_ASSET_CATS.find(c=>c.id===f.cat&&c.est);
+  let estHTML='';
+  if(f.kind==='asset'&&estCat){
+    estHTML = estCat.est==='vehicle'
+      ? `<label class="mf-label">Estimate from VIN <span class="ws-hint" style="display:inline">· optional</span></label><div class="nw-est"><input class="mf-in" id="nwVin" placeholder="17-character VIN" value="${esc(f.vin||'')}"><button class="btn" id="nwEstBtn" onclick="nwEstimate('vehicle')">✨ Decode</button></div>`
+      : `<label class="mf-label">Estimate from address <span class="ws-hint" style="display:inline">· optional</span></label><div class="nw-est"><input class="mf-in" id="nwAddr" placeholder="123 Main St, City ST 12345" value="${esc(f.address||'')}"><button class="btn" id="nwEstBtn" onclick="nwEstimate('home')">✨ Estimate</button></div>`;
+  }
+  gg('manualBody').innerHTML=
+    `<button class="ace-back" onclick="nwBackToList()">‹ Back</button>`
+    +`<label class="mf-label">Type</label><div class="nw-chips">${chips}</div>`
+    +`<label class="mf-label">Name</label><input class="mf-in" id="nwName" placeholder="${f.kind==='asset'?'e.g. Our home / 2019 Honda CR-V':'e.g. Family loan'}" value="${esc(f.name||'')}">`
+    +estHTML
+    +`<div id="nwEstNote" class="ws-hint" style="margin-top:3px"></div>`
+    +`<label class="mf-label">Value</label><input class="mf-in" id="nwValue" type="number" inputmode="decimal" placeholder="0" value="${f.value!=null?f.value:''}">`
+    +`<div class="mf-actions"><button class="btn" onclick="nwBackToList()">Cancel</button><button class="btn primary" onclick="nwSaveForm()">Save</button></div>`;
+}
+function nwSetCat(cat){ if(gg('nwName'))_nwForm.name=gg('nwName').value; if(gg('nwValue'))_nwForm.value=gg('nwValue').value; if(gg('nwVin'))_nwForm.vin=gg('nwVin').value; if(gg('nwAddr'))_nwForm.address=gg('nwAddr').value; _nwForm.cat=cat; nwEditorRender(); }
+function nwBackToList(){ _nwForm=null; nwEditorRender(); }
+function nwSaveForm(){
+  const f=_nwForm, name=((gg('nwName').value||'').trim())||f.cat, value=_num('nwValue');
+  const arr = f.kind==='asset'?(APP.nwManualAssets=APP.nwManualAssets||[]):(APP.nwManualLiab=APP.nwManualLiab||[]);
+  const rec={ id:f.id||('nw'+Date.now()+Math.floor(Math.random()*999)), cat:f.cat, name, value };
+  if(gg('nwVin'))rec.vin=gg('nwVin').value.trim(); if(gg('nwAddr'))rec.address=gg('nwAddr').value.trim();
+  const i=f.id?arr.findIndex(x=>x.id===f.id):-1; if(i>=0)arr[i]=rec; else arr.push(rec);
+  saveState(); _nwForm=null; nwEditorRender();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+}
+function nwDel(kind,id){
+  const arr=kind==='asset'?APP.nwManualAssets:APP.nwManualLiab; if(!arr)return;
+  const i=arr.findIndex(x=>x.id===id); if(i>=0)arr.splice(i,1);
+  saveState(); nwEditorRender();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+}
+async function nwEstimate(type){
+  const btn=gg('nwEstBtn'), note=gg('nwEstNote'); if(!btn)return;
+  const body = type==='vehicle' ? {type,vin:(gg('nwVin').value||'').trim()} : {type,address:(gg('nwAddr').value||'').trim()};
+  btn.disabled=true; const old=btn.textContent; btn.textContent='…'; if(note)note.textContent='Asking Richie…';
+  try{
+    const r=await fetch('/api/estimate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json().catch(()=>({}));
+    btn.disabled=false; btn.textContent=old;
+    if(!r.ok||d.error){ if(note)note.textContent=d.error||"Couldn't estimate — enter the value manually."; return; }
+    if(d.label && gg('nwName') && !gg('nwName').value) gg('nwName').value=d.label;
+    if(d.value && gg('nwValue')) gg('nwValue').value=d.value;
+    if(note)note.textContent=(d.value?('≈ '+fmtK(d.value)+' · '):'')+(d.note||'Estimate — adjust as needed.');
+  }catch(e){ btn.disabled=false; btn.textContent=old; if(note)note.textContent="Couldn't reach the estimator — enter the value manually."; }
+}
 function openAccountEditor(name){
   const acct=engAccounts().find(a=>a.name===name || a.name===((APP.cardData||{})[_cardKey(name)]||{}).nickname);
   const bill=engBills().find(b=>b.name===name)||{};
@@ -5168,7 +5283,7 @@ function openAccountEditor(name){
   }
   if(isCredit||isLoan) f+=`<label class="mf-label">Statement due day (1–31)</label><input class="mf-in" id="aeDue" type="number" inputmode="numeric" min="1" max="31" value="${cd.dueDay||bill.due||''}" placeholder="e.g. 15">`;
   f+=`<label class="mf-label">Note</label><input class="mf-in" id="aeNote" value="${esc(cd.note||'')}" placeholder="optional">`;
-  f+=`<label class="ae-toggle"><input type="checkbox" id="aeExcl" ${cd.excluded?'checked':''}><span>Exclude from totals &amp; net worth</span></label>`;
+  f+=`<label class="ae-toggle"><input type="checkbox" id="aeExcl" ${cd.excluded?'checked':''}><span>Exclude from everything — net worth, cash, spending &amp; bills <span style="color:var(--muted);font-weight:400">(great for a work card that gets reimbursed)</span></span></label>`;
   gg('manualBody').innerHTML=f
     +`<div class="ws-hint">These stay attached to this account even when balances refresh live from your bank — perfect for anything Plaid doesn't send (credit line, APR, 0% promos).</div>`
     +`<div class="mf-actions"><button class="btn danger-btn" onclick="clearAccountEdits('${nEsc}')">Clear</button><button class="btn primary" onclick="saveAccountEditor('${nEsc}')">Save</button></div>`;
@@ -5251,7 +5366,14 @@ function cashSummaryBody(w){
   const gear=`<button class="cash-pick" onclick="event.stopPropagation();openAcctCatPicker('${w.uid}')" title="Choose account types">⚙︎</button>`;
   if(!accts.length) return `<div class="wph"><div class="wph-sub">No ${esc(label)} accounts.</div><div style="text-align:center;margin-top:10px"><button class="manual-add-btn" style="width:auto;display:inline-block" onclick="event.stopPropagation();openAcctCatPicker('${w.uid}')">⚙︎ Choose account types</button></div></div>`;
   const rows=top.map(a=>`<div class="cash-row"><span class="cash-nm">${esc(a.name||'Account')}</span><span class="cash-track"><i style="width:${Math.max(5,Math.round(Math.abs(a.bal||0)/mx*100))}%"></i></span><b>${fmtK(a.bal)}</b></div>`).join('');
-  return `<div class="wph"><div class="wph-stat">${fmtK(total)}</div><div class="wph-sub">${accts.length} ${esc(label)} account${accts.length!==1?'s':''}${dataLoaded?'':' · sample'} ${gear}</div><div class="cash-list">${rows}</div></div>`;
+  // Safe-to-spend section (folded in from the old Safe to Spend widget)
+  const s=engSafeToSpend();
+  const perDay=Math.max(0,s.perDay);
+  const safe=`<div class="cash-safe">
+    <div class="cash-safe-top"><span>🟢 Safe to spend today</span><b style="color:${perDay>0?'var(--green)':'var(--red)'}">${fmtK(perDay)}<span style="font-size:10px;font-weight:600;color:var(--muted)">/day</span></b></div>
+    <div class="ws-hint">${fmtK(s.pool)} free ${s.nextIncomeDay!=null?`until pay in ${s.horizon}d`:`over ${s.horizon} days`} · after ${fmtK(s.billsDue)} bills${s.goalPortion>0.5?` + ${fmtK(s.goalPortion)} goals`:''}</div>
+  </div>`;
+  return `<div class="wph"><div class="wph-stat">${fmtK(total)}</div><div class="wph-sub">cash on hand · ${accts.length} ${esc(label)} account${accts.length!==1?'s':''}${dataLoaded?'':' · sample'} ${gear}</div>${safe}<div class="cash-list">${rows}</div></div>`;
 }
 /* Per-widget picker: which ACCOUNT CATEGORIES this widget counts */
 let _acctPick={uid:null, sel:[]};
@@ -6158,9 +6280,13 @@ function setAcctTxnNote(uid, idx, note){
 /* ═══ ALL TRANSACTIONS widget — searchable feed with per-txn category, note & tag ═══ */
 let _txnFeed={}, _txnFeedKeys={}, _txnFeedRows={};
 const TXF_FILTERS=[{id:'all',label:'All'},{id:'income',label:'Income'},{id:'spending',label:'Spending'},{id:'paycheck',label:'💵 Paychecks'},{id:'tagged',label:'Tagged'},{id:'untagged',label:'Untagged'}];
+const TXN_TF=[{key:'1w',label:'1 wk',days:7},{key:'30d',label:'30 days',days:30},{key:'3m',label:'3 mo',days:90},{key:'1y',label:'1 yr',days:365},{key:'all',label:'All',days:100000}];
+function _txfDays(tf){ const t=TXN_TF.find(x=>x.key===tf); return t?t.days:30; }
 function txnFeedBody(w){
-  const st=_txnFeed[w.uid]||(_txnFeed[w.uid]={q:'',filter:'all'});
+  const st=_txnFeed[w.uid]||(_txnFeed[w.uid]={q:'',filter:'all',tf:'30d'});
+  if(!st.tf) st.tf='30d';
   return `<div class="txf-wrap">
+    <div class="txf-tf" id="txftf_${w.uid}"></div>
     <input class="txf-search" id="txfq_${w.uid}" placeholder="🔍 Search transactions…" value="${esc(st.q)}" oninput="txnFeedSearch('${w.uid}',this.value)" onclick="event.stopPropagation()">
     <div class="txf-chips" id="txfchips_${w.uid}"></div>
     <div class="txf-summary" id="txfsum_${w.uid}"></div>
@@ -6177,7 +6303,9 @@ function _txnFeedData(w){
     {date:'2026-01-04',name:'Transfer to Savings',amount:300,transaction_id:'ex5',institution:'Example'},
   ];
   const q=(st.q||'').toLowerCase().trim();
+  const cut=Date.now()-_txfDays(st.tf||'30d')*86400000;
   list=list.filter(t=>{
+    if(new Date(t.date).getTime()<cut) return false;
     if(q){ const name=(t.merchant_name||t.name||'').toLowerCase(); const cat=getTxnCategory(t).toLowerCase(); if(!(name.includes(q)||cat.includes(q))) return false; }
     const tag=getTxnTag(t);
     switch(st.filter){
@@ -6196,6 +6324,8 @@ function txnFeedMount(w){
   const st=_txnFeed[w.uid]||{q:'',filter:'all'};
   const chipsEl=gg('txfchips_'+w.uid);
   if(chipsEl) chipsEl.innerHTML=TXF_FILTERS.map(f=>`<button class="txf-chip${st.filter===f.id?' on':''}" onclick="event.stopPropagation();txnFeedFilter('${w.uid}','${f.id}')">${esc(f.label)}</button>`).join('');
+  const tfEl=gg('txftf_'+w.uid);
+  if(tfEl) tfEl.innerHTML=TXN_TF.map(t=>`<button class="txf-tfchip${(st.tf||'30d')===t.key?' on':''}" onclick="event.stopPropagation();txnFeedTf('${w.uid}','${t.key}')">${esc(t.label)}</button>`).join('');
   txnFeedRender(w);
 }
 function txnFeedRender(w){
@@ -6208,20 +6338,23 @@ function txnFeedRender(w){
   if(!list.length){ el.innerHTML='<div class="acct-empty">No transactions match.</div>'; _txnFeedKeys[w.uid]=[]; return; }
   const cats=getUserCategories().filter(c=>!c.group).map(c=>c.label);
   const keys=[]; const capped=list.slice(0,300); _txnFeedRows[w.uid]=capped;
+  const _exSet=_excludedAcctIds();
   el.innerHTML=capped.map((t,i)=>{
     const key=_txnKey(t); keys[i]=key;
     const pos=t.amount>0, col=pos?'var(--red)':'var(--green)', amt=(pos?'-':'+')+fmt2(Math.abs(t.amount));
     const cat=getTxnCategory(t), note=getTxnNote(t), tag=getTxnTag(t);
     const name=t.merchant_name||t.name||'', dt=new Date(t.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
     const mk=_merchKey(t), hasRule=!!(mk&&_catRules[mk]);
+    const acctExcl=_exSet.has(t.account_id);
     const catList=cats.includes(cat)?cats:[cat].concat(cats);
     const opts=catList.map(c=>`<option value="${esc(c)}"${c===cat?' selected':''}>${esc(c)}</option>`).join('');
     const tagOpts=`<option value="">🏷️ tag…</option>`+TXN_TAGS.map(tg=>`<option value="${tg.id}"${tag===tg.id?' selected':''}>${tg.icon} ${tg.label}</option>`).join('');
     const tagChip = tag&&TXN_TAG_BY_ID[tag]?`<span class="txf-tag">${TXN_TAG_BY_ID[tag].icon} ${esc(TXN_TAG_BY_ID[tag].label)}</span>`:'';
     const ruleChip = hasRule?`<span class="txf-tag" style="color:var(--blue,#5b8def);background:rgba(91,141,239,.14)">＝ rule</span>`:'';
-    return `<div class="txf-row">
+    const exclChip = acctExcl?`<span class="txf-tag" style="color:var(--muted);background:var(--surface3)">excluded acct</span>`:'';
+    return `<div class="txf-row"${acctExcl?' style="opacity:.55"':''}>
       <div class="txf-main">
-        <div class="txf-nm">${esc(name)} ${tagChip}${ruleChip}</div>
+        <div class="txf-nm">${esc(name)} ${tagChip}${ruleChip}${exclChip}</div>
         <div class="txf-edit">
           <select class="txn-cat-sel" onclick="event.stopPropagation()" onchange="txnFeedSetCat('${w.uid}',${i},this.value)" title="Category">${opts}</select>
           <select class="txn-cat-sel txf-tagsel" onclick="event.stopPropagation()" onchange="txnFeedSetTag('${w.uid}',${i},this.value)" title="Tag">${tagOpts}</select>
@@ -6236,6 +6369,7 @@ function txnFeedRender(w){
 }
 function txnFeedSearch(uid,val){ (_txnFeed[uid]=_txnFeed[uid]||{q:'',filter:'all'}).q=val; const w=_findWidget(uid); if(w) txnFeedRender(w); }
 function txnFeedFilter(uid,f){ (_txnFeed[uid]=_txnFeed[uid]||{q:'',filter:'all'}).filter=f; const w=_findWidget(uid); if(w) txnFeedMount(w); }
+function txnFeedTf(uid,key){ (_txnFeed[uid]=_txnFeed[uid]||{q:'',filter:'all'}).tf=key; const w=_findWidget(uid); if(w) txnFeedMount(w); }
 function txnFeedSetCat(uid,idx,cat){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; if(cat)_catOverrides[k]=cat; else delete _catOverrides[k]; try{LS.setItem('mdf_cat_overrides',JSON.stringify(_catOverrides));}catch(e){} const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function txnFeedSetNote(uid,idx,note){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; if(note&&note.trim())_txnNotes[k]=note.trim(); else delete _txnNotes[k]; try{LS.setItem('mdf_txn_notes',JSON.stringify(_txnNotes));}catch(e){} }
 function txnFeedSetTag(uid,idx,tag){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; setTxnTag(k,tag); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
@@ -6660,7 +6794,7 @@ function renderWidgetBody(w){
   const bars=n=>`<div class="wph-bars">${Array.from({length:n}).map(()=>`<div class="wph-bar" style="height:${30+Math.random()*70}%"></div>`).join('')}</div>`;
   switch(w.type){
     case 'journey': return journeyBody(w);
-    case 'net_worth_summary': { const a=engNWAssets(), l=engNWLiab(); const nw=dataLoaded?(engNetBalance()+a-l):(a-l); const tot=a+l; const aPct=tot>0?Math.round(a/tot*100):100; return `<div class="wph"><div class="wph-stat ${nw>=0?'':'red'}" style="${nw<0?'color:var(--red)':''}">${fmtK(nw)}</div><div class="wph-sub">net worth · ${aPct}% assets</div><div class="ds-budget"><div class="ds-budget-top"><span style="color:var(--green);font-weight:700">Assets ${fmtK(a)}</span><span style="color:var(--red)">Debts ${fmtK(l)}</span></div><div class="ds-bar" style="background:rgba(240,92,92,.35)"><div class="ds-bar-fill" style="width:${aPct}%;background:var(--green)"></div></div></div></div>`; }
+    case 'net_worth_summary': { const a=engNWAssets(), l=engNWLiab(); const nw=dataLoaded?(engNetBalance()+a-l):(a-l); const tot=a+l; const aPct=tot>0?Math.round(a/tot*100):100; return `<div class="wph"><div class="wph-stat ${nw>=0?'':'red'}" style="${nw<0?'color:var(--red)':''}">${fmtK(nw)}</div><div class="wph-sub">net worth · ${aPct}% assets</div><div class="ds-budget"><div class="ds-budget-top"><span style="color:var(--green);font-weight:700">Assets ${fmtK(a)}</span><span style="color:var(--red)">Debts ${fmtK(l)}</span></div><div class="ds-bar" style="background:rgba(240,92,92,.35)"><div class="ds-bar-fill" style="width:${aPct}%;background:var(--green)"></div></div></div><button class="nw-manage" onclick="event.stopPropagation();openNetWorthEditor()">🏠 Add home, car & other assets</button></div>`; }
     case 'cash_summary': return cashSummaryBody(w);
     case 'spending_month': return discretionarySpendBody(w);
     case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); const now=Date.now(), ps=new Date(now-2*days*86400000), pe=new Date(now-days*86400000); const prev=allTxns.filter(t=>{const d=new Date(t.date);return d>=ps&&d<pe&&t.amount<0;}).reduce((s,t)=>s+Math.abs(t.amount),0); const dl=prev>0?Math.round((inc-prev)/prev*100):null; const up=dl!==null&&dl>=0; const trend=dl===null?'':`<div class="ds-trend-label" style="color:${up?'var(--green)':'var(--amber)'};margin-top:9px">${up?'▲':'▼'} ${Math.abs(dl)}% vs prior ${tfLabel(w.tf||'30d')}</div>`; const rec=engRecent(days).filter(t=>t.amount<0); const byC={}; rec.forEach(t=>{const c=getTxnCategory(t);byC[c]=(byC[c]||0)+Math.abs(t.amount);}); const top=Object.entries(byC).sort((a,b)=>b[1]-a[1])[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${trend}${top?`<div class="wph-inline"><span>Top source: ${esc(top[0])}</span><b style="color:var(--green)">${fmtK(top[1])}</b></div>`:''}</div>`; } const top=incomeSources.slice().sort((a,b)=>b.amt*(FREQ_TO_MONTHLY[b.freq]||1)-a.amt*(FREQ_TO_MONTHLY[a.freq]||1))[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">${incomeSources.length} sources \u00b7 sample</div><div class="ds-trend-label" style="color:var(--green);margin-top:9px">▲ 6% vs prior 30d</div><div class="wph-inline"><span>Top source: ${top.name}</span><b style="color:var(--green)">${fmtK(Math.round(top.amt*(FREQ_TO_MONTHLY[top.freq]||1)))}/mo</b></div></div>`; }
@@ -6782,9 +6916,9 @@ function widgetDetailContent(type, days){
       return { title:'Income sources', sub:`${fmtK(tot)}/mo from ${items.length} sources`, body:`<div class="wdt-total" style="color:var(--green)">${fmtK(tot)}<span>per month</span></div>${_detailRows(items,tot)}` };
     }
     case 'net_worth_summary': case 'net_worth_chart': {
-      if(live){ const acctA=allAccts.filter(a=>!_isDebtAcct(a)).map(a=>({label:(a.name||a.official_name||a.type),value:(a.balances&&a.balances.current)||0,note:a.institution||'bank'})); const acctD=allAccts.filter(a=>_isDebtAcct(a)).map(a=>({label:(a.name||'Debt'),value:Math.abs((a.balances&&a.balances.current)||0),note:a.institution||'bank'})); const manA=nwAssets.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat||'manual'})); const manL=nwLiab.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat||'manual'})); const assets=acctA.concat(manA); const debts=acctD.concat(manL); const aTot=assets.reduce((s,a)=>s+a.value,0); const dTot=debts.reduce((s,d)=>s+d.value,0); const net=engNetBalance()+engNWAssets()-engNWLiab();
+      if(live){ const acctA=allAccts.filter(a=>!_isDebtAcct(a)).map(a=>({label:(a.name||a.official_name||a.type),value:(a.balances&&a.balances.current)||0,note:a.institution||'bank'})); const acctD=allAccts.filter(a=>_isDebtAcct(a)).map(a=>({label:(a.name||'Debt'),value:Math.abs((a.balances&&a.balances.current)||0),note:a.institution||'bank'})); const manA=nwAssets.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat||'manual'})).concat(_nwManA()); const manL=nwLiab.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat||'manual'})).concat(_nwManL()); const assets=acctA.concat(manA); const debts=acctD.concat(manL); const aTot=assets.reduce((s,a)=>s+a.value,0); const dTot=debts.reduce((s,d)=>s+d.value,0); const net=engNetBalance()+engNWAssets()-engNWLiab();
         return { title:'Net worth breakdown', sub:`${fmtK(net)} net · ${fmtK(aTot)} assets − ${fmtK(dTot)} debts`, body:`<div class="wdt-total">${fmtK(net)}<span>net worth</span></div><div class="wdt-section">Assets</div>${_detailRows(assets,aTot)}<div class="wdt-section">Debts</div>${_detailRows(debts,dTot)}` }; }
-      const a=nwAssets.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat})); const l=nwLiab.map(x=>({label:x.name,value:x.value,note:x.cat})); const aT=engNWAssets(),lT=engNWLiab();
+      const a=nwAssets.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat})).concat(_nwManA()); const l=nwLiab.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat})).concat(_nwManL()); const aT=engNWAssets(),lT=engNWLiab();
       return { title:'Net worth breakdown', sub:`${fmtK(aT-lT)} net`, body:`<div class="wdt-total">${fmtK(aT-lT)}<span>net worth</span></div><div class="wdt-section">Assets</div>${_detailRows(a,aT)}<div class="wdt-section">Liabilities</div>${_detailRows(l,lT)}` };
     }
     case 'cash_summary': {
