@@ -675,15 +675,57 @@ app.post('/api/create_link_token', requireAuth, async (req, res) => {
   }
 });
 
+// ── DUPLICATE FAILSAFE ──────────────────────────────────────────────────────────
+// Re-linking the same bank creates a new Item whose accounts have DIFFERENT ids but the
+// same real identity — so we dedupe by a natural key (institution|mask|name|subtype),
+// then drop any transactions that belonged to the dropped duplicate accounts.
+function _acctNatKey(a) {
+  return [
+    (a.institution || '').toLowerCase().trim(),
+    (a.mask || ''),
+    (a.name || a.official_name || '').toLowerCase().trim(),
+    (a.subtype || a.type || ''),
+  ].join('|');
+}
+function dedupeAccounts(list) {
+  const seen = new Set(), out = [];
+  for (const a of (list || [])) {
+    const k = _acctNatKey(a);
+    if (seen.has(k)) continue;
+    seen.add(k); out.push(a);
+  }
+  return out;
+}
+
 app.post('/api/exchange_token', requireAuth, async (req, res) => {
   const { public_token, institution_name } = req.body;
   try {
     const r = await plaidClient.itemPublicTokenExchange({ public_token });
     const { access_token, item_id } = r.data;
-    if (!store.accessTokens.find(t => t.itemId === item_id)) {
-      store.accessTokens.push({ itemId: item_id, accessToken: access_token, institutionName: institution_name || 'Bank', addedAt: new Date().toISOString() });
-      saveTokens(store);
+    if (store.accessTokens.find(t => t.itemId === item_id)) return res.json({ success: true, item_id });
+    // FAILSAFE: if every account on this new link already exists on a connected bank, it's a
+    // duplicate re-link — remove it and don't store it. (Different masks/names are NOT duplicates,
+    // so a second login at the same bank, or business vs personal, is still kept.)
+    let newKeys = [];
+    try {
+      const ar = await plaidClient.accountsGet({ access_token });
+      newKeys = ar.data.accounts.map(a => _acctNatKey({ ...a, institution: institution_name }));
+    } catch (_) {}
+    if (newKeys.length) {
+      const existingKeys = new Set();
+      for (const t of store.accessTokens) {
+        try {
+          const er = await plaidClient.accountsGet({ access_token: t.accessToken });
+          er.data.accounts.forEach(a => existingKeys.add(_acctNatKey({ ...a, institution: t.institutionName })));
+        } catch (_) {}
+      }
+      if (newKeys.every(k => existingKeys.has(k))) {
+        try { await plaidClient.itemRemove({ access_token }); } catch (_) {}
+        return res.json({ success: true, item_id, duplicate: true, message: 'That bank is already connected — skipped the duplicate.' });
+      }
     }
+    store.accessTokens.push({ itemId: item_id, accessToken: access_token, institutionName: institution_name || 'Bank', addedAt: new Date().toISOString() });
+    saveTokens(store);
     res.json({ success: true, item_id });
   } catch (err) {
     res.status(500).json({ error: err.response?.data?.error_message || err.message });
@@ -716,7 +758,7 @@ app.get('/api/accounts', requireAuth, async (req, res) => {
       if (code === 'ITEM_LOGIN_REQUIRED') errors[errors.length - 1].needsRelink = true;
     }
   }
-  res.json({ accounts: all, items: store.accessTokens.map(t => ({ itemId: t.itemId, institutionName: t.institutionName })), errors: errors.length ? errors : undefined });
+  res.json({ accounts: dedupeAccounts(all), items: store.accessTokens.map(t => ({ itemId: t.itemId, institutionName: t.institutionName })), errors: errors.length ? errors : undefined });
 });
 
 app.get('/api/liabilities', requireAuth, async (req, res) => {
@@ -744,7 +786,7 @@ app.get('/api/liabilities', requireAuth, async (req, res) => {
       } catch (_) {}
     }
   }
-  res.json({ credit_cards: cards, mortgages, student_loans: [] });
+  res.json({ credit_cards: dedupeAccounts(cards), mortgages: dedupeAccounts(mortgages), student_loans: [] });
 });
 
 app.get('/api/transactions', requireAuth, async (req, res) => {
@@ -783,7 +825,10 @@ app.get('/api/transactions', requireAuth, async (req, res) => {
   }
 
   txns.sort((a, b) => new Date(b.date) - new Date(a.date));
-  res.json({ transactions: txns, accounts: accts, errors: errors.length ? errors : undefined });
+  const keptAccts = dedupeAccounts(accts);
+  const keptIds = new Set(keptAccts.map(a => a.account_id));
+  const keptTxns = txns.filter(t => keptIds.has(t.account_id));
+  res.json({ transactions: keptTxns, accounts: keptAccts, errors: errors.length ? errors : undefined });
 });
 
 app.delete('/api/item/:itemId', requireAuth, async (req, res) => {
