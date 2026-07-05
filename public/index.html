@@ -1376,6 +1376,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .manual-add-btn{width:100%;margin-top:10px;padding:9px;border-radius:9px;background:var(--surface2);border:1px dashed var(--border2);color:var(--muted);font-size:12.5px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .13s;}
 .manual-add-btn:hover{border-color:var(--green);color:var(--green);background:var(--green-dim);}
 .bill-edit{background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:0 0 0 6px;opacity:.6;}
+.acct-group-h{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin:12px 0 6px;padding-top:4px;border-top:1px solid var(--border);}
+.acct-group-h b{font-size:13px;font-variant-numeric:tabular-nums;}
+.zb-actual{margin-top:6px;}
+.zb-actual-bar{height:5px;border-radius:3px;background:var(--surface3);overflow:hidden;}
+.zb-actual-fill{height:100%;border-radius:3px;transition:width .3s;}
+.zb-actual-lbl{font-size:10.5px;color:var(--muted);margin-top:3px;}
 .acct-badge{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.3px;color:var(--green);background:var(--green-dim);border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:middle;}
 .acct-excluded{opacity:.5;}
 .acct-excluded .acct-bal{text-decoration:line-through;}
@@ -4088,7 +4094,7 @@ const BUNDLE_PAGES={
 };
 let _uidSeq=0;
 // Old widget types that were folded into the tabbed hubs — remap so they never render as "? Widget".
-const WIDGET_MIGRATE={debt_summary:'debt_hub',debt_payoff:'debt_hub',credit_util:'debt_hub',promo_tracker:'debt_hub',fire_progress:'fire_hub',retirement_proj:'fire_hub',fire_calc:'fire_hub',safe_to_spend:'cash_summary'};
+const WIDGET_MIGRATE={debt_summary:'debt_hub',debt_payoff:'debt_hub',credit_util:'debt_hub',promo_tracker:'debt_hub',fire_progress:'fire_hub',retirement_proj:'fire_hub',fire_calc:'fire_hub',safe_to_spend:'cash_summary',budget_actual:'zero_budget'};
 function makeWidget(type){ type=WIDGET_MIGRATE[type]||type; return {uid:'w'+Date.now()+'_'+(_uidSeq++),type:type,span:(WIDGET_BY_ID[type]&&WIDGET_BY_ID[type].span)||1}; }
 // Heal existing/seeded pages: remap folded widget types to hubs, drop unknown/removed types, and
 // collapse duplicate hubs (e.g. a page that had 4 separate debt widgets becomes one Debt hub).
@@ -4387,8 +4393,7 @@ const WIDGET_CATALOG=[
   {id:'income_month',name:"This Month's Income",icon:'💰',cat:'Overview',span:1,minLevel:1,desc:'Money in this month.'},
   {id:'budget_doughnut',name:'Budget by Category',icon:'🎯',cat:'Budget',span:2,minLevel:1,desc:'Two donuts side by side — spending by group and by category (stacked on mobile).'},
   {id:'bills_list',name:'Upcoming Bills',icon:'📋',cat:'Budget',span:1,minLevel:1,desc:"What's due and when."},
-  {id:'zero_budget',name:'Zero-Based Budget',icon:'🧮',cat:'Budget',span:2,minLevel:2,desc:'Give every dollar a job.'},
-  {id:'budget_actual',name:'Budget vs Actual',icon:'⚖️',cat:'Budget',span:2,minLevel:1,desc:'Compare what you planned to spend against what you actually spent, per category.'},
+  {id:'zero_budget',name:'Zero-Based Budget',icon:'🧮',cat:'Budget',span:2,minLevel:2,desc:'Give every dollar a job — with live actual-vs-budgeted spending per envelope.'},
   {id:'savings_buckets',name:'Savings Buckets',icon:'🪣',cat:'Overview',span:2,minLevel:1,desc:'Sinking funds — Reserve, Home, Family, Medical — each with its own goal and progress.'},
   {id:'cashflow_chart',name:'Cash Flow',icon:'🌊',cat:'Cash Flow',span:2,minLevel:1,desc:'Your projected running balance — the same forward line as the Cash Flow Planner.'},
   {id:'pl_panel',name:'Profit & Loss',icon:'📊',cat:'Cash Flow',span:2,minLevel:1,desc:'Income, spending, net & savings rate by day/week/month.'},
@@ -5040,6 +5045,8 @@ function zbWidgetBody(w){
   const income=engMonthlyIncome();
   const bills=engMonthlyBills();
   const buckets=_zbBuckets();
+  const zbActual={}; if(dataLoaded){ try{ engCategoryBreakdown(30).forEach(r=>{ zbActual[r.label]=r.value; }); }catch(e){} }
+  const spentTotal=buckets.reduce((s,b)=>s+(zbActual[b.name]||0),0);
   const envTotal=buckets.reduce((s,z)=>s+z.amt,0);
   const assigned=envTotal+bills;
   const left=income-assigned;
@@ -5067,9 +5074,15 @@ function zbWidgetBody(w){
     </div>
     <div class="zb-bar"><div class="zb-bar-fill" style="width:${Math.min(100,Math.round(assigned/Math.max(income,1)*100))}%;background:${left<0?'var(--red)':'var(--green)'}"></div></div>
     ${balanceRow}
-    <div class="zb-section-label">Category envelopes <span class="ws-hint" style="margin:0">type a dollar amount or drag</span></div>
+    <div class="zb-section-label">Category envelopes <span class="ws-hint" style="margin:0">budget vs actual · ${fmtK(spentTotal)} spent of ${fmtK(envTotal)}</span></div>
     <div class="zb-buckets">
-      ${buckets.map((b,i)=>`<div class="zb-bucket">
+      ${buckets.map((b,i)=>{
+        const spent=zbActual[b.name]||0;
+        const pct=b.amt>0?Math.min(100,Math.round(spent/b.amt*100)):(spent>0?100:0);
+        const over=b.amt>0&&spent>b.amt;
+        const barColor=over?'var(--red)':pct>=85?'var(--amber)':'var(--green)';
+        const actualLbl=`${fmtK(spent)} spent`+(b.amt>0?` · `+(over?`<b style="color:var(--red)">${fmtK(spent-b.amt)} over</b>`:`${fmtK(Math.max(0,b.amt-spent))} left`):' · no budget');
+        return `<div class="zb-bucket">
         <div class="zb-bk-top">
           <span class="zb-dot" style="background:${getCatColor(b.name)}"></span>
           <span class="zb-bk-nm">${esc(b.name)}</span>
@@ -5077,7 +5090,8 @@ function zbWidgetBody(w){
           <button class="zb-bk-del" onclick="event.stopPropagation();zbDelBucket(${i},'${w.uid}')" title="Remove ${esc(b.name)} from budget">\u2715</button>
         </div>
         <input type="range" class="zb-slider" min="0" max="${sliderMax(b.amt)}" step="10" value="${b.amt}" onclick="event.stopPropagation()" oninput="zbSetVal(${i},this.value,'${w.uid}','slider')" onchange="zbCommit('${w.uid}')">
-      </div>`).join('') || '<div class="ws-hint">No categories budgeted yet — add some below.</div>'}
+        <div class="zb-actual"><div class="zb-actual-bar"><div class="zb-actual-fill" style="width:${pct}%;background:${barColor}"></div></div><div class="zb-actual-lbl">${actualLbl}</div></div>
+      </div>`;}).join('') || '<div class="ws-hint">No categories budgeted yet — add some below.</div>'}
     </div>
     ${addSection}
   </div>`;
@@ -6235,11 +6249,14 @@ function plLineSVG(buckets, avgNet, opts){
 
 /* ═══ ALL ACCOUNTS WIDGET ═══ */
 let _acctOpen={};  // per-widget expanded account id
+function _acctIsLiability(a){
+  if(a.type==='credit'||a.type==='loan') return true;
+  try{ const def=ACCT_CAT_BY_ID[getAccountCategory(a._acct||a)]; if(def) return def.kind==='liability'; }catch(e){}
+  return (a.bal||0)<0;
+}
 function acctWidgetBody(w){
   const accts=engAccounts();
-  const tot=accts.reduce((s,a)=>s+(a.excluded?0:a.bal),0);
-  const tt=engAcctTypeTotals();
-  const rows=accts.map((a,i)=>{
+  const rowHTML=(a)=>{
     const col=a.bal<0?'var(--red)':'var(--green)';
     const balStr=(a.bal<0?'-':'+')+fmtK(Math.abs(a.bal));
     const open=_acctOpen[w.uid]===a.id;
@@ -6253,23 +6270,25 @@ function acctWidgetBody(w){
     const exclBadge = a.excluded ? `<span class="acct-badge" style="color:var(--muted);background:var(--surface3)">excluded</span>` : '';
     return `<div class="acct-chip${open?' open':''}${a.excluded?' acct-excluded':''}" onclick="toggleAcct('${w.uid}','${a.id}')">
         <span class="acct-ic">${_acctIcon(a)}</span>
-        <div class="acct-meta"><div class="acct-nm">${esc(a.name)}${promoBadge}${exclBadge}${editBtn}</div><div class="acct-sub">${esc(a.institution||a.subtype||a.type)}${a.manual?' · manual':''}</div></div>
+        <div class="acct-meta"><div class="acct-nm">${esc(a.name)}${promoBadge}${exclBadge}${editBtn}</div><div class="acct-sub">${esc(a.institution||a.subtype||a.type)}${a.manual?' \u00b7 manual':''}</div></div>
         <div class="acct-bal" style="color:${col}">${balStr}</div>
-        <span class="acct-arr">${open?'▲':'▼'}</span>
+        <span class="acct-arr">${open?'\u25b2':'\u25bc'}</span>
       </div>${open?`<div class="acct-txns" id="acdt_${w.uid}"></div>`:''}`;
-  }).join('');
+  };
+  const assets=accts.filter(a=>!_acctIsLiability(a));
+  const liabs=accts.filter(_acctIsLiability);
+  const assetTot=assets.reduce((s,a)=>s+(a.excluded?0:a.bal),0);
+  const liabTot=liabs.reduce((s,a)=>s+(a.excluded?0:Math.abs(a.bal)),0);
+  const net=assetTot-liabTot;
+  const section=(title,icon,list,subtotal,color)=> list.length?`<div class="acct-group-h"><span>${icon} ${title} \u00b7 ${list.length}</span><b style="color:${color}">${fmtK(subtotal)}</b></div>${list.map(rowHTML).join('')}`:'';
   return `<div class="acct-wrap">
     <div class="acct-summary">
       <span>${accts.length} account${accts.length!==1?'s':''}</span>
-      <span class="acct-net" style="color:${tot>=0?'var(--green)':'var(--red)'}">${tot>=0?'+':'-'}${fmtK(Math.abs(tot))} net</span>
+      <span class="acct-net" style="color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'+':'-'}${fmtK(Math.abs(net))} net worth</span>
     </div>
-    <div class="acct-typetotals">
-      <div class="acct-tt"><span>💵 Cash</span><b>${fmtK(tt.cash)}</b></div>
-      <div class="acct-tt"><span>📈 Invest</span><b>${fmtK(tt.investment)}</b></div>
-      <div class="acct-tt"><span>💳 Debt</span><b style="color:var(--red)">${fmtK(tt.credit)}</b></div>
-    </div>
-    ${rows}
-    <button class="manual-add-btn" onclick="event.stopPropagation();openManualAccount()">➕ Add an account</button>
+    ${section('Assets','\ud83d\udc9a',assets,assetTot,'var(--green)')}
+    ${section('Liabilities','\u2764\ufe0f',liabs,liabTot,'var(--red)')}
+    <button class="manual-add-btn" onclick="event.stopPropagation();openManualAccount()">\u2795 Add an account</button>
   </div>`;
 }
 function toggleAcct(uid,id){
