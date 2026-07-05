@@ -2914,10 +2914,19 @@ function engSpend30(){ return engRecent(30).filter(t=>t.amount>0).reduce((s,t)=>
 function engIncome30(){ return engRecent(30).filter(_isIncomeTxn).reduce((s,t)=>s+Math.abs(t.amount),0); }
 // Generalized windowed spend/income (any day count)
 function engSpend(days){ return engRecent(days).filter(t=>t.amount>0 && !_txnExcludedFromSpend(t)).reduce((s,t)=>s+t.amount,0); }
-function _txnIsToDebtAcct(t){ const a=(allAccts||[]).find(x=>x.account_id===t.account_id); return !!(a && (a.type==='credit'||a.type==='loan')); }
-// A transaction counts as income only if it's an inflow that ISN'T a tagged transfer/refund,
-// ISN'T a payment landing on a credit card / loan, and isn't categorized as a loan payment.
-function _isIncomeTxn(t){ return t.amount<0 && !_txnExcludedFromIncome(t) && !_txnIsToDebtAcct(t) && getTxnCategory(t)!=='Loan Payments'; }
+// Any inflow landing on a liability account (credit card, loan, mortgage) is a debt paydown, not income.
+function _txnIsToDebtAcct(t){
+  const a=(allAccts||[]).find(x=>x.account_id===t.account_id);
+  if(!a) return false;
+  if(a.type==='credit'||a.type==='loan') return true;
+  try{ const def=ACCT_CAT_BY_ID[getAccountCategory(a)]; if(def&&def.kind==='liability') return true; }catch(e){}
+  return false;
+}
+// Categories that are NEVER income — debt/liability payments and internal transfers.
+const NON_INCOME_CATEGORIES=new Set(['Loan Payments','Auto Payments','Mortgage','Credit Card','Loans','Loan','Savings & Invest','Debt','Housing']);
+// A transaction counts as income only if it's an inflow that isn't a tagged transfer/refund,
+// isn't a payment landing on a liability account, and isn't in a liability/transfer category.
+function _isIncomeTxn(t){ return t.amount<0 && !_txnExcludedFromIncome(t) && !_txnIsToDebtAcct(t) && !NON_INCOME_CATEGORIES.has(getTxnCategory(t)); }
 function engIncome(days){ return engRecent(days).filter(_isIncomeTxn).reduce((s,t)=>s+Math.abs(t.amount),0); }
 // Timeframe options: label, days, and a noun for "per period"
 const TIMEFRAMES=[{key:'1w',label:'1 wk',days:7},{key:'30d',label:'30 days',days:30},{key:'3m',label:'3 mo',days:90},{key:'1y',label:'1 yr',days:365}];
