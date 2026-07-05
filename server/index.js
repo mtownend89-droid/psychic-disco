@@ -252,6 +252,59 @@ app.post('/api/advisor', async (req, res) => {
   }
 });
 
+// ── RICHIE VALUE ESTIMATOR (VIN decode via free NHTSA API + AI dollar ballpark) ──
+async function aiDollarEstimate(thing) {
+  if (!process.env.OPENAI_API_KEY) return null;
+  try {
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: process.env.OPENAI_COACH_MODEL || 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'You give rough US dollar value estimates. Reply with ONLY a single whole number of US dollars — no symbols, words, or commas. If you cannot estimate, reply 0.' },
+          { role: 'user', content: `Estimate the value of: ${thing}` },
+        ],
+        max_tokens: 12, temperature: 0.2,
+      }),
+    });
+    if (!r.ok) return null;
+    const data = await r.json();
+    const n = parseInt((data.choices?.[0]?.message?.content || '').replace(/[^0-9]/g, ''), 10);
+    return isFinite(n) && n > 0 ? n : null;
+  } catch (_) { return null; }
+}
+
+app.post('/api/estimate', requireAuth, async (req, res) => {
+  const { type, vin, address } = req.body || {};
+  try {
+    if (type === 'vehicle') {
+      const clean = String(vin || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (clean.length < 11) return res.status(400).json({ error: 'Enter the full VIN (usually 17 characters).' });
+      let label = '';
+      try {
+        const vr = await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/decodevinvalues/${encodeURIComponent(clean)}?format=json`);
+        const vd = await vr.json();
+        const v = (vd.Results && vd.Results[0]) || {};
+        label = [v.ModelYear, v.Make, v.Model, v.Trim].filter(Boolean).join(' ').trim();
+      } catch (_) {}
+      if (!label) return res.status(422).json({ error: "Couldn't decode that VIN." });
+      const value = await aiDollarEstimate(`a used ${label} in average condition — typical private-party resale value in US dollars`);
+      return res.json({ label, value: value || null, note: 'Rough estimate — confirm on KBB or Edmunds.' });
+    }
+    if (type === 'home') {
+      const a = String(address || '').trim();
+      if (a.length < 5) return res.status(400).json({ error: 'Enter an address or ZIP plus a few home details.' });
+      const value = await aiDollarEstimate(`a typical single-family home at or near "${a}" — a rough, conservative US market value in dollars`);
+      return res.json({ label: a, value: value || null, note: 'Very rough ballpark from limited info — verify on Zillow or Redfin and adjust.' });
+    }
+    return res.status(400).json({ error: 'Provide a VIN (vehicle) or address (home).' });
+  } catch (e) {
+    console.error('estimate route error', e);
+    res.status(500).json({ error: 'Estimate failed — you can enter the value manually.' });
+  }
+});
+
 // ── RICHIE AI ONBOARDING (adaptive interview → profile) ─────────────────────────
 app.post('/api/onboard', async (req, res) => {
   try {
