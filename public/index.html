@@ -477,6 +477,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .cpw-form{display:flex;flex-direction:column;gap:9px;}
 /* ── Richie step-by-step wizard ── */
 .rwiz-overlay{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:20px;}
+#bootLoader{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;background:var(--bg,#0e1117);transition:opacity .35s ease;}
+#bootLoader.hide{opacity:0;pointer-events:none;}
+.bl-inner{display:flex;flex-direction:column;align-items:center;gap:16px;}
+.bl-bag{font-size:56px;line-height:1;animation:blBob 1.6s ease-in-out infinite;}
+.bl-spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--border,#232a36);border-top-color:var(--green,#2ecc8a);animation:blSpin .8s linear infinite;}
+.bl-msg{font-size:13.5px;color:var(--muted,#8a93a3);font-weight:600;font-family:var(--font,system-ui,sans-serif);}
+@keyframes blSpin{to{transform:rotate(360deg);}}
+@keyframes blBob{0%,100%{transform:translateY(0);}50%{transform:translateY(-9px);}}
 .rwiz-card{width:100%;max-width:440px;background:var(--surface1,var(--surface2));border:1px solid var(--border);border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.5);padding:22px;position:relative;}
 .rwiz-x{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;}
 .rwiz-x:hover{color:var(--text);}
@@ -2122,6 +2130,15 @@ canvas.chart-interactive{cursor:crosshair;}
 </head>
 <body>
 
+<!-- ═══ BOOT LOADER (covers the blank gap before login/app/SWOT) ═══ -->
+<div id="bootLoader">
+  <div class="bl-inner">
+    <div class="bl-bag">💰</div>
+    <div class="bl-spin"></div>
+    <div class="bl-msg" id="blMsg">Loading your money world…</div>
+  </div>
+</div>
+
 <!-- ═══ LOGIN SCREEN ═══ -->
 <div id="loginScreen" style="display:none">
   <div class="ri-bg"></div>
@@ -2670,7 +2687,7 @@ function engAccounts(){
       {name:'Credit Card (example)',type:'credit',subtype:'credit card',bal:-750,institution:'Example',id:'s4'},
     ].concat(manual);
   }
-  return allAccts.map((a,i)=>{
+  return _dedupeAcctList(allAccts.map((a,i)=>{
     const nm=(a.name||a.official_name||a.type);
     const cd=(APP.cardData||{})[_cardKey(nm)]||{};
     return {
@@ -2678,7 +2695,15 @@ function engAccounts(){
       bal:(_isDebtAcct(a)?-(Math.abs(a.balances.current||0)):(a.balances.current??a.balances.available??0)),
       institution:a.institution||'', id:a.account_id||('a'+i), excluded:!!cd.excluded, _acct:a
     };
-  }).concat(manual);
+  }).concat(manual));
+}
+function _dedupeAcctList(list){
+  const seen=new Set(), out=[];
+  for(const a of (list||[])){
+    const k=[(a.institution||'').toLowerCase().trim(),(a.rawName||a.name||'').toLowerCase().trim(),(a.subtype||a.type||''),Math.round(a.bal||0)].join('|');
+    if(seen.has(k)) continue; seen.add(k); out.push(a);
+  }
+  return out;
 }
 function engAcctNet30(acct){
   if(!dataLoaded||!acct._acct) return null;
@@ -8294,6 +8319,7 @@ function _afterAuthedEnter(){
   gg('loginScreen').style.display='none';
   ['loginPass','loginPass2','loginRecovery'].forEach(id=>{ const el=gg(id); if(el) el.value=''; });
   setToken(1);
+  showLoader('Loading your money world…');
   loadEngineData().then(()=>runWelcomeBack());
 }
 function _showRecovery(code,contLabel){
@@ -8323,6 +8349,7 @@ async function doLogin(){
     btn.disabled=false; btn.textContent='Sign in';
     gg('loginScreen').style.display='none';
     gg('loginPass').value='';
+    showLoader('Loading your money world…');
     await loadEngineData();
     runWelcomeBack();
   }catch(e){
@@ -8414,6 +8441,7 @@ function buildSWOT(){
 }
 
 function runWelcomeBack(){
+  try{ hideLoader(); }catch(e){}
   gg('welcomeBack').style.display='flex';
   const stars=gg('wbStars'); if(stars){ let s=''; for(let i=0;i<30;i++) s+=`<div class="ri-star" style="left:${Math.random()*100}%;top:${Math.random()*100}%;--dur:${2+Math.random()*3}s;--delay:${Math.random()*3}s"></div>`; stars.innerHTML=s; }
   const wb=new RichieEmoji(gg('wbRichie')); window._wbRichie=wb;
@@ -8581,6 +8609,8 @@ function wizFinish(){
   showLogin("You're all set! Sign in to lock things down — Richie will greet you each time.");
 }
 
+function showLoader(msg){ const l=gg('bootLoader'); if(!l)return; if(msg){ const m=gg('blMsg'); if(m)m.textContent=msg; } l.style.display='flex'; void l.offsetWidth; l.classList.remove('hide'); }
+function hideLoader(){ const l=gg('bootLoader'); if(!l)return; l.classList.add('hide'); setTimeout(()=>{ if(l.classList.contains('hide')) l.style.display='none'; },450); }
 function boot(){
   enterApp();
 }
@@ -8593,6 +8623,7 @@ function enterApp(){
   fabChar=new RichieEmoji(gg('fabChar'));
   rpChar=new RichieEmoji(gg('rpChar'));
   renderShell();
+  try{ hideLoader(); }catch(e){}
   try{ refreshEnvBadge(); }catch(e){}
   try{ if(APP._awaitingBuild){ if(typeof gamiCheckin==='function') gamiCheckin(); } else { gamiInit(); } }catch(e){}
   if(APP.activePage&&APP.activePage!=='__settings__') switchPage(APP.activePage);
@@ -8665,9 +8696,9 @@ function start(){
   showStorageWarning();
   let hasSetup=false;
   try{ hasSetup=!!(LS.getItem('richie_setup')||LS.getItem('richie_app')); }catch(e){}
-  if(!hasSetup){ runIntro(); return; }            // brand new → intro → wizard → login
+  if(!hasSetup){ runIntro(); hideLoader(); return; }            // brand new → intro → wizard → login
   if(isLoggedIn()){ enterApp(); }                 // already authenticated this session
-  else { showLogin(); }                           // returning → login → welcome-back SWOT
+  else { showLogin(); hideLoader(); }               // returning → login → welcome-back SWOT
 }
 window.addEventListener('load',start);
 </script>
