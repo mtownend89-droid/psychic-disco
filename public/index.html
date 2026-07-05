@@ -417,6 +417,15 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .um-item span{font-size:14px;width:18px;text-align:center;}
 .um-item:hover{background:rgba(255,255,255,0.05);}
 .um-danger{color:#f0846c;}
+.um-profiles{padding:4px 0 6px;margin-bottom:5px;border-bottom:1px solid var(--border);}
+.um-prof-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);padding:2px 10px 6px;}
+.um-prof{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:8px 10px;border:none;background:none;color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;}
+.um-prof:hover{background:rgba(255,255,255,0.05);}
+.um-prof.on{background:var(--green-dim);}
+.um-prof-av{font-size:16px;width:22px;text-align:center;flex-shrink:0;}
+.um-prof-nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.um-prof-chk{color:var(--green);font-weight:800;}
+.um-prof-add{color:var(--muted);font-weight:500;}
 .um-danger:hover{background:rgba(240,92,92,.12);}
 .uinfo{display:flex;flex-direction:column;gap:2px;}
 .uinfo-row{display:flex;justify-content:space-between;gap:14px;padding:10px 2px;border-bottom:1px solid var(--border);font-size:13px;}
@@ -2250,10 +2259,10 @@ canvas.chart-interactive{cursor:crosshair;}
             <div class="um-sub" id="umSub">—</div>
           </div>
         </div>
+        <div class="um-profiles" id="umProfiles"></div>
         <button class="um-item" onclick="startGettingStarted()"><span>🧭</span> Getting started</button>
         <button class="um-item" onclick="openUserInfo()"><span>👤</span> User info</button>
         <button class="um-item" onclick="closeUserMenu();openChangePassword()"><span>🔑</span> Change password</button>
-        <button class="um-item" onclick="switchUser()"><span>🔄</span> Switch user</button>
         <button class="um-item um-danger" onclick="logout()"><span>🚪</span> Sign out</button>
       </div>
     </div>
@@ -3161,6 +3170,7 @@ function engBills(){
   const mortByAcct={}; (plaidLiabilities&&plaidLiabilities.mortgages||[]).forEach(m=>{ if(m.account_id) mortByAcct[m.account_id]=m; });
   const out=[];
   (allAccts||[]).forEach(a=>{
+    if(_acctExcluded(a.name||a.official_name)) return;   // excluded accounts stay out of debt/bills too
     const cur=(a.balances&&(a.balances.current))??0;
     if(a.type==='credit'){
       const c=liabByAcct[a.account_id]||{};
@@ -4003,7 +4013,30 @@ const BUNDLE_PAGES={
   blank:[['Home','🏠','#2ecc8a',[]]],
 };
 let _uidSeq=0;
-function makeWidget(type){ return {uid:'w'+Date.now()+'_'+(_uidSeq++),type:type,span:(WIDGET_BY_ID[type]&&WIDGET_BY_ID[type].span)||1}; }
+// Old widget types that were folded into the tabbed hubs — remap so they never render as "? Widget".
+const WIDGET_MIGRATE={debt_summary:'debt_hub',debt_payoff:'debt_hub',credit_util:'debt_hub',promo_tracker:'debt_hub',fire_progress:'fire_hub',retirement_proj:'fire_hub',fire_calc:'fire_hub'};
+function makeWidget(type){ type=WIDGET_MIGRATE[type]||type; return {uid:'w'+Date.now()+'_'+(_uidSeq++),type:type,span:(WIDGET_BY_ID[type]&&WIDGET_BY_ID[type].span)||1}; }
+// Heal existing/seeded pages: remap folded widget types to hubs, drop unknown/removed types, and
+// collapse duplicate hubs (e.g. a page that had 4 separate debt widgets becomes one Debt hub).
+function migratePages(pages){
+  if(!Array.isArray(pages)) return pages;
+  const DEDUPE=new Set(['debt_hub','fire_hub']);
+  pages.forEach(pg=>{
+    if(!Array.isArray(pg.widgets)) return;
+    const seen=new Set();
+    pg.widgets=pg.widgets.map(w=>{
+      if(typeof w==='string') return WIDGET_MIGRATE[w]||w;
+      if(w&&w.type&&WIDGET_MIGRATE[w.type]) return {...w, type:WIDGET_MIGRATE[w.type]};
+      return w;
+    }).filter(w=>{
+      const t=(typeof w==='string')?w:(w&&w.type);
+      if(!t || !WIDGET_BY_ID[t]) return false;               // drop removed/unknown types
+      if(DEDUPE.has(t)){ if(seen.has(t)) return false; seen.add(t); }
+      return true;
+    });
+  });
+  return pages;
+}
 /* Default config for a widget — merged with whatever the widget has stored. */
 function widgetConfig(w){
   const c=(w&&w.config)||{};
@@ -4096,6 +4129,7 @@ function loadState(){
     const saved=JSON.parse(LS.getItem('richie_app')||'null');
     if(saved){
       APP=Object.assign(APP,saved);
+      try{ migratePages(APP.pages); }catch(e){}   // heal folded/removed widget types
       // Migration: heal worlds saved before widgets were seeded into bundle pages.
       const hasAnyWidget=(APP.pages||[]).some(p=>p.widgets&&p.widgets.length>0);
       if((APP.pages||[]).length && !hasAnyWidget){
@@ -4138,9 +4172,59 @@ function loadState(){
       APP.pages=seedPages('overview');
       APP.activePage=APP.pages[0].id;
     }
+    _initProfiles();   // set up / load per-profile layouts
   }catch(e){ console.warn('state load failed',e); }
 }
-function saveState(){ try{ LS.setItem('richie_app',JSON.stringify(APP)); }catch(e){} }
+function saveState(){ try{ _saveActiveLayout(); LS.setItem('richie_app',JSON.stringify(APP)); }catch(e){} }
+/* ── Per-profile layouts: each profile (Matt, Dana…) has its own pages/widgets; ALL
+   financial data (accounts, transactions, goals, budget, categories, net worth) is shared. ── */
+function _activeProfile(){ return (APP.profiles||[]).find(p=>p.id===APP.activeProfile) || (APP.profiles&&APP.profiles[0]) || {name:'Me',avatar:'💰'}; }
+function _initProfiles(){
+  if(!Array.isArray(APP.profiles)||!APP.profiles.length) APP.profiles=[{name:'Me',avatar:'💰'}];
+  APP.profiles.forEach((p,i)=>{ if(!p.id) p.id='prof'+i+'_'+String(p.name||'me').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,10); if(!p.avatar) p.avatar='💰'; });
+  if(!APP.layouts||typeof APP.layouts!=='object') APP.layouts={};
+  const keys=APP.profiles.map(p=>p.id);
+  if(!APP.activeProfile||keys.indexOf(APP.activeProfile)<0) APP.activeProfile=keys[0];
+  // First run under the profile system: adopt the current dashboard as the active profile's layout.
+  if(!APP.layouts[APP.activeProfile] && (APP.pages||[]).length){
+    APP.layouts[APP.activeProfile]={ pages:APP.pages, activePage:APP.activePage };
+  }
+  // Load the active profile's layout into the working copy.
+  const lay=APP.layouts[APP.activeProfile];
+  if(lay && Array.isArray(lay.pages) && lay.pages.length){ APP.pages=lay.pages; APP.activePage=lay.activePage||(lay.pages[0]&&lay.pages[0].id); }
+}
+function _saveActiveLayout(){
+  if(!APP.layouts) APP.layouts={};
+  if(!APP.activeProfile) return;
+  APP.layouts[APP.activeProfile]={ pages:APP.pages, activePage:(APP.activePage==='__settings__'?(APP.pages[0]&&APP.pages[0].id):APP.activePage) };
+}
+function _cloneLayout(){
+  const pages=(APP.pages||[]).map(p=>({ ...p, id:'p'+Date.now()+'_'+Math.floor(Math.random()*99999), widgets:(p.widgets||[]).map(w=>({...w, uid:'w'+Date.now()+'_'+(_uidSeq++)})) }));
+  return { pages, activePage: pages[0]?pages[0].id:null };
+}
+function switchProfile(key){
+  try{ closeUserMenu(); }catch(e){}
+  if(key===APP.activeProfile) return;
+  const p=(APP.profiles||[]).find(x=>x.id===key); if(!p) return;
+  _saveActiveLayout();
+  APP.activeProfile=key;
+  let lay=APP.layouts[key];
+  if(!lay || !Array.isArray(lay.pages) || !lay.pages.length){ lay=_cloneLayout(); APP.layouts[key]=lay; }   // new profile starts from a copy they can customize
+  APP.pages=lay.pages; APP.activePage=lay.activePage;
+  saveState();
+  renderShell();
+  if(APP.activePage && APP.activePage!=='__settings__') switchPage(APP.activePage);
+  else if(APP.pages[0]) switchPage(APP.pages[0].id);
+  try{ if(typeof richieSay==='function') richieSay(`Now showing ${p.name}'s dashboard. The money data's shared — only the layout changes.`); }catch(e){}
+}
+function addProfile(){
+  const name=(prompt('New profile name (e.g. Dana):')||'').trim();
+  if(!name) return;
+  const id='prof'+(APP.profiles.length)+'_'+name.toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,10)+Math.floor(Math.random()*99);
+  APP.profiles.push({ id, name, avatar:'🧑' });
+  saveState();
+  switchProfile(id);   // jump into the new profile (starts as a copy of the current layout)
+}
 
 /* ═══════════════ RENDER SHELL ═══════════════ */
 function applyAccent(){ const p=RICHIE_PERSONAS[APP.persona]; document.documentElement.style.setProperty('--green', p?p.accent:'#2ecc8a'); document.documentElement.style.setProperty('--richie-green', p?p.accent:'#2ecc8a'); }
@@ -4150,7 +4234,7 @@ function renderShell(){
   gg('sbHousehold').textContent=APP.household;
   const lv=LEVELS.find(l=>l.n===APP.level)||LEVELS[0];
   gg('sbLevelLabel').textContent=lv.icon+' Level '+lv.n+' · '+lv.name;
-  const prof=APP.profiles[0]||{name:'Me',avatar:'💰'};
+  const prof=_activeProfile();
   gg('sbAvatar').textContent=prof.avatar||'💰';
   gg('sbUserName').textContent=prof.name||'Me';
   gg('sbXp').textContent=APP.xp+' XP';
@@ -4534,6 +4618,7 @@ function richieBuildApp(opts){
   if(cg.length){ APP.pages=seedPagesFromGoals(cg); APP._goalsFirst=true; APP._coachQueue=APP.pages.filter(p=>p.goalMetric).map(p=>p.id); }
   else { APP.pages=seedPages((setup.bundle)||'overview'); }
   APP._awaitingBuild=false;
+  try{ migratePages(APP.pages); }catch(e){}   // fold seeded debt/FIRE widgets into hubs + dedupe
   APP.activePage=APP.pages[0]?APP.pages[0].id:null;
   saveState();
   try{ gamiInit(); }catch(e){}                 // drops in the Journey widget + checks first achievements
@@ -8320,15 +8405,20 @@ function toggleUserMenu(e){
 function closeUserMenu(){ const m=gg('userMenu'); if(m) m.style.display='none'; document.removeEventListener('click',_umOutside); }
 function _umOutside(ev){ const m=gg('userMenu'), b=gg('sbUserBtn'); if(m && !m.contains(ev.target) && b && !b.contains(ev.target)) closeUserMenu(); }
 function populateUserMenu(){
-  const prof=(APP.profiles&&APP.profiles[0])||{name:'Me',avatar:'💰'};
+  const prof=_activeProfile();
   const lv=LEVELS.find(l=>l.n===APP.level)||LEVELS[0];
   const av=gg('umAvatar'); if(av) av.textContent=prof.avatar||'💰';
-  const nm=gg('umName'); if(nm) nm.textContent=_loginUsername()||prof.name||'Me';
+  const nm=gg('umName'); if(nm) nm.textContent=prof.name||_loginUsername()||'Me';
   const sb=gg('umSub'); if(sb) sb.textContent=(APP.household||'My Finance World')+' · '+lv.icon+' '+lv.name;
+  const pl=gg('umProfiles');
+  if(pl){
+    const rows=(APP.profiles||[]).map(p=>`<button class="um-prof${p.id===APP.activeProfile?' on':''}" onclick="switchProfile('${p.id}')"><span class="um-prof-av">${esc(p.avatar||'💰')}</span><span class="um-prof-nm">${esc(p.name||'Me')}</span>${p.id===APP.activeProfile?'<span class="um-prof-chk">✓</span>':''}</button>`).join('');
+    pl.innerHTML=`<div class="um-prof-lbl">Viewing as · your own layout</div>${rows}<button class="um-prof um-prof-add" onclick="addProfile()"><span class="um-prof-av">➕</span><span class="um-prof-nm">Add profile</span></button>`;
+  }
 }
 function openUserInfo(){
   closeUserMenu();
-  const prof=(APP.profiles&&APP.profiles[0])||{name:'Me',avatar:'💰'};
+  const prof=_activeProfile();
   const lv=LEVELS.find(l=>l.n===APP.level)||LEVELS[0];
   gg('manualModal').style.display='flex';
   gg('manualTitle').textContent='User info';
