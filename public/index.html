@@ -1195,6 +1195,31 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .rec-billbtn{flex-shrink:0;background:var(--green-dim);border:1px solid var(--green);color:var(--green);border-radius:8px;padding:6px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);white-space:nowrap;}
 .rec-billbtn:hover{background:var(--surface3);}
 .rec-inbills{flex-shrink:0;font-size:12px;font-weight:700;color:var(--muted);padding:6px 11px;white-space:nowrap;}
+.pf-wrap{display:flex;flex-direction:column;}
+.pf-total{margin-bottom:8px;}
+.pf-accts{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;}
+.pf-acct{font-size:10.5px;font-weight:600;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 9px;}
+.pf-list{display:flex;flex-direction:column;}
+.pf-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);cursor:pointer;}
+.pf-row:last-of-type{border-bottom:none;}
+.pf-row:hover{background:var(--surface2);border-radius:8px;padding-left:6px;padding-right:6px;}
+.pf-main{flex:1;min-width:0;}
+.pf-nm{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pf-sym{font-size:10px;font-weight:800;color:var(--green);background:var(--green-dim);padding:1px 5px;border-radius:5px;margin-left:4px;}
+.pf-sub{font-size:11px;color:var(--muted);margin-top:1px;}
+.pf-bar{height:4px;border-radius:3px;background:var(--surface3);overflow:hidden;margin-top:5px;}
+.pf-bar i{display:block;height:100%;background:var(--green);border-radius:3px;}
+.pf-side{text-align:right;flex-shrink:0;}
+.pf-val{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;}
+.pf-pct{font-size:11px;color:var(--muted);}
+.pf-research{font-size:10px;color:var(--green);font-weight:700;margin-top:2px;}
+.rs-hero{text-align:center;padding:6px 0 14px;}
+.rs-sym{font-size:26px;font-weight:800;letter-spacing:1px;}
+.rs-val{font-size:13px;color:var(--muted);margin-top:3px;}
+.rs-link{display:block;padding:11px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);text-decoration:none;font-size:13px;font-weight:600;margin-bottom:7px;}
+.rs-link:hover{border-color:var(--green);}
+.rs-answer{margin-top:10px;}
+.rs-ans-txt{font-size:13px;line-height:1.6;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 13px;}
 /* ── Credit Utilization + DTI ── */
 .cu-nolimit{display:flex;flex-direction:column;gap:6px;}
 .cu-setlimit{width:100%;text-align:left;padding:10px 12px;border:1px dashed var(--amber);background:var(--amber-dim);color:var(--text);border-radius:9px;font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;}
@@ -2196,6 +2221,18 @@ canvas.chart-interactive{cursor:crosshair;}
   <div class="doc-card">
     <div class="doc-head"><span>📄 Upload statement or bill</span><button class="doc-x" onclick="closeDocModal()">✕</button></div>
     <div class="doc-body" id="docBody"></div>
+  </div>
+</div>
+<div id="researchModal" class="doc-modal" style="display:none">
+  <div class="doc-card">
+    <div class="doc-head"><span id="rsTitle">Research</span><button class="doc-x" onclick="closeResearch()">✕</button></div>
+    <div class="doc-body" id="rsBody"></div>
+  </div>
+</div>
+<div id="holdModal" class="doc-modal" style="display:none">
+  <div class="doc-card">
+    <div class="doc-head"><span id="holdTitle">Add position</span><button class="doc-x" onclick="closeHold()">✕</button></div>
+    <div class="doc-body" id="holdBody"></div>
   </div>
 </div>
 
@@ -4003,7 +4040,10 @@ function docReviewRender(){
     header=`<div class="doc-hgrid">${field('Institution','docInst',r.institution,'E*Trade')}${field('Account','docAcct',r.accountName,'IRA / Brokerage')}${field('Total value ($)','docValue',r.accountValue,'0')}</div>`;
     addOpt=`<label class="doc-addbill"><input type="checkbox" id="docAddAsset" checked> Add to Net Worth as an Investment asset (${fmtK(+r.accountValue||0)})</label>`;
     const hold=Array.isArray(r.holdings)?r.holdings:[];
-    if(hold.length) section=`<div class="doc-section-h">Holdings \u00b7 ${hold.length}</div><div class="doc-txns">${hold.slice(0,80).map(h=>`<div class="doc-txn"><span class="doc-tx-desc" style="border:none">${esc(h.name||'')}</span><span class="doc-tx-amt" style="border:none;background:none">${fmtK(+h.value||0)}</span></div>`).join('')}</div>`;
+    if(hold.length){
+      addOpt+=`<label class="doc-addbill"><input type="checkbox" id="docImportHoldings" checked> Import ${hold.length} position${hold.length!==1?'s':''} into your Portfolio</label>`;
+      section=`<div class="doc-section-h">Holdings \u00b7 ${hold.length}</div><div class="doc-txns">${hold.slice(0,80).map(h=>`<div class="doc-txn"><span class="doc-tx-desc" style="border:none">${esc(h.name||'')}${h.symbol?' \u00b7 '+esc(h.symbol):''}</span><span class="doc-tx-amt" style="border:none;background:none">${fmtK(+h.value||0)}</span></div>`).join('')}</div>`;
+    }
   } else if(isBill){
     detailLbl='Bill';
     const due=(r.amountDue!=null?r.amountDue:r.premium);
@@ -4039,14 +4079,20 @@ function docAddSelected(){
   const hasTxns=txns.length>0;
   const inst=((gg('docInst')&&gg('docInst').value)||r.institution||'Statement').trim();
   const nm=((gg('docAcct')&&gg('docAcct').value)||inst||'Statement').trim();
-  const finish=(msg)=>{ saveState(); _rebuildTxns(); if(allTxns.length>0) dataLoaded=true; closeDocModal(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); if(typeof richieSay==='function'&&msg) richieSay(msg); };
-  // Investment -> Net Worth asset
+  const finish=(msg)=>{ saveState(); _rebuildTxns(); if(allTxns.length>0) dataLoaded=true; try{ nwHistRecord(); }catch(e){} closeDocModal(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); if(typeof richieSay==='function'&&msg) richieSay(msg); };
+  // Investment -> Net Worth asset + Portfolio positions
   if((type==='investment')||(!!r.accountValue&&!hasTxns)){
+    let msg='';
     if(gg('docAddAsset')&&gg('docAddAsset').checked){
       const val=parseFloat(gg('docValue').value)||r.accountValue||0;
-      if(val>0){ APP.nwManualAssets=APP.nwManualAssets||[]; APP.nwManualAssets.push({ id:'nw'+Date.now()+Math.floor(Math.random()*999), cat:'Investment', name:nm, value:val }); return finish(`Added ${nm} (${fmtK(val)}) to your Net Worth. \ud83d\udcc8`); }
+      if(val>0){ APP.nwManualAssets=APP.nwManualAssets||[]; APP.nwManualAssets.push({ id:'nw'+Date.now()+Math.floor(Math.random()*999), cat:'Investment', name:nm, value:val }); msg=`Added ${nm} (${fmtK(val)}) to your Net Worth. \ud83d\udcc8`; }
     }
-    return finish('');
+    if(gg('docImportHoldings')&&gg('docImportHoldings').checked && Array.isArray(r.holdings)){
+      APP.holdings=APP.holdings||[]; let n=0;
+      r.holdings.forEach(h=>{ if(!h||(!h.value&&!h.name))return; APP.holdings.push({ id:'h'+Date.now()+'_'+(n++), name:h.name||h.symbol||'Position', symbol:(h.symbol||'').toString().toUpperCase().trim(), shares:(h.shares!=null?h.shares:null), value:+h.value||0, account:nm, addedAt:Date.now() }); });
+      if(n) msg=(msg?msg+' ':'')+`Imported ${n} position${n!==1?'s':''} to your Portfolio.`;
+    }
+    return finish(msg);
   }
   // Any bill (insurance / phone / cable / utility / loan / generic) -> Upcoming Bills
   if(!hasTxns){
@@ -4077,6 +4123,91 @@ function docAddSelected(){
   }
   finish(added?`Added ${added} transaction${added!==1?'s':''}${addBill?' and a bill':''} from your ${((type||'statement').replace('_',' '))}. \ud83d\udcc4`:`Saved the details from your ${((type||'statement').replace('_',' '))}.`);
 }
+/* ═══ INVESTMENTS / PORTFOLIO (Mogul) — positions from statements + research ═══ */
+function engHoldings(){ return (APP.holdings||[]).slice(); }
+function engPortfolioValue(){ return engHoldings().reduce((s,h)=>s+(+h.value||0),0); }
+function portfolioBody(w){
+  const H=engHoldings();
+  if(!H.length) return `<div class="wph"><div class="wph-sub">No positions yet.</div><div class="ws-hint" style="margin-top:6px">Upload a brokerage / IRA / 401k statement and Richie pulls your positions in automatically — or add one by hand.</div><button class="nw-add" style="margin-top:11px" onclick="event.stopPropagation();openHoldingEditor()">＋ Add a position</button></div>`;
+  const tot=engPortfolioValue();
+  const byAcct={}; H.forEach(h=>{ const a=h.account||'—'; byAcct[a]=(byAcct[a]||0)+(+h.value||0); });
+  const acctChips=Object.keys(byAcct).length>1?`<div class="pf-accts">${Object.entries(byAcct).map(([a,v])=>`<span class="pf-acct">${esc(a)} · ${fmtK(v)}</span>`).join('')}</div>`:'';
+  const rows=H.slice().sort((a,b)=>(+b.value||0)-(+a.value||0)).map(h=>{
+    const pct=tot>0?Math.round((+h.value||0)/tot*100):0;
+    return `<div class="pf-row" onclick="openResearch('${h.id}')">
+      <div class="pf-main"><div class="pf-nm">${esc(h.name||h.symbol||'Position')}${h.symbol?` <span class="pf-sym">${esc(h.symbol)}</span>`:''}</div><div class="pf-sub">${h.shares!=null?esc(String(h.shares))+' sh · ':''}${esc(h.account||'')}</div><div class="pf-bar"><i style="width:${Math.max(2,pct)}%"></i></div></div>
+      <div class="pf-side"><div class="pf-val">${fmtK(h.value)}</div><div class="pf-pct">${pct}%</div><div class="pf-research">research ›</div></div>
+    </div>`;
+  }).join('');
+  return `<div class="pf-wrap"><div class="pf-total"><div class="wph-stat">${fmtK(tot)}</div><div class="wph-sub">portfolio value · ${H.length} position${H.length!==1?'s':''}</div>${acctChips}</div><div class="pf-list">${rows}</div><button class="nw-add" onclick="event.stopPropagation();openHoldingEditor()">＋ Add a position</button></div>`;
+}
+function openResearch(id){
+  const h=(APP.holdings||[]).find(x=>x.id===id); if(!h) return;
+  const tot=engPortfolioValue(), pct=tot>0?Math.round((+h.value||0)/tot*100):0;
+  const sym=(h.symbol||'').trim(), q=encodeURIComponent(sym||h.name||'');
+  const yahoo=sym?`https://finance.yahoo.com/quote/${encodeURIComponent(sym)}`:`https://finance.yahoo.com/lookup?s=${q}`;
+  const google=`https://www.google.com/search?q=${q}%20stock`;
+  const mw=sym?`https://www.marketwatch.com/investing/stock/${encodeURIComponent(sym.toLowerCase())}`:`https://www.marketwatch.com/tools/quotes/lookup.asp?lookup=${q}`;
+  gg('rsTitle').textContent=h.name||h.symbol||'Research';
+  gg('rsBody').innerHTML=`
+    <div class="rs-hero"><div class="rs-sym">${esc(sym||'—')}</div><div class="rs-val">${fmtK(h.value)} · ${pct}% of portfolio${h.shares!=null?' · '+esc(String(h.shares))+' sh':''}</div></div>
+    <div class="doc-section-h">Research links</div>
+    <a class="rs-link" href="${yahoo}" target="_blank" rel="noopener">📊 Yahoo Finance ›</a>
+    <a class="rs-link" href="${google}" target="_blank" rel="noopener">🔎 Google ›</a>
+    <a class="rs-link" href="${mw}" target="_blank" rel="noopener">📰 MarketWatch ›</a>
+    <div class="doc-section-h">Ask Richie</div>
+    <button class="btn primary" id="rsAskBtn" onclick="researchAsk('${h.id}')">💬 Explain this holding</button>
+    <div id="rsAnswer" class="rs-answer"></div>
+    <div class="ws-hint" style="margin-top:12px">Educational only — not investment advice. Always do your own research.</div>
+    <div class="mf-actions"><button class="btn" onclick="openHoldingEditor('${h.id}')">Edit</button><button class="btn" onclick="closeResearch()">Close</button></div>`;
+  gg('researchModal').style.display='flex';
+}
+function closeResearch(){ gg('researchModal').style.display='none'; }
+async function researchAsk(id){
+  const h=(APP.holdings||[]).find(x=>x.id===id); if(!h) return;
+  const ans=gg('rsAnswer'), btn=gg('rsAskBtn'); if(!ans) return;
+  if(btn) btn.disabled=true; ans.innerHTML='<div class="ws-hint">Richie is looking into it…</div>';
+  try{
+    const r=await fetch('/api/advisor',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ messages:[{role:'user', content:`In 3-4 plain sentences, explain what ${h.name}${h.symbol?' ('+h.symbol+')':''} is as an investment: what kind of asset it is, its sector or category, and its general risk profile. Educational only — do NOT give buy/sell/hold advice.`}], mode:'general', persona:APP.persona||'coach', level:APP.level||5 })});
+    const d=await r.json().catch(()=>({}));
+    if(btn) btn.disabled=false;
+    const txt=(d&&(d.reply||d.tip||d.message))||'';
+    ans.innerHTML= txt ? `<div class="rs-ans-txt">${esc(txt)}</div>` : '<div class="ws-hint">Couldn’t get a summary right now — try the research links above.</div>';
+  }catch(e){ if(btn) btn.disabled=false; ans.innerHTML='<div class="ws-hint">Couldn’t reach Richie — try the research links above.</div>'; }
+}
+let _holdEdit=null;
+function openHoldingEditor(id){
+  closeResearch();
+  const h=id?(APP.holdings||[]).find(x=>x.id===id):null; _holdEdit=id||null;
+  gg('holdTitle').textContent=h?'Edit position':'Add position';
+  gg('holdBody').innerHTML=`
+    <label class="mf-label">Name</label><input class="mf-in" id="hldName" placeholder="e.g. Apple Inc / S&P 500 Index" value="${h?esc(h.name||''):''}">
+    <div class="doc-hgrid" style="margin-top:10px">
+      <div class="doc-f"><label>Ticker (optional)</label><input id="hldSym" value="${h?esc(h.symbol||''):''}" placeholder="AAPL"></div>
+      <div class="doc-f"><label>Shares (optional)</label><input id="hldShares" type="number" step="any" value="${h&&h.shares!=null?esc(String(h.shares)):''}" placeholder="0"></div>
+      <div class="doc-f"><label>Value ($)</label><input id="hldValue" type="number" step="0.01" value="${h?esc(String(h.value!=null?h.value:'')):''}" placeholder="0"></div>
+      <div class="doc-f"><label>Account</label><input id="hldAcct" value="${h?esc(h.account||''):''}" placeholder="Brokerage / IRA"></div>
+    </div>
+    <div class="mf-actions">${h?`<button class="btn" style="color:var(--red)" onclick="holdingDelete('${h.id}')">Delete</button>`:'<span></span>'}<button class="btn primary" onclick="holdingSave()">Save</button></div>`;
+  gg('holdModal').style.display='flex';
+}
+function closeHold(){ gg('holdModal').style.display='none'; _holdEdit=null; }
+function holdingSave(){
+  const name=(gg('hldName').value||'').trim(); const value=parseFloat(gg('hldValue').value)||0;
+  if(!name && !value){ closeHold(); return; }
+  const rec={ id:_holdEdit||('h'+Date.now()+Math.floor(Math.random()*999)), name:name||'Position', symbol:(gg('hldSym').value||'').toUpperCase().trim(), shares:(gg('hldShares').value!==''?parseFloat(gg('hldShares').value):null), value, account:(gg('hldAcct').value||'').trim(), addedAt:Date.now() };
+  APP.holdings=APP.holdings||[];
+  const i=_holdEdit?APP.holdings.findIndex(x=>x.id===_holdEdit):-1;
+  if(i>=0) APP.holdings[i]=rec; else APP.holdings.push(rec);
+  saveState(); closeHold();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+}
+function holdingDelete(id){
+  APP.holdings=(APP.holdings||[]).filter(x=>x.id!==id);
+  saveState(); closeHold();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+}
+
 async function openLinkHandler(){
   if(typeof Plaid==='undefined'){ showToast('Plaid not loaded — check your connection.','error'); return; }
   try{
@@ -4609,6 +4740,7 @@ const WIDGET_CATALOG=[
   {id:'top_categories',name:'Top Categories',icon:'📊',cat:'Cash Flow',span:1,minLevel:1,desc:'Where your money goes most.'},
   {id:'category_heatmap',name:'Category Heatmap',icon:'🗓️',cat:'Cash Flow',span:2,minLevel:2,desc:'Spending by category across months — spot seasonal patterns at a glance.'},
   {id:'net_worth_chart',name:'Net Worth Trend',icon:'📈',cat:'Wealth',span:2,minLevel:2,desc:'Net worth over months.'},
+  {id:'investments',name:'Investments',icon:'🏦',cat:'Wealth',span:2,minLevel:5,desc:'Your portfolio — positions pulled from statements, allocation, and one-tap research. (Mogul)'},
   {id:'fire_hub',name:'Wealth & FIRE',icon:'🔥',cat:'Wealth',span:2,minLevel:3,desc:'Financial-independence progress, long-term projection, and an interactive calculator — in tabs.'},
   {id:'debt_hub',name:'Debt',icon:'💳',cat:'Debt',span:2,minLevel:1,desc:'Everything you owe in one place — balances, payoff timeline, credit utilization, and 0% promos, in tabs.'},
   {id:'fire_drill',name:'Fire Drill Simulator',icon:'🧯',cat:'Playground',span:2,minLevel:2,desc:'Stress-test your finances against job loss, disasters & more.'},
@@ -7106,6 +7238,7 @@ function renderWidgetBody(w){
     case 'all_transactions': return txnFeedBody(w);
     case 'safe_to_spend': return safeToSpendBody(w);
     case 'recurring': return recurringBody(w);
+    case 'investments': return portfolioBody(w);
     case 'sankey': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Income → group → category${dataLoaded?' · last '+tfLabel(w.tf||'30d'):' · sample'}</div><div style="position:relative"><canvas id="cv_${w.uid}"></canvas></div></div>`;
     case 'net_worth_chart': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Net worth trend${dataLoaded?'':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
     case 'fire_progress': return fireProgressBody(w);
