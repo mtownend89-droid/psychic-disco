@@ -118,6 +118,54 @@ app.post('/api/tts', async (req, res) => {
   }
 });
 
+// ── RICHIE DOCUMENT ANALYSIS (statements/bills → structured data) ────────────────
+app.post('/api/analyze_document', requireAuth, async (req, res) => {
+  const { file, mimeType, filename } = req.body || {};
+  if (!file) return res.status(400).json({ error: 'No file provided.' });
+  if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'Document analysis needs OPENAI_API_KEY set on the server.' });
+  const SYSTEM = 'You extract structured financial data from bank / credit-card statements and bills. Return ONLY valid minified JSON, no prose, no markdown fences. Schema: {"docType":"statement|bill|receipt|other","institution":string|null,"accountName":string|null,"accountMask":string|null,"statementBalance":number|null,"amountDue":number|null,"dueDate":"YYYY-MM-DD"|null,"apr":number|null,"creditLimit":number|null,"minimumPayment":number|null,"transactions":[{"date":"YYYY-MM-DD","description":string,"amount":number}]}. Amount sign: POSITIVE = a charge/purchase (money out), NEGATIVE = a payment/credit/refund (money in). Use null for unknown fields, dates as YYYY-MM-DD. If the document is unreadable, return {"error":"reason"}.';
+  try {
+    let userContent;
+    const mt = (mimeType || '').toLowerCase();
+    if (mt.startsWith('image/')) {
+      userContent = [
+        { type: 'text', text: 'Extract the financial data from this statement/bill image.' },
+        { type: 'image_url', image_url: { url: `data:${mimeType};base64,${file}` } },
+      ];
+    } else if (mt.includes('pdf')) {
+      let text = '';
+      try { const pdfParse = require('pdf-parse'); const d = await pdfParse(Buffer.from(file, 'base64')); text = d.text || ''; }
+      catch (e) { return res.status(422).json({ error: "Couldn't read that PDF (the pdf-parse package may not be installed). Upload a screenshot/image of the statement instead." }); }
+      if (!text.trim()) return res.status(422).json({ error: 'That PDF looks like a scanned image with no text — upload it as an image (PNG/JPG) instead.' });
+      userContent = `Extract the financial data from this statement text:\n\n${text.slice(0, 16000)}`;
+    } else {
+      const text = Buffer.from(file, 'base64').toString('utf8');
+      userContent = `Extract the financial data from this file (${filename || 'upload'}):\n\n${text.slice(0, 16000)}`;
+    }
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: process.env.OPENAI_VISION_MODEL || 'gpt-4o-mini',
+        messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: userContent }],
+        max_tokens: 3500, temperature: 0,
+        response_format: { type: 'json_object' },
+      }),
+    });
+    if (!r.ok) { const d = await r.text().catch(() => ''); console.error('analyze_document AI error', r.status, d.slice(0, 300)); return res.status(502).json({ error: 'AI analysis failed — try again, or use a clearer image.' }); }
+    const data = await r.json();
+    let parsed;
+    try { parsed = JSON.parse(data.choices?.[0]?.message?.content || '{}'); }
+    catch (e) { return res.status(502).json({ error: "Couldn't parse the analysis result." }); }
+    if (parsed.error) return res.status(422).json({ error: parsed.error });
+    if (Array.isArray(parsed.transactions)) parsed.transactions = parsed.transactions.slice(0, 500);
+    res.json({ result: parsed });
+  } catch (e) {
+    console.error('analyze_document error', e);
+    res.status(500).json({ error: 'Analysis failed — ' + (e.message || 'unknown error') });
+  }
+});
+
 // ── RICHIE AI COACH (OpenAI chat) ───────────────────────────────────────────────
 const PERSONA_STYLE = {
   coach:      'a warm, encouraging coach. Celebrate progress, keep it kind.',
