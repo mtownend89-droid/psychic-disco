@@ -485,6 +485,43 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .bl-msg{font-size:13.5px;color:var(--muted,#8a93a3);font-weight:600;font-family:var(--font,system-ui,sans-serif);}
 @keyframes blSpin{to{transform:rotate(360deg);}}
 @keyframes blBob{0%,100%{transform:translateY(0);}50%{transform:translateY(-9px);}}
+.sb-upload{background:var(--surface2);border:1px solid var(--border);color:var(--text);margin-top:7px;}
+.cd-sub{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:7px;}
+.cd-list{display:flex;flex-direction:column;gap:7px;}
+.cd-row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:9px 11px;}
+.cd-meta{min-width:0;flex:1;}
+.cd-nm{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cd-info{font-size:11px;color:var(--muted);margin-top:1px;}
+.cd-rm{flex-shrink:0;background:none;border:1px solid var(--border);color:var(--red);border-radius:7px;padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);}
+.cd-rm:hover{background:rgba(240,92,92,.12);border-color:var(--red);}
+.sb-upload:hover{border-color:var(--green);}
+.bgate-alt{margin-top:12px;background:none;border:1px solid var(--border);color:var(--muted);padding:11px 18px;border-radius:12px;font-family:var(--font);font-weight:600;font-size:14px;cursor:pointer;}
+.bgate-alt:hover{border-color:var(--green);color:var(--text);}
+.doc-modal{position:fixed;inset:0;z-index:1600;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px;}
+.doc-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;width:100%;max-width:560px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;}
+.doc-head{display:flex;justify-content:space-between;align-items:center;padding:15px 18px;border-bottom:1px solid var(--border);font-weight:800;font-size:15px;}
+.doc-x{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;}
+.doc-body{padding:16px 18px;overflow-y:auto;}
+.doc-loading{display:flex;flex-direction:column;align-items:center;gap:12px;padding:34px 10px;text-align:center;}
+.doc-err{color:var(--red);font-size:13.5px;padding:18px 4px;text-align:center;line-height:1.5;}
+.doc-sub{font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5;}
+.doc-section-h{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin:14px 0 8px;padding-top:8px;border-top:1px solid var(--border);}
+.doc-hgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.doc-f{display:flex;flex-direction:column;gap:3px;}
+.doc-f label{font-size:11px;color:var(--muted);font-weight:600;}
+.doc-f input{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 9px;color:var(--text);font-family:var(--font);font-size:13px;}
+.doc-addbill{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--text);margin-top:11px;cursor:pointer;}
+.doc-selrow{display:flex;gap:7px;align-items:center;margin-bottom:8px;}
+.doc-txns{display:flex;flex-direction:column;gap:2px;max-height:280px;overflow-y:auto;}
+.doc-txn{display:flex;align-items:center;gap:8px;padding:7px 6px;border-radius:8px;cursor:pointer;}
+.doc-txn:hover{background:var(--surface2);}
+.doc-txn.dup{opacity:.6;}
+.doc-tx-date{font-size:11px;color:var(--muted);flex-shrink:0;width:52px;font-variant-numeric:tabular-nums;}
+.doc-tx-desc{flex:1;min-width:0;background:none;border:none;color:var(--text);font-size:12.5px;font-family:var(--font);border-bottom:1px solid transparent;}
+.doc-tx-desc:focus{outline:none;border-bottom-color:var(--border);}
+.doc-tx-amt{width:78px;flex-shrink:0;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 6px;color:var(--text);font-size:12px;font-family:var(--font);text-align:right;font-variant-numeric:tabular-nums;}
+.doc-dupflag{font-size:9.5px;font-weight:800;color:var(--amber);background:rgba(240,165,64,.15);padding:2px 5px;border-radius:5px;flex-shrink:0;}
+@media(max-width:520px){.doc-hgrid{grid-template-columns:1fr;}}
 .rwiz-card{width:100%;max-width:440px;background:var(--surface1,var(--surface2));border:1px solid var(--border);border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.5);padding:22px;position:relative;}
 .rwiz-x{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;}
 .rwiz-x:hover{color:var(--text);}
@@ -1150,6 +1187,14 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .rec-side{text-align:right;flex-shrink:0;}
 .rec-amt{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;}
 .rec-mo{font-size:10.5px;color:var(--muted);}
+.rec-row2{padding:9px 0;border-bottom:1px solid var(--border);}
+.rec-row2:last-of-type{border-bottom:none;}
+.rec-r2-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+.rec-r2-ctrls{display:flex;gap:7px;margin-top:7px;align-items:center;}
+.rec-catsel{flex:1;min-width:0;}
+.rec-billbtn{flex-shrink:0;background:var(--green-dim);border:1px solid var(--green);color:var(--green);border-radius:8px;padding:6px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);white-space:nowrap;}
+.rec-billbtn:hover{background:var(--surface3);}
+.rec-inbills{flex-shrink:0;font-size:12px;font-weight:700;color:var(--muted);padding:6px 11px;white-space:nowrap;}
 /* ── Credit Utilization + DTI ── */
 .cu-nolimit{display:flex;flex-direction:column;gap:6px;}
 .cu-setlimit{width:100%;text-align:left;padding:10px 12px;border:1px dashed var(--amber);background:var(--amber-dim);color:var(--text);border-radius:9px;font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;}
@@ -2147,6 +2192,14 @@ canvas.chart-interactive{cursor:crosshair;}
 
 <!-- ═══ LOGIN SCREEN ═══ -->
 <div id="loginScreen" style="display:none">
+
+<input type="file" id="docFileInput" accept=".pdf,image/*,.csv,.txt" style="display:none" onchange="docFileChosen(this)">
+<div id="docModal" class="doc-modal" style="display:none">
+  <div class="doc-card">
+    <div class="doc-head"><span>📄 Upload statement or bill</span><button class="doc-x" onclick="closeDocModal()">✕</button></div>
+    <div class="doc-body" id="docBody"></div>
+  </div>
+</div>
   <div class="ri-bg"></div>
   <div class="login-card">
     <span class="richie ri-char" id="loginRichie" style="font-size:88px">💰</span>
@@ -2289,6 +2342,7 @@ canvas.chart-interactive{cursor:crosshair;}
     <div class="sb-footer">
       <div class="sb-section-divider"></div>
       <button class="sb-connect" id="sbConnectBtn" onclick="openLinkHandler()">➕ Connect a bank</button>
+      <button class="sb-connect sb-upload" id="sbUploadBtn" onclick="docUploadPick()">📄 Upload statement</button>
       <button class="sb-utility-btn" onclick="switchPage('__settings__')">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         Settings
@@ -2580,13 +2634,14 @@ const TXN_TAGS=[
   {id:'business',   label:'Business',      icon:'💼'},
   {id:'reimburse',  label:'Reimbursement', icon:'🧾'},
   {id:'subscription',label:'Subscription', icon:'🔄'},
+  {id:'ccpayment',  label:'Credit Card Payment', icon:'💳'},
   {id:'ignore',     label:'Ignore',        icon:'🚫'},
 ];
 const TXN_TAG_BY_ID={}; TXN_TAGS.forEach(t=>TXN_TAG_BY_ID[t.id]=t);
 function getTxnTag(t){ return _txnTags[_txnKey(t)]||''; }
 function setTxnTag(key, tag){ if(!key) return; if(tag) _txnTags[key]=tag; else delete _txnTags[key]; try{ LS.setItem('mdf_txn_tags', JSON.stringify(_txnTags)); }catch(e){} }
 // Tags that mean "not real spending" (transfers, paybacks, ignored) — excluded from spend totals.
-function _txnExcludedFromSpend(t){ const g=getTxnTag(t); return g==='transfer'||g==='ignore'||g==='reimburse'; }
+function _txnExcludedFromSpend(t){ const g=getTxnTag(t); return g==='transfer'||g==='ignore'||g==='reimburse'||g==='ccpayment'; }
 // Tags that mean "not real income" (a transfer in, a refund, etc.) — excluded from income totals.
 function _txnExcludedFromIncome(t){ const g=getTxnTag(t); return g==='transfer'||g==='ignore'||g==='refund'||g==='reimburse'; }
 function _txnKey(t){ return t.transaction_id || t.id || ((t.date||'')+'|'+(t.merchant_name||t.name||'')+'|'+t.amount); }
@@ -2603,7 +2658,8 @@ function getTxnCategory(t){
 function getTxnNote(t){ return _txnNotes[_txnKey(t)]||''; }
 
 /* ── Live data layer (Plaid-backed via server API) ── */
-let allAccts=[], allTxns=[], dataLoaded=false, serverAvailable=true;
+let allAccts=[], allTxns=[], _plaidTxns=[], dataLoaded=false, serverAvailable=true;
+function _rebuildTxns(){ allTxns=(_plaidTxns||[]).concat(APP.importedTxns||[]); }
 async function _fetchJSON(url){
   // Returns parsed JSON, or null when no API server is present (standalone/offline).
   let r;
@@ -2618,7 +2674,7 @@ async function loadAccounts(){
 }
 async function loadTransactions(){
   const d=await _fetchJSON('/api/transactions'); if(!d) return false;
-  allTxns=d.transactions||[]; return true;
+  _plaidTxns=d.transactions||[]; _rebuildTxns(); return true;
 }
 let plaidLiabilities=null; // {credit_cards:[], mortgages:[]} from server when connected
 async function loadLiabilities(){
@@ -2628,7 +2684,8 @@ async function loadLiabilities(){
 async function loadEngineData(){
   const [a,b]=await Promise.all([loadAccounts(),loadTransactions()]);
   loadLiabilities(); // fire-and-forget; enriches SWOT/debt when available
-  dataLoaded=(a||b)&&(allAccts.length>0||allTxns.length>0);
+  _rebuildTxns();
+  dataLoaded=((a||b)&&(allAccts.length>0||allTxns.length>0)) || ((APP.importedTxns||[]).length>0);
   try{ if(typeof checkGoalCompletion==='function') checkGoalCompletion(); }catch(e){}
   try{ if(typeof maybeWarnPromos==='function') maybeWarnPromos(); }catch(e){}
   return dataLoaded;
@@ -3341,19 +3398,47 @@ function engRecurring(){
     else if(g>=350&&g<=385){cad='yearly';per=365;}
     if(!cad) return;
     const last=txns[txns.length-1];
-    out.push({merchant:(last.merchant_name||last.name||k), amount:med, cadence:cad, count:txns.length, lastDate:last.date, monthly:med*(30.44/per), category:getTxnCategory(last), key:_txnKey(last)});
+    out.push({merchant:(last.merchant_name||last.name||k), amount:med, cadence:cad, count:txns.length, lastDate:last.date, monthly:med*(30.44/per), category:getTxnCategory(last), key:_txnKey(last), merchKey:k});
   });
   return out.sort((a,b)=>b.monthly-a.monthly);
 }
+let _recRows=[];
 function recurringBody(w){
-  const rec=engRecurring();
+  const rec=engRecurring(); _recRows=rec;
   if(!rec.length) return `<div class="wph"><div class="wph-sub">No recurring charges detected yet.</div><div class="ws-hint" style="margin-top:6px">Once you've got a couple months of transactions, Richie spots subscriptions and recurring bills automatically.</div></div>`;
   const monthlyTot=rec.reduce((s,r)=>s+r.monthly,0);
-  const rows=rec.slice(0,20).map(r=>`<div class="rec-row">
-    <div class="rec-main"><div class="rec-nm">${esc(r.merchant)}</div><div class="rec-sub">${r.cadence} · ${esc(r.category)} · seen ${r.count}×</div></div>
-    <div class="rec-side"><div class="rec-amt">${fmtK(r.amount)}</div><div class="rec-mo">${fmtK(r.monthly)}/mo</div></div>
-  </div>`).join('');
-  return `<div class="rec-wrap"><div class="rec-total"><b>${fmtK(monthlyTot)}</b> est. recurring / month · ${rec.length} found</div>${rows}<div class="ws-hint" style="margin-top:9px">Spot one you forgot? Cancel it — or tag it <b>Subscription</b> or <b>Ignore</b> in the All Transactions widget.</div></div>`;
+  const cats=getUserCategories().filter(c=>!c.group).map(c=>c.label);
+  const billNames=new Set((APP.manualBills||[]).map(b=>(b.name||'').toLowerCase()));
+  const rows=rec.slice(0,25).map((r,i)=>{
+    const catList=cats.includes(r.category)?cats:[r.category].concat(cats);
+    const opts=catList.map(c=>`<option value="${esc(c)}"${c===r.category?' selected':''}>${esc(c)}</option>`).join('');
+    const inBills=billNames.has((r.merchant||'').toLowerCase());
+    const billBtn=inBills
+      ? `<span class="rec-inbills" title="Already in your Bills">✓ Bill</span>`
+      : `<button class="rec-billbtn" onclick="event.stopPropagation();recurringToBill(${i})" title="Add to Upcoming Bills">＋ Bill</button>`;
+    return `<div class="rec-row2">
+      <div class="rec-r2-top">
+        <div class="rec-nm">${esc(r.merchant)}</div>
+        <div class="rec-side"><div class="rec-amt">${fmtK(r.amount)}</div><div class="rec-mo">${r.cadence} · ${fmtK(r.monthly)}/mo</div></div>
+      </div>
+      <div class="rec-r2-ctrls">
+        <select class="txn-cat-sel rec-catsel" onclick="event.stopPropagation()" onchange="recurringSetCat(${i},this.value)" title="Set category (applies to this merchant)">${opts}</select>
+        ${billBtn}
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="rec-wrap"><div class="rec-total"><b>${fmtK(monthlyTot)}</b> est. recurring / month · ${rec.length} found</div><div class="ws-hint" style="margin:2px 0 9px">Subscriptions <b>and</b> bills — utilities, insurance, phone, landscaping. Categorize each (sets a rule for that merchant) or add it to your Bills.</div>${rows}</div>`;
+}
+function recurringSetCat(i,cat){ const r=_recRows[i]; if(!r||!r.merchKey)return; setCatRule(r.merchKey,cat); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+function recurringToBill(i){
+  const r=_recRows[i]; if(!r)return;
+  APP.manualBills=APP.manualBills||[];
+  if(APP.manualBills.some(b=>(b.name||'').toLowerCase()===(r.merchant||'').toLowerCase())){ if(typeof richieSay==='function') richieSay(`${r.merchant} is already in your Bills.`); return; }
+  const dueDay=r.lastDate?Math.max(1,Math.min(31,new Date(r.lastDate+'T12:00:00').getDate())):1;
+  const amt=Math.round(r.monthly);
+  APP.manualBills.push({ name:r.merchant, pay:amt, min:amt, bal:0, apr:0, due:dueDay, cat:(r.category||'OTHER'), promoEnd:'', limit:0, promo:'', note:'manual', paid:false });
+  saveState(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+  if(sbRichie)sbRichie.do('nod'); if(typeof richieSay==='function') richieSay(`Added ${r.merchant} to your Bills — about ${fmtK(r.monthly)}/mo, due ~day ${dueDay}.`);
 }
 function safeToSpendBody(w){
   const s=engSafeToSpend();
@@ -3873,6 +3958,91 @@ function showToast(msg,type){
   el.style.color = type==='error'?'#ff9b9b':type==='success'?'#7be0b4':'#e4e6f0';
   el.style.border = '1px solid '+(type==='error'?'rgba(240,92,92,0.4)':type==='success'?'rgba(46,204,138,0.4)':'rgba(255,255,255,0.1)');
   el.style.opacity='1'; clearTimeout(_toastT); _toastT=setTimeout(()=>{el.style.opacity='0';},3200);
+}
+/* ═══ UPLOAD & ANALYZE STATEMENTS/BILLS (Richie AI) ═══ */
+let _docResult=null, _docSel={};
+function docShowModal(){ gg('docModal').style.display='flex'; }
+function closeDocModal(){ gg('docModal').style.display='none'; _docResult=null; _docSel={}; }
+function docUploadPick(){ const inp=gg('docFileInput'); if(inp){ inp.value=''; inp.click(); } }
+function docFileChosen(inp){
+  const f=inp.files&&inp.files[0]; if(!f) return;
+  if(f.size>12*1024*1024){ alert('That file is large (max ~12MB). Try a smaller image, or split the PDF.'); return; }
+  const rd=new FileReader();
+  rd.onload=()=>{ const b64=String(rd.result||'').split(',')[1]||''; docAnalyze(b64, f.type||'', f.name||'upload'); };
+  rd.onerror=()=>alert('Could not read that file.');
+  rd.readAsDataURL(f);
+}
+async function docAnalyze(b64, mime, name){
+  docShowModal();
+  gg('docBody').innerHTML=`<div class="doc-loading"><div class="bl-bag">💰</div><div class="bl-spin"></div><div class="bl-msg">Richie is reading ${esc(name)}…</div><div class="ws-hint" style="margin-top:6px">Pulling out transactions, balances, APR and due dates.</div></div>`;
+  try{
+    const r=await fetch('/api/analyze_document',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({file:b64,mimeType:mime,filename:name})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||d.error||!d.result){ gg('docBody').innerHTML=`<div class="doc-err">${esc((d&&d.error)||'Analysis failed. Try a clearer image or a different file.')}</div><div class="mf-actions"><span></span><button class="btn primary" onclick="closeDocModal()">Close</button></div>`; return; }
+    _docResult=d.result; docReviewInit(); docReviewRender();
+  }catch(e){ gg('docBody').innerHTML=`<div class="doc-err">Couldn't reach the analyzer. Check your connection and try again.</div><div class="mf-actions"><span></span><button class="btn primary" onclick="closeDocModal()">Close</button></div>`; }
+}
+function _docDupCheck(t){
+  const amt=+t.amount||0, dsc=(t.description||'').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,10);
+  return (allTxns||[]).some(x=>x.date===t.date && Math.abs((x.amount||0)-amt)<0.01 && ((x.name||x.merchant_name||'').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,10)===dsc));
+}
+function docReviewInit(){
+  const t=(_docResult&&_docResult.transactions)||[]; _docSel={};
+  t.forEach((x,i)=>{ x._dup=_docDupCheck(x); _docSel[i]=!x._dup; });   // duplicates default OFF
+}
+function docReviewRender(){
+  const r=_docResult||{}, txns=Array.isArray(r.transactions)?r.transactions:[];
+  const dupCount=txns.filter(t=>t._dup).length, selCount=txns.filter((_,i)=>_docSel[i]).length;
+  const field=(lbl,id,val,ph)=>`<div class="doc-f"><label>${lbl}</label><input id="${id}" value="${val!=null?esc(String(val)):''}" placeholder="${ph||''}"></div>`;
+  const header=`<div class="doc-hgrid">
+    ${field('Institution','docInst',r.institution,'Bank')}
+    ${field('Account / bill','docAcct',r.accountName,'Name')}
+    ${field('Amount due ($)','docDue',r.amountDue,'0')}
+    ${field('Due date','docDueDate',r.dueDate,'YYYY-MM-DD')}
+    ${field('APR (%)','docApr',r.apr,'0')}
+    ${field('Credit limit ($)','docLimit',r.creditLimit,'0')}
+  </div>`;
+  const rows=txns.map((t,i)=>`<label class="doc-txn${t._dup?' dup':''}">
+    <input type="checkbox" ${_docSel[i]?'checked':''} onchange="_docSel[${i}]=this.checked;docUpdateCount()">
+    <span class="doc-tx-date">${esc(t.date||'—')}</span>
+    <input class="doc-tx-desc" value="${esc(t.description||'')}" onchange="_docResult.transactions[${i}].description=this.value">
+    <input class="doc-tx-amt" type="number" step="0.01" value="${t.amount!=null?t.amount:''}" onchange="_docResult.transactions[${i}].amount=parseFloat(this.value)||0">
+    ${t._dup?'<span class="doc-dupflag" title="Looks like it is already in your data">dup</span>':''}
+  </label>`).join('');
+  gg('docBody').innerHTML=`
+    <div class="doc-sub">Richie found a ${esc(r.docType||'document')}${r.institution?' from '+esc(r.institution):''}. Edit anything, then pick what to add.</div>
+    <div class="doc-section-h">Account / bill details</div>${header}
+    ${(r.amountDue||r.apr||r.creditLimit)?`<label class="doc-addbill"><input type="checkbox" id="docAddBill" ${r.amountDue?'checked':''}> Also add this as a bill in Upcoming Bills</label>`:''}
+    <div class="doc-section-h">Transactions · ${txns.length}${dupCount?` · <span style="color:var(--amber)">${dupCount} duplicate${dupCount!==1?'s':''} unchecked</span>`:''}</div>
+    <div class="doc-selrow"><button class="btn" onclick="docSelectAll(true)">Select all</button><button class="btn" onclick="docSelectAll(false)">None</button><span class="ws-hint" id="docSelCount" style="margin-left:auto">${selCount} selected</span></div>
+    <div class="doc-txns">${rows||'<div class="ws-hint">No transactions found in this document.</div>'}</div>
+    <div class="mf-actions"><button class="btn" onclick="closeDocModal()">Cancel</button><button class="btn primary" onclick="docAddSelected()">＋ Add selected</button></div>`;
+}
+function docUpdateCount(){ const r=_docResult||{}, txns=r.transactions||[]; const el=gg('docSelCount'); if(el) el.textContent=txns.filter((_,i)=>_docSel[i]).length+' selected'; }
+function docSelectAll(v){ const txns=(_docResult&&_docResult.transactions)||[]; txns.forEach((_,i)=>_docSel[i]=v); docReviewRender(); }
+function docAddSelected(){
+  const r=_docResult||{}, txns=r.transactions||[];
+  const inst=((gg('docInst')&&gg('docInst').value)||r.institution||'Statement').trim();
+  APP.importedTxns=APP.importedTxns||[]; let added=0;
+  const importId='imp'+Date.now(), importLabel=inst+' · '+new Date().toLocaleDateString();
+  txns.forEach((t,i)=>{
+    if(!_docSel[i]||!t.date||t.amount==null) return;
+    APP.importedTxns.push({ transaction_id:'imp_'+Date.now()+'_'+(added++), account_id:'imported', date:t.date, name:t.description||'Imported', merchant_name:t.description||'', amount:+t.amount, personal_finance_category:{primary:''}, institution:inst, _imported:true, _importId:importId, _importLabel:importLabel });
+  });
+  const addBill=gg('docAddBill')&&gg('docAddBill').checked;
+  if(addBill){
+    const due=parseFloat(gg('docDue').value)||0;
+    const nm=((gg('docAcct')&&gg('docAcct').value)||inst||'Statement').trim();
+    APP.manualBills=APP.manualBills||[];
+    if(due>0 && !APP.manualBills.some(b=>(b.name||'').toLowerCase()===nm.toLowerCase())){
+      const dd=gg('docDueDate').value, dueDay=dd?Math.max(1,Math.min(31,(new Date(dd+'T12:00:00').getDate()||1))):1;
+      APP.manualBills.push({ name:nm, pay:Math.round(due), min:Math.round(due), bal:0, apr:parseFloat(gg('docApr').value)||0, due:dueDay, cat:'OTHER', promoEnd:'', limit:parseFloat(gg('docLimit').value)||0, promo:'', note:'imported', paid:false });
+    }
+  }
+  saveState(); _rebuildTxns(); if(allTxns.length>0) dataLoaded=true;
+  closeDocModal();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+  if(typeof richieSay==='function') richieSay(added?`Added ${added} transaction${added!==1?'s':''}${addBill?' and a bill':''} from your ${(r.docType||'statement')}. 📄`:`Saved the details from your ${(r.docType||'statement')}.`);
 }
 async function openLinkHandler(){
   if(typeof Plaid==='undefined'){ showToast('Plaid not loaded — check your connection.','error'); return; }
@@ -4680,6 +4850,7 @@ function buildGateHTML(){
     <div class="bgate-sub">Connect your bank and I'll build your whole dashboard around your real money${goals?' and your goals':''} — that's your first win. 🎉</div>
     ${goals?`<div class="bgate-goals">${esc(goals)}</div>`:''}
     <button class="bgate-cta" onclick="openLinkHandler()">🔗 Connect my bank</button>
+    <button class="bgate-alt" onclick="docUploadPick()">📄 Or upload a statement / bill</button>
     <button class="bgate-skip" onclick="richieBuildApp({sample:true})">Explore with sample data first</button>
     <div class="bgate-note">🔒 Bank-level encryption · read-only · disconnect anytime</div>
   </div></div>`;
@@ -7094,6 +7265,15 @@ function renderSettings(){
       <p style="color:var(--muted);font-size:13px;margin-bottom:22px">Tune how Richie guides you. More options arrive as we build.</p>
 
       <div class="set-card">
+        <div class="set-card-label">🔗 Connected data</div>
+        <div style="font-size:12px;color:var(--muted);margin:2px 0 12px;line-height:1.5">Your linked banks and anything you've uploaded. Remove a bank or an import to pull its data out of every widget.</div>
+        <div class="cd-sub">Banks</div>
+        <div id="setBanks" class="cd-list"><div class="ws-hint">Loading…</div></div>
+        <div class="cd-sub" style="margin-top:14px">Uploaded statements &amp; bills</div>
+        <div id="setImports" class="cd-list"></div>
+      </div>
+
+      <div class="set-card">
         <div class="set-card-label">Your Guide (Richie's personality)</div>
         <div class="persona-row" id="setPersonaRow"></div>
       </div>
@@ -7205,6 +7385,43 @@ function renderSettings(){
   const pct=APP.proMode?100:levelProgress().pct;
   gg('setXpFill').style.width=pct+'%';
   gg('setXpText').textContent=APP.proMode?'Pro Mode active — all features unlocked':(APP.xp.toLocaleString()+' XP'+(levelProgress().next!=null?(' · '+levelProgress().toNext.toLocaleString()+' to next level'):' · max level'));
+  try{ renderConnectedData(); }catch(e){}
+}
+/* ── Connected data: banks + imported statements ── */
+async function renderConnectedData(){
+  // Imported statements (grouped by import batch)
+  const imp=gg('setImports');
+  if(imp){
+    const groups={};
+    (APP.importedTxns||[]).forEach(t=>{ const k=t._importId||'legacy'; (groups[k]=groups[k]||{label:t._importLabel||t.institution||'Import', count:0, sum:0}); groups[k].count++; groups[k].sum+=Math.abs(t.amount||0); });
+    const keys=Object.keys(groups);
+    imp.innerHTML = keys.length ? keys.map(k=>`<div class="cd-row"><div class="cd-meta"><div class="cd-nm">📄 ${esc(groups[k].label)}</div><div class="cd-info">${groups[k].count} transaction${groups[k].count!==1?'s':''} · ${fmtK(groups[k].sum)}</div></div><button class="cd-rm" onclick="removeImport('${k}')">Remove</button></div>`).join('') : '<div class="ws-hint">No uploaded statements yet.</div>';
+  }
+  // Connected banks (from server)
+  const bx=gg('setBanks'); if(!bx) return;
+  try{
+    const d=await _fetchJSON('/api/items');
+    if(!d||!Array.isArray(d.items)){ bx.innerHTML='<div class="ws-hint">Connect a bank to see it here.</div>'; return; }
+    bx.innerHTML = d.items.length ? d.items.map(it=>`<div class="cd-row"><div class="cd-meta"><div class="cd-nm">🏦 ${esc(it.institutionName||'Bank')}</div><div class="cd-info">${it.addedAt?('linked '+new Date(it.addedAt).toLocaleDateString()):'linked'}</div></div><button class="cd-rm" onclick="removeBank('${esc(it.itemId)}','${esc(it.institutionName||'this bank')}')">Remove</button></div>`).join('') : '<div class="ws-hint">No banks connected yet.</div>';
+  }catch(e){ bx.innerHTML='<div class="ws-hint">Could not load connected banks.</div>'; }
+}
+async function removeBank(itemId, name){
+  if(!confirm('Disconnect '+(name||'this bank')+'? Its accounts and transactions will be removed.')) return;
+  try{
+    const r=await fetch('/api/item/'+encodeURIComponent(itemId),{method:'DELETE'});
+    if(!r.ok){ alert('Could not remove that bank. Try again.'); return; }
+    await loadEngineData();
+    renderConnectedData();
+    const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg&&APP.activePage!=='__settings__')renderCanvas(pg);
+    if(typeof richieSay==='function') richieSay((name||'Bank')+' disconnected.');
+  }catch(e){ alert('Could not reach the server.'); }
+}
+function removeImport(importId){
+  if(!confirm('Remove this uploaded statement and its transactions?')) return;
+  APP.importedTxns=(APP.importedTxns||[]).filter(t=>(t._importId||'legacy')!==importId);
+  saveState(); _rebuildTxns();
+  renderConnectedData();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg&&APP.activePage!=='__settings__')renderCanvas(pg);
 }
 
 function setPersona(key){ APP.persona=key; saveState(); applyAccent(); renderShell(); renderSettings(); if(sbRichie)sbRichie.do('bounce'); richieSay(RICHIE_PERSONAS[key].quips[0]); }
