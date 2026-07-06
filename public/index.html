@@ -2190,9 +2190,7 @@ canvas.chart-interactive{cursor:crosshair;}
   </div>
 </div>
 
-<!-- ═══ LOGIN SCREEN ═══ -->
-<div id="loginScreen" style="display:none">
-
+<!-- ═══ UPLOAD: file input + document review modal (body-level so they're never inside a hidden container) ═══ -->
 <input type="file" id="docFileInput" accept=".pdf,image/*,.csv,.txt" style="display:none" onchange="docFileChosen(this)">
 <div id="docModal" class="doc-modal" style="display:none">
   <div class="doc-card">
@@ -2200,6 +2198,9 @@ canvas.chart-interactive{cursor:crosshair;}
     <div class="doc-body" id="docBody"></div>
   </div>
 </div>
+
+<!-- ═══ LOGIN SCREEN ═══ -->
+<div id="loginScreen" style="display:none">
   <div class="ri-bg"></div>
   <div class="login-card">
     <span class="richie ri-char" id="loginRichie" style="font-size:88px">💰</span>
