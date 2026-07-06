@@ -3992,40 +3992,70 @@ function docReviewInit(){
   t.forEach((x,i)=>{ x._dup=_docDupCheck(x); _docSel[i]=!x._dup; });   // duplicates default OFF
 }
 function docReviewRender(){
-  const r=_docResult||{}, txns=Array.isArray(r.transactions)?r.transactions:[];
-  const dupCount=txns.filter(t=>t._dup).length, selCount=txns.filter((_,i)=>_docSel[i]).length;
+  const r=_docResult||{}, type=r.docType||'', txns=Array.isArray(r.transactions)?r.transactions:[];
   const field=(lbl,id,val,ph)=>`<div class="doc-f"><label>${lbl}</label><input id="${id}" value="${val!=null?esc(String(val)):''}" placeholder="${ph||''}"></div>`;
-  const header=`<div class="doc-hgrid">
-    ${field('Institution','docInst',r.institution,'Bank')}
-    ${field('Account / bill','docAcct',r.accountName,'Name')}
-    ${field('Amount due ($)','docDue',r.amountDue,'0')}
-    ${field('Due date','docDueDate',r.dueDate,'YYYY-MM-DD')}
-    ${field('APR (%)','docApr',r.apr,'0')}
-    ${field('Credit limit ($)','docLimit',r.creditLimit,'0')}
-  </div>`;
-  const rows=txns.map((t,i)=>`<label class="doc-txn${t._dup?' dup':''}">
-    <input type="checkbox" ${_docSel[i]?'checked':''} onchange="_docSel[${i}]=this.checked;docUpdateCount()">
-    <span class="doc-tx-date">${esc(t.date||'—')}</span>
-    <input class="doc-tx-desc" value="${esc(t.description||'')}" onchange="_docResult.transactions[${i}].description=this.value">
-    <input class="doc-tx-amt" type="number" step="0.01" value="${t.amount!=null?t.amount:''}" onchange="_docResult.transactions[${i}].amount=parseFloat(this.value)||0">
-    ${t._dup?'<span class="doc-dupflag" title="Looks like it is already in your data">dup</span>':''}
-  </label>`).join('');
+  const isInvest=type==='investment', isInsurance=type==='insurance';
+  let header, addOpt='', section='';
+  if(isInvest){
+    header=`<div class="doc-hgrid">${field('Institution','docInst',r.institution,'E*Trade')}${field('Account','docAcct',r.accountName,'IRA / Brokerage')}${field('Total value ($)','docValue',r.accountValue,'0')}</div>`;
+    addOpt=`<label class="doc-addbill"><input type="checkbox" id="docAddAsset" checked> Add to Net Worth as an Investment asset (${fmtK(+r.accountValue||0)})</label>`;
+    const hold=Array.isArray(r.holdings)?r.holdings:[];
+    if(hold.length) section=`<div class="doc-section-h">Holdings · ${hold.length}</div><div class="doc-txns">${hold.slice(0,80).map(h=>`<div class="doc-txn"><span class="doc-tx-desc" style="border:none">${esc(h.name||'')}</span><span class="doc-tx-amt" style="border:none;background:none">${fmtK(+h.value||0)}</span></div>`).join('')}</div>`;
+  } else if(isInsurance){
+    header=`<div class="doc-hgrid">${field('Insurer','docInst',r.institution,'State Farm')}${field('Policy','docAcct',r.accountName,'Auto / Home')}${field('Premium ($)','docDue',(r.premium!=null?r.premium:r.amountDue),'0')}${field('Due date','docDueDate',r.dueDate,'YYYY-MM-DD')}</div>`;
+    addOpt=`<label class="doc-addbill"><input type="checkbox" id="docAddBill" checked> Add as a bill in Upcoming Bills</label>`;
+  } else {
+    header=`<div class="doc-hgrid">${field('Institution','docInst',r.institution,'Bank')}${field('Account / bill','docAcct',r.accountName,'Name')}${field('Amount due ($)','docDue',r.amountDue,'0')}${field('Due date','docDueDate',r.dueDate,'YYYY-MM-DD')}${field('APR (%)','docApr',r.apr,'0')}${field('Credit limit ($)','docLimit',r.creditLimit,'0')}</div>`;
+    if(r.amountDue||r.apr||r.creditLimit) addOpt=`<label class="doc-addbill"><input type="checkbox" id="docAddBill" ${r.amountDue?'checked':''}> Also add this as a bill in Upcoming Bills</label>`;
+    const dupCount=txns.filter(t=>t._dup).length, selCount=txns.filter((_,i)=>_docSel[i]).length;
+    const rows=txns.map((t,i)=>`<label class="doc-txn${t._dup?' dup':''}">
+      <input type="checkbox" ${_docSel[i]?'checked':''} onchange="_docSel[${i}]=this.checked;docUpdateCount()">
+      <span class="doc-tx-date">${esc(t.date||'\u2014')}</span>
+      <input class="doc-tx-desc" value="${esc(t.description||'')}" onchange="_docResult.transactions[${i}].description=this.value">
+      <input class="doc-tx-amt" type="number" step="0.01" value="${t.amount!=null?t.amount:''}" onchange="_docResult.transactions[${i}].amount=parseFloat(this.value)||0">
+      ${t._dup?'<span class="doc-dupflag" title="Looks like it is already in your data">dup</span>':''}
+    </label>`).join('');
+    section=`<div class="doc-section-h">Transactions \u00b7 ${txns.length}${dupCount?` \u00b7 <span style="color:var(--amber)">${dupCount} duplicate${dupCount!==1?'s':''} unchecked</span>`:''}</div>
+      <div class="doc-selrow"><button class="btn" onclick="docSelectAll(true)">Select all</button><button class="btn" onclick="docSelectAll(false)">None</button><span class="ws-hint" id="docSelCount" style="margin-left:auto">${selCount} selected</span></div>
+      <div class="doc-txns">${rows||'<div class="ws-hint">No transactions found in this document.</div>'}</div>`;
+  }
+  const kindLbl=isInvest?'an investment statement':isInsurance?'an insurance statement':('a '+(type.replace('_',' ')||'document'));
   gg('docBody').innerHTML=`
-    <div class="doc-sub">Richie found a ${esc(r.docType||'document')}${r.institution?' from '+esc(r.institution):''}. Edit anything, then pick what to add.</div>
-    <div class="doc-section-h">Account / bill details</div>${header}
-    ${(r.amountDue||r.apr||r.creditLimit)?`<label class="doc-addbill"><input type="checkbox" id="docAddBill" ${r.amountDue?'checked':''}> Also add this as a bill in Upcoming Bills</label>`:''}
-    <div class="doc-section-h">Transactions · ${txns.length}${dupCount?` · <span style="color:var(--amber)">${dupCount} duplicate${dupCount!==1?'s':''} unchecked</span>`:''}</div>
-    <div class="doc-selrow"><button class="btn" onclick="docSelectAll(true)">Select all</button><button class="btn" onclick="docSelectAll(false)">None</button><span class="ws-hint" id="docSelCount" style="margin-left:auto">${selCount} selected</span></div>
-    <div class="doc-txns">${rows||'<div class="ws-hint">No transactions found in this document.</div>'}</div>
-    <div class="mf-actions"><button class="btn" onclick="closeDocModal()">Cancel</button><button class="btn primary" onclick="docAddSelected()">＋ Add selected</button></div>`;
+    <div class="doc-sub">Richie found ${kindLbl}${r.institution?' from '+esc(r.institution):''}. Edit anything, then add it.</div>
+    <div class="doc-section-h">${isInvest?'Account':isInsurance?'Policy':'Account / bill'} details</div>${header}
+    ${addOpt}
+    ${section}
+    <div class="mf-actions"><button class="btn" onclick="closeDocModal()">Cancel</button><button class="btn primary" onclick="docAddSelected()">\uff0b Add</button></div>`;
 }
 function docUpdateCount(){ const r=_docResult||{}, txns=r.transactions||[]; const el=gg('docSelCount'); if(el) el.textContent=txns.filter((_,i)=>_docSel[i]).length+' selected'; }
 function docSelectAll(v){ const txns=(_docResult&&_docResult.transactions)||[]; txns.forEach((_,i)=>_docSel[i]=v); docReviewRender(); }
 function docAddSelected(){
-  const r=_docResult||{}, txns=r.transactions||[];
+  const r=_docResult||{}, type=r.docType||'';
   const inst=((gg('docInst')&&gg('docInst').value)||r.institution||'Statement').trim();
+  const nm=((gg('docAcct')&&gg('docAcct').value)||inst||'Statement').trim();
+  const finish=(msg)=>{ saveState(); _rebuildTxns(); if(allTxns.length>0) dataLoaded=true; closeDocModal(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); if(typeof richieSay==='function'&&msg) richieSay(msg); };
+  // Investment statement -> Net Worth asset
+  if(type==='investment'){
+    if(gg('docAddAsset')&&gg('docAddAsset').checked){
+      const val=parseFloat(gg('docValue').value)||r.accountValue||0;
+      if(val>0){ APP.nwManualAssets=APP.nwManualAssets||[]; APP.nwManualAssets.push({ id:'nw'+Date.now()+Math.floor(Math.random()*999), cat:'Investment', name:nm, value:val }); return finish(`Added ${nm} (${fmtK(val)}) to your Net Worth. \ud83d\udcc8`); }
+    }
+    return finish('');
+  }
+  // Insurance statement -> bill
+  if(type==='insurance'){
+    if(gg('docAddBill')&&gg('docAddBill').checked){
+      const due=parseFloat(gg('docDue').value)||r.premium||r.amountDue||0;
+      const dd=gg('docDueDate').value, dueDay=dd?Math.max(1,Math.min(31,(new Date(dd+'T12:00:00').getDate()||1))):1;
+      APP.manualBills=APP.manualBills||[];
+      if(due>0 && !APP.manualBills.some(b=>(b.name||'').toLowerCase()===nm.toLowerCase())){ APP.manualBills.push({ name:nm, pay:Math.round(due), min:Math.round(due), bal:0, apr:0, due:dueDay, cat:'Insurance', promoEnd:'', limit:0, promo:'', note:'imported', paid:false }); return finish(`Added ${nm} to your Bills \u2014 ${fmtK(due)}.`); }
+    }
+    return finish('');
+  }
+  // Bank / credit-card statement -> transactions (+ optional bill)
+  const txns=r.transactions||[];
   APP.importedTxns=APP.importedTxns||[]; let added=0;
-  const importId='imp'+Date.now(), importLabel=inst+' · '+new Date().toLocaleDateString();
+  const importId='imp'+Date.now(), importLabel=inst+' \u00b7 '+new Date().toLocaleDateString();
   txns.forEach((t,i)=>{
     if(!_docSel[i]||!t.date||t.amount==null) return;
     APP.importedTxns.push({ transaction_id:'imp_'+Date.now()+'_'+(added++), account_id:'imported', date:t.date, name:t.description||'Imported', merchant_name:t.description||'', amount:+t.amount, personal_finance_category:{primary:''}, institution:inst, _imported:true, _importId:importId, _importLabel:importLabel });
@@ -4033,17 +4063,13 @@ function docAddSelected(){
   const addBill=gg('docAddBill')&&gg('docAddBill').checked;
   if(addBill){
     const due=parseFloat(gg('docDue').value)||0;
-    const nm=((gg('docAcct')&&gg('docAcct').value)||inst||'Statement').trim();
     APP.manualBills=APP.manualBills||[];
     if(due>0 && !APP.manualBills.some(b=>(b.name||'').toLowerCase()===nm.toLowerCase())){
       const dd=gg('docDueDate').value, dueDay=dd?Math.max(1,Math.min(31,(new Date(dd+'T12:00:00').getDate()||1))):1;
       APP.manualBills.push({ name:nm, pay:Math.round(due), min:Math.round(due), bal:0, apr:parseFloat(gg('docApr').value)||0, due:dueDay, cat:'OTHER', promoEnd:'', limit:parseFloat(gg('docLimit').value)||0, promo:'', note:'imported', paid:false });
     }
   }
-  saveState(); _rebuildTxns(); if(allTxns.length>0) dataLoaded=true;
-  closeDocModal();
-  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
-  if(typeof richieSay==='function') richieSay(added?`Added ${added} transaction${added!==1?'s':''}${addBill?' and a bill':''} from your ${(r.docType||'statement')}. 📄`:`Saved the details from your ${(r.docType||'statement')}.`);
+  finish(added?`Added ${added} transaction${added!==1?'s':''}${addBill?' and a bill':''} from your ${(type.replace('_',' ')||'statement')}. \ud83d\udcc4`:`Saved the details from your ${(type.replace('_',' ')||'statement')}.`);
 }
 async function openLinkHandler(){
   if(typeof Plaid==='undefined'){ showToast('Plaid not loaded — check your connection.','error'); return; }
