@@ -18,6 +18,7 @@
   --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.1);
   --text:#e4e6f0;--muted:#8b8fa8;--hint:#484c65;
   --green:#2ecc8a;--green-dim:rgba(46,204,138,0.1);--green-glow:rgba(46,204,138,0.2);
+  --pos:#2ecc8a;--pos-dim:rgba(46,204,138,0.12);
   --red:#f05c5c;--red-dim:rgba(240,92,92,0.1);
   --amber:#f0a540;--amber-dim:rgba(240,165,64,0.1);
   --blue:#5b8def;--blue-dim:rgba(91,141,239,0.1);
@@ -494,6 +495,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .cd-info{font-size:11px;color:var(--muted);margin-top:1px;}
 .cd-rm{flex-shrink:0;background:none;border:1px solid var(--border);color:var(--red);border-radius:7px;padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font);}
 .cd-rm:hover{background:rgba(240,92,92,.12);border-color:var(--red);}
+.ap-sub{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:8px;}
+.ap-themes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.ap-theme{display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:none;cursor:pointer;padding:4px 2px;border-radius:9px;font-family:var(--font);}
+.ap-theme.on{background:var(--surface2);}
+.ap-sw{display:flex;gap:2px;align-items:center;justify-content:center;width:100%;height:34px;border-radius:8px;border:1px solid var(--border2);overflow:hidden;padding:5px;}
+.ap-sw i{width:8px;height:16px;border-radius:3px;display:block;}
+.ap-theme-nm{font-size:10.5px;font-weight:600;color:var(--text);}
+.ap-theme.on .ap-theme-nm{color:var(--green);}
+.ap-fonts{display:flex;flex-wrap:wrap;gap:7px;}
+.ap-font{font-size:13px;font-weight:600;padding:8px 13px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);color:var(--text);cursor:pointer;}
+.ap-font.on{border-color:var(--green);color:var(--green);}
+.ap-colors{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;}
+.ap-color{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;}
+.ap-color input[type=color]{width:100%;height:34px;border:1px solid var(--border);border-radius:8px;background:none;cursor:pointer;padding:2px;}
+@media(max-width:520px){.ap-themes{grid-template-columns:repeat(3,1fr);}}
 .sb-upload:hover{border-color:var(--green);}
 .bgate-alt{margin-top:12px;background:none;border:1px solid var(--border);color:var(--muted);padding:11px 18px;border-radius:12px;font-family:var(--font);font-weight:600;font-size:14px;cursor:pointer;}
 .bgate-alt:hover{border-color:var(--green);color:var(--text);}
@@ -2593,7 +2609,7 @@ catch(e){ _storageBlocked=true; }
 ═══════════════════════════════════════════════════════════════════ */
 const fmtM=n=>'$'+(Math.abs(n)>=1e6?(Math.abs(n)/1e6).toFixed(2)+'M':Math.abs(n)>=1000?Math.round(Math.abs(n)/1000)+'K':Math.round(Math.abs(n)).toLocaleString());
 const fmtK=n=>'$'+Math.round(Math.abs(n)).toLocaleString();
-const moneyCol=n=>(+n>0?'var(--green)':(+n<0?'var(--red)':'var(--muted)'));   // positive → green, negative → red
+const moneyCol=n=>(+n>0?'var(--pos)':(+n<0?'var(--red)':'var(--muted)'));   // positive → green, negative → red
 const fmt2=n=>'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 
 /* ── Category model (single source of truth) ── */
@@ -3487,7 +3503,7 @@ function safeToSpendBody(w){
   const s=engSafeToSpend();
   const perDay=Math.max(0,s.perDay);
   return `<div class="wph"><div class="wph-sub">Safe to spend today</div>
-    <div class="wph-stat" style="color:${perDay>0?'var(--green)':'var(--red)'}">${fmtK(perDay)}</div>
+    <div class="wph-stat" style="color:${perDay>0?'var(--pos)':'var(--red)'}">${fmtK(perDay)}</div>
     <div class="wph-sub">${fmtK(s.pool)} free ${s.nextIncomeDay!=null?`until pay in ${s.horizon}d`:`over ${s.horizon} days`}</div>
     <div class="sts-break">
       <div><span>Cash on hand</span><b>${fmtK(s.cash)}</b></div>
@@ -4693,7 +4709,50 @@ function addProfile(){
 }
 
 /* ═══════════════ RENDER SHELL ═══════════════ */
-function applyAccent(){ const p=RICHIE_PERSONAS[APP.persona]; document.documentElement.style.setProperty('--green', p?p.accent:'#2ecc8a'); document.documentElement.style.setProperty('--richie-green', p?p.accent:'#2ecc8a'); }
+/* ═══ APPEARANCE / THEME (per profile) ═══ */
+const THEME_PRESETS=[
+  {id:'midnight',name:'Midnight',bg:'#0d0f14',sidebar:'#111318',surface:'#161920',surface2:'#1c1f28',surface3:'#232734',text:'#e4e6f0',muted:'#8b8fa8',border:'rgba(255,255,255,0.06)',border2:'rgba(255,255,255,0.1)',accent:'#2ecc8a'},
+  {id:'ocean',name:'Ocean',bg:'#0a141f',sidebar:'#0c1a28',surface:'#122130',surface2:'#182a3d',surface3:'#20364d',text:'#e2ecf5',muted:'#7d94a8',border:'rgba(120,180,255,0.08)',border2:'rgba(120,180,255,0.14)',accent:'#38bdf8'},
+  {id:'forest',name:'Forest',bg:'#0b140f',sidebar:'#0e1a13',surface:'#12211a',surface2:'#182b21',surface3:'#20382b',text:'#e0f0e6',muted:'#7ea08c',border:'rgba(120,255,180,0.07)',border2:'rgba(120,255,180,0.13)',accent:'#4ade80'},
+  {id:'grape',name:'Grape',bg:'#120e1c',sidebar:'#170f24',surface:'#1e142f',surface2:'#271a3d',surface3:'#33224d',text:'#ece2f5',muted:'#9585a8',border:'rgba(180,120,255,0.08)',border2:'rgba(180,120,255,0.14)',accent:'#a78bfa'},
+  {id:'sunset',name:'Sunset',bg:'#1a0f12',sidebar:'#22131a',surface:'#2b1820',surface2:'#3a1f2a',surface3:'#4d2836',text:'#f5e2e8',muted:'#a8858f',border:'rgba(255,120,150,0.08)',border2:'rgba(255,120,150,0.14)',accent:'#fb7185'},
+  {id:'gold',name:'Midas',bg:'#14110a',sidebar:'#1a160d',surface:'#211c10',surface2:'#2b2416',surface3:'#382f1e',text:'#f5efe0',muted:'#a89a7e',border:'rgba(255,210,120,0.08)',border2:'rgba(255,210,120,0.14)',accent:'#f0c040'},
+  {id:'mono',name:'Carbon',bg:'#0d0d0d',sidebar:'#121212',surface:'#181818',surface2:'#1f1f1f',surface3:'#282828',text:'#e8e8e8',muted:'#909090',border:'rgba(255,255,255,0.06)',border2:'rgba(255,255,255,0.1)',accent:'#e4e4e7'},
+  {id:'daylight',name:'Daylight',bg:'#f4f6fb',sidebar:'#e9edf5',surface:'#ffffff',surface2:'#f0f3f9',surface3:'#e4e9f2',text:'#1a1d29',muted:'#697089',border:'rgba(0,0,0,0.08)',border2:'rgba(0,0,0,0.13)',accent:'#10b981'},
+];
+const THEME_BY_ID={}; THEME_PRESETS.forEach(t=>THEME_BY_ID[t.id]=t);
+const FONT_OPTS=[
+  {id:'dm',name:'DM Sans',css:"'DM Sans',sans-serif"},
+  {id:'inter',name:'Inter',css:"'Inter',sans-serif"},
+  {id:'jakarta',name:'Jakarta',css:"'Plus Jakarta Sans',sans-serif"},
+  {id:'outfit',name:'Outfit',css:"'Outfit',sans-serif"},
+  {id:'nunito',name:'Nunito',css:"'Nunito',sans-serif"},
+  {id:'manrope',name:'Manrope',css:"'Manrope',sans-serif"},
+  {id:'roboto',name:'Roboto',css:"'Roboto',sans-serif"},
+  {id:'mono',name:'JetBrains Mono',css:"'JetBrains Mono',monospace"},
+  {id:'system',name:'System',css:"system-ui,-apple-system,sans-serif"},
+];
+const FONT_BY_ID={}; FONT_OPTS.forEach(f=>FONT_BY_ID[f.id]=f);
+function _hexToRgba(hex,al){ hex=String(hex||'').replace('#',''); if(hex.length===3)hex=hex.split('').map(c=>c+c).join(''); const n=parseInt(hex,16); if(isNaN(n))return 'rgba(46,204,138,'+al+')'; return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${al})`; }
+function _toHexColor(v){ v=String(v||''); return /^#[0-9a-fA-F]{6}$/.test(v)?v:(/^#[0-9a-fA-F]{3}$/.test(v)?v:'#2ecc8a'); }
+function _appearance(){ return (APP.appearances&&APP.appearances[APP.activeProfile])||{}; }
+function _setAppearance(patch){ APP.appearances=APP.appearances||{}; APP.appearances[APP.activeProfile]=Object.assign({}, _appearance(), patch); }
+function applyAppearance(){
+  const a=_appearance();
+  const preset=THEME_BY_ID[a.preset||'midnight']||THEME_PRESETS[0];
+  const r=document.documentElement.style, set=(k,v)=>r.setProperty(k,v);
+  set('--bg', a.bg||preset.bg); set('--sidebar', preset.sidebar);
+  set('--surface', a.surface||preset.surface); set('--surface2', preset.surface2); set('--surface3', preset.surface3);
+  set('--text', a.text||preset.text); set('--muted', preset.muted);
+  set('--border', preset.border); set('--border2', preset.border2);
+  const persona=RICHIE_PERSONAS[APP.persona];
+  const accent=a.accent||(persona&&persona.accent)||preset.accent;   // custom > persona > preset
+  set('--green', accent); set('--green-dim', _hexToRgba(accent,0.12)); set('--green-glow', _hexToRgba(accent,0.2)); set('--richie-green', accent); set('--accent', accent);
+  set('--pos', a.pos||'#2ecc8a'); set('--pos-dim', _hexToRgba(a.pos||'#2ecc8a',0.12));   // money-in stays its own color
+  set('--red', a.neg||'#f05c5c'); set('--red-dim', _hexToRgba(a.neg||'#f05c5c',0.1));
+  const font=FONT_BY_ID[a.font||'dm']||FONT_OPTS[0]; set('--font', font.css);
+}
+function applyAccent(){ applyAppearance(); }   // persona/appearance both flow through here
 
 function renderShell(){
   applyAccent();
@@ -5460,7 +5519,7 @@ function zbWidgetBody(w){
       <div class="zb-hstat"><span>Assigned to envelopes</span><b>${fmtK(envTotal)}</b></div>
       <div class="zb-hstat zb-tobudget"><span>To budget</span><b style="color:${leftColor}">${left>=0?'':'-'}${fmtK(Math.abs(left))} ${Math.abs(left)<1?'✓ balanced':left>0?'left':'over'}</b></div>
     </div>
-    <div class="zb-bar"><div class="zb-bar-fill" style="width:${Math.min(100,Math.round(assigned/Math.max(income,1)*100))}%;background:${left<0?'var(--red)':'var(--green)'}"></div></div>
+    <div class="zb-bar"><div class="zb-bar-fill" style="width:${Math.min(100,Math.round(assigned/Math.max(income,1)*100))}%;background:${left<0?'var(--red)':'var(--pos)'}"></div></div>
     ${balanceRow}
     <div class="zb-section-label">Category envelopes <span class="ws-hint" style="margin:0">budget vs actual · ${fmtK(spentTotal)} spent of ${fmtK(envTotal)}</span></div>
     <div class="zb-buckets">
@@ -5503,7 +5562,7 @@ function zbSetVal(i,val,uid,from){
   const tb=card.querySelector('.zb-tobudget b');
   if(tb){ tb.textContent=(left>=0?'':'-')+fmtK(Math.abs(left))+' '+(Math.abs(left)<1?'✓ balanced':left>0?'left':'over'); tb.style.color=Math.abs(left)<1?'var(--green)':left>0?'var(--amber)':'var(--red)'; }
   const bar=card.querySelector('.zb-bar-fill');
-  if(bar){ bar.style.width=Math.min(100,Math.round(assigned/Math.max(income,1)*100))+'%'; bar.style.background=left<0?'var(--red)':'var(--green)'; }
+  if(bar){ bar.style.width=Math.min(100,Math.round(assigned/Math.max(income,1)*100))+'%'; bar.style.background=left<0?'var(--red)':'var(--pos)'; }
 }
 function zbCommit(uid){ saveState(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function zbDelBucket(i,uid){ const b=_zbBuckets(); b.splice(i,1); saveState(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
@@ -5810,7 +5869,7 @@ function cashSummaryBody(w){
   const s=engSafeToSpend();
   const perDay=Math.max(0,s.perDay);
   const safe=`<div class="cash-safe">
-    <div class="cash-safe-top"><span>🟢 Safe to spend today</span><b style="color:${perDay>0?'var(--green)':'var(--red)'}">${fmtK(perDay)}<span style="font-size:10px;font-weight:600;color:var(--muted)">/day</span></b></div>
+    <div class="cash-safe-top"><span>🟢 Safe to spend today</span><b style="color:${perDay>0?'var(--pos)':'var(--red)'}">${fmtK(perDay)}<span style="font-size:10px;font-weight:600;color:var(--muted)">/day</span></b></div>
     <div class="ws-hint">${fmtK(s.pool)} free ${s.nextIncomeDay!=null?`until pay in ${s.horizon}d`:`over ${s.horizon} days`} · after ${fmtK(s.billsDue)} bills${s.goalPortion>0.5?` + ${fmtK(s.goalPortion)} goals`:''}</div>
   </div>`;
   return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(total)}">${fmtK(total)}</div><div class="wph-sub">cash on hand · ${accts.length} ${esc(label)} account${accts.length!==1?'s':''}${dataLoaded?'':' · sample'} ${gear}</div>${safe}<div class="cash-list">${rows}</div></div>`;
@@ -6163,11 +6222,11 @@ function discretionarySpendBody(w){
   const cur=vals[vals.length-1]||spend;
   const trendUp = cur>prev;
   const trendPct = prev>0?Math.round((cur-prev)/prev*100):0;
-  const trendColor = trendUp?'var(--red)':'var(--green)';  // spending up = bad
+  const trendColor = trendUp?'var(--red)':'var(--pos)';  // spending up = bad
   const sub = (w.tf==='30d'||!w.tf) ? 'discretionary · last 30 days' : `discretionary · ${tfLabel(w.tf)}`;
   const filterBtn=`<button class="cash-pick" onclick="event.stopPropagation();openSpendCatPicker('${w.uid}')" title="Choose which categories to include">⚙︎</button>`;
   return `<div class="wph">
-    <div class="wph-stat" style="color:${moneyCol(spend)}">${fmtK(spend)}</div>
+    <div class="wph-stat" style="color:${(budget>0&&spend>budget)?'var(--red)':'var(--pos)'}">${fmtK(spend)}</div>
     <div class="wph-sub">${sub}${dataLoaded?'':' · sample'}${hidden.length?` · ${hidden.length} hidden`:''} ${filterBtn}</div>
     <div class="ds-budget">
       <div class="ds-budget-top">
@@ -6195,14 +6254,14 @@ function budgetActualBody(w){
   const tfLbl={7:'1 wk',30:'This month',90:'3 mo'};
   const rows=d.rows.map(r=>{
     const barColor = r.over?'var(--red)':r.pct>=85?'var(--amber)':'var(--green)';
-    const diffColor = r.diff>=0?'var(--green)':'var(--red)';
+    const diffColor = r.diff>=0?'var(--pos)':'var(--red)';
     return `<div class="ba-row">
       <div class="ba-top"><span class="ba-nm"><span class="ba-dot" style="background:${r.color}"></span>${esc(r.name)}${r.unbudgeted?'<span class="ba-unbud">unbudgeted</span>':''}</span><span class="ba-diff" style="color:${diffColor}">${r.diff>=0?'+':'-'}${fmtK(Math.abs(r.diff))}</span></div>
       <div class="ba-bar"><div class="ba-bar-fill" style="width:${Math.min(100,r.pct)}%;background:${barColor}"></div>${r.budget>0?'<div class="ba-bar-mark" title="budget"></div>':''}</div>
       <div class="ba-sub">${fmtK(r.actual)} spent ${r.budget>0?'of '+fmtK(r.budget)+(r.over?' · <b style="color:var(--red)">over</b>':' budget'):'· <b style="color:var(--amber)">no budget set</b>'}</div>
     </div>`;
   }).join('');
-  const totColor=d.totDiff>=0?'var(--green)':'var(--red)';
+  const totColor=d.totDiff>=0?'var(--pos)':'var(--red)';
   return `<div class="ba-wrap">
     <div class="ba-toolbar">
       <div class="pl-toggle">${[7,30,90].map(k=>`<button class="pl-gbtn${tf===k?' active':''}" onclick="setBaTf('${w.uid}',${k})">${tfLbl[k]}</button>`).join('')}</div>
@@ -6466,7 +6525,7 @@ function cfcMount(w){
     <div class="cfp-stat"><div class="cfp-stat-l">Starting cash</div><div class="cfp-stat-v">${fmtK(p.start)}</div></div>
     <div class="cfp-stat"><div class="cfp-stat-l">Income in</div><div class="cfp-stat-v" style="color:var(--green)">+${fmtK(p.totalIn)}</div></div>
     <div class="cfp-stat"><div class="cfp-stat-l">Bills out</div><div class="cfp-stat-v" style="color:var(--red)">-${fmtK(p.totalOut)}</div></div>
-    <div class="cfp-stat"><div class="cfp-stat-l">End balance</div><div class="cfp-stat-v" style="color:${p.end>=0?'var(--green)':'var(--red)'}">${fmtK(p.end)}</div></div>`;
+    <div class="cfp-stat"><div class="cfp-stat-l">End balance</div><div class="cfp-stat-v" style="color:${p.end>=0?'var(--pos)':'var(--red)'}">${fmtK(p.end)}</div></div>`;
   }
   const chart=gg('cfcchart_'+w.uid);
   if(chart){ chart.innerHTML=cfpLineSVG(p, 'cfc'+w.uid, 300, 80); }
@@ -6509,7 +6568,7 @@ function cfpMount(w){
     <div class="cfp-stat"><div class="cfp-stat-l">Starting cash</div><div class="cfp-stat-v">${fmtK(p.start)}</div></div>
     <div class="cfp-stat"><div class="cfp-stat-l">Income in</div><div class="cfp-stat-v" style="color:var(--green)">+${fmtK(p.totalIn)}</div></div>
     <div class="cfp-stat"><div class="cfp-stat-l">Bills out</div><div class="cfp-stat-v" style="color:var(--red)">-${fmtK(p.totalOut)}</div></div>
-    <div class="cfp-stat"><div class="cfp-stat-l">End balance</div><div class="cfp-stat-v" style="color:${p.end>=0?'var(--green)':'var(--red)'}">${fmtK(p.end)}</div></div>`;
+    <div class="cfp-stat"><div class="cfp-stat-l">End balance</div><div class="cfp-stat-v" style="color:${p.end>=0?'var(--pos)':'var(--red)'}">${fmtK(p.end)}</div></div>`;
   }
   // running balance line (mini SVG sparkline so it works everywhere, no Chart.js dependency)
   const chart=gg('cfpchart_'+w.uid);
@@ -6569,13 +6628,13 @@ function plMount(w){
   const days=wDays(w);
   const s=dataLoaded?engPLStats(days,group):(function(){ const b=engPLSample(group); const ti=b.reduce((x,y)=>x+y.inc,0),ts=b.reduce((x,y)=>x+y.spend,0); const nets=b.map(x=>x.inc-x.spend); return {buckets:b,totalInc:ti,totalSpend:ts,net:ti-ts,sr:ti>0?Math.round((ti-ts)/ti*100):0,best:b[nets.indexOf(Math.max(...nets))],worst:b[nets.indexOf(Math.min(...nets))],txnCount:b.reduce((x,y)=>x+y.n,0),avgNet:Math.round((ti-ts)/b.length),periods:b.length}; })();
   const badge=gg('plnet_'+w.uid);
-  if(badge){ badge.textContent='Net '+(s.net>=0?'+':'-')+fmtK(Math.abs(s.net)); badge.style.color=s.net>=0?'var(--green)':'var(--red)'; }
+  if(badge){ badge.textContent='Net '+(s.net>=0?'+':'-')+fmtK(Math.abs(s.net)); badge.style.color=s.net>=0?'var(--pos)':'var(--red)'; }
   const strip=gg('plstrip_'+w.uid);
   if(strip){
     const stats=[
       {l:'Income',v:fmtK(s.totalInc),c:'var(--green)'},
       {l:'Spending',v:fmtK(s.totalSpend),c:'var(--red)'},
-      {l:'Net',v:(s.net>=0?'+':'-')+fmtK(Math.abs(s.net)),c:s.net>=0?'var(--green)':'var(--red)'},
+      {l:'Net',v:(s.net>=0?'+':'-')+fmtK(Math.abs(s.net)),c:s.net>=0?'var(--pos)':'var(--red)'},
       {l:'Savings Rate',v:s.sr+'%',c:'var(--blue)'},
     ];
     strip.innerHTML=stats.map(x=>`<div class="pl-stat"><div class="pl-stat-l">${x.l}</div><div class="pl-stat-v" style="color:${x.c}">${x.v}</div></div>`).join('');
@@ -6585,7 +6644,7 @@ function plMount(w){
     // net-per-period LINE chart: solid baseline at 0, dotted line at the average
     det.innerHTML=`${plLineSVG(s.buckets, s.avgNet, {wide: (w&&w.span===2)})}
       <div class="pl-extra">
-        <div class="pl-xrow"><span>Avg net / period</span><b style="color:${s.avgNet>=0?'var(--green)':'var(--red)'}">${s.avgNet>=0?'+':'-'}${fmtK(Math.abs(s.avgNet))}</b></div>
+        <div class="pl-xrow"><span>Avg net / period</span><b style="color:${s.avgNet>=0?'var(--pos)':'var(--red)'}">${s.avgNet>=0?'+':'-'}${fmtK(Math.abs(s.avgNet))}</b></div>
         <div class="pl-xrow"><span>Best period</span><b style="color:var(--green)">${s.best?s.best.key+' · +'+fmtK(s.best.inc-s.best.spend):'—'}</b></div>
         <div class="pl-xrow"><span>Worst period</span><b style="color:var(--red)">${s.worst?s.worst.key+' · '+(s.worst.inc-s.worst.spend>=0?'+':'-')+fmtK(Math.abs(s.worst.inc-s.worst.spend)):'—'}</b></div>
         <div class="pl-xrow"><span>Transactions</span><b>${s.txnCount} over ${s.periods} period${s.periods!==1?'s':''}</b></div>
@@ -6637,13 +6696,13 @@ function plLineSVG(buckets, avgNet, opts){
   const fs=wide?15:17, fsAxis=wide?13:15, dotR=wide?4:5;
   const dots=pts.map((p,i)=>{
     const last=i===pts.length-1;
-    return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${last?dotR+1.5:dotR}" fill="${p.v>=0?'var(--green)':'var(--red)'}" stroke="var(--surface)" stroke-width="2"/>`;
+    return `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${last?dotR+1.5:dotR}" fill="${p.v>=0?'var(--pos)':'var(--red)'}" stroke="var(--surface)" stroke-width="2"/>`;
   }).join('');
   const step=b.length>(wide?9:6)?Math.ceil(b.length/(wide?7:5)):1;
   const xlabels=b.map((x,i)=> (i%step===0||i===b.length-1)
     ? `<text x="${X(i).toFixed(1)}" y="${(H-16).toFixed(1)}" text-anchor="middle" font-size="${fsAxis}" fill="var(--muted)">${esc(x.key)}</text>`:'').join('');
   const fk=(n)=>`${n>=0?'+':'-'}$${Math.abs(n)>=1000?(Math.abs(n)/1000).toFixed(1)+'k':Math.abs(n)}`;
-  const avgCol=avg>=0?'var(--green)':'var(--red)';
+  const avgCol=avg>=0?'var(--pos)':'var(--red)';
   return `<svg class="pl-linechart${wide?' wide':''}" viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="xMidYMid meet" style="display:block">
     <defs>
       <linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
@@ -6673,7 +6732,7 @@ function _acctIsLiability(a){
 function acctWidgetBody(w){
   const accts=engAccounts();
   const rowHTML=(a)=>{
-    const col=a.bal<0?'var(--red)':'var(--green)';
+    const col=a.bal<0?'var(--red)':'var(--pos)';
     const balStr=(a.bal<0?'-':'+')+fmtK(Math.abs(a.bal));
     const open=_acctOpen[w.uid]===a.id;
     const raw=a.rawName||a.name;
@@ -6700,7 +6759,7 @@ function acctWidgetBody(w){
   return `<div class="acct-wrap">
     <div class="acct-summary">
       <span>${accts.length} account${accts.length!==1?'s':''}</span>
-      <span class="acct-net" style="color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'+':'-'}${fmtK(Math.abs(net))} net worth</span>
+      <span class="acct-net" style="color:${net>=0?'var(--pos)':'var(--red)'}">${net>=0?'+':'-'}${fmtK(Math.abs(net))} net worth</span>
     </div>
     ${section('Assets','\ud83d\udc9a',assets,assetTot,'var(--green)')}
     ${section('Liabilities','\u2764\ufe0f',liabs,liabTot,'var(--red)')}
@@ -6718,10 +6777,10 @@ function acctMount(w){
   const info=engAcctNet30(acct);
   if(!info){ el.innerHTML='<div class="acct-empty">Connect your bank to see transactions for this account.</div>'; return; }
   const net=info.net;
-  let html=`<div class="acct-txn-head">${info.count} txns · last 30d · net <b style="color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'+':'-'}${fmt2(Math.abs(net))}</b></div>`;
+  let html=`<div class="acct-txn-head">${info.count} txns · last 30d · net <b style="color:${net>=0?'var(--pos)':'var(--red)'}">${net>=0?'+':'-'}${fmt2(Math.abs(net))}</b></div>`;
   if(!info.txns.length){ html+='<div class="acct-empty">No transactions in last 30 days.</div>'; el.innerHTML=html; return; }
   const keys=[];
-  html+=info.txns.map((t,i)=>{ const key=_txnKey(t); keys[i]=key; const pos=t.amount>0; const col=pos?'var(--red)':'var(--green)'; const amt=(pos?'-':'+')+fmt2(Math.abs(t.amount)); const cat=getTxnCategory(t); const note=getTxnNote(t); const tag=getTxnTag(t); const name=t.merchant_name||t.name||''; const dt=new Date(t.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  html+=info.txns.map((t,i)=>{ const key=_txnKey(t); keys[i]=key; const pos=t.amount>0; const col=pos?'var(--red)':'var(--pos)'; const amt=(pos?'-':'+')+fmt2(Math.abs(t.amount)); const cat=getTxnCategory(t); const note=getTxnNote(t); const tag=getTxnTag(t); const name=t.merchant_name||t.name||''; const dt=new Date(t.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
       const tagChip = tag&&TXN_TAG_BY_ID[tag]?`<span class="txf-tag">${TXN_TAG_BY_ID[tag].icon} ${esc(TXN_TAG_BY_ID[tag].label)}</span>`:'';
       return `<div class="acct-txn-row">
         <div style="flex:1;min-width:0">
@@ -6814,7 +6873,7 @@ function txnFeedRender(w){
   const _exSet=_excludedAcctIds();
   el.innerHTML=capped.map((t,i)=>{
     const key=_txnKey(t); keys[i]=key;
-    const pos=t.amount>0, col=pos?'var(--red)':'var(--green)', amt=(pos?'-':'+')+fmt2(Math.abs(t.amount));
+    const pos=t.amount>0, col=pos?'var(--red)':'var(--pos)', amt=(pos?'-':'+')+fmt2(Math.abs(t.amount));
     const cat=getTxnCategory(t), note=getTxnNote(t), tag=getTxnTag(t);
     const name=t.merchant_name||t.name||'', dt=new Date(t.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
     const mk=_merchKey(t), hasRule=!!(mk&&_catRules[mk]);
@@ -6912,7 +6971,7 @@ function fdRecalc(){
     <div class="fd-nr"><span>Income</span><b style="color:var(--green)">${fmtK(fdScenarioIncome())}</b></div>
     <div class="fd-nr"><span>Bills</span><b style="color:var(--red)">-${fmtK(fdMonthlyBills())}</b></div>
     <div class="fd-nr"><span>Extra costs</span><b style="color:var(--red)">-${fmtK(fdExtraTotal())}</b></div>
-    <div class="fd-nr fd-nr-tot"><span>Net / month</span><b style="color:${r.net>=0?'var(--green)':'var(--red)'}">${r.net>=0?'+':'-'}${fmtK(Math.abs(r.net))}</b></div>`; }
+    <div class="fd-nr fd-nr-tot"><span>Net / month</span><b style="color:${r.net>=0?'var(--pos)':'var(--red)'}">${r.net>=0?'+':'-'}${fmtK(Math.abs(r.net))}</b></div>`; }
   const al=gg('fdAlert');
   if(al){ if(r.months>=999){ al.className='fd-alert info'; al.textContent='✅ Net positive — solid footing in this scenario.'; }
     else if(r.months<3){ al.className='fd-alert danger'; al.textContent='⚠️ Critical: under 3 months runway. Contact creditors now.'; }
@@ -7267,10 +7326,10 @@ function renderWidgetBody(w){
   const bars=n=>`<div class="wph-bars">${Array.from({length:n}).map(()=>`<div class="wph-bar" style="height:${30+Math.random()*70}%"></div>`).join('')}</div>`;
   switch(w.type){
     case 'journey': return journeyBody(w);
-    case 'net_worth_summary': { const a=engNWAssets(), l=engNWLiab(); const nw=dataLoaded?(engNetBalance()+a-l):(a-l); const tot=a+l; const aPct=tot>0?Math.round(a/tot*100):100; return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(nw)}">${fmtK(nw)}</div><div class="wph-sub">net worth · ${aPct}% assets</div><div class="ds-budget"><div class="ds-budget-top"><span style="color:var(--green);font-weight:700">Assets ${fmtK(a)}</span><span style="color:var(--red)">Debts ${fmtK(l)}</span></div><div class="ds-bar" style="background:rgba(240,92,92,.35)"><div class="ds-bar-fill" style="width:${aPct}%;background:var(--green)"></div></div></div><button class="nw-manage" onclick="event.stopPropagation();openNetWorthEditor()">🏠 Add home, car & other assets</button></div>`; }
+    case 'net_worth_summary': { const a=engNWAssets(), l=engNWLiab(); const nw=dataLoaded?(engNetBalance()+a-l):(a-l); const tot=a+l; const aPct=tot>0?Math.round(a/tot*100):100; return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(nw)}">${fmtK(nw)}</div><div class="wph-sub">net worth · ${aPct}% assets</div><div class="ds-budget"><div class="ds-budget-top"><span style="color:var(--pos);font-weight:700">Assets ${fmtK(a)}</span><span style="color:var(--red)">Debts ${fmtK(l)}</span></div><div class="ds-bar" style="background:rgba(240,92,92,.35)"><div class="ds-bar-fill" style="width:${aPct}%;background:var(--pos)"></div></div></div><button class="nw-manage" onclick="event.stopPropagation();openNetWorthEditor()">🏠 Add home, car & other assets</button></div>`; }
     case 'cash_summary': return cashSummaryBody(w);
     case 'spending_month': return discretionarySpendBody(w);
-    case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); const now=Date.now(), ps=new Date(now-2*days*86400000), pe=new Date(now-days*86400000); const prev=allTxns.filter(t=>{const d=new Date(t.date);return d>=ps&&d<pe&&_isIncomeTxn(t);}).reduce((s,t)=>s+Math.abs(t.amount),0); const dl=prev>0?Math.round((inc-prev)/prev*100):null; const up=dl!==null&&dl>=0; const trend=dl===null?'':`<div class="ds-trend-label" style="color:${up?'var(--green)':'var(--amber)'};margin-top:9px">${up?'▲':'▼'} ${Math.abs(dl)}% vs prior ${tfLabel(w.tf||'30d')}</div>`; const rec=engRecent(days).filter(_isIncomeTxn); const byC={}; rec.forEach(t=>{const c=getTxnCategory(t);byC[c]=(byC[c]||0)+Math.abs(t.amount);}); const top=Object.entries(byC).sort((a,b)=>b[1]-a[1])[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${trend}${top?`<div class="wph-inline"><span>Top source: ${esc(top[0])}</span><b style="color:var(--green)">${fmtK(top[1])}</b></div>`:''}</div>`; } const top=incomeSources.slice().sort((a,b)=>b.amt*(FREQ_TO_MONTHLY[b.freq]||1)-a.amt*(FREQ_TO_MONTHLY[a.freq]||1))[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">${incomeSources.length} sources \u00b7 sample</div><div class="ds-trend-label" style="color:var(--green);margin-top:9px">▲ 6% vs prior 30d</div><div class="wph-inline"><span>Top source: ${top.name}</span><b style="color:var(--green)">${fmtK(Math.round(top.amt*(FREQ_TO_MONTHLY[top.freq]||1)))}/mo</b></div></div>`; }
+    case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); const now=Date.now(), ps=new Date(now-2*days*86400000), pe=new Date(now-days*86400000); const prev=allTxns.filter(t=>{const d=new Date(t.date);return d>=ps&&d<pe&&_isIncomeTxn(t);}).reduce((s,t)=>s+Math.abs(t.amount),0); const dl=prev>0?Math.round((inc-prev)/prev*100):null; const up=dl!==null&&dl>=0; const trend=dl===null?'':`<div class="ds-trend-label" style="color:${up?'var(--green)':'var(--amber)'};margin-top:9px">${up?'▲':'▼'} ${Math.abs(dl)}% vs prior ${tfLabel(w.tf||'30d')}</div>`; const rec=engRecent(days).filter(_isIncomeTxn); const byC={}; rec.forEach(t=>{const c=getTxnCategory(t);byC[c]=(byC[c]||0)+Math.abs(t.amount);}); const top=Object.entries(byC).sort((a,b)=>b[1]-a[1])[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--pos)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${trend}${top?`<div class="wph-inline"><span>Top source: ${esc(top[0])}</span><b style="color:var(--pos)">${fmtK(top[1])}</b></div>`:''}</div>`; } const top=incomeSources.slice().sort((a,b)=>b.amt*(FREQ_TO_MONTHLY[b.freq]||1)-a.amt*(FREQ_TO_MONTHLY[a.freq]||1))[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--pos)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">${incomeSources.length} sources \u00b7 sample</div><div class="ds-trend-label" style="color:var(--green);margin-top:9px">▲ 6% vs prior 30d</div><div class="wph-inline"><span>Top source: ${top.name}</span><b style="color:var(--green)">${fmtK(Math.round(top.amt*(FREQ_TO_MONTHLY[top.freq]||1)))}/mo</b></div></div>`; }
     case 'debt_summary': return debtSummaryBody(w);
     case 'category_heatmap': return categoryHeatmapBody(w);
     case 'budget_doughnut': return budgetTiersBody(w);
@@ -7424,9 +7483,9 @@ function widgetDetailContent(type, days){
     }
     case 'cashflow_chart': {
       const p=engCashFlowProjection(90);
-      const ev=[...p.events].sort((a,b)=>a.day-b.day).slice(0,12).map(e=>({label:(e.day===0?'today':'day '+e.day)+' · '+e.name, value:Math.abs(e.amt), color:e.type==='income'?'var(--green)':'var(--red)', note:e.type}));
+      const ev=[...p.events].sort((a,b)=>a.day-b.day).slice(0,12).map(e=>({label:(e.day===0?'today':'day '+e.day)+' · '+e.name, value:Math.abs(e.amt), color:e.type==='income'?'var(--pos)':'var(--red)', note:e.type}));
       return { title:'Cash flow projection', sub:`Start ${fmtK(p.start)} → end ${fmtK(p.end)} over 90 days · low ${fmtK(p.low.bal)} on day ${p.low.day}`,
-        body:`<div class="wdt-total" style="color:${p.end>=0?'var(--green)':'var(--red)'}">${fmtK(p.end)}<span>projected balance in 90 days</span></div>
+        body:`<div class="wdt-total" style="color:${p.end>=0?'var(--pos)':'var(--red)'}">${fmtK(p.end)}<span>projected balance in 90 days</span></div>
         <div class="wdt-row"><span class="wdt-label">Income in</span><span class="wdt-vals"><b style="color:var(--green)">+${fmtK(p.totalIn)}</b></span></div>
         <div class="wdt-row"><span class="wdt-label">Bills out</span><span class="wdt-vals"><b style="color:var(--red)">-${fmtK(p.totalOut)}</b></span></div>
         <div class="wdt-row"><span class="wdt-label">Lowest point</span><span class="wdt-vals"><b style="color:${p.low.bal<0?'var(--red)':'var(--amber)'}">${fmtK(p.low.bal)}</b> · day ${p.low.day}</span></div>
@@ -7517,6 +7576,18 @@ function renderSettings(){
         <div id="setBanks" class="cd-list"><div class="ws-hint">Loading…</div></div>
         <div class="cd-sub" style="margin-top:14px">Uploaded statements &amp; bills</div>
         <div id="setImports" class="cd-list"></div>
+      </div>
+
+      <div class="set-card">
+        <div class="set-card-label">🎨 Appearance</div>
+        <div style="font-size:12px;color:var(--muted);margin:2px 0 12px;line-height:1.5">Pick a theme, tweak any color, and choose a font. Starts from your Richie persona — change it whenever you like. Saved per profile.</div>
+        <div class="ap-sub">Theme</div>
+        <div class="ap-themes" id="apThemes"></div>
+        <div class="ap-sub" style="margin-top:15px">Font</div>
+        <div class="ap-fonts" id="apFonts"></div>
+        <div class="ap-sub" style="margin-top:15px">Custom colors</div>
+        <div class="ap-colors" id="apColors"></div>
+        <button class="btn" style="margin-top:13px" onclick="resetAppearance()">↺ Reset to Richie default</button>
       </div>
 
       <div class="set-card">
@@ -7632,7 +7703,34 @@ function renderSettings(){
   gg('setXpFill').style.width=pct+'%';
   gg('setXpText').textContent=APP.proMode?'Pro Mode active — all features unlocked':(APP.xp.toLocaleString()+' XP'+(levelProgress().next!=null?(' · '+levelProgress().toNext.toLocaleString()+' to next level'):' · max level'));
   try{ renderConnectedData(); }catch(e){}
+  try{ renderAppearance(); }catch(e){}
 }
+/* ── Appearance render + handlers (per profile) ── */
+function renderAppearance(){
+  const a=_appearance();
+  const preset=THEME_BY_ID[a.preset||'midnight']||THEME_PRESETS[0];
+  const persona=RICHIE_PERSONAS[APP.persona];
+  const tw=gg('apThemes');
+  if(tw) tw.innerHTML=THEME_PRESETS.map(p=>`<button class="ap-theme${(a.preset||'midnight')===p.id?' on':''}" onclick="setThemePreset('${p.id}')" title="${esc(p.name)}"><span class="ap-sw" style="background:${p.bg};border-color:${p.border2}"><i style="background:${p.accent}"></i><i style="background:${p.surface}"></i><i style="background:${p.text}"></i></span><span class="ap-theme-nm">${esc(p.name)}</span></button>`).join('');
+  const fw=gg('apFonts');
+  if(fw) fw.innerHTML=FONT_OPTS.map(f=>`<button class="ap-font${(a.font||'dm')===f.id?' on':''}" style="font-family:${f.css}" onclick="setThemeFont('${f.id}')">${esc(f.name)}</button>`).join('');
+  const cw=gg('apColors');
+  if(cw){
+    const rows=[
+      ['Accent','accent', a.accent||(persona&&persona.accent)||preset.accent],
+      ['Background','bg', a.bg||preset.bg],
+      ['Cards','surface', a.surface||preset.surface],
+      ['Text','text', a.text||preset.text],
+      ['Money in','pos', a.pos||'#2ecc8a'],
+      ['Money out','neg', a.neg||'#f05c5c'],
+    ];
+    cw.innerHTML=rows.map(([lbl,key,val])=>`<label class="ap-color"><input type="color" value="${_toHexColor(val)}" oninput="setThemeColor('${key}',this.value)"><span>${esc(lbl)}</span></label>`).join('');
+  }
+}
+function setThemePreset(id){ _setAppearance({preset:id, bg:null, surface:null, text:null, accent:null}); applyAppearance(); saveState(); renderAppearance(); }
+function setThemeFont(id){ _setAppearance({font:id}); applyAppearance(); saveState(); renderAppearance(); }
+function setThemeColor(key,val){ const patch={}; patch[key==='neg'?'neg':key]=val; _setAppearance(patch); applyAppearance(); saveState(); }
+function resetAppearance(){ if(APP.appearances) APP.appearances[APP.activeProfile]={}; applyAppearance(); saveState(); renderAppearance(); renderShell(); if(typeof richieSay==='function') richieSay('Back to your Richie look. ✨'); }
 /* ── Connected data: banks + imported statements ── */
 async function renderConnectedData(){
   // Imported statements (grouped by import batch)
