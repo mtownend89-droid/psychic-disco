@@ -4589,7 +4589,40 @@ function loadState(){
     _initProfiles();   // set up / load per-profile layouts
   }catch(e){ console.warn('state load failed',e); }
 }
-function saveState(){ try{ _saveActiveLayout(); LS.setItem('richie_app',JSON.stringify(APP)); }catch(e){} }
+function saveState(){ try{ _saveActiveLayout(); LS.setItem('richie_app',JSON.stringify(APP)); syncPush(); }catch(e){} }
+/* ── Cross-device state sync: push edits to the server, pull newer edits from other devices ── */
+const SYNC_KEYS=['mdf_categories','mdf_cat_overrides','mdf_cat_rules','mdf_txn_notes','mdf_txn_tags','mdf_acct_cats','mdf_nw_history','mdf_fire','mdf_gami','richie_setup','richie_proactive','richie_audio','richie_voice'];
+function syncCollect(){ const stores={}; SYNC_KEYS.forEach(k=>{ const v=LS.getItem(k); if(v!=null) stores[k]=v; }); return { app:APP, stores, _ts:Date.now() }; }
+function syncApplyToLS(blob){ try{ if(blob&&blob.app) LS.setItem('richie_app', JSON.stringify(blob.app)); if(blob&&blob.stores) Object.keys(blob.stores).forEach(k=>{ if(blob.stores[k]!=null) LS.setItem(k, blob.stores[k]); }); }catch(e){} }
+let _syncTimer=null;
+function syncPush(){
+  if(typeof serverAvailable!=='undefined' && !serverAvailable) return;
+  clearTimeout(_syncTimer);
+  _syncTimer=setTimeout(async ()=>{
+    try{
+      const blob=syncCollect();
+      LS.setItem('mdf_sync_ts', String(blob._ts));
+      await fetch('/api/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({state:blob})});
+    }catch(e){}
+  }, 1800);
+}
+async function syncPull(){
+  if(typeof serverAvailable!=='undefined' && !serverAvailable) return false;
+  try{
+    const d=await _fetchJSON('/api/state');
+    if(d && d.state && d.state._ts){
+      const localTs=+(LS.getItem('mdf_sync_ts')||0);
+      if(d.state._ts > localTs){          // another device has newer edits → adopt them
+        syncApplyToLS(d.state);
+        LS.setItem('mdf_sync_ts', String(d.state._ts));
+        if(!SS.getItem('_didSync')){ SS.setItem('_didSync','1'); location.reload(); return true; }
+      }
+    } else {
+      syncPush();                          // no server copy yet → push this device up as the baseline
+    }
+  }catch(e){}
+  return false;
+}
 /* ── Per-profile layouts: each profile (Matt, Dana…) has its own pages/widgets; ALL
    financial data (accounts, transactions, goals, budget, categories, net worth) is shared. ── */
 function _activeProfile(){ return (APP.profiles||[]).find(p=>p.id===APP.activeProfile) || (APP.profiles&&APP.profiles[0]) || {name:'Me',avatar:'💰'}; }
@@ -9031,6 +9064,7 @@ function boot(){
 }
 function enterApp(){
   _obVoice=false; riAudioOn=false;        // app is silent (voice was onboarding-only)
+  try{ syncPull(); }catch(e){}            // adopt newer edits from another device (may reload once)
   loadState();
   gg('appShell').style.display='block';
   gg('richieAssistant').style.display='block';
