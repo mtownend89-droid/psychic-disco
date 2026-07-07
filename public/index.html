@@ -1544,6 +1544,10 @@ select.mf-in{appearance:none;cursor:pointer;}
 .ce-foot{display:flex;align-items:center;gap:8px;padding:14px 20px;border-top:1px solid var(--border);}
 .wph-sub{font-size:11.5px;color:var(--muted);margin-top:2px;}
 .wph-inline{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:9px;border-top:1px solid var(--border);font-size:11.5px;color:var(--muted);}
+.scp-row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);cursor:pointer;}
+.scp-row:last-of-type{border-bottom:none;}
+.scp-nm{flex:1;font-size:13px;font-weight:600;color:var(--text);}
+.scp-v{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;}
 .cash-safe{margin:10px 0 4px;padding:9px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;}
 .cash-safe-top{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:600;color:var(--text);margin-bottom:3px;}
 .cash-safe-top b{font-size:16px;font-variant-numeric:tabular-nums;}
@@ -2589,6 +2593,7 @@ catch(e){ _storageBlocked=true; }
 ═══════════════════════════════════════════════════════════════════ */
 const fmtM=n=>'$'+(Math.abs(n)>=1e6?(Math.abs(n)/1e6).toFixed(2)+'M':Math.abs(n)>=1000?Math.round(Math.abs(n)/1000)+'K':Math.round(Math.abs(n)).toLocaleString());
 const fmtK=n=>'$'+Math.round(Math.abs(n)).toLocaleString();
+const moneyCol=n=>(+n>0?'var(--green)':(+n<0?'var(--red)':'var(--muted)'));   // positive → green, negative → red
 const fmt2=n=>'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 
 /* ── Category model (single source of truth) ── */
@@ -4139,7 +4144,7 @@ function portfolioBody(w){
       <div class="pf-side"><div class="pf-val">${fmtK(h.value)}</div><div class="pf-pct">${pct}%</div><div class="pf-research">research ›</div></div>
     </div>`;
   }).join('');
-  return `<div class="pf-wrap"><div class="pf-total"><div class="wph-stat">${fmtK(tot)}</div><div class="wph-sub">portfolio value · ${H.length} position${H.length!==1?'s':''}</div>${acctChips}</div><div class="pf-list">${rows}</div><button class="nw-add" onclick="event.stopPropagation();openHoldingEditor()">＋ Add a position</button></div>`;
+  return `<div class="pf-wrap"><div class="pf-total"><div class="wph-stat" style="color:${moneyCol(tot)}">${fmtK(tot)}</div><div class="wph-sub">portfolio value · ${H.length} position${H.length!==1?'s':''}</div>${acctChips}</div><div class="pf-list">${rows}</div><button class="nw-add" onclick="event.stopPropagation();openHoldingEditor()">＋ Add a position</button></div>`;
 }
 function openResearch(id){
   const h=(APP.holdings||[]).find(x=>x.id===id); if(!h) return;
@@ -4593,7 +4598,15 @@ function saveState(){ try{ _saveActiveLayout(); LS.setItem('richie_app',JSON.str
 /* ── Cross-device state sync: push edits to the server, pull newer edits from other devices ── */
 const SYNC_KEYS=['mdf_categories','mdf_cat_overrides','mdf_cat_rules','mdf_txn_notes','mdf_txn_tags','mdf_acct_cats','mdf_nw_history','mdf_fire','mdf_gami','richie_setup','richie_proactive','richie_audio','richie_voice'];
 function syncCollect(){ const stores={}; SYNC_KEYS.forEach(k=>{ const v=LS.getItem(k); if(v!=null) stores[k]=v; }); return { app:APP, stores, _ts:Date.now() }; }
-function syncApplyToLS(blob){ try{ if(blob&&blob.app) LS.setItem('richie_app', JSON.stringify(blob.app)); if(blob&&blob.stores) Object.keys(blob.stores).forEach(k=>{ if(blob.stores[k]!=null) LS.setItem(k, blob.stores[k]); }); }catch(e){} }
+function syncApplyToLS(blob){ try{
+  const localApp=JSON.parse(LS.getItem('richie_app')||'{}');
+  if(blob&&blob.app){
+    blob.app.xp=Math.max(+blob.app.xp||0, +localApp.xp||0);        // XP/level never go backwards
+    blob.app.level=Math.max(+blob.app.level||0, +localApp.level||0);
+    LS.setItem('richie_app', JSON.stringify(blob.app));
+  }
+  if(blob&&blob.stores) Object.keys(blob.stores).forEach(k=>{ if(blob.stores[k]!=null) LS.setItem(k, blob.stores[k]); });
+}catch(e){} }
 let _syncTimer=null;
 function syncPush(){
   if(typeof serverAvailable!=='undefined' && !serverAvailable) return;
@@ -4602,7 +4615,13 @@ function syncPush(){
     try{
       const blob=syncCollect();
       LS.setItem('mdf_sync_ts', String(blob._ts));
-      await fetch('/api/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({state:blob})});
+      const r=await fetch('/api/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({state:blob})});
+      const jd=await r.json().catch(()=>null);
+      if(jd && ((+jd.xp||0)>(+APP.xp||0) || (+jd.level||0)>(+APP.level||0))){   // server had higher XP/level → adopt it
+        APP.xp=Math.max(+APP.xp||0,+jd.xp||0); APP.level=Math.max(+APP.level||0,+jd.level||0);
+        LS.setItem('richie_app', JSON.stringify(APP));
+        try{ const el=gg('sbXp'); if(el) el.textContent=APP.xp+' XP'; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg) renderCanvas(pg); }catch(e){}
+      }
     }catch(e){}
   }, 1800);
 }
@@ -5794,10 +5813,36 @@ function cashSummaryBody(w){
     <div class="cash-safe-top"><span>🟢 Safe to spend today</span><b style="color:${perDay>0?'var(--green)':'var(--red)'}">${fmtK(perDay)}<span style="font-size:10px;font-weight:600;color:var(--muted)">/day</span></b></div>
     <div class="ws-hint">${fmtK(s.pool)} free ${s.nextIncomeDay!=null?`until pay in ${s.horizon}d`:`over ${s.horizon} days`} · after ${fmtK(s.billsDue)} bills${s.goalPortion>0.5?` + ${fmtK(s.goalPortion)} goals`:''}</div>
   </div>`;
-  return `<div class="wph"><div class="wph-stat">${fmtK(total)}</div><div class="wph-sub">cash on hand · ${accts.length} ${esc(label)} account${accts.length!==1?'s':''}${dataLoaded?'':' · sample'} ${gear}</div>${safe}<div class="cash-list">${rows}</div></div>`;
+  return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(total)}">${fmtK(total)}</div><div class="wph-sub">cash on hand · ${accts.length} ${esc(label)} account${accts.length!==1?'s':''}${dataLoaded?'':' · sample'} ${gear}</div>${safe}<div class="cash-list">${rows}</div></div>`;
 }
 /* Per-widget picker: which ACCOUNT CATEGORIES this widget counts */
 let _acctPick={uid:null, sel:[]};
+// Current Spending: choose which categories to include (e.g. exclude Work)
+function openSpendCatPicker(uid){
+  const w=_findWidget(uid); if(!w) return;
+  const days=wDays(w);
+  let unfiltered;
+  if(dataLoaded){ unfiltered=engDiscretionaryBreakdown(days); }
+  else { const g=engCategoryMonthGrid(6), li=g.months.length-1; unfiltered=g.cats.filter(c=>isDiscretionary(c.label)).map(c=>({label:c.label,value:Math.round((c.vals[li]||0)*(days/30))})).filter(r=>r.value>0); }
+  const labels=Array.from(new Set([ ...unfiltered.map(r=>r.label), ...(w.hiddenCats||[]) ])).sort();
+  const hidden=new Set(w.hiddenCats||[]);
+  gg('manualModal').style.display='flex';
+  gg('manualTitle').textContent='Show categories';
+  gg('manualSub').textContent='Uncheck any category to leave it out of Current Spending (e.g. Work).';
+  gg('manualBody').innerHTML = (labels.length?labels.map(l=>{
+    const v=(unfiltered.find(r=>r.label===l)||{}).value||0;
+    const le=esc(l).replace(/'/g,"\\'");
+    return `<label class="scp-row"><input type="checkbox" ${hidden.has(l)?'':'checked'} onchange="spendCatToggle('${uid}','${le}',this.checked)"><span class="scp-nm">${esc(l)}</span><span class="scp-v">${fmtK(v)}</span></label>`;
+  }).join(''):'<div class="ws-hint">No spending categories yet.</div>') + `<div class="mf-actions"><span></span><button class="btn primary" onclick="closeManual()">Done</button></div>`;
+}
+function spendCatToggle(uid,label,show){
+  const w=_findWidget(uid); if(!w) return;
+  w.hiddenCats=w.hiddenCats||[];
+  if(show) w.hiddenCats=w.hiddenCats.filter(x=>x!==label);
+  else if(!w.hiddenCats.includes(label)) w.hiddenCats.push(label);
+  saveState();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+}
 function openAcctCatPicker(uid){
   const w=_findWidget(uid); if(!w) return;
   _acctPick={uid, sel:(w.acctCats&&w.acctCats.length?w.acctCats.slice():['cash','savings'])};
@@ -6094,17 +6139,18 @@ function budgetTiersBody(w){
 /* ═══ CURRENT (DISCRETIONARY) SPENDING WIDGET ═══ */
 function discretionarySpendBody(w){
   const days=wDays(w);
-  let disc, spend;
+  let disc;
   if(dataLoaded){
     disc=engDiscretionaryBreakdown(days);
-    spend=disc.reduce((s,r)=>s+r.value,0);
   } else {
     // sample mode: derive from the latest month of the category grid, scaled to window
     const g=engCategoryMonthGrid(6);
     const li=g.months.length-1;
     disc=g.cats.filter(c=>isDiscretionary(c.label)).map(c=>({label:c.label,value:Math.round((c.vals[li]||0)*(days/30)),color:c.color})).filter(r=>r.value>0).sort((a,b)=>b.value-a.value);
-    spend=disc.reduce((s,r)=>s+r.value,0);
   }
+  const hidden=(w.hiddenCats||[]);
+  if(hidden.length) disc=disc.filter(r=>!hidden.includes(r.label));
+  const spend=disc.reduce((s,r)=>s+r.value,0);
   const top=disc[0];
   const budget=engDiscretionaryBudget()*(days/30);
   const pct = budget>0 ? spend/budget*100 : 0;
@@ -6119,9 +6165,10 @@ function discretionarySpendBody(w){
   const trendPct = prev>0?Math.round((cur-prev)/prev*100):0;
   const trendColor = trendUp?'var(--red)':'var(--green)';  // spending up = bad
   const sub = (w.tf==='30d'||!w.tf) ? 'discretionary · last 30 days' : `discretionary · ${tfLabel(w.tf)}`;
+  const filterBtn=`<button class="cash-pick" onclick="event.stopPropagation();openSpendCatPicker('${w.uid}')" title="Choose which categories to include">⚙︎</button>`;
   return `<div class="wph">
-    <div class="wph-stat">${fmtK(spend)}</div>
-    <div class="wph-sub">${sub}${dataLoaded?'':' · sample'}</div>
+    <div class="wph-stat" style="color:${moneyCol(spend)}">${fmtK(spend)}</div>
+    <div class="wph-sub">${sub}${dataLoaded?'':' · sample'}${hidden.length?` · ${hidden.length} hidden`:''} ${filterBtn}</div>
     <div class="ds-budget">
       <div class="ds-budget-top">
         <span style="color:${color};font-weight:700">${Math.round(pct)}% of ${fmtK(budget)} budget</span>
@@ -7220,7 +7267,7 @@ function renderWidgetBody(w){
   const bars=n=>`<div class="wph-bars">${Array.from({length:n}).map(()=>`<div class="wph-bar" style="height:${30+Math.random()*70}%"></div>`).join('')}</div>`;
   switch(w.type){
     case 'journey': return journeyBody(w);
-    case 'net_worth_summary': { const a=engNWAssets(), l=engNWLiab(); const nw=dataLoaded?(engNetBalance()+a-l):(a-l); const tot=a+l; const aPct=tot>0?Math.round(a/tot*100):100; return `<div class="wph"><div class="wph-stat ${nw>=0?'':'red'}" style="${nw<0?'color:var(--red)':''}">${fmtK(nw)}</div><div class="wph-sub">net worth · ${aPct}% assets</div><div class="ds-budget"><div class="ds-budget-top"><span style="color:var(--green);font-weight:700">Assets ${fmtK(a)}</span><span style="color:var(--red)">Debts ${fmtK(l)}</span></div><div class="ds-bar" style="background:rgba(240,92,92,.35)"><div class="ds-bar-fill" style="width:${aPct}%;background:var(--green)"></div></div></div><button class="nw-manage" onclick="event.stopPropagation();openNetWorthEditor()">🏠 Add home, car & other assets</button></div>`; }
+    case 'net_worth_summary': { const a=engNWAssets(), l=engNWLiab(); const nw=dataLoaded?(engNetBalance()+a-l):(a-l); const tot=a+l; const aPct=tot>0?Math.round(a/tot*100):100; return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(nw)}">${fmtK(nw)}</div><div class="wph-sub">net worth · ${aPct}% assets</div><div class="ds-budget"><div class="ds-budget-top"><span style="color:var(--green);font-weight:700">Assets ${fmtK(a)}</span><span style="color:var(--red)">Debts ${fmtK(l)}</span></div><div class="ds-bar" style="background:rgba(240,92,92,.35)"><div class="ds-bar-fill" style="width:${aPct}%;background:var(--green)"></div></div></div><button class="nw-manage" onclick="event.stopPropagation();openNetWorthEditor()">🏠 Add home, car & other assets</button></div>`; }
     case 'cash_summary': return cashSummaryBody(w);
     case 'spending_month': return discretionarySpendBody(w);
     case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); const now=Date.now(), ps=new Date(now-2*days*86400000), pe=new Date(now-days*86400000); const prev=allTxns.filter(t=>{const d=new Date(t.date);return d>=ps&&d<pe&&_isIncomeTxn(t);}).reduce((s,t)=>s+Math.abs(t.amount),0); const dl=prev>0?Math.round((inc-prev)/prev*100):null; const up=dl!==null&&dl>=0; const trend=dl===null?'':`<div class="ds-trend-label" style="color:${up?'var(--green)':'var(--amber)'};margin-top:9px">${up?'▲':'▼'} ${Math.abs(dl)}% vs prior ${tfLabel(w.tf||'30d')}</div>`; const rec=engRecent(days).filter(_isIncomeTxn); const byC={}; rec.forEach(t=>{const c=getTxnCategory(t);byC[c]=(byC[c]||0)+Math.abs(t.amount);}); const top=Object.entries(byC).sort((a,b)=>b[1]-a[1])[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${trend}${top?`<div class="wph-inline"><span>Top source: ${esc(top[0])}</span><b style="color:var(--green)">${fmtK(top[1])}</b></div>`:''}</div>`; } const top=incomeSources.slice().sort((a,b)=>b.amt*(FREQ_TO_MONTHLY[b.freq]||1)-a.amt*(FREQ_TO_MONTHLY[a.freq]||1))[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">${incomeSources.length} sources \u00b7 sample</div><div class="ds-trend-label" style="color:var(--green);margin-top:9px">▲ 6% vs prior 30d</div><div class="wph-inline"><span>Top source: ${top.name}</span><b style="color:var(--green)">${fmtK(Math.round(top.amt*(FREQ_TO_MONTHLY[top.freq]||1)))}/mo</b></div></div>`; }
