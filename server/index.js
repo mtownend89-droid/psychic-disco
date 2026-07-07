@@ -11,6 +11,7 @@ const { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } = re
 const app = express();
 app.set('trust proxy', 1);
 app.use('/api/analyze_document', express.json({ limit: '30mb' }));   // statement/bill uploads (base64) can be several MB
+app.use('/api/state', express.json({ limit: '6mb' }));               // full app-state sync blob
 app.use(express.json({ limit: '50kb' }));
 // ── CORS: locked to an allowlist. Set ALLOWED_ORIGINS in env (comma-separated) if
 //    you ever call the API from a different domain. Same-origin app calls are
@@ -602,6 +603,7 @@ const plaidClient = new PlaidApi(new Configuration({
 // ── TOKEN STORE ───────────────────────────────────────────────────────────────
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '../.data');   // point at a Render Persistent Disk mount (e.g. /var/data) so tokens/auth survive redeploys
 const TOKEN_FILE = path.join(DATA_DIR, 'tokens.json');
+const STATE_FILE = path.join(DATA_DIR, 'appstate.json');   // synced app state (layouts, edits, holdings, etc.)
 
 // Encrypt the Plaid access tokens at rest (AES-256-GCM). Key is derived from
 // TOKEN_ENC_KEY (or SESSION_SECRET). Set one of those in Render so the key is
@@ -779,6 +781,37 @@ app.post('/api/exchange_token', requireAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.response?.data?.error_message || err.message });
   }
+});
+
+// ── APP STATE SYNC (shared across a household's devices) ─────────────────────────
+function loadAppState() {
+  try {
+    if (fs.existsSync(STATE_FILE)) {
+      const raw = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+      if (raw && raw.v === 1 && raw.data) return decryptJSON(raw);
+      return raw;
+    }
+  } catch (e) { console.warn('state load:', e.message); }
+  return null;
+}
+function saveAppState(blob) {
+  try {
+    const dir = path.dirname(STATE_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(STATE_FILE, JSON.stringify(encryptJSON(blob)), 'utf8');
+  } catch (e) { console.warn('state save (ok on free tier):', e.message); }
+}
+app.get('/api/state', requireAuth, (req, res) => { res.json({ state: loadAppState() }); });
+app.post('/api/state', requireAuth, (req, res) => {
+  const { state } = req.body || {};
+  if (!state || typeof state !== 'object') return res.status(400).json({ error: 'no state' });
+  // Only accept if newer than what we have (last-write-wins by timestamp).
+  const existing = loadAppState();
+  if (existing && existing._ts && state._ts && state._ts < existing._ts) {
+    return res.json({ ok: true, ts: existing._ts, kept: 'newer_on_server' });
+  }
+  saveAppState(state);
+  res.json({ ok: true, ts: state._ts || Date.now() });
 });
 
 app.get('/api/items', requireAuth, (req, res) => {
