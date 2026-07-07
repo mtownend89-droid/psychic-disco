@@ -805,13 +805,16 @@ app.get('/api/state', requireAuth, (req, res) => { res.json({ state: loadAppStat
 app.post('/api/state', requireAuth, (req, res) => {
   const { state } = req.body || {};
   if (!state || typeof state !== 'object') return res.status(400).json({ error: 'no state' });
-  // Only accept if newer than what we have (last-write-wins by timestamp).
   const existing = loadAppState();
-  if (existing && existing._ts && state._ts && state._ts < existing._ts) {
-    return res.json({ ok: true, ts: existing._ts, kept: 'newer_on_server' });
-  }
-  saveAppState(state);
-  res.json({ ok: true, ts: state._ts || Date.now() });
+  // XP and level are accumulative — always keep the highest any device has reported.
+  const maxXp = Math.max(+((state.app || {}).xp) || 0, +((existing && existing.app || {}).xp) || 0);
+  const maxLevel = Math.max(+((state.app || {}).level) || 0, +((existing && existing.app || {}).level) || 0);
+  // Newest by timestamp wins for everything else (layouts, edits); older push keeps the server's edits.
+  let base = state;
+  if (existing && existing._ts && state._ts && state._ts < existing._ts) base = existing;
+  if (base.app) { base.app.xp = maxXp; base.app.level = maxLevel; }
+  saveAppState(base);
+  res.json({ ok: true, ts: base._ts || Date.now(), xp: maxXp, level: maxLevel });
 });
 
 app.get('/api/items', requireAuth, (req, res) => {
