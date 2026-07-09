@@ -3737,12 +3737,17 @@ const GOAL_METRICS={
   savings:    {label:'Total savings/cash', icon:'💰', dir:'up',   get:()=>Math.max(engStartCash(), engNWAssets()), unit:'$'},
   networth:   {label:'Net worth',          icon:'📈', dir:'up',   get:()=>dataLoaded?engNetBalance()+engNWAssets()-engNWLiab():engNetWorth(), unit:'$'},
   debt:       {label:'Total debt',         icon:'💳', dir:'down', get:()=>engBillsDebt()||engTotalDebt(), unit:'$'},
-  emergency:  {label:'Emergency fund',     icon:'🛟', dir:'up',   get:()=>{ const b=(APP.zeroBuckets||zeroBuckets).find(x=>/emer/i.test(x.name)); return b?b.amt:0; }, unit:'$'},
+  emergency:  {label:'Emergency fund',     icon:'🛟', dir:'up',   get:()=>engEmergencyFund(), unit:'$'},
+  creditutil: {label:'Credit utilization', icon:'📉', dir:'down', get:()=>Math.round(engCreditUtil().pct), unit:'%'},
+  creditlimit:{label:'Total credit limit', icon:'💳', dir:'up',   get:()=>Math.round(engCreditUtil().limit), unit:'$'},
   savingsrate:{label:'Monthly savings rate',icon:'📊',dir:'up',   get:()=>{ const inc=engMonthlyIncome(); const sp=dataLoaded?engSpend30():engMonthlyBills(); return inc>0?Math.round((inc-sp)/inc*100):0; }, unit:'%'},
   custom:     {label:'Custom (manual)',    icon:'🎯', dir:'up',   get:()=>null, unit:'$'},
 };
 // Preset goals the user can activate with one tap
 const GOAL_PRESETS=[
+  {key:'ccutil30',name:'Lower CC utilization to 30%', metric:'creditutil', target:30, icon:'📉', blurb:'Get every card under 30% — a big credit-score win.'},
+  {key:'ccutil10',name:'Lower CC utilization to 10%', metric:'creditutil', target:10, icon:'📉', blurb:'Under 10% is excellent-credit territory.'},
+  {key:'cclimit', name:'Increase total credit limit', metric:'creditlimit',target:null,icon:'⬆️', blurb:'Raise your limit — which also lowers utilization.', auto:'limitup'},
   {key:'ef1k',   name:'Starter emergency fund', metric:'emergency', target:1000,  icon:'🛟', blurb:'Your first $1,000 safety net.'},
   {key:'ef3mo',  name:'3-month emergency fund', metric:'emergency', target:null,  icon:'🛟', blurb:'Three months of expenses saved.', auto:'3mo'},
   {key:'debtfree',name:'Become debt-free',      metric:'debt',      target:0,     icon:'🚀', blurb:'Pay every balance down to zero.'},
@@ -3787,7 +3792,14 @@ function goalPlanFor(metric){ return GOAL_PLANS[metric]||GOAL_PLANS.custom; }
 function goalAutoTarget(kind){
   if(kind==='3mo') return Math.round(engMonthlyBills()*3)||3000;
   if(kind==='fire') return Math.round(engMonthlyBills()*12*25)||500000;
+  if(kind==='limitup') return Math.round((engCreditUtil().limit||5000)*1.5)||10000;
   return 0;
+}
+// Emergency fund = sum of accounts you've tagged as emergency (else the emergency budget bucket).
+function engEmergencyFund(){
+  const tagged=APP.emergencyAccts||[];
+  if(tagged.length){ return engAccounts().filter(a=>!a.excluded && tagged.includes(a.rawName||a.name)).reduce((s,a)=>s+Math.max(0,a.bal||0),0); }
+  const b=(APP.zeroBuckets||zeroBuckets).find(x=>/emer/i.test(x.name)); return b?b.amt:0;
 }
 function goalProgress(g){
   const m=GOAL_METRICS[g.metric]; if(!m) return {pct:0,current:0,target:g.target||0};
@@ -5783,6 +5795,7 @@ function openAccountEditor(name){
   if(isCredit||isLoan) f+=`<label class="mf-label">Statement due day (1–31)</label><input class="mf-in" id="aeDue" type="number" inputmode="numeric" min="1" max="31" value="${cd.dueDay||bill.due||''}" placeholder="e.g. 15">`;
   f+=`<label class="mf-label">Note</label><input class="mf-in" id="aeNote" value="${esc(cd.note||'')}" placeholder="optional">`;
   f+=`<label class="ae-toggle"><input type="checkbox" id="aeExcl" ${cd.excluded?'checked':''}><span>Exclude from everything — net worth, cash, spending &amp; bills <span style="color:var(--muted);font-weight:400">(great for a work card that gets reimbursed)</span></span></label>`;
+  if(!isCredit && !isLoan) f+=`<label class="ae-toggle"><input type="checkbox" id="aeEmergency" ${(APP.emergencyAccts||[]).includes(name)?'checked':''}><span>🛟 Count toward Emergency Fund <span style="color:var(--muted);font-weight:400">(links this account to your emergency-fund goal)</span></span></label>`;
   gg('manualBody').innerHTML=f
     +`<div class="ws-hint">These stay attached to this account even when balances refresh live from your bank — perfect for anything Plaid doesn't send (credit line, APR, 0% promos).</div>`
     +`<div class="mf-actions"><button class="btn danger-btn" onclick="clearAccountEdits('${nEsc}')">Clear</button><button class="btn primary" onclick="saveAccountEditor('${nEsc}')">Save</button></div>`;
@@ -5799,6 +5812,13 @@ function saveAccountEditor(name){
   if(g('aeNote'))     f.note=g('aeNote').value.trim();
   f.excluded = !!(g('aeExcl') && g('aeExcl').checked);
   setCardData(name, f);
+  if(g('aeEmergency')){
+    APP.emergencyAccts=APP.emergencyAccts||[];
+    const on=g('aeEmergency').checked;
+    if(on && !APP.emergencyAccts.includes(name)) APP.emergencyAccts.push(name);
+    else if(!on) APP.emergencyAccts=APP.emergencyAccts.filter(x=>x!==name);
+    saveState();
+  }
   closeManual();
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
   if(sbRichie)sbRichie.do('nod');
@@ -6759,7 +6779,6 @@ function acctWidgetBody(w){
   return `<div class="acct-wrap">
     <div class="acct-summary">
       <span>${accts.length} account${accts.length!==1?'s':''}</span>
-      <span class="acct-net" style="color:${net>=0?'var(--pos)':'var(--red)'}">${net>=0?'+':'-'}${fmtK(Math.abs(net))} net worth</span>
     </div>
     ${section('Assets','\ud83d\udc9a',assets,assetTot,'var(--green)')}
     ${section('Liabilities','\u2764\ufe0f',liabs,liabTot,'var(--red)')}
@@ -7326,7 +7345,7 @@ function renderWidgetBody(w){
   const bars=n=>`<div class="wph-bars">${Array.from({length:n}).map(()=>`<div class="wph-bar" style="height:${30+Math.random()*70}%"></div>`).join('')}</div>`;
   switch(w.type){
     case 'journey': return journeyBody(w);
-    case 'net_worth_summary': { const a=engNWAssets(), l=engNWLiab(); const nw=dataLoaded?(engNetBalance()+a-l):(a-l); const tot=a+l; const aPct=tot>0?Math.round(a/tot*100):100; return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(nw)}">${fmtK(nw)}</div><div class="wph-sub">net worth · ${aPct}% assets</div><div class="ds-budget"><div class="ds-budget-top"><span style="color:var(--pos);font-weight:700">Assets ${fmtK(a)}</span><span style="color:var(--red)">Debts ${fmtK(l)}</span></div><div class="ds-bar" style="background:rgba(240,92,92,.35)"><div class="ds-bar-fill" style="width:${aPct}%;background:var(--pos)"></div></div></div><button class="nw-manage" onclick="event.stopPropagation();openNetWorthEditor()">🏠 Add home, car & other assets</button></div>`; }
+    case 'net_worth_summary': { const a=engNWAssets(), l=engNWLiab(); const nw=dataLoaded?(engNetBalance()+a-l):(a-l); const nwGoalG=(APP.goals||[]).filter(x=>x.metric==='networth'&&x.target>0).sort((x,y)=>y.target-x.target)[0]; const goalNW=nwGoalG?nwGoalG.target:(nw>0?Math.max(100000,Math.ceil((nw+1)/100000)*100000):100000); const gPct=goalNW>0?Math.max(0,Math.min(100,Math.round(nw/goalNW*100))):0; return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(nw)}">${fmtK(nw)}</div><div class="wph-sub">net worth · ${gPct}% to goal</div><div class="ds-budget"><div class="ds-budget-top"><span style="color:${moneyCol(nw)};font-weight:700">Now ${fmtK(nw)}</span><span style="color:var(--muted)">Goal ${fmtK(goalNW)}</span></div><div class="ds-bar" style="background:var(--surface3)"><div class="ds-bar-fill" style="width:${gPct}%;background:var(--pos)"></div></div></div><button class="nw-manage" onclick="event.stopPropagation();openNetWorthEditor()">🏠 Add home, car & other assets</button></div>`; }
     case 'cash_summary': return cashSummaryBody(w);
     case 'spending_month': return discretionarySpendBody(w);
     case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); const now=Date.now(), ps=new Date(now-2*days*86400000), pe=new Date(now-days*86400000); const prev=allTxns.filter(t=>{const d=new Date(t.date);return d>=ps&&d<pe&&_isIncomeTxn(t);}).reduce((s,t)=>s+Math.abs(t.amount),0); const dl=prev>0?Math.round((inc-prev)/prev*100):null; const up=dl!==null&&dl>=0; const trend=dl===null?'':`<div class="ds-trend-label" style="color:${up?'var(--green)':'var(--amber)'};margin-top:9px">${up?'▲':'▼'} ${Math.abs(dl)}% vs prior ${tfLabel(w.tf||'30d')}</div>`; const rec=engRecent(days).filter(_isIncomeTxn); const byC={}; rec.forEach(t=>{const c=getTxnCategory(t);byC[c]=(byC[c]||0)+Math.abs(t.amount);}); const top=Object.entries(byC).sort((a,b)=>b[1]-a[1])[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--pos)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${trend}${top?`<div class="wph-inline"><span>Top source: ${esc(top[0])}</span><b style="color:var(--pos)">${fmtK(top[1])}</b></div>`:''}</div>`; } const top=incomeSources.slice().sort((a,b)=>b.amt*(FREQ_TO_MONTHLY[b.freq]||1)-a.amt*(FREQ_TO_MONTHLY[a.freq]||1))[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--pos)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">${incomeSources.length} sources \u00b7 sample</div><div class="ds-trend-label" style="color:var(--green);margin-top:9px">▲ 6% vs prior 30d</div><div class="wph-inline"><span>Top source: ${top.name}</span><b style="color:var(--green)">${fmtK(Math.round(top.amt*(FREQ_TO_MONTHLY[top.freq]||1)))}/mo</b></div></div>`; }
