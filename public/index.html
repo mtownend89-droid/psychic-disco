@@ -2745,6 +2745,16 @@ function getTxnNote(t){ return _txnNotes[_txnKey(t)]||''; }
 /* ── Live data layer (Plaid-backed via server API) ── */
 let allAccts=[], allTxns=[], _plaidTxns=[], dataLoaded=false, serverAvailable=true;
 function _rebuildTxns(){ allTxns=(_plaidTxns||[]).concat(APP.importedTxns||[]); }
+/* ── Pending transactions (Plaid sends them with pending:true) — used for "expected" totals.
+   Expected balance = current balance minus the net of pending amounts (Plaid amount>0 = money out),
+   which works for both asset balances (+) and debt balances stored negative. Banks that already
+   fold pending into the reported balance will make this an estimate — hence the "expected" label. ── */
+function engAcctPending(a){
+  if(!dataLoaded||!a||a.manual) return {count:0,sum:0};
+  const list=allTxns.filter(t=>t.pending&&t.account_id===a.id);
+  return {count:list.length, sum:list.reduce((s,t)=>s+(+t.amount||0),0)};
+}
+function engExpectedBalance(a){ const p=engAcctPending(a); return (a.bal||0)-p.sum; }
 async function _fetchJSON(url){
   // Returns parsed JSON, or null when no API server is present (standalone/offline).
   let r;
@@ -5972,7 +5982,9 @@ function cashSummaryBody(w){
     <div class="cash-safe-top"><span>🟢 Safe to spend today</span><b style="color:${perDay>0?'var(--pos)':'var(--red)'}">${fmtK(perDay)}<span style="font-size:10px;font-weight:600;color:var(--muted)">/day</span></b></div>
     <div class="ws-hint">${fmtK(s.pool)} free ${s.nextIncomeDay!=null?`until pay in ${s.horizon}d`:`over ${s.horizon} days`} · after ${fmtK(s.billsDue)} bills${s.goalPortion>0.5?` + ${fmtK(s.goalPortion)} goals`:''}</div>
   </div>`;
-  return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(total)}">${fmtK(total)}</div><div class="wph-sub">cash on hand · ${accts.length} ${esc(label)} account${accts.length!==1?'s':''}${dataLoaded?'':' · sample'} ${gear}</div>${safe}<div class="cash-list">${rows}</div></div>`;
+  const pend=accts.reduce((o,a)=>{const p=engAcctPending(a);o.count+=p.count;o.sum+=p.sum;return o;},{count:0,sum:0});
+  const pendLine=pend.count?`<div class="wph-sub" style="color:var(--amber)">⏳ ${pend.count} pending → ${fmtK(total-pend.sum)} expected</div>`:'';
+  return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(total)}">${fmtK(total)}</div><div class="wph-sub">cash on hand · ${accts.length} ${esc(label)} account${accts.length!==1?'s':''}${dataLoaded?'':' · sample'} ${gear}</div>${pendLine}${safe}<div class="cash-list">${rows}</div></div>`;
 }
 /* Per-widget picker: which ACCOUNT CATEGORIES this widget counts */
 let _acctPick={uid:null, sel:[]};
@@ -6844,9 +6856,11 @@ function acctWidgetBody(w){
       : `<button class="bill-edit" onclick="event.stopPropagation();openAccountEditor('${rEsc}')" title="Edit details">\u270E</button>`;
     const promoBadge = cd.promoEnd ? `<span class="acct-badge">0%</span>` : '';
     const exclBadge = a.excluded ? `<span class="acct-badge" style="color:var(--muted);background:var(--surface3)">excluded</span>` : '';
+    const pend=engAcctPending(a);
+    const pendStr=pend.count?` \u00b7 <span style="color:var(--amber)">\u23f3 ${pend.count} pending \u2192 ${fmtK(engExpectedBalance(a))} expected</span>`:'';
     return `<div class="acct-chip${open?' open':''}${a.excluded?' acct-excluded':''}" onclick="toggleAcct('${w.uid}','${a.id}')">
         <span class="acct-ic">${_acctIcon(a)}</span>
-        <div class="acct-meta"><div class="acct-nm">${esc(a.name)}${promoBadge}${exclBadge}${editBtn}</div><div class="acct-sub">${esc(a.institution||a.subtype||a.type)}${a.manual?' \u00b7 manual':''}</div></div>
+        <div class="acct-meta"><div class="acct-nm">${esc(a.name)}${promoBadge}${exclBadge}${editBtn}</div><div class="acct-sub">${esc(a.institution||a.subtype||a.type)}${a.manual?' \u00b7 manual':''}${pendStr}</div></div>
         <div class="acct-bal" style="color:${col}">${balStr}</div>
         <span class="acct-arr">${open?'\u25b2':'\u25bc'}</span>
       </div>${open?`<div class="acct-txns" id="acdt_${w.uid}"></div>`:''}`;
@@ -6911,7 +6925,7 @@ function setAcctTxnNote(uid, idx, note){
 
 /* ═══ ALL TRANSACTIONS widget — searchable feed with per-txn category, note & tag ═══ */
 let _txnFeed={}, _txnFeedKeys={}, _txnFeedRows={};
-const TXF_FILTERS=[{id:'all',label:'All'},{id:'income',label:'Income'},{id:'spending',label:'Spending'},{id:'paycheck',label:'💵 Paychecks'},{id:'tagged',label:'Tagged'},{id:'untagged',label:'Untagged'}];
+const TXF_FILTERS=[{id:'all',label:'All'},{id:'income',label:'Income'},{id:'spending',label:'Spending'},{id:'pending',label:'⏳ Pending'},{id:'paycheck',label:'💵 Paychecks'},{id:'tagged',label:'Tagged'},{id:'untagged',label:'Untagged'}];
 const TXN_TF=[{key:'1w',label:'1 wk',days:7},{key:'30d',label:'30 days',days:30},{key:'3m',label:'3 mo',days:90},{key:'1y',label:'1 yr',days:365},{key:'all',label:'All',days:100000}];
 function _txfDays(tf){ const t=TXN_TF.find(x=>x.key===tf); return t?t.days:30; }
 function txnFeedBody(w){
@@ -6943,6 +6957,7 @@ function _txnFeedData(w){
     switch(st.filter){
       case 'income':    return t.amount<0;
       case 'spending':  return t.amount>0;
+      case 'pending':   return !!t.pending;
       case 'paycheck':  return tag==='paycheck';
       case 'tagged':    return !!tag;
       case 'untagged':  return !tag;
@@ -6964,8 +6979,10 @@ function txnFeedRender(w){
   const list=_txnFeedData(w);
   const inTot=list.filter(t=>t.amount<0).reduce((s,t)=>s+Math.abs(t.amount),0);
   const outTot=list.filter(t=>t.amount>0).reduce((s,t)=>s+t.amount,0);
+  const pendN=list.filter(t=>t.pending).length;
+  const pendOut=list.filter(t=>t.pending&&t.amount>0).reduce((s,t)=>s+t.amount,0);
   const sumEl=gg('txfsum_'+w.uid);
-  if(sumEl) sumEl.innerHTML=`<span>${list.length} txn${list.length!==1?'s':''}</span><span class="txf-in">+${fmtK(inTot)} in</span><span class="txf-out">−${fmtK(outTot)} out</span>`;
+  if(sumEl) sumEl.innerHTML=`<span>${list.length} txn${list.length!==1?'s':''}</span><span class="txf-in">+${fmtK(inTot)} in</span><span class="txf-out">−${fmtK(outTot)} out</span>`+(pendN?`<span style="color:var(--amber)">⏳ ${pendN} pending${pendOut?' · '+fmtK(pendOut):''}</span>`:'');
   const el=gg('txflist_'+w.uid); if(!el) return;
   if(!list.length){ el.innerHTML='<div class="acct-empty">No transactions match.</div>'; _txnFeedKeys[w.uid]=[]; return; }
   const cats=getUserCategories().filter(c=>!c.group).map(c=>c.label);
@@ -6984,9 +7001,10 @@ function txnFeedRender(w){
     const tagChip = tag&&TXN_TAG_BY_ID[tag]?`<span class="txf-tag">${TXN_TAG_BY_ID[tag].icon} ${esc(TXN_TAG_BY_ID[tag].label)}</span>`:'';
     const ruleChip = hasRule?`<span class="txf-tag" style="color:var(--blue,#5b8def);background:rgba(91,141,239,.14)">＝ rule</span>`:'';
     const exclChip = acctExcl?`<span class="txf-tag" style="color:var(--muted);background:var(--surface3)">excluded acct</span>`:'';
+    const pendChip = t.pending?`<span class="txf-tag" style="color:var(--amber);background:var(--amber-dim)">⏳ pending</span>`:'';
     return `<div class="txf-row"${acctExcl?' style="opacity:.55"':''}>
       <div class="txf-main">
-        <div class="txf-nm">${esc(name)} ${tagChip}${ruleChip}${exclChip}</div>
+        <div class="txf-nm">${esc(name)} ${pendChip}${tagChip}${ruleChip}${exclChip}</div>
         <div class="txf-edit">
           <select class="txn-cat-sel" onclick="event.stopPropagation()" onchange="txnFeedSetCat('${w.uid}',${i},this.value)" title="Category">${opts}</select>
           <select class="txn-cat-sel txf-tagsel" onclick="event.stopPropagation()" onchange="txnFeedSetTag('${w.uid}',${i},this.value)" title="Tag">${tagOpts}</select>
