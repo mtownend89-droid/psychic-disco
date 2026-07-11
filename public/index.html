@@ -2939,9 +2939,10 @@ function manualRender(){
       <label class="mf-label">Account name</label><input class="mf-in" id="mfName" value="${esc(a.name||'')}" placeholder="e.g. Cash envelope, Crypto wallet">
       <div class="mf-row">
         <div><label class="mf-label">Balance</label><input class="mf-in" id="mfBal" type="number" value="${a.bal||''}" placeholder="0"></div>
-        <div><label class="mf-label">Type</label><select class="mf-in" id="mfType" onchange="document.getElementById('mfNeg').style.display=this.value==='credit'?'block':'none'">${[['depository','Cash / Bank'],['investment','Investment'],['credit','Credit / Debt'],['other','Other asset']].map(t=>`<option value="${t[0]}"${a.type===t[0]?' selected':''}>${t[1]}</option>`).join('')}</select></div>
+        <div><label class="mf-label">Type</label><select class="mf-in" id="mfType" onchange="document.getElementById('mfNeg').style.display=this.value==='credit'?'block':'none';document.getElementById('mfContribWrap').style.display=this.value==='investment'?'block':'none'">${[['depository','Cash / Bank'],['investment','Investment'],['credit','Credit / Debt'],['other','Other asset']].map(t=>`<option value="${t[0]}"${a.type===t[0]?' selected':''}>${t[1]}</option>`).join('')}</select></div>
       </div>
       <div id="mfNeg" style="display:${a.type==='credit'?'block':'none'};font-size:11.5px;color:var(--muted);margin-bottom:8px">Credit/debt balances are counted as money owed.</div>
+      <div id="mfContribWrap" style="display:${a.type==='investment'?'block':'none'}"><label class="mf-label">Planned contribution / mo</label><input class="mf-in" id="mfContrib" type="number" inputmode="decimal" value="${a.contrib||''}" placeholder="e.g. 500 — feeds the retirement calculator"></div>
       <label class="mf-label">Institution (optional)</label><input class="mf-in" id="mfInst" value="${esc(a.institution||'')}" placeholder="e.g. Local Credit Union">
       <div class="mf-actions">
         ${editing?`<button class="btn danger-btn" onclick="deleteManualAccount(${_manualEdit.idx})">Delete</button>`:'<span></span>'}
@@ -3062,6 +3063,7 @@ function saveManualAccount(){
   if(type==='credit') bal=-Math.abs(bal);
   const subtype={depository:'checking',investment:'investment',credit:'credit card',other:'other'}[type];
   const item={name, bal, type, subtype, institution:(gg('mfInst').value||'').trim(), id:'m'+Date.now()};
+  if(type==='investment'&&gg('mfContrib')) item.contrib=_num('mfContrib');
   APP.manualAccounts=APP.manualAccounts||[];
   if(_manualEdit.idx!=null) APP.manualAccounts[_manualEdit.idx]=item; else APP.manualAccounts.push(item);
   saveState(); closeManual(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
@@ -4155,9 +4157,13 @@ function docAddSelected(){
   // Investment -> Net Worth asset + Portfolio positions
   if((type==='investment')||(!!r.accountValue&&!hasTxns)){
     let msg='', assetId=null, holdingIds=[];
+    // Contributions Richie spotted on the statement become the starting "planned contribution"
+    // (period total as-is; YTD divided by 12) \u2014 editable later in the Accounts widget.
+    const _perC=+r.periodContribution||0, _ytdC=+r.ytdContribution||0;
+    const detectedContrib=_perC>0?Math.round(_perC):(_ytdC>0?Math.round(_ytdC/12):0);
     if(gg('docAddAsset')&&gg('docAddAsset').checked){
       const val=parseFloat(gg('docValue').value)||r.accountValue||0;
-      if(val>0){ assetId='nw'+Date.now()+Math.floor(Math.random()*999); APP.nwManualAssets=APP.nwManualAssets||[]; APP.nwManualAssets.push({ id:assetId, cat:'Investment', name:nm, value:val }); msg=`Added ${nm} (${fmtK(val)}) to your Net Worth. \ud83d\udcc8`; }
+      if(val>0){ assetId='nw'+Date.now()+Math.floor(Math.random()*999); APP.nwManualAssets=APP.nwManualAssets||[]; APP.nwManualAssets.push({ id:assetId, cat:'Investment', name:nm, value:val, contrib:detectedContrib||0 }); msg=`Added ${nm} (${fmtK(val)}) to your Net Worth. \ud83d\udcc8`; if(detectedContrib) msg+=` I spotted ~${fmtK(detectedContrib)}/mo in contributions \u2014 saved as your planned contribution (edit it anytime in the Accounts widget).`; }
     }
     if(gg('docImportHoldings')&&gg('docImportHoldings').checked && Array.isArray(r.holdings)){
       APP.holdings=APP.holdings||[]; let n=0;
@@ -4204,6 +4210,25 @@ function engHoldings(){ return (APP.holdings||[]).slice(); }
 function engPortfolioValue(){ return engHoldings().reduce((s,h)=>s+(+h.value||0),0); }
 function engInvestAccounts(){ return engAccounts().filter(a=>a.type==='investment' && !a.excluded); }
 function engInvestNWAssets(){ return (APP.nwManualAssets||[]).filter(x=>x.cat==='Investment'); }
+/* Total of ALL investments: linked/manual investment accounts + statement-imported net-worth
+   assets + standalone positions. Positions whose account matches a counted account/asset name
+   are skipped — a statement import creates both, and counting each would double the money. */
+function engInvestTotal(){
+  const IA=engInvestAccounts(), NA=engInvestNWAssets();
+  const counted=new Set();
+  IA.forEach(a=>counted.add((a.name||'').toLowerCase().trim()));
+  NA.forEach(x=>counted.add((x.name||'').toLowerCase().trim()));
+  const loose=engHoldings().filter(h=>!counted.has((h.account||'').toLowerCase().trim()));
+  return IA.reduce((s,a)=>s+(+a.bal||0),0)+NA.reduce((s,x)=>s+(+x.value||0),0)+loose.reduce((s,h)=>s+(+h.value||0),0);
+}
+/* Sum of planned monthly contributions across investment accounts (cardData for bank accounts,
+   the item itself for manual accounts and statement-imported net-worth assets). */
+function engPlannedContrib(){
+  let s=0;
+  engInvestAccounts().forEach(a=>{ const cd=(APP.cardData||{})[_cardKey(a.rawName||a.name)]||{}; s+=(+cd.contrib||+a.contrib||0); });
+  engInvestNWAssets().forEach(x=>{ s+=(+x.contrib||0); });
+  return s;
+}
 function portfolioBody(w){
   const H=engHoldings();
   const IA=engInvestAccounts();
@@ -5343,10 +5368,9 @@ function buildWidgetChart(w, cid){
     buildChartWidget(cid,'line',labels,vals,'#5b8def',{fill:true,tension:0.35,
       datasets:[{data:vals,borderColor:'#5b8def',backgroundColor:'rgba(91,141,239,0.12)',fill:true,tension:0.35,pointRadius:0,borderWidth:2}]});
   } else if(w.type==='retirement_proj'){
-    const yrs=['Now','+5y','+10y','+15y','+20y','+23y'];
-    const start=live?Math.max(engNWAssets(),45000):45000;
-    const vals=yrs.map((_,i)=>Math.round(start*Math.pow(1.07,i*5)+1200*12*((Math.pow(1.07,i*5)-1)/0.07)));
-    buildChartWidget(cid,'line',yrs,vals,'#f0a540',{datasets:[{data:vals,borderColor:'#f0a540',backgroundColor:'rgba(240,165,64,0.12)',fill:true,tension:0.3,pointRadius:0,borderWidth:2}]});
+    // Same live-linked model as the calculator tab — saved/contrib track real data while linked.
+    const proj=fireProject(fireEffective());
+    buildChartWidget(cid,'line',proj.labels,proj.bals,'#f0a540',{datasets:[{data:proj.bals,borderColor:'#f0a540',backgroundColor:'rgba(240,165,64,0.12)',fill:true,tension:0.3,pointRadius:0,borderWidth:2}]});
   }
 }
 
@@ -5436,6 +5460,27 @@ function fireState(){
   return _fireState;
 }
 function fireSaveState(){ try{ LS.setItem('mdf_fire',JSON.stringify(_fireState)); }catch(e){} }
+/* Live-linked calculator inputs: while linked, "Saved now" tracks the total of all investments
+   and "Monthly add" tracks planned contributions. Dragging a slider unlinks it (flag=false);
+   the 🔗 chip relinks. Links only engage when there's real data to link to. */
+function fireEffective(){
+  const U=fireState();
+  const inv=engInvestTotal(), pc=engPlannedContrib();
+  const savedLinked=(U.savedLinked!==false)&&inv>0;
+  const contribLinked=(U.contribLinked!==false)&&pc>0;
+  return Object.assign({}, U, {
+    saved: savedLinked?Math.round(inv):U.saved,
+    contrib: contribLinked?Math.round(pc):U.contrib,
+    savedLinked, contribLinked,
+  });
+}
+function fireToggleLink(which){
+  const U=fireState();
+  if(which==='saved') U.savedLinked=(U.savedLinked===false);
+  else U.contribLinked=(U.contribLinked===false);
+  fireSaveState();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+}
 // Core projection: compound growth with monthly contributions (ported calcGrowth logic)
 function fireProject(U){
   const yrs=Math.max(U.ret-U.age,1), rate=U.rate/100, contrib=U.contrib*12;
@@ -5453,7 +5498,7 @@ function fireSlider(id,label,min,max,step,val,fmt){
 /* ═══ WEALTH / FIRE: extracted bodies + consolidated hub ═══ */
 function fireProgressBody(w){
   const target=engMonthlyBills()*12*25;
-  const cur=dataLoaded?Math.max(engNWAssets(),engNetBalance()):engNWAssets();
+  const cur=dataLoaded?Math.max(engNWAssets(),engNetBalance(),engInvestTotal()):Math.max(engNWAssets(),engInvestTotal());
   const pct=target>0?Math.min(100,Math.round(cur/target*100)):0;
   return `<div class="wph"><div class="wph-stat">${pct}%</div><div class="wph-sub">to FI (${fmtM(target)} target)</div><div class="xp-bar" style="margin-top:8px"><div class="xp-fill" style="width:${pct}%"></div></div></div>`;
 }
@@ -5482,13 +5527,16 @@ function fireHubMount(w){
 }
 
 function fireWidgetBody(w){
-  const U=fireState();
+  const U=fireEffective();
+  const linkChip=(which,on,title)=>`<button class="txf-chip${on?' on':''}" style="margin:-4px 0 8px;font-size:10.5px" onclick="event.stopPropagation();fireToggleLink('${which}')" title="${title}">🔗 ${on?'linked to '+(which==='saved'?'investments':'planned contributions'):'link to '+(which==='saved'?'investments':'planned contributions')}</button>`;
   return `<div class="fc-wrap">
     <div class="fc-sliders">
       ${fireSlider('age','Current age',18,70,1,U.age,v=>v)}
       ${fireSlider('ret','Retire at',40,80,1,U.ret,v=>v)}
       ${fireSlider('saved','Saved now',0,2000000,1000,U.saved,v=>fmtK(v))}
+      ${linkChip('saved',U.savedLinked,'While linked, tracks the live total of your investment accounts, statement imports, and positions')}
       ${fireSlider('contrib','Monthly add',0,10000,50,U.contrib,v=>fmtK(v))}
+      ${linkChip('contrib',U.contribLinked,'While linked, tracks the planned contributions you set on investment accounts')}
       ${fireSlider('rate','Return %',1,12,0.5,U.rate,v=>v+'%')}
     </div>
     <div class="fc-results">
@@ -5501,6 +5549,8 @@ function fireWidgetBody(w){
 }
 function fireOnInput(id,value){
   const U=fireState(); U[id]= (id==='rate')? parseFloat(value): parseInt(value,10);
+  if(id==='saved') U.savedLinked=false;         // dragging the slider takes manual control
+  if(id==='contrib') U.contribLinked=false;
   const fmtMap={age:v=>v,ret:v=>v,saved:v=>fmtK(v),contrib:v=>fmtK(v),rate:v=>v+'%'};
   const lbl=gg('fcv_'+id); if(lbl) lbl.textContent=fmtMap[id](U[id]);
   fireSaveState();
@@ -5510,7 +5560,7 @@ function fireRefresh(){
   // find the active fire_calc widget canvas
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(!pg) return;
   const w=(pg.widgets||[]).find(x=>x.type==='fire_calc' || x.type==='fire_hub'); if(!w) return;
-  const U=fireState(), proj=fireProject(U);
+  const U=fireEffective(), proj=fireProject(U);
   const fEl=gg('fc_final'); if(fEl) fEl.textContent=fmtM(proj.finalBal);
   const mEl=gg('fc_monthly'); if(mEl) mEl.textContent=fmtK(proj.monthly)+'/mo';
   const nEl=gg('fc_note'); if(nEl) nEl.innerHTML=`${fmtM(proj.real)} in today's dollars over ${proj.yrs} years.`;
@@ -5807,7 +5857,7 @@ function nwEditorRender(){
 }
 function nwOpenForm(kind,id){
   const arr=kind==='asset'?APP.nwManualAssets:APP.nwManualLiab; const item=id?(arr||[]).find(x=>x.id===id):null;
-  _nwForm={ kind, id:id||null, cat:item?item.cat:(kind==='asset'?'Real Estate':'Loan'), name:item?item.name:'', value:item&&item.value!=null?item.value:'', vin:(item&&item.vin)||'', address:(item&&item.address)||'' };
+  _nwForm={ kind, id:id||null, cat:item?item.cat:(kind==='asset'?'Real Estate':'Loan'), name:item?item.name:'', value:item&&item.value!=null?item.value:'', vin:(item&&item.vin)||'', address:(item&&item.address)||'', contrib:(item&&item.contrib)||'' };
   nwEditorRender();
 }
 function nwFormRender(){
@@ -5827,15 +5877,17 @@ function nwFormRender(){
     +estHTML
     +`<div id="nwEstNote" class="ws-hint" style="margin-top:3px"></div>`
     +`<label class="mf-label">Value</label><input class="mf-in" id="nwValue" type="number" inputmode="decimal" placeholder="0" value="${f.value!=null?f.value:''}">`
+    +(f.kind==='asset'&&f.cat==='Investment'?`<label class="mf-label">Planned contribution / mo</label><input class="mf-in" id="nwContrib" type="number" inputmode="decimal" placeholder="e.g. 500 — feeds the retirement calculator" value="${f.contrib!==''&&f.contrib!=null?f.contrib:''}">`:'')
     +`<div class="mf-actions">${f.id?`<button class="btn" style="color:var(--red)" onclick="_nwForm=null;nwDel('${f.kind}','${f.id}')">Delete</button>`:''}<button class="btn" onclick="nwBackToList()">Cancel</button><button class="btn primary" onclick="nwSaveForm()">Save</button></div>`;
 }
-function nwSetCat(cat){ if(gg('nwName'))_nwForm.name=gg('nwName').value; if(gg('nwValue'))_nwForm.value=gg('nwValue').value; if(gg('nwVin'))_nwForm.vin=gg('nwVin').value; if(gg('nwAddr'))_nwForm.address=gg('nwAddr').value; _nwForm.cat=cat; nwEditorRender(); }
+function nwSetCat(cat){ if(gg('nwName'))_nwForm.name=gg('nwName').value; if(gg('nwValue'))_nwForm.value=gg('nwValue').value; if(gg('nwVin'))_nwForm.vin=gg('nwVin').value; if(gg('nwAddr'))_nwForm.address=gg('nwAddr').value; if(gg('nwContrib'))_nwForm.contrib=gg('nwContrib').value; _nwForm.cat=cat; nwEditorRender(); }
 function nwBackToList(){ _nwForm=null; nwEditorRender(); }
 function nwSaveForm(){
   const f=_nwForm, name=((gg('nwName').value||'').trim())||f.cat, value=_num('nwValue');
   const arr = f.kind==='asset'?(APP.nwManualAssets=APP.nwManualAssets||[]):(APP.nwManualLiab=APP.nwManualLiab||[]);
   const rec={ id:f.id||('nw'+Date.now()+Math.floor(Math.random()*999)), cat:f.cat, name, value };
   if(gg('nwVin'))rec.vin=gg('nwVin').value.trim(); if(gg('nwAddr'))rec.address=gg('nwAddr').value.trim();
+  if(gg('nwContrib'))rec.contrib=_num('nwContrib');
   const i=f.id?arr.findIndex(x=>x.id===f.id):-1; if(i>=0)arr[i]=rec; else arr.push(rec);
   saveState(); _nwForm=null; nwEditorRender();
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
@@ -5867,6 +5919,7 @@ function openAccountEditor(name){
   const type=(acct&&acct.type)||'';
   const isCredit = type==='credit' || bill.cat==='CC';
   const isLoan   = type==='loan'   || ['HM','CAR','LOAN'].includes(bill.cat);
+  const isInvest = type==='investment';
   const nEsc=esc(name).replace(/'/g,"\\'");
   gg('manualModal').style.display='flex';
   gg('manualTitle').textContent='Edit account';
@@ -5883,6 +5936,7 @@ function openAccountEditor(name){
       +`<div><label class="mf-label">Monthly payment</label><input class="mf-in" id="aeMinPay" type="number" inputmode="decimal" value="${cd.minPay||bill.min||''}" placeholder="e.g. 450"></div></div>`;
   }
   if(isCredit||isLoan) f+=`<label class="mf-label">Statement due day (1–31)</label><input class="mf-in" id="aeDue" type="number" inputmode="numeric" min="1" max="31" value="${cd.dueDay||bill.due||''}" placeholder="e.g. 15">`;
+  if(isInvest) f+=`<label class="mf-label">Planned contribution / mo</label><input class="mf-in" id="aeContrib" type="number" inputmode="decimal" value="${cd.contrib||''}" placeholder="e.g. 500 — feeds the retirement calculator">`;
   f+=`<label class="mf-label">Note</label><input class="mf-in" id="aeNote" value="${esc(cd.note||'')}" placeholder="optional">`;
   f+=`<label class="ae-toggle"><input type="checkbox" id="aeExcl" ${cd.excluded?'checked':''}><span>Exclude from everything — net worth, cash, spending &amp; bills <span style="color:var(--muted);font-weight:400">(great for a work card that gets reimbursed)</span></span></label>`;
   if(!isCredit && !isLoan) f+=`<label class="ae-toggle"><input type="checkbox" id="aeEmergency" ${(APP.emergencyAccts||[]).includes(name)?'checked':''}><span>🛟 Count toward Emergency Fund <span style="color:var(--muted);font-weight:400">(links this account to your emergency-fund goal)</span></span></label>`;
@@ -5899,6 +5953,7 @@ function saveAccountEditor(name){
   if(g('aePromoAmt')) f.promoAmt=_num('aePromoAmt');
   if(g('aeMinPay'))   f.minPay=_num('aeMinPay');
   if(g('aeDue'))      f.dueDay=_num('aeDue');
+  if(g('aeContrib'))  f.contrib=_num('aeContrib');
   if(g('aeNote'))     f.note=g('aeNote').value.trim();
   f.excluded = !!(g('aeExcl') && g('aeExcl').checked);
   setCardData(name, f);
@@ -6867,15 +6922,29 @@ function acctWidgetBody(w){
   };
   const assets=accts.filter(a=>!_acctIsLiability(a));
   const liabs=accts.filter(_acctIsLiability);
-  const assetTot=assets.reduce((s,a)=>s+(a.excluded?0:a.bal),0);
+  // Statement-imported investment accounts (net-worth assets) live here too \u2014 they're real
+  // accounts, just fed by uploads instead of Plaid. Click opens the shared asset editor.
+  const stmtAssets=engInvestNWAssets();
+  const stmtRow=(x)=>{
+    const contrib=+x.contrib||0;
+    return `<div class="acct-chip" onclick="portfolioEditNWAsset('${x.id}')">
+        <span class="acct-ic">\ud83d\udcc8</span>
+        <div class="acct-meta"><div class="acct-nm">${esc(x.name||'Investment')}<button class="bill-edit" onclick="event.stopPropagation();portfolioEditNWAsset('${x.id}')" title="Edit details">\u270e</button></div><div class="acct-sub">statement import \u00b7 investment${contrib?` \u00b7 <span style="color:var(--green)">\ud83d\udcb5 ${fmtK(contrib)}/mo planned</span>`:''}</div></div>
+        <div class="acct-bal" style="color:var(--pos)">+${fmtK(+x.value||0)}</div>
+        <span class="acct-arr">\u203a</span>
+      </div>`;
+  };
+  const assetTot=assets.reduce((s,a)=>s+(a.excluded?0:a.bal),0)+stmtAssets.reduce((s,x)=>s+(+x.value||0),0);
   const liabTot=liabs.reduce((s,a)=>s+(a.excluded?0:Math.abs(a.bal)),0);
   const net=assetTot-liabTot;
+  const assetCount=assets.length+stmtAssets.length;
+  const assetsHtml=assetCount?`<div class="acct-group-h"><span>\ud83d\udc9a Assets \u00b7 ${assetCount}</span><b style="color:var(--green)">${fmtK(assetTot)}</b></div>${assets.map(rowHTML).join('')}${stmtAssets.map(stmtRow).join('')}`:'';
   const section=(title,icon,list,subtotal,color)=> list.length?`<div class="acct-group-h"><span>${icon} ${title} \u00b7 ${list.length}</span><b style="color:${color}">${fmtK(subtotal)}</b></div>${list.map(rowHTML).join('')}`:'';
   return `<div class="acct-wrap">
     <div class="acct-summary">
-      <span>${accts.length} account${accts.length!==1?'s':''}</span>
+      <span>${accts.length+stmtAssets.length} account${(accts.length+stmtAssets.length)!==1?'s':''}</span>
     </div>
-    ${section('Assets','\ud83d\udc9a',assets,assetTot,'var(--green)')}
+    ${assetsHtml}
     ${section('Liabilities','\u2764\ufe0f',liabs,liabTot,'var(--red)')}
     <button class="manual-add-btn" onclick="event.stopPropagation();openManualAccount()">\u2795 Add an account</button>
   </div>`;
