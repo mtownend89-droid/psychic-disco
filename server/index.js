@@ -121,11 +121,24 @@ app.post('/api/tts', async (req, res) => {
 });
 
 // ── RICHIE DOCUMENT ANALYSIS (statements/bills → structured data) ────────────────
+function _trimStatement(text, limit) {
+  text = String(text || '');
+  if (text.length <= limit) return text;
+  const lower = text.toLowerCase();
+  let idx = -1;
+  for (const kw of ['common stocks', 'holdings', 'exchange-traded', 'security description', 'account detail', 'asset allocation', 'positions']) {
+    const i = lower.indexOf(kw); if (i >= 0) { idx = i; break; }
+  }
+  const head = text.slice(0, 7000);
+  if (idx < 0) return text.slice(0, limit);
+  const region = text.slice(Math.max(0, idx - 800), idx + (limit - 8000));
+  return head + '\n[... additional pages omitted ...]\n' + region;
+}
 app.post('/api/analyze_document', requireAuth, async (req, res) => {
   const { file, mimeType, filename } = req.body || {};
   if (!file) return res.status(400).json({ error: 'No file provided.' });
   if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'Document analysis needs OPENAI_API_KEY set on the server.' });
-  const SYSTEM = 'You extract structured data from ANY financial document that matters to a person\'s finances: bank statements, credit-card statements, brokerage/IRA/401k/retirement investment statements, insurance statements, loan/mortgage statements, and any recurring bill (phone, cable/internet, electric/gas/water utilities, streaming, medical, rent, HOA, etc.). First identify the document type, then fill the matching fields. Return ONLY valid minified JSON, no prose, no markdown fences. Schema: {"docType":"bank_statement|credit_card|investment|insurance|loan|utility|phone|cable|bill|receipt|other","institution":string|null,"accountName":string|null,"accountMask":string|null,"statementBalance":number|null,"accountValue":number|null,"amountDue":number|null,"premium":number|null,"dueDate":"YYYY-MM-DD"|null,"apr":number|null,"creditLimit":number|null,"minimumPayment":number|null,"transactions":[{"date":"YYYY-MM-DD","description":string,"amount":number}],"holdings":[{"name":string,"symbol":string|null,"shares":number|null,"value":number}]}. Rules: bank_statement/credit_card -> statementBalance + transactions (amount sign: POSITIVE=charge/purchase money out, NEGATIVE=payment/credit/refund money in); credit_card also amountDue, apr, creditLimit, minimumPayment. investment -> accountValue = total ending value, holdings = each position with its name, ticker symbol if shown, share/unit quantity if shown, and market value. insurance -> premium + dueDate. loan/mortgage -> statementBalance (amount owed), amountDue, minimumPayment, apr, dueDate. utility/phone/cable/bill -> amountDue + dueDate (institution = the provider). Always set institution to the company/provider name. Use null for unknown fields, dates YYYY-MM-DD, numbers with no currency symbols or commas. If truly unreadable, return {"error":"reason"}.';
+  const SYSTEM = 'You extract structured data from ANY financial document that matters to a person\'s finances: bank statements, credit-card statements, brokerage/IRA/401k/retirement investment statements, insurance statements, loan/mortgage statements, and any recurring bill (phone, cable/internet, electric/gas/water utilities, streaming, medical, rent, HOA, etc.). First identify the document type, then fill the matching fields. Return ONLY valid minified JSON, no prose, no markdown fences. Schema: {"docType":"bank_statement|credit_card|investment|insurance|loan|utility|phone|cable|bill|receipt|other","institution":string|null,"accountName":string|null,"accountMask":string|null,"statementBalance":number|null,"accountValue":number|null,"amountDue":number|null,"premium":number|null,"dueDate":"YYYY-MM-DD"|null,"apr":number|null,"creditLimit":number|null,"minimumPayment":number|null,"transactions":[{"date":"YYYY-MM-DD","description":string,"amount":number}],"holdings":[{"name":string,"symbol":string|null,"shares":number|null,"value":number,"costBasis":number|null,"gain":number|null}]}. Rules: bank_statement/credit_card -> statementBalance + transactions (amount sign: POSITIVE=charge/purchase money out, NEGATIVE=payment/credit/refund money in); credit_card also amountDue, apr, creditLimit, minimumPayment. investment -> accountValue = the account ENDING TOTAL VALUE (labeled e.g. "Ending Total Value" or "TOTAL VALUE"); accountName should include the account type (e.g. "Roth IRA","Traditional IRA","401k","Brokerage"). Pull EVERY position from the HOLDINGS / STOCKS / COMMON STOCKS / EXCHANGE-TRADED & CLOSED-END FUNDS / MUTUAL FUNDS / CASH sections. For each security use its summary/TOTAL row (which already combines Purchases + Reinvestments) for shares (Quantity) and value (Market Value) — do NOT output the separate Purchases/Reinvestments sub-rows as their own holdings. The ticker symbol is usually in parentheses in the name: "NVIDIA CORPORATION (NVDA)"->NVDA, "VANGUARD S&P 500 ETF (VOO)"->VOO, "STATE STREET SPDR PORTFOLIO (SPYD)"->SPYD. Include cash / money-market / bank-deposit balances as one holding named "Cash". For each holding also set costBasis = its Total Cost and gain = its Unrealized Gain/(Loss) (negative for a loss) when shown. investment holdings must sum close to accountValue. insurance -> premium + dueDate. loan/mortgage -> statementBalance (amount owed), amountDue, minimumPayment, apr, dueDate. utility/phone/cable/bill -> amountDue + dueDate (institution = the provider). Always set institution to the company/provider name. Use null for unknown fields, dates YYYY-MM-DD, numbers with no currency symbols or commas. If truly unreadable, return {"error":"reason"}.';
   try {
     let userContent;
     const mt = (mimeType || '').toLowerCase();
@@ -139,10 +152,10 @@ app.post('/api/analyze_document', requireAuth, async (req, res) => {
       try { const pdfParse = require('pdf-parse'); const d = await pdfParse(Buffer.from(file, 'base64')); text = d.text || ''; }
       catch (e) { return res.status(422).json({ error: "Couldn't read that PDF (the pdf-parse package may not be installed). Upload a screenshot/image of the statement instead." }); }
       if (!text.trim()) return res.status(422).json({ error: 'That PDF looks like a scanned image with no text — upload it as an image (PNG/JPG) instead.' });
-      userContent = `Extract the financial data from this statement text:\n\n${text.slice(0, 16000)}`;
+      userContent = `Extract the financial data from this statement text:\n\n${_trimStatement(text, 60000)}`;
     } else {
       const text = Buffer.from(file, 'base64').toString('utf8');
-      userContent = `Extract the financial data from this file (${filename || 'upload'}):\n\n${text.slice(0, 16000)}`;
+      userContent = `Extract the financial data from this file (${filename || 'upload'}):\n\n${_trimStatement(text, 60000)}`;
     }
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
