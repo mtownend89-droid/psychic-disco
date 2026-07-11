@@ -5,10 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Matt & Dana | Finance</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600;700&family=Nunito:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&family=Fira+Code:wght@400;500&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+<!-- xlsx (SheetJS) and Plaid Link are loaded on demand (see _loadScript) — they're only needed
+     when the user exports a workbook or opens the bank-link flow, not on first paint. -->
 <style>
 /* ══════════════════════════════════════════════════════════════════════
    DESIGN TOKENS
@@ -2587,6 +2588,22 @@ canvas.chart-interactive{cursor:crosshair;}
 <script>
 const gg=id=>document.getElementById(id);
 
+/* ── On-demand script loader: xlsx (SheetJS) and Plaid Link are heavy CDN
+   bundles only needed for export / bank-linking, not first paint. Cached
+   per-src so repeat calls don't inject duplicate <script> tags. ── */
+const _scriptPromises={};
+function _loadScript(src){
+  if(_scriptPromises[src]) return _scriptPromises[src];
+  _scriptPromises[src]=new Promise((resolve,reject)=>{
+    const s=document.createElement('script');
+    s.src=src; s.onload=()=>resolve(); s.onerror=()=>reject(new Error('Failed to load '+src));
+    document.head.appendChild(s);
+  });
+  return _scriptPromises[src];
+}
+const XLSX_CDN_SRC='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+const PLAID_LINK_CDN_SRC='https://cdn.plaid.com/link/v2/stable/link-initialize.js';
+
 /* ── Safe storage: falls back to in-memory when the browser blocks
    localStorage/sessionStorage (e.g. Edge Tracking Prevention, private mode).
    The whole app reads/writes through LS/SS so it never crashes on blocked storage. ── */
@@ -3522,8 +3539,9 @@ function engBillsDebt(){ return engBills().reduce((s,b)=>s+Math.abs(b.bal||0),0)
    Builds a multi-sheet workbook mirroring the source spreadsheet, using whatever
    data is live (Plaid) or seeded. Uses SheetJS (window.XLSX, loaded via CDN). */
 function _xlsxSheet(rows){ return XLSX.utils.aoa_to_sheet(rows); }
-function exportToExcel(){
-  if(typeof XLSX==='undefined'){ alert('Spreadsheet library still loading — try again in a moment.'); return; }
+async function exportToExcel(){
+  if(typeof XLSX==='undefined'){ try{ await _loadScript(XLSX_CDN_SRC); }catch(e){} }
+  if(typeof XLSX==='undefined'){ alert('Spreadsheet library failed to load — check your connection and try again.'); return; }
   const wb=XLSX.utils.book_new();
   const today=new Date();
   const money=(n)=>Math.round((n||0)*100)/100;
@@ -4258,6 +4276,7 @@ function holdingDelete(id){
 }
 
 async function openLinkHandler(){
+  if(typeof Plaid==='undefined'){ try{ await _loadScript(PLAID_LINK_CDN_SRC); }catch(e){} }
   if(typeof Plaid==='undefined'){ showToast('Plaid not loaded — check your connection.','error'); return; }
   try{
     const linkRes=await fetch('/api/create_link_token',{method:'POST'});
@@ -6342,8 +6361,9 @@ function categoryHeatmapBody(w){
 function setHmMonths(uid,k){ _hmMonths[uid]=k; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 
 /* Export a single widget's data to its own one-sheet workbook */
-function exportWidget(kind){
-  if(typeof XLSX==='undefined'){ alert('Spreadsheet library still loading — try again in a moment.'); return; }
+async function exportWidget(kind){
+  if(typeof XLSX==='undefined'){ try{ await _loadScript(XLSX_CDN_SRC); }catch(e){} }
+  if(typeof XLSX==='undefined'){ alert('Spreadsheet library failed to load — check your connection and try again.'); return; }
   const wb=XLSX.utils.book_new(); const today=new Date(); const money=(n)=>Math.round((n||0)*100)/100;
   let name='Export';
   if(kind==='budget_actual'){

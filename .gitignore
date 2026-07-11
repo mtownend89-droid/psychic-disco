@@ -1,0 +1,14 @@
+# Secrets — real Plaid/OpenAI keys and session secrets live only in Render env vars
+.env
+.env.*
+!.env.example
+
+# Local encrypted data store (Plaid tokens, auth, synced app state)
+.data/
+
+# Dependencies
+node_modules/
+
+# OS/editor cruft
+.DS_Store
+Thumbs.db
