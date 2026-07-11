@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const cors    = require('cors');
+const compression = require('compression');
 const path    = require('path');
 const fs      = require('fs');
 const crypto  = require('crypto');
@@ -10,6 +11,7 @@ const { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } = re
 
 const app = express();
 app.set('trust proxy', 1);
+app.use(compression());   // gzip responses (client-negotiated) — biggest win for the ~660KB index.html
 app.use('/api/analyze_document', express.json({ limit: '30mb' }));   // statement/bill uploads (base64) can be several MB
 app.use('/api/state', express.json({ limit: '6mb' }));               // full app-state sync blob
 app.use(express.json({ limit: '50kb' }));
