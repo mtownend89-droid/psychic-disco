@@ -4196,12 +4196,16 @@ function portfolioBody(w){
   const NA=engInvestNWAssets();
   if(!H.length && !IA.length && !NA.length) return `<div class="wph"><div class="wph-sub">No positions yet.</div><div class="ws-hint" style="margin-top:6px">Upload a brokerage / IRA / 401k statement and Richie pulls your positions in automatically — or add one by hand. Investment accounts and assets from Net Worth show up here too.</div><button class="nw-add" style="margin-top:11px" onclick="event.stopPropagation();openHoldingEditor()">＋ Add a position</button></div>`;
   const tot=engPortfolioValue();
+  const iaTot=IA.reduce((s,a)=>s+(+a.bal||0),0);
+  const naTot=NA.reduce((s,x)=>s+(+x.value||0),0);
+  const grand=tot+iaTot+naTot;   // "% of total investments" baseline across all three sections
   const totGain=engHoldings().reduce((s,h)=>s+(+h.gain||0),0);
   const hasGain=engHoldings().some(h=>h.gain!=null);
   const byAcct={}; H.forEach(h=>{ const a=h.account||'—'; byAcct[a]=(byAcct[a]||0)+(+h.value||0); });
   const acctChips=Object.keys(byAcct).length>1?`<div class="pf-accts">${Object.entries(byAcct).map(([a,v])=>`<span class="pf-acct">${esc(a)} · ${fmtK(v)}</span>`).join('')}</div>`:'';
+  const pctOf=v=>grand>0?Math.round((+v||0)/grand*100):0;
   const rows=H.slice().sort((a,b)=>(+b.value||0)-(+a.value||0)).map(h=>{
-    const pct=tot>0?Math.round((+h.value||0)/tot*100):0;
+    const pct=pctOf(h.value);
     const g=(h.gain!=null)?`<div class="pf-gain" style="color:${moneyCol(h.gain)}">${(+h.gain>=0?'+':'−')}${fmtK(Math.abs(h.gain))}</div>`:`<div class="pf-pct">${pct}%</div>`;
     return `<div class="pf-row" onclick="openResearch('${h.id}')">
       <div class="pf-main"><div class="pf-nm">${esc(h.name||h.symbol||'Position')}${h.symbol?` <span class="pf-sym">${esc(h.symbol)}</span>`:''}</div><div class="pf-sub">${h.shares!=null?esc(String(h.shares))+' sh · ':''}${esc(h.account||'')}</div><div class="pf-bar"><i style="width:${Math.max(2,pct)}%"></i></div></div>
@@ -4209,22 +4213,31 @@ function portfolioBody(w){
     </div>`;
   }).join('');
   const gainLine=hasGain?` · <span style="color:${moneyCol(totGain)}">${totGain>=0?'+':'−'}${fmtK(Math.abs(totGain))} total ${totGain>=0?'gain':'loss'}</span>`:'';
-  const posHeader=H.length?`<div class="pf-total"><div class="wph-stat" style="color:${moneyCol(tot)}">${fmtK(tot)}</div><div class="wph-sub">portfolio value · ${H.length} position${H.length!==1?'s':''}${gainLine}</div>${acctChips}</div>`:'';
+  const posHeader=`<div class="pf-total"><div class="wph-stat" style="color:${moneyCol(grand)}">${fmtK(grand)}</div><div class="wph-sub">total investments${H.length?` · ${H.length} position${H.length!==1?'s':''}`:''}${gainLine}</div>${acctChips}</div>`;
   const posSection=H.length?`<div class="pf-list">${rows}</div>`:'';
 
-  // Investment-type accounts (Plaid-linked or manually added) that also count toward Net Worth.
-  const acctRows=IA.map(a=>{
+  // Investment-type accounts (Plaid-linked or manually added) — same row format as positions.
+  const acctRows=IA.slice().sort((a,b)=>(+b.bal||0)-(+a.bal||0)).map(a=>{
     const raw=a.rawName||a.name, rEsc=esc(raw).replace(/'/g,"\\'");
-    const editBtn=a.manual
-      ? `<button class="nw-ed" onclick="event.stopPropagation();openManualAccount(${(APP.manualAccounts||[]).findIndex(x=>x.id===a.id)})" title="Edit">✎</button>`
-      : `<button class="nw-ed" onclick="event.stopPropagation();openAccountEditor('${rEsc}')" title="Edit / remove">✎</button>`;
-    return `<div class="nw-row"><span class="nw-ic">📈</span><span class="nw-nm">${esc(a.name)}<span class="nw-cat">${esc(a.institution||(a.manual?'manual':'linked'))}</span></span><span class="nw-val">${fmtK(a.bal)}</span>${editBtn}</div>`;
+    const idx=(APP.manualAccounts||[]).findIndex(x=>x.id===a.id);
+    const open=a.manual?`openManualAccount(${idx})`:`openAccountEditor('${rEsc}')`;
+    const pct=pctOf(a.bal);
+    return `<div class="pf-row" onclick="${open}">
+      <div class="pf-main"><div class="pf-nm">${esc(a.name)}</div><div class="pf-sub">${esc(a.institution||(a.manual?'manual':'linked'))}</div><div class="pf-bar"><i style="width:${Math.max(2,pct)}%"></i></div></div>
+      <div class="pf-side"><div class="pf-val">${fmtK(a.bal)}</div><div class="pf-pct">${pct}%</div><div class="pf-research">edit ›</div></div>
+    </div>`;
   }).join('');
-  const acctSection=IA.length?`<div class="doc-section-h">Linked from Net Worth</div><div class="nw-list">${acctRows}</div>`:'';
+  const acctSection=IA.length?`<div class="doc-section-h">Linked from Net Worth</div><div class="pf-list">${acctRows}</div>`:'';
 
-  // Manually-entered Net Worth assets categorized as Investment (e.g. a lump-sum 401k balance).
-  const naRows=NA.map(x=>`<div class="nw-row"><span class="nw-ic">📈</span><span class="nw-nm">${esc(x.name||x.cat)}<span class="nw-cat">Net worth asset</span></span><span class="nw-val">${fmtK(+x.value||0)}</span><button class="nw-ed" onclick="event.stopPropagation();portfolioEditNWAsset('${x.id}')" title="Edit">✎</button><button class="nw-ed" onclick="event.stopPropagation();nwDel('asset','${x.id}')" title="Delete">🗑</button></div>`).join('');
-  const naSection=NA.length?`<div class="doc-section-h">Net worth investment assets</div><div class="nw-list">${naRows}</div>`:'';
+  // Manually-entered Net Worth assets categorized as Investment — same row format as positions.
+  const naRows=NA.slice().sort((a,b)=>(+b.value||0)-(+a.value||0)).map(x=>{
+    const pct=pctOf(x.value);
+    return `<div class="pf-row" onclick="portfolioEditNWAsset('${x.id}')">
+      <div class="pf-main"><div class="pf-nm">${esc(x.name||x.cat)}</div><div class="pf-sub">Net worth asset</div><div class="pf-bar"><i style="width:${Math.max(2,pct)}%"></i></div></div>
+      <div class="pf-side"><div class="pf-val">${fmtK(+x.value||0)}</div><div class="pf-pct">${pct}%</div><div class="pf-research">edit ›</div></div>
+    </div>`;
+  }).join('');
+  const naSection=NA.length?`<div class="doc-section-h">Net worth investment assets</div><div class="pf-list">${naRows}</div>`:'';
 
   return `<div class="pf-wrap">${posHeader}${posSection}${acctSection}${naSection}<button class="nw-add" onclick="event.stopPropagation();openHoldingEditor()">＋ Add a position</button></div>`;
 }
@@ -5800,7 +5813,7 @@ function nwFormRender(){
     +estHTML
     +`<div id="nwEstNote" class="ws-hint" style="margin-top:3px"></div>`
     +`<label class="mf-label">Value</label><input class="mf-in" id="nwValue" type="number" inputmode="decimal" placeholder="0" value="${f.value!=null?f.value:''}">`
-    +`<div class="mf-actions"><button class="btn" onclick="nwBackToList()">Cancel</button><button class="btn primary" onclick="nwSaveForm()">Save</button></div>`;
+    +`<div class="mf-actions">${f.id?`<button class="btn" style="color:var(--red)" onclick="_nwForm=null;nwDel('${f.kind}','${f.id}')">Delete</button>`:''}<button class="btn" onclick="nwBackToList()">Cancel</button><button class="btn primary" onclick="nwSaveForm()">Save</button></div>`;
 }
 function nwSetCat(cat){ if(gg('nwName'))_nwForm.name=gg('nwName').value; if(gg('nwValue'))_nwForm.value=gg('nwValue').value; if(gg('nwVin'))_nwForm.vin=gg('nwVin').value; if(gg('nwAddr'))_nwForm.address=gg('nwAddr').value; _nwForm.cat=cat; nwEditorRender(); }
 function nwBackToList(){ _nwForm=null; nwEditorRender(); }
