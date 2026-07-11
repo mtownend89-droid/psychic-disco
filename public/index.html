@@ -488,6 +488,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 @keyframes blBob{0%,100%{transform:translateY(0);}50%{transform:translateY(-9px);}}
 .sb-upload{background:var(--surface2);border:1px solid var(--border);color:var(--text);margin-top:7px;}
 .cd-sub{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:7px;}
+.cd-tabs{display:flex;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:4px;margin-bottom:11px;}
+.cd-tab{flex:1;background:none;border:none;color:var(--muted);font-family:var(--font);font-size:12.5px;font-weight:700;padding:8px 6px;border-radius:7px;cursor:pointer;}
+.cd-tab.on{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.2);}
 .cd-list{display:flex;flex-direction:column;gap:7px;}
 .cd-row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:9px 11px;}
 .cd-meta{min-width:0;flex:1;}
@@ -1229,6 +1232,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .pf-val{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;}
 .pf-pct{font-size:11px;color:var(--muted);}
 .pf-research{font-size:10px;color:var(--green);font-weight:700;margin-top:2px;}
+.pf-gain{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;}
+.rs-gain{font-size:13px;font-weight:700;margin-top:5px;}
 .rs-hero{text-align:center;padding:6px 0 14px;}
 .rs-sym{font-size:26px;font-weight:800;letter-spacing:1px;}
 .rs-val{font-size:13px;color:var(--muted);margin-top:3px;}
@@ -4112,19 +4117,22 @@ function docAddSelected(){
   const hasTxns=txns.length>0;
   const inst=((gg('docInst')&&gg('docInst').value)||r.institution||'Statement').trim();
   const nm=((gg('docAcct')&&gg('docAcct').value)||inst||'Statement').trim();
+  const impId='up'+Date.now()+Math.floor(Math.random()*999);
+  APP.imports=APP.imports||[];
   const finish=(msg)=>{ saveState(); _rebuildTxns(); if(allTxns.length>0) dataLoaded=true; try{ nwHistRecord(); }catch(e){} closeDocModal(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); if(typeof richieSay==='function'&&msg) richieSay(msg); };
   // Investment -> Net Worth asset + Portfolio positions
   if((type==='investment')||(!!r.accountValue&&!hasTxns)){
-    let msg='';
+    let msg='', assetId=null, holdingIds=[];
     if(gg('docAddAsset')&&gg('docAddAsset').checked){
       const val=parseFloat(gg('docValue').value)||r.accountValue||0;
-      if(val>0){ APP.nwManualAssets=APP.nwManualAssets||[]; APP.nwManualAssets.push({ id:'nw'+Date.now()+Math.floor(Math.random()*999), cat:'Investment', name:nm, value:val }); msg=`Added ${nm} (${fmtK(val)}) to your Net Worth. \ud83d\udcc8`; }
+      if(val>0){ assetId='nw'+Date.now()+Math.floor(Math.random()*999); APP.nwManualAssets=APP.nwManualAssets||[]; APP.nwManualAssets.push({ id:assetId, cat:'Investment', name:nm, value:val }); msg=`Added ${nm} (${fmtK(val)}) to your Net Worth. \ud83d\udcc8`; }
     }
     if(gg('docImportHoldings')&&gg('docImportHoldings').checked && Array.isArray(r.holdings)){
       APP.holdings=APP.holdings||[]; let n=0;
-      r.holdings.forEach(h=>{ if(!h||(!h.value&&!h.name))return; APP.holdings.push({ id:'h'+Date.now()+'_'+(n++), name:h.name||h.symbol||'Position', symbol:(h.symbol||'').toString().toUpperCase().trim(), shares:(h.shares!=null?h.shares:null), value:+h.value||0, account:nm, addedAt:Date.now() }); });
+      r.holdings.forEach(h=>{ if(!h||(!h.value&&!h.name))return; const hid='h'+Date.now()+'_'+(n++); holdingIds.push(hid); APP.holdings.push({ id:hid, name:h.name||h.symbol||'Position', symbol:(h.symbol||'').toString().toUpperCase().trim(), shares:(h.shares!=null?h.shares:null), value:+h.value||0, cost:(h.costBasis!=null?+h.costBasis:(h.cost!=null?+h.cost:null)), gain:(h.gain!=null?+h.gain:null), account:nm, addedAt:Date.now() }); });
       if(n) msg=(msg?msg+' ':'')+`Imported ${n} position${n!==1?'s':''} to your Portfolio.`;
     }
+    APP.imports.push({ id:impId, kind:'investment', label:nm, ts:Date.now(), assetId, holdingIds, summary:`Investment · ${holdingIds.length} position${holdingIds.length!==1?'s':''}${r.accountValue?' · '+fmtK(r.accountValue):''}` });
     return finish(msg);
   }
   // Any bill (insurance / phone / cable / utility / loan / generic) -> Upcoming Bills
@@ -4134,26 +4142,28 @@ function docAddSelected(){
       const dd=gg('docDueDate').value, dueDay=dd?Math.max(1,Math.min(31,(new Date(dd+'T12:00:00').getDate()||1))):1;
       const catMap={insurance:'Insurance',utility:'Utilities',phone:'Utilities',cable:'Utilities',loan:'Loan Payments'};
       APP.manualBills=APP.manualBills||[];
-      if(due>0 && !APP.manualBills.some(b=>(b.name||'').toLowerCase()===nm.toLowerCase())){ APP.manualBills.push({ name:nm, pay:Math.round(due), min:Math.round(due), bal:0, apr:parseFloat((gg('docApr')&&gg('docApr').value))||0, due:dueDay, cat:(catMap[type]||'OTHER'), promoEnd:'', limit:0, promo:'', note:'imported', paid:false }); return finish(`Added ${nm} to your Bills \u2014 ${fmtK(due)}.`); }
+      if(due>0 && !APP.manualBills.some(b=>(b.name||'').toLowerCase()===nm.toLowerCase())){ APP.manualBills.push({ name:nm, pay:Math.round(due), min:Math.round(due), bal:0, apr:parseFloat((gg('docApr')&&gg('docApr').value))||0, due:dueDay, cat:(catMap[type]||'OTHER'), promoEnd:'', limit:0, promo:'', note:'imported', paid:false }); APP.imports.push({ id:impId, kind:'bill', label:nm, ts:Date.now(), billName:nm, summary:`Bill · ${fmtK(due)}` }); return finish(`Added ${nm} to your Bills \u2014 ${fmtK(due)}.`); }
     }
     return finish('');
   }
   // Bank / credit-card -> transactions (+ optional bill)
   APP.importedTxns=APP.importedTxns||[]; let added=0;
-  const importId='imp'+Date.now(), importLabel=inst+' \u00b7 '+new Date().toLocaleDateString();
+  const importId=impId, importLabel=inst+' \u00b7 '+new Date().toLocaleDateString();
   txns.forEach((t,i)=>{
     if(!_docSel[i]||!t.date||t.amount==null) return;
     APP.importedTxns.push({ transaction_id:'imp_'+Date.now()+'_'+(added++), account_id:'imported', date:t.date, name:t.description||'Imported', merchant_name:t.description||'', amount:+t.amount, personal_finance_category:{primary:''}, institution:inst, _imported:true, _importId:importId, _importLabel:importLabel });
   });
+  let billName=null;
   const addBill=gg('docAddBill')&&gg('docAddBill').checked;
   if(addBill){
     const due=parseFloat(gg('docDue').value)||0;
     APP.manualBills=APP.manualBills||[];
     if(due>0 && !APP.manualBills.some(b=>(b.name||'').toLowerCase()===nm.toLowerCase())){
       const dd=gg('docDueDate').value, dueDay=dd?Math.max(1,Math.min(31,(new Date(dd+'T12:00:00').getDate()||1))):1;
-      APP.manualBills.push({ name:nm, pay:Math.round(due), min:Math.round(due), bal:0, apr:parseFloat(gg('docApr').value)||0, due:dueDay, cat:'OTHER', promoEnd:'', limit:parseFloat(gg('docLimit').value)||0, promo:'', note:'imported', paid:false });
+      billName=nm; APP.manualBills.push({ name:nm, pay:Math.round(due), min:Math.round(due), bal:0, apr:parseFloat(gg('docApr').value)||0, due:dueDay, cat:'OTHER', promoEnd:'', limit:parseFloat(gg('docLimit').value)||0, promo:'', note:'imported', paid:false });
     }
   }
+  APP.imports.push({ id:impId, kind:'bank', label:importLabel, ts:Date.now(), txnImportId:importId, billName, summary:`${added} transaction${added!==1?'s':''}${billName?' + bill':''}` });
   finish(added?`Added ${added} transaction${added!==1?'s':''}${addBill?' and a bill':''} from your ${((type||'statement').replace('_',' '))}. \ud83d\udcc4`:`Saved the details from your ${((type||'statement').replace('_',' '))}.`);
 }
 /* ═══ INVESTMENTS / PORTFOLIO (Mogul) — positions from statements + research ═══ */
@@ -4163,16 +4173,20 @@ function portfolioBody(w){
   const H=engHoldings();
   if(!H.length) return `<div class="wph"><div class="wph-sub">No positions yet.</div><div class="ws-hint" style="margin-top:6px">Upload a brokerage / IRA / 401k statement and Richie pulls your positions in automatically — or add one by hand.</div><button class="nw-add" style="margin-top:11px" onclick="event.stopPropagation();openHoldingEditor()">＋ Add a position</button></div>`;
   const tot=engPortfolioValue();
+  const totGain=engHoldings().reduce((s,h)=>s+(+h.gain||0),0);
+  const hasGain=engHoldings().some(h=>h.gain!=null);
   const byAcct={}; H.forEach(h=>{ const a=h.account||'—'; byAcct[a]=(byAcct[a]||0)+(+h.value||0); });
   const acctChips=Object.keys(byAcct).length>1?`<div class="pf-accts">${Object.entries(byAcct).map(([a,v])=>`<span class="pf-acct">${esc(a)} · ${fmtK(v)}</span>`).join('')}</div>`:'';
   const rows=H.slice().sort((a,b)=>(+b.value||0)-(+a.value||0)).map(h=>{
     const pct=tot>0?Math.round((+h.value||0)/tot*100):0;
+    const g=(h.gain!=null)?`<div class="pf-gain" style="color:${moneyCol(h.gain)}">${(+h.gain>=0?'+':'−')}${fmtK(Math.abs(h.gain))}</div>`:`<div class="pf-pct">${pct}%</div>`;
     return `<div class="pf-row" onclick="openResearch('${h.id}')">
       <div class="pf-main"><div class="pf-nm">${esc(h.name||h.symbol||'Position')}${h.symbol?` <span class="pf-sym">${esc(h.symbol)}</span>`:''}</div><div class="pf-sub">${h.shares!=null?esc(String(h.shares))+' sh · ':''}${esc(h.account||'')}</div><div class="pf-bar"><i style="width:${Math.max(2,pct)}%"></i></div></div>
-      <div class="pf-side"><div class="pf-val">${fmtK(h.value)}</div><div class="pf-pct">${pct}%</div><div class="pf-research">research ›</div></div>
+      <div class="pf-side"><div class="pf-val">${fmtK(h.value)}</div>${g}<div class="pf-research">research ›</div></div>
     </div>`;
   }).join('');
-  return `<div class="pf-wrap"><div class="pf-total"><div class="wph-stat" style="color:${moneyCol(tot)}">${fmtK(tot)}</div><div class="wph-sub">portfolio value · ${H.length} position${H.length!==1?'s':''}</div>${acctChips}</div><div class="pf-list">${rows}</div><button class="nw-add" onclick="event.stopPropagation();openHoldingEditor()">＋ Add a position</button></div>`;
+  const gainLine=hasGain?` · <span style="color:${moneyCol(totGain)}">${totGain>=0?'+':'−'}${fmtK(Math.abs(totGain))} total ${totGain>=0?'gain':'loss'}</span>`:'';
+  return `<div class="pf-wrap"><div class="pf-total"><div class="wph-stat" style="color:${moneyCol(tot)}">${fmtK(tot)}</div><div class="wph-sub">portfolio value · ${H.length} position${H.length!==1?'s':''}${gainLine}</div>${acctChips}</div><div class="pf-list">${rows}</div><button class="nw-add" onclick="event.stopPropagation();openHoldingEditor()">＋ Add a position</button></div>`;
 }
 function openResearch(id){
   const h=(APP.holdings||[]).find(x=>x.id===id); if(!h) return;
@@ -4183,7 +4197,7 @@ function openResearch(id){
   const mw=sym?`https://www.marketwatch.com/investing/stock/${encodeURIComponent(sym.toLowerCase())}`:`https://www.marketwatch.com/tools/quotes/lookup.asp?lookup=${q}`;
   gg('rsTitle').textContent=h.name||h.symbol||'Research';
   gg('rsBody').innerHTML=`
-    <div class="rs-hero"><div class="rs-sym">${esc(sym||'—')}</div><div class="rs-val">${fmtK(h.value)} · ${pct}% of portfolio${h.shares!=null?' · '+esc(String(h.shares))+' sh':''}</div></div>
+    <div class="rs-hero"><div class="rs-sym">${esc(sym||'—')}</div><div class="rs-val">${fmtK(h.value)} · ${pct}% of portfolio${h.shares!=null?' · '+esc(String(h.shares))+' sh':''}</div>${(h.gain!=null||h.cost!=null)?`<div class="rs-gain" style="color:${moneyCol(h.gain||0)}">${h.gain!=null?((+h.gain>=0?'▲ +':'▼ −')+fmtK(Math.abs(h.gain))+' '+(+h.gain>=0?'gain':'loss')):''}${h.cost!=null?` · ${fmtK(h.cost)} cost basis`:''}</div>`:''}</div>
     <div class="doc-section-h">Research links</div>
     <a class="rs-link" href="${yahoo}" target="_blank" rel="noopener">📊 Yahoo Finance ›</a>
     <a class="rs-link" href="${google}" target="_blank" rel="noopener">🔎 Google ›</a>
@@ -4219,6 +4233,7 @@ function openHoldingEditor(id){
       <div class="doc-f"><label>Ticker (optional)</label><input id="hldSym" value="${h?esc(h.symbol||''):''}" placeholder="AAPL"></div>
       <div class="doc-f"><label>Shares (optional)</label><input id="hldShares" type="number" step="any" value="${h&&h.shares!=null?esc(String(h.shares)):''}" placeholder="0"></div>
       <div class="doc-f"><label>Value ($)</label><input id="hldValue" type="number" step="0.01" value="${h?esc(String(h.value!=null?h.value:'')):''}" placeholder="0"></div>
+      <div class="doc-f"><label>Cost basis ($)</label><input id="hldCost" type="number" step="0.01" value="${h&&h.cost!=null?esc(String(h.cost)):''}" placeholder="optional"></div>
       <div class="doc-f"><label>Account</label><input id="hldAcct" value="${h?esc(h.account||''):''}" placeholder="Brokerage / IRA"></div>
     </div>
     <div class="mf-actions">${h?`<button class="btn" style="color:var(--red)" onclick="holdingDelete('${h.id}')">Delete</button>`:'<span></span>'}<button class="btn primary" onclick="holdingSave()">Save</button></div>`;
@@ -4228,7 +4243,8 @@ function closeHold(){ gg('holdModal').style.display='none'; _holdEdit=null; }
 function holdingSave(){
   const name=(gg('hldName').value||'').trim(); const value=parseFloat(gg('hldValue').value)||0;
   if(!name && !value){ closeHold(); return; }
-  const rec={ id:_holdEdit||('h'+Date.now()+Math.floor(Math.random()*999)), name:name||'Position', symbol:(gg('hldSym').value||'').toUpperCase().trim(), shares:(gg('hldShares').value!==''?parseFloat(gg('hldShares').value):null), value, account:(gg('hldAcct').value||'').trim(), addedAt:Date.now() };
+  const cost=(gg('hldCost')&&gg('hldCost').value!=='')?parseFloat(gg('hldCost').value):null;
+  const rec={ id:_holdEdit||('h'+Date.now()+Math.floor(Math.random()*999)), name:name||'Position', symbol:(gg('hldSym').value||'').toUpperCase().trim(), shares:(gg('hldShares').value!==''?parseFloat(gg('hldShares').value):null), value, cost:(cost!=null&&!isNaN(cost))?cost:null, gain:(cost!=null&&!isNaN(cost))?(value-cost):null, account:(gg('hldAcct').value||'').trim(), addedAt:Date.now() };
   APP.holdings=APP.holdings||[];
   const i=_holdEdit?APP.holdings.findIndex(x=>x.id===_holdEdit):-1;
   if(i>=0) APP.holdings[i]=rec; else APP.holdings.push(rec);
@@ -7591,10 +7607,11 @@ function renderSettings(){
       <div class="set-card">
         <div class="set-card-label">🔗 Connected data</div>
         <div style="font-size:12px;color:var(--muted);margin:2px 0 12px;line-height:1.5">Your linked banks and anything you've uploaded. Remove a bank or an import to pull its data out of every widget.</div>
-        <div class="cd-sub">Banks</div>
-        <div id="setBanks" class="cd-list"><div class="ws-hint">Loading…</div></div>
-        <div class="cd-sub" style="margin-top:14px">Uploaded statements &amp; bills</div>
-        <div id="setImports" class="cd-list"></div>
+        <div class="cd-tabs">
+          <button class="cd-tab on" id="cdTabBanks" onclick="setCdTab('banks')">🏦 Linked banks</button>
+          <button class="cd-tab" id="cdTabUploads" onclick="setCdTab('uploads')">📄 Uploaded documents</button>
+        </div>
+        <div id="cdList" class="cd-list"><div class="ws-hint">Loading…</div></div>
       </div>
 
       <div class="set-card">
@@ -7751,38 +7768,63 @@ function setThemeFont(id){ _setAppearance({font:id}); applyAppearance(); saveSta
 function setThemeColor(key,val){ const patch={}; patch[key==='neg'?'neg':key]=val; _setAppearance(patch); applyAppearance(); saveState(); }
 function resetAppearance(){ if(APP.appearances) APP.appearances[APP.activeProfile]={}; applyAppearance(); saveState(); renderAppearance(); renderShell(); if(typeof richieSay==='function') richieSay('Back to your Richie look. ✨'); }
 /* ── Connected data: banks + imported statements ── */
+let _cdTab='banks';
+function setCdTab(t){ _cdTab=t; renderConnectedData(); }
+function _collectImports(){
+  const out=[], seen={};
+  (APP.imports||[]).forEach(im=>{ if(im&&im.id){ out.push(im); seen[im.id]=1; } });
+  // legacy uploads (transactions tagged before unified tracking existed)
+  const g={};
+  (APP.importedTxns||[]).forEach(t=>{ const k=t._importId||'legacy'; if(seen[k])return; (g[k]=g[k]||{id:k,kind:'bank',label:t._importLabel||t.institution||'Import',ts:0,count:0,sum:0}); g[k].count++; });
+  Object.values(g).forEach(x=>{ x.summary=`${x.count} transaction${x.count!==1?'s':''}`; out.push(x); });
+  return out.sort((a,b)=>(b.ts||0)-(a.ts||0));
+}
 async function renderConnectedData(){
-  // Imported statements (grouped by import batch)
-  const imp=gg('setImports');
-  if(imp){
-    const groups={};
-    (APP.importedTxns||[]).forEach(t=>{ const k=t._importId||'legacy'; (groups[k]=groups[k]||{label:t._importLabel||t.institution||'Import', count:0, sum:0}); groups[k].count++; groups[k].sum+=Math.abs(t.amount||0); });
-    const keys=Object.keys(groups);
-    imp.innerHTML = keys.length ? keys.map(k=>`<div class="cd-row"><div class="cd-meta"><div class="cd-nm">📄 ${esc(groups[k].label)}</div><div class="cd-info">${groups[k].count} transaction${groups[k].count!==1?'s':''} · ${fmtK(groups[k].sum)}</div></div><button class="cd-rm" onclick="removeImport('${k}')">Remove</button></div>`).join('') : '<div class="ws-hint">No uploaded statements yet.</div>';
+  const tb=gg('cdTabBanks'), tu=gg('cdTabUploads');
+  if(tb) tb.classList.toggle('on',_cdTab==='banks');
+  if(tu) tu.classList.toggle('on',_cdTab==='uploads');
+  const box=gg('cdList'); if(!box) return;
+  if(_cdTab==='uploads'){
+    const ups=_collectImports();
+    box.innerHTML = ups.length ? ups.map(im=>{
+      const icon=im.kind==='investment'?'📈':im.kind==='bill'?'🧾':'📄';
+      return `<div class="cd-row"><div class="cd-meta"><div class="cd-nm">${icon} ${esc(im.label||'Upload')}</div><div class="cd-info">${esc(im.summary||'')}</div></div><button class="cd-rm" onclick="removeImport('${esc(im.id)}')">Remove</button></div>`;
+    }).join('') : '<div class="ws-hint">No uploaded documents yet. Use “📄 Upload statement” to add one.</div>';
+    return;
   }
-  // Connected banks (from server)
-  const bx=gg('setBanks'); if(!bx) return;
+  box.innerHTML='<div class="ws-hint">Loading…</div>';
   try{
-    const d=await _fetchJSON('/api/items');
-    if(!d||!Array.isArray(d.items)){ bx.innerHTML='<div class="ws-hint">Connect a bank to see it here.</div>'; return; }
-    bx.innerHTML = d.items.length ? d.items.map(it=>`<div class="cd-row"><div class="cd-meta"><div class="cd-nm">🏦 ${esc(it.institutionName||'Bank')}</div><div class="cd-info">${it.addedAt?('linked '+new Date(it.addedAt).toLocaleDateString()):'linked'}</div></div><button class="cd-rm" onclick="removeBank('${esc(it.itemId)}','${esc(it.institutionName||'this bank')}')">Remove</button></div>`).join('') : '<div class="ws-hint">No banks connected yet.</div>';
-  }catch(e){ bx.innerHTML='<div class="ws-hint">Could not load connected banks.</div>'; }
+    const d=await _fetchJSON('/api/items?ts='+Date.now());   // cache-bust so removals reflect immediately
+    if(!d||!Array.isArray(d.items)){ box.innerHTML='<div class="ws-hint">Connect a bank to see it here.</div>'; return; }
+    box.innerHTML = d.items.length ? d.items.map(it=>`<div class="cd-row" id="cdbank_${esc(it.itemId)}"><div class="cd-meta"><div class="cd-nm">🏦 ${esc(it.institutionName||'Bank')}</div><div class="cd-info">${it.addedAt?('linked '+new Date(it.addedAt).toLocaleDateString()):'linked'}</div></div><button class="cd-rm" onclick="removeBank('${esc(it.itemId)}','${esc((it.institutionName||'this bank').replace(/'/g,''))}')">Remove</button></div>`).join('') : '<div class="ws-hint">No banks connected yet.</div>';
+  }catch(e){ box.innerHTML='<div class="ws-hint">Could not load connected banks.</div>'; }
 }
 async function removeBank(itemId, name){
   if(!confirm('Disconnect '+(name||'this bank')+'? Its accounts and transactions will be removed.')) return;
+  const row=gg('cdbank_'+itemId), btn=row&&row.querySelector('.cd-rm');
+  if(btn){ btn.textContent='Removing…'; btn.disabled=true; } if(row) row.style.opacity='.5';
   try{
     const r=await fetch('/api/item/'+encodeURIComponent(itemId),{method:'DELETE'});
-    if(!r.ok){ alert('Could not remove that bank. Try again.'); return; }
-    await loadEngineData();
-    renderConnectedData();
+    if(!r.ok){ alert('Could not remove that bank. Try again.'); if(btn){btn.textContent='Remove';btn.disabled=false;} if(row)row.style.opacity=''; return; }
+    if(row) row.remove();                       // instant UI removal
+    await loadEngineData();                      // refresh accounts + transactions
+    await renderConnectedData();                 // re-render list from server (cache-busted)
     const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg&&APP.activePage!=='__settings__')renderCanvas(pg);
     if(typeof richieSay==='function') richieSay((name||'Bank')+' disconnected.');
-  }catch(e){ alert('Could not reach the server.'); }
+  }catch(e){ alert('Could not reach the server.'); if(btn){btn.textContent='Remove';btn.disabled=false;} if(row)row.style.opacity=''; }
 }
-function removeImport(importId){
-  if(!confirm('Remove this uploaded statement and its transactions?')) return;
-  APP.importedTxns=(APP.importedTxns||[]).filter(t=>(t._importId||'legacy')!==importId);
-  saveState(); _rebuildTxns();
+function removeImport(id){
+  if(!confirm('Remove this upload and everything it added?')) return;
+  const rec=(APP.imports||[]).find(im=>im.id===id);
+  // transactions (unified id OR legacy _importId)
+  APP.importedTxns=(APP.importedTxns||[]).filter(t=>{ const k=t._importId||'legacy'; return k!==id && (!rec||!rec.txnImportId||k!==rec.txnImportId); });
+  if(rec){
+    if(rec.holdingIds&&rec.holdingIds.length) APP.holdings=(APP.holdings||[]).filter(h=>!rec.holdingIds.includes(h.id));
+    if(rec.assetId) APP.nwManualAssets=(APP.nwManualAssets||[]).filter(a=>a.id!==rec.assetId);
+    if(rec.billName) APP.manualBills=(APP.manualBills||[]).filter(b=>(b.name||'').toLowerCase()!==String(rec.billName).toLowerCase());
+  }
+  APP.imports=(APP.imports||[]).filter(im=>im.id!==id);
+  saveState(); _rebuildTxns(); try{ nwHistRecord(); }catch(e){}
   renderConnectedData();
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg&&APP.activePage!=='__settings__')renderCanvas(pg);
 }
@@ -8321,7 +8363,7 @@ const RICHIE_STORY=[
 ];
 let riScene=0, riTyping=false, riTypeTimer=null, riFullText="";
 let riChar=null, wizChar=null, wizStep=1;
-let setupConfig={ persona:null, level:null, householdName:'', profiles:[{name:'',avatar:'💰'}], bundle:null, chosenGoals:[], plaidConnected:false, xp:0, proMode:false };
+let setupConfig={ persona:null, level:1, householdName:'', profiles:[{name:'',avatar:'💰'}], bundle:null, chosenGoals:[], plaidConnected:false, xp:0, proMode:false };
 
 function introApplyAccent(){ const p=setupConfig.persona&&RICHIE_PERSONAS[setupConfig.persona]; document.documentElement.style.setProperty('--green', p?p.accent:'#2ecc8a'); }
 
@@ -8393,7 +8435,7 @@ function riPickPersona(key,e){
 }
 function riPickLevel(n,e){
   if(e)e.stopPropagation();
-  setupConfig.level=n; const lv=LEVELS.find(l=>l.n===n);
+  setupConfig.level=1; const lv=LEVELS.find(l=>l.n===1);
   gg('riChoices').style.display='none'; document.querySelector('.ri-bubble-wrap').style.display='block';
   if(riChar) riChar.emotion('happy'); riScene++; gg('riClickHint').style.display='inline';
   riTypeText(`${lv.icon} ${lv.name} it is. Good to know \u2014 I'll keep things just right for you.`);
@@ -8416,8 +8458,8 @@ function riAnswerQuiz(oi,e){
   if(o.coach){ const w=(o.pts!=null?1:2); _quizCoach[o.coach]=(_quizCoach[o.coach]||0)+w; }  // style Qs weigh 2×
   riQuizIdx++;
   if(riQuizIdx<LEVEL_QUIZ.length){ riRenderQuiz(); return; }
-  const lvl=levelFromQuiz(riQuizScore, riQuizLevelCount);
-  setupConfig.level=lvl; const lv=LEVELS.find(l=>l.n===lvl);
+  const lvl=1;
+  setupConfig.level=1; const lv=LEVELS.find(l=>l.n===lvl);
   const wrap=gg('riChoices'); wrap.style.display='none'; wrap.classList.remove('ri-quiz'); wrap.style.gridTemplateColumns='';
   document.querySelector('.ri-bubble-wrap').style.display='block';
   if(riChar) riChar.emotion('excited'); riScene++; gg('riClickHint').style.display='inline';
@@ -8529,7 +8571,7 @@ function _aiGoalToPreset(g){
 }
 function riApplyProfile(profile){
   profile=profile||_obFallbackProfile();
-  let lv=parseInt(profile.level,10); if(!(lv>=1&&lv<=5)) lv=2; setupConfig.level=lv;
+  setupConfig.level=1;   // all new users start at Level 1 and earn their way up
   const pk=(typeof PERSONA_ORDER!=='undefined'&&PERSONA_ORDER.includes(profile.persona))?profile.persona:'coach';
   setupConfig.persona=pk; setupConfig._aiPersona=true; introApplyAccent();
   const seen={}; const goals=(profile.goals||[]).slice(0,4).map(_aiGoalToPreset).filter(g=>{ if(!g||seen[g.key])return false; seen[g.key]=1; return true; });
@@ -8537,9 +8579,9 @@ function riApplyProfile(profile){
   const wrap=gg('riChoices'); wrap.style.display='none'; wrap.classList.remove('ri-interview');
   document.querySelector('.ri-bubble-wrap').style.display='block';
   if(riChar) riChar.emotion('excited');
-  const lvo=LEVELS.find(l=>l.n===lv); const gnames=setupConfig.chosenGoals.map(g=>g.name).join(', ');
+  const gnames=setupConfig.chosenGoals.map(g=>g.name).join(', ');
   const gi=RICHIE_STORY.findIndex(s=>s.choice==='goals'); if(gi>=0) riScene=gi; gg('riClickHint').style.display='inline';
-  riTypeText(`Okay \u2014 I've got a real read on you now. You're a ${lvo.icon} Lv ${lv} \u00b7 ${lvo.name}. Based on everything, here's what I think we should work toward: ${gnames}. Tweak below if you want, then we'll build it.`);
+  riTypeText(`Okay \u2014 I've got a real read on you now. Based on everything, here's what I think we should work toward: ${gnames}. Tweak below if you want, then we'll build it.`);
   setTimeout(()=>{ riShowChoices('goals'); }, 320);   // goal picker, pre-filled with the AI's picks
 }
 /* ── Narrated goals picker (now part of the intro, before naming) ── */
@@ -9213,7 +9255,7 @@ function openUserInfo(){
 function wizFinish(){
   _obVoice=false; riAudioOn=false;        // onboarding done — Richie goes silent from here on
   try{ _stopTts(); }catch(e){}
-  const _seedLv=Math.min(Math.max(1,setupConfig.level||1),2);   // head-start up to Saver; Budgeter+ must be earned
+  const _seedLv=1;   // all new users start at Level 1   // head-start up to Saver; Budgeter+ must be earned
   setupConfig.xp=LEVEL_XP[_seedLv-1]||0;
   try{ LS.setItem('richie_setup',JSON.stringify(setupConfig)); LS.removeItem('richie_app'); }catch(e){}
   gg('setupWizard').style.display='none';
