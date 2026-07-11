@@ -4184,12 +4184,17 @@ function docAddSelected(){
   APP.imports.push({ id:impId, kind:'bank', label:importLabel, ts:Date.now(), txnImportId:importId, billName, summary:`${added} transaction${added!==1?'s':''}${billName?' + bill':''}` });
   finish(added?`Added ${added} transaction${added!==1?'s':''}${addBill?' and a bill':''} from your ${((type||'statement').replace('_',' '))}. \ud83d\udcc4`:`Saved the details from your ${((type||'statement').replace('_',' '))}.`);
 }
-/* ═══ INVESTMENTS / PORTFOLIO (Mogul) — positions from statements + research ═══ */
+/* ═══ INVESTMENTS / PORTFOLIO (Mogul) — positions from statements + research,
+   plus investment accounts & assets linked in from Net Worth ═══ */
 function engHoldings(){ return (APP.holdings||[]).slice(); }
 function engPortfolioValue(){ return engHoldings().reduce((s,h)=>s+(+h.value||0),0); }
+function engInvestAccounts(){ return engAccounts().filter(a=>a.type==='investment' && !a.excluded); }
+function engInvestNWAssets(){ return (APP.nwManualAssets||[]).filter(x=>x.cat==='Investment'); }
 function portfolioBody(w){
   const H=engHoldings();
-  if(!H.length) return `<div class="wph"><div class="wph-sub">No positions yet.</div><div class="ws-hint" style="margin-top:6px">Upload a brokerage / IRA / 401k statement and Richie pulls your positions in automatically — or add one by hand.</div><button class="nw-add" style="margin-top:11px" onclick="event.stopPropagation();openHoldingEditor()">＋ Add a position</button></div>`;
+  const IA=engInvestAccounts();
+  const NA=engInvestNWAssets();
+  if(!H.length && !IA.length && !NA.length) return `<div class="wph"><div class="wph-sub">No positions yet.</div><div class="ws-hint" style="margin-top:6px">Upload a brokerage / IRA / 401k statement and Richie pulls your positions in automatically — or add one by hand. Investment accounts and assets from Net Worth show up here too.</div><button class="nw-add" style="margin-top:11px" onclick="event.stopPropagation();openHoldingEditor()">＋ Add a position</button></div>`;
   const tot=engPortfolioValue();
   const totGain=engHoldings().reduce((s,h)=>s+(+h.gain||0),0);
   const hasGain=engHoldings().some(h=>h.gain!=null);
@@ -4204,7 +4209,30 @@ function portfolioBody(w){
     </div>`;
   }).join('');
   const gainLine=hasGain?` · <span style="color:${moneyCol(totGain)}">${totGain>=0?'+':'−'}${fmtK(Math.abs(totGain))} total ${totGain>=0?'gain':'loss'}</span>`:'';
-  return `<div class="pf-wrap"><div class="pf-total"><div class="wph-stat" style="color:${moneyCol(tot)}">${fmtK(tot)}</div><div class="wph-sub">portfolio value · ${H.length} position${H.length!==1?'s':''}${gainLine}</div>${acctChips}</div><div class="pf-list">${rows}</div><button class="nw-add" onclick="event.stopPropagation();openHoldingEditor()">＋ Add a position</button></div>`;
+  const posHeader=H.length?`<div class="pf-total"><div class="wph-stat" style="color:${moneyCol(tot)}">${fmtK(tot)}</div><div class="wph-sub">portfolio value · ${H.length} position${H.length!==1?'s':''}${gainLine}</div>${acctChips}</div>`:'';
+  const posSection=H.length?`<div class="pf-list">${rows}</div>`:'';
+
+  // Investment-type accounts (Plaid-linked or manually added) that also count toward Net Worth.
+  const acctRows=IA.map(a=>{
+    const raw=a.rawName||a.name, rEsc=esc(raw).replace(/'/g,"\\'");
+    const editBtn=a.manual
+      ? `<button class="nw-ed" onclick="event.stopPropagation();openManualAccount(${(APP.manualAccounts||[]).findIndex(x=>x.id===a.id)})" title="Edit">✎</button>`
+      : `<button class="nw-ed" onclick="event.stopPropagation();openAccountEditor('${rEsc}')" title="Edit / remove">✎</button>`;
+    return `<div class="nw-row"><span class="nw-ic">📈</span><span class="nw-nm">${esc(a.name)}<span class="nw-cat">${esc(a.institution||(a.manual?'manual':'linked'))}</span></span><span class="nw-val">${fmtK(a.bal)}</span>${editBtn}</div>`;
+  }).join('');
+  const acctSection=IA.length?`<div class="doc-section-h">Linked from Net Worth</div><div class="nw-list">${acctRows}</div>`:'';
+
+  // Manually-entered Net Worth assets categorized as Investment (e.g. a lump-sum 401k balance).
+  const naRows=NA.map(x=>`<div class="nw-row"><span class="nw-ic">📈</span><span class="nw-nm">${esc(x.name||x.cat)}<span class="nw-cat">Net worth asset</span></span><span class="nw-val">${fmtK(+x.value||0)}</span><button class="nw-ed" onclick="event.stopPropagation();portfolioEditNWAsset('${x.id}')" title="Edit">✎</button><button class="nw-ed" onclick="event.stopPropagation();nwDel('asset','${x.id}')" title="Delete">🗑</button></div>`).join('');
+  const naSection=NA.length?`<div class="doc-section-h">Net worth investment assets</div><div class="nw-list">${naRows}</div>`:'';
+
+  return `<div class="pf-wrap">${posHeader}${posSection}${acctSection}${naSection}<button class="nw-add" onclick="event.stopPropagation();openHoldingEditor()">＋ Add a position</button></div>`;
+}
+function portfolioEditNWAsset(id){
+  gg('manualModal').style.display='flex';
+  gg('manualTitle').textContent='Home, car & assets';
+  gg('manualSub').textContent="Add what a bank can't see — property, vehicles, valuables — plus debts not linked to a bank.";
+  nwOpenForm('asset', id);
 }
 function openResearch(id){
   const h=(APP.holdings||[]).find(x=>x.id===id); if(!h) return;
