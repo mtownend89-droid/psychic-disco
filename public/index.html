@@ -3749,6 +3749,14 @@ function engPromoAlerts(withinDays){
 }
 
 /* ═══ CREDIT UTILIZATION + DEBT-TO-INCOME ═══ */
+/* Credit-card debt only — bills categorized CC and credit-type accounts cover the same
+   cards from two sources (Plaid liabilities vs balances), so take the larger rather than
+   summing both, which would double-count. */
+function engCCDebt(){
+  const fromBills=engBills().filter(b=>b.cat==='CC').reduce((s,b)=>s+Math.abs(b.bal||0),0);
+  const fromAccts=engAccounts().filter(a=>!a.excluded&&a.type==='credit').reduce((s,a)=>s+Math.abs(a.bal||0),0);
+  return Math.max(fromBills,fromAccts);
+}
 function engCreditUtil(){
   const cards=engBills().filter(b=>b.cat==='CC' && (b.limit||0)>0);
   const limit=cards.reduce((s,c)=>s+(c.limit||0),0);
@@ -3803,6 +3811,7 @@ const GOAL_METRICS={
   savings:    {label:'Total savings/cash', icon:'💰', dir:'up',   get:()=>Math.max(engStartCash(), engNWAssets()), unit:'$'},
   networth:   {label:'Net worth',          icon:'📈', dir:'up',   get:()=>dataLoaded?engNetBalance()+engNWAssets()-engNWLiab():engNetWorth(), unit:'$'},
   debt:       {label:'Total debt',         icon:'💳', dir:'down', get:()=>engBillsDebt()||engTotalDebt(), unit:'$'},
+  ccdebt:     {label:'Credit-card debt',   icon:'✂️', dir:'down', get:()=>engCCDebt(), unit:'$'},
   emergency:  {label:'Emergency fund',     icon:'🛟', dir:'up',   get:()=>engEmergencyFund(), unit:'$'},
   creditutil: {label:'Credit utilization', icon:'📉', dir:'down', get:()=>Math.round(engCreditUtil().pct), unit:'%'},
   creditlimit:{label:'Total credit limit', icon:'💳', dir:'up',   get:()=>Math.round(engCreditUtil().limit), unit:'$'},
@@ -3817,13 +3826,19 @@ const GOAL_PRESETS=[
   {key:'ef1k',   name:'Starter emergency fund', metric:'emergency', target:1000,  icon:'🛟', blurb:'Your first $1,000 safety net.'},
   {key:'ef3mo',  name:'3-month emergency fund', metric:'emergency', target:null,  icon:'🛟', blurb:'Three months of expenses saved.', auto:'3mo'},
   {key:'debtfree',name:'Become debt-free',      metric:'debt',      target:0,     icon:'🚀', blurb:'Pay every balance down to zero.'},
-  {key:'cc0',    name:'Kill credit-card debt',  metric:'debt',      target:0,     icon:'✂️', blurb:'Wipe out high-interest card balances.'},
+  {key:'cc0',    name:'Kill credit-card debt',  metric:'ccdebt',    target:0,     icon:'✂️', blurb:'Wipe out high-interest card balances.'},
   {key:'save10k',name:'Save $10,000',           metric:'savings',   target:10000, icon:'💰', blurb:'Build a solid cash cushion.'},
   {key:'nw100k', name:'$100K net worth',        metric:'networth',  target:100000,icon:'💎', blurb:'Cross the six-figure milestone.'},
   {key:'sr20',   name:'Save 20% of income',     metric:'savingsrate',target:20,   icon:'📊', blurb:'Hit a 20% monthly savings rate.'},
   {key:'fire25', name:'Reach Coast FIRE',       metric:'networth',  target:null,  icon:'🔥', blurb:'25× your annual expenses invested.', auto:'fire'},
 ];
-function _goals(){ if(!APP.goals) APP.goals=[]; return APP.goals; }
+function _goals(){
+  if(!APP.goals) APP.goals=[];
+  // Migration: "Kill credit-card debt" goals created before the ccdebt metric existed
+  // tracked ALL debt. Switch them over; start=null re-baselines from current CC debt.
+  APP.goals.forEach(g=>{ if(g&&g.metric==='debt'&&(g.presetKey==='cc0'||/credit.?card/i.test(g.name||''))){ g.metric='ccdebt'; g.start=null; } });
+  return APP.goals;
+}
 
 /* ═══ GOAL → WIDGETS → PAGE mapping (the goals-first brain) ═══
    Each preset goal knows: which widgets help achieve it, what page to build,
@@ -3854,6 +3869,7 @@ const GOAL_PLANS={
     coach:"Custom goal locked in. I've given you the core tracking tools — your Goals tracker, cash position, budget, and P&L. Update your progress as you go and I'll keep cheering you on.",
     teach:["Break a big goal into monthly milestones.","Track progress regularly so you stay motivated.","Celebrate small wins along the way."] },
 };
+GOAL_PLANS.ccdebt=GOAL_PLANS.debt;   // CC-only goal uses the same page/widgets/coaching as debt
 function goalPlanFor(metric){ return GOAL_PLANS[metric]||GOAL_PLANS.custom; }
 function goalAutoTarget(kind){
   if(kind==='3mo') return Math.round(engMonthlyBills()*3)||3000;
@@ -3870,6 +3886,9 @@ function engEmergencyFund(){
 function goalProgress(g){
   const m=GOAL_METRICS[g.metric]; if(!m) return {pct:0,current:0,target:g.target||0};
   let current = g.metric==='custom' ? (g.current||0) : m.get();
+  // Pay-down goals: (re-)anchor the baseline at the high-water mark. Covers migrated goals
+  // (start=null) and debt that grew past the original start — progress % stays meaningful.
+  if(m.dir==='down' && current>0 && (g.start==null || g.start<current)) g.start=current;
   const start = g.start!=null?g.start:0;
   const target = g.target||0;
   let pct;
