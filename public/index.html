@@ -2789,11 +2789,17 @@ async function loadEngineData(){
 
 /* ── Metric computations (ported formulas) ── */
 function _isDebtAcct(a){ return !!(a && (a.type==='credit' || a.type==='loan')); }   // Plaid loans (mortgage/auto/student) carry positive balances = money OWED
-function engNetBalance(){ return allAccts.reduce((s,a)=>{ if(_acctExcluded(a.name||a.official_name||a.type)) return s; const c=(a.balances&&a.balances.current)??0; return _isDebtAcct(a)?s-c:s+c; },0); }
+// Net bank balance from the master account list (engAccounts) so dedupe, per-account
+// exclusions, and nicknames stay consistent with every widget. Manual accounts are left
+// out to preserve the historical meaning (bank-linked net only); debt bals are negative.
+function engNetBalance(){
+  if(!dataLoaded||!allAccts.length) return 0;
+  return engAccounts().reduce((s,a)=>(a.manual||a.excluded)?s:s+(a.bal||0),0);
+}
 // Account IDs whose account the user excluded — their transactions drop out of ALL analytics.
 function _excludedAcctIds(){
   const set=new Set();
-  (allAccts||[]).forEach(a=>{ if(_acctExcluded(a.name||a.official_name)) set.add(a.account_id); });
+  engAccounts().forEach(a=>{ if(a.excluded&&a.id) set.add(a.id); });
   return set;
 }
 function engRecent(days){ const cut=new Date(Date.now()-days*86400000); const ex=_excludedAcctIds(); return allTxns.filter(t=>new Date(t.date)>=cut && !ex.has(t.account_id)); }
@@ -2848,18 +2854,20 @@ function engAccounts(){
   }
   return _dedupeAcctList(allAccts.map((a,i)=>{
     const nm=(a.name||a.official_name||a.type);
-    const cd=(APP.cardData||{})[_cardKey(nm)]||{};
+    const cd=_cdFor({institution:a.institution, mask:a.mask, name:nm});
     return {
-      name:(cd.nickname||nm), rawName:nm, type:a.type, subtype:a.subtype,
+      name:(cd.nickname||nm), rawName:nm, type:a.type, subtype:a.subtype, mask:a.mask||'',
       bal:(_isDebtAcct(a)?-(Math.abs(a.balances.current||0)):(a.balances.current??a.balances.available??0)),
-      institution:a.institution||'', id:a.account_id||('a'+i), excluded:!!cd.excluded, _acct:a
+      institution:a.institution||'', id:a.account_id||('a'+i), excluded:!!cd.excluded, contrib:(+cd.contrib||+a.contrib||0), _acct:a
     };
   }).concat(manual));
 }
 function _dedupeAcctList(list){
+  // Mask (account-number suffix) is part of the key — several same-named accounts at one
+  // bank (e.g. four Amex HYSAs) are distinct accounts, not duplicates.
   const seen=new Set(), out=[];
   for(const a of (list||[])){
-    const k=[(a.institution||'').toLowerCase().trim(),(a.rawName||a.name||'').toLowerCase().trim(),(a.subtype||a.type||''),Math.round(a.bal||0)].join('|');
+    const k=[(a.institution||'').toLowerCase().trim(),(a.mask||''),(a.rawName||a.name||'').toLowerCase().trim(),(a.subtype||a.type||''),Math.round(a.bal||0)].join('|');
     if(seen.has(k)) continue; seen.add(k); out.push(a);
   }
   return out;
@@ -2901,6 +2909,7 @@ function setBillPayCommit(){ const pg=APP.pages.find(p=>p.id===APP.activePage); 
 
 /* ── Manual bills & accounts editor (items not linked to Plaid) ── */
 let _manualEdit={kind:'bill', idx:null};
+let _aeKey=null;   // storage key for the account currently open in the account editor
 function openManualBill(idx){ _manualEdit={kind:'bill', idx:(idx==null?null:idx)}; gg('manualModal').style.display='flex'; manualRender(); }
 function openManualCard(){ _manualEdit={kind:'bill', idx:null, preset:'card'}; gg('manualModal').style.display='flex'; manualRender(); }
 function openManualAccount(idx){ _manualEdit={kind:'account', idx:(idx==null?null:idx)}; gg('manualModal').style.display='flex'; manualRender(); }
@@ -3426,6 +3435,23 @@ function engBills(){
 // Persistent overlay so promo end dates / credit limits the user enters survive even
 // when bills are coming live from Plaid (Plaid can't know your 0% promo end date).
 function _cardKey(name){ return (name||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
+/* ── Per-ACCOUNT identity & metadata ──
+   _cardKey is name-only, so several same-named accounts (e.g. four Amex HYSAs) shared one
+   record — nicknaming one renamed them all. _acctIdKey adds institution+mask so each account
+   has its own identity; _cdFor reads the per-account record first, falling back to the legacy
+   name record so existing edits keep working. Writes go to the per-account key (and the legacy
+   key, for name-based readers like bills). ── */
+function _acctIdKey(a){
+  if(!a) return '';
+  const nm=a.rawName||a.name||a.official_name||a.type||'';
+  return 'id:'+[(a.institution||'').toLowerCase().trim(),(a.mask||''),String(nm).toLowerCase().trim()].join('|');
+}
+function _cdFor(a){
+  const data=APP.cardData||{};
+  const legacy=data[_cardKey(a&&(a.rawName||a.name||a.official_name))]||{};
+  const byId=data[_acctIdKey(a)]||{};
+  return Object.assign({}, legacy, byId);
+}
 function _applyCardData(list){
   const data=APP.cardData||{};
   return list.map(b=>{
@@ -4226,7 +4252,7 @@ function engInvestTotal(){
    the item itself for manual accounts and statement-imported net-worth assets). */
 function engPlannedContrib(){
   let s=0;
-  engInvestAccounts().forEach(a=>{ const cd=(APP.cardData||{})[_cardKey(a.rawName||a.name)]||{}; s+=(+cd.contrib||+a.contrib||0); });
+  engInvestAccounts().forEach(a=>{ s+=(+a.contrib||0); });   // engAccounts resolves per-account cardData
   engInvestNWAssets().forEach(x=>{ s+=(+x.contrib||0); });
   return s;
 }
@@ -4258,9 +4284,9 @@ function portfolioBody(w){
 
   // Investment-type accounts (Plaid-linked or manually added) — same row format as positions.
   const acctRows=IA.slice().sort((a,b)=>(+b.bal||0)-(+a.bal||0)).map(a=>{
-    const raw=a.rawName||a.name, rEsc=esc(raw).replace(/'/g,"\\'");
+    const kEsc=esc(_acctIdKey(a)).replace(/'/g,"\\'");
     const idx=(APP.manualAccounts||[]).findIndex(x=>x.id===a.id);
-    const open=a.manual?`openManualAccount(${idx})`:`openAccountEditor('${rEsc}')`;
+    const open=a.manual?`openManualAccount(${idx})`:`openAccountEditor('${kEsc}')`;
     const pct=pctOf(a.bal);
     return `<div class="pf-row" onclick="${open}">
       <div class="pf-main"><div class="pf-nm">${esc(a.name)}</div><div class="pf-sub">${esc(a.institution||(a.manual?'manual':'linked'))}</div><div class="pf-bar"><i style="width:${Math.max(2,pct)}%"></i></div></div>
@@ -5924,18 +5950,23 @@ async function nwEstimate(type){
     if(note)note.textContent=(d.value?('≈ '+fmtK(d.value)+' · '):'')+(d.note||'Estimate — adjust as needed.');
   }catch(e){ btn.disabled=false; btn.textContent=old; if(note)note.textContent="Couldn't reach the estimator — enter the value manually."; }
 }
-function openAccountEditor(name){
-  const acct=engAccounts().find(a=>a.name===name || a.name===((APP.cardData||{})[_cardKey(name)]||{}).nickname);
+function openAccountEditor(ref){
+  // ref is a per-account id key ('id:institution|mask|name') or, from legacy callers, a name.
+  const accts=engAccounts();
+  let acct=String(ref).indexOf('id:')===0?accts.find(a=>_acctIdKey(a)===ref):null;
+  if(!acct) acct=accts.find(a=>a.name===ref || a.rawName===ref || a.name===((APP.cardData||{})[_cardKey(ref)]||{}).nickname);
+  const name=acct?(acct.rawName||acct.name):String(ref).replace(/^id:.*\|/,'');
+  _aeKey=acct?_acctIdKey(acct):_cardKey(name);   // per-account storage key for this editing session
   const bill=engBills().find(b=>b.name===name)||{};
-  const cd=(APP.cardData||{})[_cardKey(name)]||{};
+  const cd=acct?_cdFor(acct):((APP.cardData||{})[_cardKey(name)]||{});
   const type=(acct&&acct.type)||'';
   const isCredit = type==='credit' || bill.cat==='CC';
   const isLoan   = type==='loan'   || ['HM','CAR','LOAN'].includes(bill.cat);
-  const isInvest = type==='investment';
+  const isInvest = !isCredit && !isLoan;   // savings/HYSA/investment — all can carry a planned contribution
   const nEsc=esc(name).replace(/'/g,"\\'");
   gg('manualModal').style.display='flex';
   gg('manualTitle').textContent='Edit account';
-  gg('manualSub').textContent=esc(cd.nickname||name);
+  gg('manualSub').textContent=esc(cd.nickname||name)+(acct&&acct.mask?' ···'+acct.mask:'');
   let f=`<label class="mf-label">Nickname</label><input class="mf-in" id="aeNick" value="${esc(cd.nickname||'')}" placeholder="${esc(name)}">`;
   if(isCredit){
     f+=`<div class="mf-row"><div><label class="mf-label">Credit limit</label><input class="mf-in" id="aeLimit" type="number" inputmode="decimal" value="${cd.limit||bill.limit||''}" placeholder="e.g. 5000"></div>`
@@ -5968,7 +5999,17 @@ function saveAccountEditor(name){
   if(g('aeContrib'))  f.contrib=_num('aeContrib');
   if(g('aeNote'))     f.note=g('aeNote').value.trim();
   f.excluded = !!(g('aeExcl') && g('aeExcl').checked);
-  setCardData(name, f);
+  if(_aeKey && _aeKey.indexOf('id:')===0){
+    // Per-account record gets everything. The legacy name record only gets the bill-facing
+    // fields (limit/APR/promo/due) that name-based readers like engBills use — never
+    // nickname/excluded/contrib, which would leak onto other same-named accounts.
+    APP.cardData=APP.cardData||{};
+    APP.cardData[_aeKey]=Object.assign({}, APP.cardData[_aeKey]||{}, f);
+    const shared={}; ['limit','apr','promoEnd','promoAmt','minPay','dueDay'].forEach(k=>{ if(f[k]!==undefined) shared[k]=f[k]; });
+    setCardData(name, shared);
+  } else {
+    setCardData(name, f);
+  }
   if(g('aeEmergency')){
     APP.emergencyAccts=APP.emergencyAccts||[];
     const on=g('aeEmergency').checked;
@@ -5980,7 +6021,7 @@ function saveAccountEditor(name){
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
   if(sbRichie)sbRichie.do('nod');
 }
-function clearAccountEdits(name){ if(APP.cardData) delete APP.cardData[_cardKey(name)]; saveState(); closeManual(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+function clearAccountEdits(name){ if(APP.cardData){ delete APP.cardData[_cardKey(name)]; if(_aeKey) delete APP.cardData[_aeKey]; } saveState(); closeManual(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function _openPromoEditorLegacy(name){
   const bill=engBills().find(b=>b.name===name) || {name, promoEnd:'', limit:0, apr:0};
   const cd=(APP.cardData||{})[_cardKey(name)]||{};
@@ -6275,7 +6316,7 @@ function openBucketAccounts(uid){
       <label class="sb-acct-row">
         <input type="checkbox" ${linked.has(a.id)?'checked':''} onchange="toggleBucketAccount('${a.id}','${uid}')">
         <span class="sb-acct-ic">${_savingsIconFor(a)}</span>
-        <span class="sb-acct-meta"><span class="sb-acct-nm">${esc(a.name)}</span><span class="sb-acct-sub">${esc(a.institution||a.subtype||a.type)}</span></span>
+        <span class="sb-acct-meta"><span class="sb-acct-nm">${esc(a.name)}</span><span class="sb-acct-sub">${esc(a.institution||a.subtype||a.type)}${a.mask?' ···'+esc(a.mask):''}</span></span>
         <span class="sb-acct-bal">${fmtK(a.bal)}</span>
       </label>`).join('')||'<div class="ws-hint">No deposit/investment accounts found.</div>'}</div>
     <div class="mf-actions"><span></span><button class="btn primary" onclick="closeManual()">Done</button></div>`;
@@ -6916,18 +6957,18 @@ function acctWidgetBody(w){
     const balStr=(a.bal<0?'-':'+')+fmtK(Math.abs(a.bal));
     const open=_acctOpen[w.uid]===a.id;
     const raw=a.rawName||a.name;
-    const cd=(APP.cardData||{})[_cardKey(raw)]||{};
-    const rEsc=esc(raw).replace(/'/g,"\\'");
+    const cd=_cdFor(a);
+    const kEsc=esc(_acctIdKey(a)).replace(/'/g,"\\'");
     const editBtn = a.manual
       ? `<button class="bill-edit" onclick="event.stopPropagation();openManualAccount(${(APP.manualAccounts||[]).findIndex(x=>x.id===a.id)})" title="Edit">\u270E</button>`
-      : `<button class="bill-edit" onclick="event.stopPropagation();openAccountEditor('${rEsc}')" title="Edit details">\u270E</button>`;
+      : `<button class="bill-edit" onclick="event.stopPropagation();openAccountEditor('${kEsc}')" title="Edit details">\u270E</button>`;
     const promoBadge = cd.promoEnd ? `<span class="acct-badge">0%</span>` : '';
     const exclBadge = a.excluded ? `<span class="acct-badge" style="color:var(--muted);background:var(--surface3)">excluded</span>` : '';
     const pend=engAcctPending(a);
     const pendStr=pend.count?` \u00b7 <span style="color:var(--amber)">\u23f3 ${pend.count} pending \u2192 ${fmtK(engExpectedBalance(a))} expected</span>`:'';
     return `<div class="acct-chip${open?' open':''}${a.excluded?' acct-excluded':''}" onclick="toggleAcct('${w.uid}','${a.id}')">
         <span class="acct-ic">${_acctIcon(a)}</span>
-        <div class="acct-meta"><div class="acct-nm">${esc(a.name)}${promoBadge}${exclBadge}${editBtn}</div><div class="acct-sub">${esc(a.institution||a.subtype||a.type)}${a.manual?' \u00b7 manual':''}${pendStr}</div></div>
+        <div class="acct-meta"><div class="acct-nm">${esc(a.name)}${promoBadge}${exclBadge}${editBtn}</div><div class="acct-sub">${esc(a.institution||a.subtype||a.type)}${a.mask?' \u00b7\u00b7\u00b7'+esc(a.mask):''}${a.manual?' \u00b7 manual':''}${(+cd.contrib||+a.contrib)?` \u00b7 <span style="color:var(--green)">\ud83d\udcb5 ${fmtK(+cd.contrib||+a.contrib)}/mo planned</span>`:''}${pendStr}</div></div>
         <div class="acct-bal" style="color:${col}">${balStr}</div>
         <span class="acct-arr">${open?'\u25b2':'\u25bc'}</span>
       </div>${open?`<div class="acct-txns" id="acdt_${w.uid}"></div>`:''}`;
@@ -7664,7 +7705,7 @@ function widgetDetailContent(type, days){
       return { title:'Income sources', sub:`${fmtK(tot)}/mo from ${items.length} sources`, body:`<div class="wdt-total" style="color:var(--green)">${fmtK(tot)}<span>per month</span></div>${_detailRows(items,tot)}` };
     }
     case 'net_worth_summary': case 'net_worth_chart': {
-      if(live){ const acctA=allAccts.filter(a=>!_isDebtAcct(a)).map(a=>({label:(a.name||a.official_name||a.type),value:(a.balances&&a.balances.current)||0,note:a.institution||'bank'})); const acctD=allAccts.filter(a=>_isDebtAcct(a)).map(a=>({label:(a.name||'Debt'),value:Math.abs((a.balances&&a.balances.current)||0),note:a.institution||'bank'})); const manA=nwAssets.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat||'manual'})).concat(_nwManA()); const manL=nwLiab.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat||'manual'})).concat(_nwManL()); const assets=acctA.concat(manA); const debts=acctD.concat(manL); const aTot=assets.reduce((s,a)=>s+a.value,0); const dTot=debts.reduce((s,d)=>s+d.value,0); const net=engNetBalance()+engNWAssets()-engNWLiab();
+      if(live){ const ea=engAccounts().filter(a=>!a.manual&&!a.excluded); const acctA=ea.filter(a=>(a.bal||0)>=0&&a.type!=='credit'&&a.type!=='loan').map(a=>({label:a.name,value:a.bal||0,note:(a.institution||'bank')+(a.mask?' ···'+a.mask:'')})); const acctD=ea.filter(a=>(a.bal||0)<0||a.type==='credit'||a.type==='loan').map(a=>({label:a.name||'Debt',value:Math.abs(a.bal||0),note:(a.institution||'bank')+(a.mask?' ···'+a.mask:'')})); const manA=nwAssets.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat||'manual'})).concat(_nwManA()); const manL=nwLiab.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat||'manual'})).concat(_nwManL()); const assets=acctA.concat(manA); const debts=acctD.concat(manL); const aTot=assets.reduce((s,a)=>s+a.value,0); const dTot=debts.reduce((s,d)=>s+d.value,0); const net=engNetBalance()+engNWAssets()-engNWLiab();
         return { title:'Net worth breakdown', sub:`${fmtK(net)} net · ${fmtK(aTot)} assets − ${fmtK(dTot)} debts`, body:`<div class="wdt-total">${fmtK(net)}<span>net worth</span></div><div class="wdt-section">Assets</div>${_detailRows(assets,aTot)}<div class="wdt-section">Debts</div>${_detailRows(debts,dTot)}` }; }
       const a=nwAssets.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat})).concat(_nwManA()); const l=nwLiab.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat})).concat(_nwManL()); const aT=engNWAssets(),lT=engNWLiab();
       return { title:'Net worth breakdown', sub:`${fmtK(aT-lT)} net`, body:`<div class="wdt-total">${fmtK(aT-lT)}<span>net worth</span></div><div class="wdt-section">Assets</div>${_detailRows(a,aT)}<div class="wdt-section">Liabilities</div>${_detailRows(l,lT)}` };
