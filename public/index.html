@@ -3975,9 +3975,12 @@ function goalCadenceNudge(g, cadence){
   const plan=GOAL_CADENCE[g.metric]||GOAL_CADENCE.custom;
   return plan[cadence]||plan.weekly;
 }
-function engNWAssets(){ return nwAssets.reduce((s,a)=>s+(a.value||0),0) + (APP.nwManualAssets||[]).reduce((s,a)=>s+(+a.value||0),0); }
+function engNWAssets(){ return nwAssets.reduce((s,a)=>s+(a.value||0),0) + (APP.nwManualAssets||[]).reduce((s,a)=>s+(+a.value||0),0) + engPosOnlyAccounts().reduce((s,p)=>s+p.value,0); }
 function engNWLiab(){ return nwLiab.reduce((s,l)=>s+(l.value||0),0) + (APP.nwManualLiab||[]).reduce((s,l)=>s+(+l.value||0),0); }
-function _nwManA(){ return (APP.nwManualAssets||[]).filter(x=>+x.value>0).map(x=>({label:x.name||x.cat,value:+x.value,note:x.cat||'manual'})); }
+function _nwManA(){
+  return (APP.nwManualAssets||[]).filter(x=>+x.value>0).map(x=>({label:x.name||x.cat,value:+x.value,note:x.cat||'manual'}))
+    .concat(engPosOnlyAccounts().map(p=>({label:p.name,value:p.value,note:'portfolio positions'})));
+}
 function _nwManL(){ return (APP.nwManualLiab||[]).filter(x=>+x.value>0).map(x=>({label:x.name||x.cat,value:+x.value,note:x.cat||'manual'})); }
 function engNetWorth(){ return engNWAssets()-engNWLiab(); }
 function engUpcomingBills(){
@@ -4237,16 +4240,24 @@ function engHoldings(){ return (APP.holdings||[]).slice(); }
 function engPortfolioValue(){ return engHoldings().reduce((s,h)=>s+(+h.value||0),0); }
 function engInvestAccounts(){ return engAccounts().filter(a=>a.type==='investment' && !a.excluded); }
 function engInvestNWAssets(){ return (APP.nwManualAssets||[]).filter(x=>x.cat==='Investment'); }
-/* Total of ALL investments: linked/manual investment accounts + statement-imported net-worth
-   assets + standalone positions. Positions whose account matches a counted account/asset name
-   are skipped — a statement import creates both, and counting each would double the money. */
-function engInvestTotal(){
-  const IA=engInvestAccounts(), NA=engInvestNWAssets();
+/* Investment accounts represented ONLY by portfolio positions — no bank link and no
+   net-worth asset with the same name. Grouped by the position's account name. These are
+   the single source for "position-only" accounts everywhere (All Accounts, net worth,
+   invest totals) so the same money is never counted twice or dropped. */
+function engPosOnlyAccounts(){
   const counted=new Set();
-  IA.forEach(a=>counted.add((a.name||'').toLowerCase().trim()));
-  NA.forEach(x=>counted.add((x.name||'').toLowerCase().trim()));
-  const loose=engHoldings().filter(h=>!counted.has((h.account||'').toLowerCase().trim()));
-  return IA.reduce((s,a)=>s+(+a.bal||0),0)+NA.reduce((s,x)=>s+(+x.value||0),0)+loose.reduce((s,h)=>s+(+h.value||0),0);
+  engAccounts().forEach(a=>counted.add((a.name||'').toLowerCase().trim()));
+  (APP.nwManualAssets||[]).forEach(x=>counted.add((x.name||'').toLowerCase().trim()));
+  const groups={};
+  engHoldings().forEach(h=>{ const k=(h.account||'').trim(); if(!k||counted.has(k.toLowerCase())) return; groups[k]=(groups[k]||0)+(+h.value||0); });
+  return Object.entries(groups).map(([name,value])=>({name, value, contrib:+(((APP.cardData||{})['pos:'+name.toLowerCase()]||{}).contrib)||0}));
+}
+/* Total of ALL investments: linked/manual investment accounts + statement-imported net-worth
+   assets + position-only accounts (deduped by name via engPosOnlyAccounts). */
+function engInvestTotal(){
+  return engInvestAccounts().reduce((s,a)=>s+(+a.bal||0),0)
+    + engInvestNWAssets().reduce((s,x)=>s+(+x.value||0),0)
+    + engPosOnlyAccounts().reduce((s,p)=>s+p.value,0);
 }
 /* Sum of planned monthly contributions across investment accounts (cardData for bank accounts,
    the item itself for manual accounts and statement-imported net-worth assets). */
@@ -4254,6 +4265,7 @@ function engPlannedContrib(){
   let s=0;
   engInvestAccounts().forEach(a=>{ s+=(+a.contrib||0); });   // engAccounts resolves per-account cardData
   engInvestNWAssets().forEach(x=>{ s+=(+x.contrib||0); });
+  engPosOnlyAccounts().forEach(p=>{ s+=(+p.contrib||0); });
   return s;
 }
 function portfolioBody(w){
@@ -6022,6 +6034,33 @@ function saveAccountEditor(name){
   if(sbRichie)sbRichie.do('nod');
 }
 function clearAccountEdits(name){ if(APP.cardData){ delete APP.cardData[_cardKey(name)]; if(_aeKey) delete APP.cardData[_aeKey]; } saveState(); closeManual(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+/* ── Editor for position-only investment accounts (grouped from portfolio holdings).
+   Renaming rewrites the account field on every position in the group; the planned
+   contribution lives in cardData under 'pos:<name>' and feeds engPlannedContrib. ── */
+function openPosAcctEditor(name){
+  const cd=(APP.cardData||{})['pos:'+String(name).toLowerCase()]||{};
+  const nEsc=esc(name).replace(/'/g,"\\'");
+  gg('manualModal').style.display='flex';
+  gg('manualTitle').textContent='Edit investment account';
+  gg('manualSub').textContent='Grouped from your portfolio positions.';
+  gg('manualBody').innerHTML=`
+    <label class="mf-label">Account name</label><input class="mf-in" id="paName" value="${esc(name)}">
+    <label class="mf-label">Planned contribution / mo</label><input class="mf-in" id="paContrib" type="number" inputmode="decimal" value="${cd.contrib||''}" placeholder="e.g. 500 — feeds the retirement calculator">
+    <div class="ws-hint">Renaming updates every position in this account. Its value is the live sum of those positions.</div>
+    <div class="mf-actions"><span></span><button class="btn primary" onclick="savePosAcctEditor('${nEsc}')">Save</button></div>`;
+}
+function savePosAcctEditor(oldName){
+  const nn=(gg('paName').value||'').trim()||oldName;
+  const contrib=_num('paContrib');
+  const oldKey='pos:'+String(oldName).toLowerCase(), newKey='pos:'+nn.toLowerCase();
+  APP.cardData=APP.cardData||{};
+  if(newKey!==oldKey) delete APP.cardData[oldKey];
+  APP.cardData[newKey]=Object.assign({}, APP.cardData[newKey]||{}, {contrib});
+  if(nn!==oldName) (APP.holdings||[]).forEach(h=>{ if((h.account||'').trim()===oldName) h.account=nn; });
+  saveState(); closeManual();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+  if(sbRichie)sbRichie.do('nod');
+}
 function _openPromoEditorLegacy(name){
   const bill=engBills().find(b=>b.name===name) || {name, promoEnd:'', limit:0, apr:0};
   const cd=(APP.cardData||{})[_cardKey(name)]||{};
@@ -6988,17 +7027,18 @@ function acctWidgetBody(w){
       </div>`;
   };
   // Investment accounts represented only by portfolio positions (no bank link, no net-worth
-  // asset) \u2014 grouped by the position's account name so they still appear here.
-  const _counted=new Set(accts.map(a=>(a.name||'').toLowerCase().trim()).concat(stmtAssets.map(x=>(x.name||'').toLowerCase().trim())));
-  const posAccts={};
-  engHoldings().forEach(h=>{ const k=(h.account||'').trim(); if(!k||_counted.has(k.toLowerCase())) return; posAccts[k]=(posAccts[k]||0)+(+h.value||0); });
-  const posRow=([nm,val])=>`<div class="acct-chip" style="cursor:default">
+  // asset) \u2014 same grouping engine as net worth / invest totals (engPosOnlyAccounts).
+  const posEntries=engPosOnlyAccounts();
+  const posRow=(p)=>{
+    const nEsc=esc(p.name).replace(/'/g,"\\'");
+    return `<div class="acct-chip" onclick="openPosAcctEditor('${nEsc}')">
         <span class="acct-ic">\ud83d\udcc8</span>
-        <div class="acct-meta"><div class="acct-nm">${esc(nm)}</div><div class="acct-sub">portfolio positions \u00b7 investment</div></div>
-        <div class="acct-bal" style="color:var(--pos)">+${fmtK(val)}</div>
+        <div class="acct-meta"><div class="acct-nm">${esc(p.name)}<button class="bill-edit" onclick="event.stopPropagation();openPosAcctEditor('${nEsc}')" title="Edit details">\u270e</button></div><div class="acct-sub">portfolio positions \u00b7 investment${p.contrib?` \u00b7 <span style="color:var(--green)">\ud83d\udcb5 ${fmtK(p.contrib)}/mo planned</span>`:''}</div></div>
+        <div class="acct-bal" style="color:var(--pos)">+${fmtK(p.value)}</div>
+        <span class="acct-arr">\u203a</span>
       </div>`;
-  const posEntries=Object.entries(posAccts);
-  const posTot=posEntries.reduce((s,[,v])=>s+v,0);
+  };
+  const posTot=posEntries.reduce((s,p)=>s+p.value,0);
   const assetTot=assets.reduce((s,a)=>s+(a.excluded?0:a.bal),0)+stmtAssets.reduce((s,x)=>s+(+x.value||0),0)+posTot;
   const liabTot=liabs.reduce((s,a)=>s+(a.excluded?0:Math.abs(a.bal)),0);
   const net=assetTot-liabTot;
