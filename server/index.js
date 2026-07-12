@@ -722,6 +722,21 @@ app.post('/api/create_link_token', requireAuth, async (req, res) => {
     country_codes: [CountryCode.Us],
     language: 'en',
   };
+  // Update mode: re-authenticate an existing item (expired login) — pass its access_token
+  // and no products; the item and its accounts survive, so no re-exchange and no duplicates.
+  const itemId = (req.body || {}).item_id;
+  if (itemId) {
+    const item = store.accessTokens.find(t => t.itemId === itemId);
+    if (!item) return res.status(404).json({ error: 'Unknown item — remove and reconnect the bank instead.' });
+    try {
+      const r = await plaidClient.linkTokenCreate({ ...base, access_token: item.accessToken });
+      return res.json({ link_token: r.data.link_token, update_mode: true });
+    } catch (e) {
+      const pd = (e.response && e.response.data) || {};
+      console.error('Update-mode link token failed:', pd.error_code || '', pd.error_message || e.message);
+      return res.status(500).json({ error: pd.error_message || e.message, error_code: pd.error_code });
+    }
+  }
   try {
     const r = await plaidClient.linkTokenCreate({
       ...base,
