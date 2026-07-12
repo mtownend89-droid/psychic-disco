@@ -2763,9 +2763,10 @@ async function _fetchJSON(url){
   if(!r.ok || !ct.includes('json')){ serverAvailable=false; return null; } // server returned HTML/error → not connected
   try{ return await r.json(); }catch(e){ serverAvailable=false; return null; }
 }
+let _acctErrors=[];  // per-institution sync failures from /api/accounts (e.g. ITEM_LOGIN_REQUIRED → bank needs reconnect)
 async function loadAccounts(){
   const d=await _fetchJSON('/api/accounts'); if(!d) return false;
-  allAccts=d.accounts||[]; return true;
+  allAccts=d.accounts||[]; _acctErrors=d.errors||[]; return true;
 }
 async function loadTransactions(){
   const d=await _fetchJSON('/api/transactions'); if(!d) return false;
@@ -4355,15 +4356,26 @@ function holdingDelete(id){
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
 }
 
-async function openLinkHandler(){
+async function openLinkHandler(relinkItemId){
   if(typeof Plaid==='undefined'){ try{ await _loadScript(PLAID_LINK_CDN_SRC); }catch(e){} }
   if(typeof Plaid==='undefined'){ showToast('Plaid not loaded — check your connection.','error'); return; }
   try{
-    const linkRes=await fetch('/api/create_link_token',{method:'POST'});
+    const linkRes=await fetch('/api/create_link_token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(relinkItemId?{item_id:relinkItemId}:{})});
     if(!linkRes.ok){ const err=await linkRes.json().catch(()=>({})); showToast('Link token failed ('+linkRes.status+'): '+(err.error||'unknown'),'error'); return; }
     const linkData=await linkRes.json();
     const link_token=linkData.link_token;
     if(!link_token){ showToast('No link token returned','error'); return; }
+    if(relinkItemId){
+      // Update mode: same bank item, fresh credentials — no token exchange needed after.
+      const handler=Plaid.create({ token:link_token, onSuccess:async()=>{
+        showToast('Bank reconnected! Refreshing data…','success');
+        await loadEngineData();
+        const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+        if(sbRichie)sbRichie.do('tada');
+      }});
+      handler.open();
+      return;
+    }
     const handler=Plaid.create({ token:link_token,
       onSuccess:async(pub,meta)=>{
         const inst=(meta&&meta.institution&&meta.institution.name)||'Bank';
@@ -6934,15 +6946,31 @@ function acctWidgetBody(w){
         <span class="acct-arr">\u203a</span>
       </div>`;
   };
-  const assetTot=assets.reduce((s,a)=>s+(a.excluded?0:a.bal),0)+stmtAssets.reduce((s,x)=>s+(+x.value||0),0);
+  // Investment accounts represented only by portfolio positions (no bank link, no net-worth
+  // asset) \u2014 grouped by the position's account name so they still appear here.
+  const _counted=new Set(accts.map(a=>(a.name||'').toLowerCase().trim()).concat(stmtAssets.map(x=>(x.name||'').toLowerCase().trim())));
+  const posAccts={};
+  engHoldings().forEach(h=>{ const k=(h.account||'').trim(); if(!k||_counted.has(k.toLowerCase())) return; posAccts[k]=(posAccts[k]||0)+(+h.value||0); });
+  const posRow=([nm,val])=>`<div class="acct-chip" style="cursor:default">
+        <span class="acct-ic">\ud83d\udcc8</span>
+        <div class="acct-meta"><div class="acct-nm">${esc(nm)}</div><div class="acct-sub">portfolio positions \u00b7 investment</div></div>
+        <div class="acct-bal" style="color:var(--pos)">+${fmtK(val)}</div>
+      </div>`;
+  const posEntries=Object.entries(posAccts);
+  const posTot=posEntries.reduce((s,[,v])=>s+v,0);
+  const assetTot=assets.reduce((s,a)=>s+(a.excluded?0:a.bal),0)+stmtAssets.reduce((s,x)=>s+(+x.value||0),0)+posTot;
   const liabTot=liabs.reduce((s,a)=>s+(a.excluded?0:Math.abs(a.bal)),0);
   const net=assetTot-liabTot;
-  const assetCount=assets.length+stmtAssets.length;
-  const assetsHtml=assetCount?`<div class="acct-group-h"><span>\ud83d\udc9a Assets \u00b7 ${assetCount}</span><b style="color:var(--green)">${fmtK(assetTot)}</b></div>${assets.map(rowHTML).join('')}${stmtAssets.map(stmtRow).join('')}`:'';
+  const assetCount=assets.length+stmtAssets.length+posEntries.length;
+  const assetsHtml=assetCount?`<div class="acct-group-h"><span>\ud83d\udc9a Assets \u00b7 ${assetCount}</span><b style="color:var(--green)">${fmtK(assetTot)}</b></div>${assets.map(rowHTML).join('')}${stmtAssets.map(stmtRow).join('')}${posEntries.map(posRow).join('')}`:'';
   const section=(title,icon,list,subtotal,color)=> list.length?`<div class="acct-group-h"><span>${icon} ${title} \u00b7 ${list.length}</span><b style="color:${color}">${fmtK(subtotal)}</b></div>${list.map(rowHTML).join('')}`:'';
+  // Banks the server couldn't sync \u2014 without this banner their accounts silently vanish.
+  const errRow=(e)=>`<div style="display:flex;align-items:center;gap:8px;margin-top:4px"><span style="flex:1;min-width:0">${esc(e.institution||'Bank')}<span style="color:var(--muted)"> \u2014 ${e.needsRelink?'login expired':'sync failed'}</span></span>${e.needsRelink&&e.itemId?`<button class="btn" style="height:24px;font-size:11px;padding:0 10px;color:var(--amber);border-color:var(--amber)" onclick="event.stopPropagation();openLinkHandler('${e.itemId}')">Reconnect</button>`:''}</div>`;
+  const errBanner=_acctErrors.length?`<div style="background:var(--amber-dim);border:1px solid var(--amber);border-radius:9px;padding:9px 11px;margin-bottom:9px;font-size:12px;color:var(--text)"><b style="color:var(--amber)">\u26a0\ufe0f ${_acctErrors.length} bank${_acctErrors.length!==1?'s':''} not syncing</b> \u2014 accounts below are incomplete${_acctErrors.map(errRow).join('')}</div>`:'';
   return `<div class="acct-wrap">
+    ${errBanner}
     <div class="acct-summary">
-      <span>${accts.length+stmtAssets.length} account${(accts.length+stmtAssets.length)!==1?'s':''}</span>
+      <span>${assetCount+liabs.length} account${(assetCount+liabs.length)!==1?'s':''}</span>
     </div>
     ${assetsHtml}
     ${section('Liabilities','\u2764\ufe0f',liabs,liabTot,'var(--red)')}
