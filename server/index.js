@@ -763,7 +763,9 @@ app.post('/api/create_link_token', requireAuth, async (req, res) => {
 function _acctNatKey(a) {
   return [
     (a.institution || '').toLowerCase().trim(),
-    (a.mask || ''),
+    // No mask → fall back to account_id: several same-named accounts (e.g. multiple HYSAs at
+    // one bank) must never merge. Costs re-link dupe detection only for maskless accounts.
+    (a.mask || a.account_id || ''),
     (a.name || a.official_name || '').toLowerCase().trim(),
     (a.subtype || a.type || ''),
   ].join('|');
