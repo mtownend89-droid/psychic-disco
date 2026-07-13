@@ -2814,7 +2814,9 @@ function engPLBuckets(days, group){
     else if(group==='weekly'){ const wk=new Date(d); wk.setDate(d.getDate()-d.getDay()); key=wk.toISOString().slice(5,10); }
     else key=d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
     if(!buckets[key]) buckets[key]={key,inc:0,spend:0,n:0,order:d.getTime()};
-    if(t.amount<0) buckets[key].inc+=Math.abs(t.amount); else buckets[key].spend+=t.amount;
+    // Income side goes through _isIncomeTxn so credit-card payments landing on the card,
+    // tagged transfers/refunds, and liability categories never count as income.
+    if(t.amount<0){ if(_isIncomeTxn(t)) buckets[key].inc+=Math.abs(t.amount); } else buckets[key].spend+=t.amount;
     buckets[key].n++;
   });
   return Object.values(buckets).sort((a,b)=>a.order-b.order);
@@ -7179,7 +7181,7 @@ function _txnFeedData(w){
     if(q){ const name=(t.merchant_name||t.name||'').toLowerCase(); const cat=getTxnCategory(t).toLowerCase(); if(!(name.includes(q)||cat.includes(q))) return false; }
     const tag=getTxnTag(t);
     switch(st.filter){
-      case 'income':    return t.amount<0;
+      case 'income':    return _isIncomeTxn(t);   // true income only — CC payments/transfers are inflows, not income
       case 'spending':  return t.amount>0;
       case 'pending':   return !!t.pending;
       case 'paycheck':  return tag==='paycheck';
@@ -7791,7 +7793,7 @@ function widgetDetailContent(type, days){
         body:`<div class="wdt-total">${fmtK(tot)}<span>total spend</span></div>${_detailRows(cats,tot)}` };
     }
     case 'income_month': {
-      if(live){ const rec=engRecent(days).filter(t=>t.amount<0); const byCat={}; rec.forEach(t=>{const c=getTxnCategory(t); byCat[c]=(byCat[c]||0)+Math.abs(t.amount);}); const items=Object.entries(byCat).map(([l,v])=>({label:l,value:v,color:getCatColor(l)})).sort((a,b)=>b.value-a.value); const tot=items.reduce((s,i)=>s+i.value,0);
+      if(live){ const rec=engRecent(days).filter(_isIncomeTxn); const byCat={}; rec.forEach(t=>{const c=getTxnCategory(t); byCat[c]=(byCat[c]||0)+Math.abs(t.amount);}); const items=Object.entries(byCat).map(([l,v])=>({label:l,value:v,color:getCatColor(l)})).sort((a,b)=>b.value-a.value); const tot=items.reduce((s,i)=>s+i.value,0);
         return { title:'Income — last '+dl, sub:`${fmtK(tot)} across ${items.length} source${items.length!==1?'s':''}`, body:`<div class="wdt-total" style="color:var(--green)">${fmtK(tot)}<span>received</span></div>${_detailRows(items,tot)}` }; }
       const items=incomeSources.map(s=>({label:s.name,value:Math.round(s.amt*(FREQ_TO_MONTHLY[s.freq]||1)),note:s.freq})); const tot=items.reduce((s,i)=>s+i.value,0);
       return { title:'Income sources', sub:`${fmtK(tot)}/mo from ${items.length} sources`, body:`<div class="wdt-total" style="color:var(--green)">${fmtK(tot)}<span>per month</span></div>${_detailRows(items,tot)}` };
