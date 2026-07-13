@@ -2726,7 +2726,22 @@ const TXN_TAG_BY_ID={}; TXN_TAGS.forEach(t=>TXN_TAG_BY_ID[t.id]=t);
 function getTxnTag(t){ return _txnTags[_txnKey(t)]||''; }
 function setTxnTag(key, tag){ if(!key) return; if(tag) _txnTags[key]=tag; else delete _txnTags[key]; try{ LS.setItem('mdf_txn_tags', JSON.stringify(_txnTags)); }catch(e){} }
 // Tags that mean "not real spending" (transfers, paybacks, ignored) — excluded from spend totals.
-function _txnExcludedFromSpend(t){ const g=getTxnTag(t); return g==='transfer'||g==='ignore'||g==='reimburse'||g==='ccpayment'; }
+/* A credit-card payment leaving a bank account is NOT spending — the card's purchases are
+   the real spending, so counting the payment too double-counts. Detected by user tag,
+   Plaid's category (CREDIT_CARD_PAYMENT), the legacy category array, or a conservative
+   payee-name pattern ("AMEX EPAYMENT", "CHASE CREDIT CRD AUTOPAY", ...). */
+function _isCCPaymentTxn(t){
+  if(getTxnTag(t)==='ccpayment') return true;
+  if(!(t.amount>0)) return false;   // only outflows from a bank account can be card payments
+  const det=((t.personal_finance_category&&(t.personal_finance_category.detailed||t.personal_finance_category.primary))||'').toUpperCase();
+  if(det.includes('CREDIT_CARD_PAYMENT')) return true;
+  const legacy=(Array.isArray(t.category)?t.category.join(' '):String(t.category||'')).toLowerCase();
+  if(legacy.includes('credit card') && legacy.includes('payment')) return true;
+  const nm=(t.merchant_name||t.name||'').toLowerCase();
+  if(/(credit ?crd|credit ?card|amex|american express|discover|barclays?|citi ?card|card ?(pmt|payment|autopay|e-?pay))/.test(nm) && /(pmt|payment|autopay|e-?pay|ach)/.test(nm)) return true;
+  return false;
+}
+function _txnExcludedFromSpend(t){ const g=getTxnTag(t); return g==='transfer'||g==='ignore'||g==='reimburse'||g==='ccpayment'||_isCCPaymentTxn(t); }
 // Tags that mean "not real income" (a transfer in, a refund, etc.) — excluded from income totals.
 function _txnExcludedFromIncome(t){ const g=getTxnTag(t); return g==='transfer'||g==='ignore'||g==='refund'||g==='reimburse'; }
 function _txnKey(t){ return t.transaction_id || t.id || ((t.date||'')+'|'+(t.merchant_name||t.name||'')+'|'+t.amount); }
@@ -2815,8 +2830,11 @@ function engPLBuckets(days, group){
     else key=d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
     if(!buckets[key]) buckets[key]={key,inc:0,spend:0,n:0,order:d.getTime()};
     // Income side goes through _isIncomeTxn so credit-card payments landing on the card,
-    // tagged transfers/refunds, and liability categories never count as income.
-    if(t.amount<0){ if(_isIncomeTxn(t)) buckets[key].inc+=Math.abs(t.amount); } else buckets[key].spend+=t.amount;
+    // tagged transfers/refunds, and liability categories never count as income; spend side
+    // goes through _txnExcludedFromSpend so the payment leaving checking isn't double-counted
+    // on top of the card purchases it paid for.
+    if(t.amount<0){ if(_isIncomeTxn(t)) buckets[key].inc+=Math.abs(t.amount); }
+    else if(!_txnExcludedFromSpend(t)) buckets[key].spend+=t.amount;
     buckets[key].n++;
   });
   return Object.values(buckets).sort((a,b)=>a.order-b.order);
@@ -3082,7 +3100,7 @@ function saveManualAccount(){
   if(sbRichie)sbRichie.do('nod');
 }
 function deleteManualAccount(idx){ if(!confirm('Delete this account?'))return; APP.manualAccounts.splice(idx,1); saveState(); closeManual(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
-function engSpend30(){ return engRecent(30).filter(t=>t.amount>0).reduce((s,t)=>s+t.amount,0); }
+function engSpend30(){ return engRecent(30).filter(t=>t.amount>0 && !_txnExcludedFromSpend(t)).reduce((s,t)=>s+t.amount,0); }
 function engIncome30(){ return engRecent(30).filter(_isIncomeTxn).reduce((s,t)=>s+Math.abs(t.amount),0); }
 // Generalized windowed spend/income (any day count)
 function engSpend(days){ return engRecent(days).filter(t=>t.amount>0 && !_txnExcludedFromSpend(t)).reduce((s,t)=>s+t.amount,0); }
@@ -3106,7 +3124,7 @@ function tfDays(key){ const t=TIMEFRAMES.find(x=>x.key===key); return t?t.days:3
 function tfLabel(key){ const t=TIMEFRAMES.find(x=>x.key===key); return t?t.label:'30 days'; }
 function engTotalDebt(){ return allAccts.filter(a=>_isDebtAcct(a)).reduce((s,a)=>s+Math.abs((a.balances&&a.balances.current)||0),0); }
 function engCategoryBreakdown(days){
-  const rec=engRecent(days).filter(t=>t.amount>0); const byCat={};
+  const rec=engRecent(days).filter(t=>t.amount>0 && !_txnExcludedFromSpend(t)); const byCat={};
   rec.forEach(t=>{ const c=getTxnCategory(t); byCat[c]=(byCat[c]||0)+t.amount; });
   return Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([label,value])=>({label,value,color:getCatColor(label)}));
 }
@@ -4054,7 +4072,7 @@ function engCategoryMonthGrid(months){
   const catMap={};  // label -> vals[]
   if(dataLoaded && allTxns.length){
     allTxns.forEach(t=>{
-      if(t.amount<=0) return; // spending only
+      if(t.amount<=0 || _txnExcludedFromSpend(t)) return; // spending only — CC payments/transfers excluded
       const td=new Date(t.date);
       const mi=monthBounds.findIndex(([a,b])=>td>=a&&td<b);
       if(mi<0) return;
@@ -7182,7 +7200,7 @@ function _txnFeedData(w){
     const tag=getTxnTag(t);
     switch(st.filter){
       case 'income':    return _isIncomeTxn(t);   // true income only — CC payments/transfers are inflows, not income
-      case 'spending':  return t.amount>0;
+      case 'spending':  return t.amount>0 && !_txnExcludedFromSpend(t);   // real spending — CC payments/transfers excluded
       case 'pending':   return !!t.pending;
       case 'paycheck':  return tag==='paycheck';
       case 'tagged':    return !!tag;
