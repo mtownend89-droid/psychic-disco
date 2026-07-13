@@ -4186,11 +4186,16 @@ function docReviewInit(){
 function docReviewRender(){
   const r=_docResult||{}, type=r.docType||'', txns=Array.isArray(r.transactions)?r.transactions:[];
   const hasTxns=txns.length>0;
-  const isInvest=(type==='investment')||(!!r.accountValue&&!hasTxns);
-  const isBill=!isInvest&&!hasTxns;   // insurance / phone / cable / utility / loan / any bill
+  const isScore=(type==='credit_score')||(!!r.creditScore&&!hasTxns&&!r.accountValue&&r.amountDue==null&&r.premium==null);
+  const isInvest=!isScore&&((type==='investment')||(!!r.accountValue&&!hasTxns));
+  const isBill=!isInvest&&!isScore&&!hasTxns;   // insurance / phone / cable / utility / loan / any bill
   const field=(lbl,id,val,ph)=>`<div class="doc-f"><label>${lbl}</label><input id="${id}" value="${val!=null?esc(String(val)):''}" placeholder="${ph||''}"></div>`;
   let header, addOpt='', section='', detailLbl='Account / bill';
-  if(isInvest){
+  if(isScore){
+    detailLbl='Score';
+    header=`<div class="doc-hgrid">${field('Source','docInst',r.institution,'Credit Karma / Amex')}${field('Score (300–850)','docScore',r.creditScore,'735')}${field('As of','docScoreDate',r.scoreDate||new Date().toISOString().slice(0,10),'YYYY-MM-DD')}</div>`;
+    addOpt=`<label class="doc-addbill"><input type="checkbox" id="docLogScore" checked> Log to the Credit Score monitor${r.scoreModel?' · '+esc(r.scoreModel):''}</label>`;
+  } else if(isInvest){
     detailLbl='Account';
     header=`<div class="doc-hgrid">${field('Institution','docInst',r.institution,'E*Trade')}${field('Account','docAcct',r.accountName,'IRA / Brokerage')}${field('Total value ($)','docValue',r.accountValue,'0')}</div>`;
     addOpt=`<label class="doc-addbill"><input type="checkbox" id="docAddAsset" checked> Add to Net Worth as an Investment asset (${fmtK(+r.accountValue||0)})</label>`;
@@ -4219,7 +4224,7 @@ function docReviewRender(){
       <div class="doc-selrow"><button class="btn" onclick="docSelectAll(true)">Select all</button><button class="btn" onclick="docSelectAll(false)">None</button><span class="ws-hint" id="docSelCount" style="margin-left:auto">${selCount} selected</span></div>
       <div class="doc-txns">${rows||'<div class="ws-hint">No transactions found in this document.</div>'}</div>`;
   }
-  const kindLbl=isInvest?'an investment statement':isBill?('a '+((type||'bill').replace('_',' '))):('a '+((type||'statement').replace('_',' ')));
+  const kindLbl=isScore?'a credit-score snapshot':isInvest?'an investment statement':isBill?('a '+((type||'bill').replace('_',' '))):('a '+((type||'statement').replace('_',' ')));
   gg('docBody').innerHTML=`
     <div class="doc-sub">Richie found ${esc(kindLbl)}${r.institution?' from '+esc(r.institution):''}. Edit anything, then add it.</div>
     <div class="doc-section-h">${detailLbl} details</div>${header}
@@ -4237,6 +4242,22 @@ function docAddSelected(){
   const impId='up'+Date.now()+Math.floor(Math.random()*999);
   APP.imports=APP.imports||[];
   const finish=(msg)=>{ saveState(); _rebuildTxns(); if(allTxns.length>0) dataLoaded=true; try{ nwHistRecord(); }catch(e){} closeDocModal(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); if(typeof richieSay==='function'&&msg) richieSay(msg); };
+  // Credit-score snapshot -> Score monitor (same upsert rule as manual entry: one per date)
+  if((type==='credit_score')||(!!r.creditScore&&!hasTxns&&!r.accountValue&&r.amountDue==null&&r.premium==null)){
+    if(gg('docLogScore')&&gg('docLogScore').checked){
+      const v=Math.round(parseFloat((gg('docScore')&&gg('docScore').value))||(+r.creditScore)||0);
+      const d=(((gg('docScoreDate')&&gg('docScoreDate').value)||r.scoreDate||new Date().toISOString().slice(0,10))+'').trim();
+      if(v>=300&&v<=850&&/^\d{4}-\d{2}-\d{2}$/.test(d)){
+        const list=_ccScores(); const i=list.findIndex(x=>x.d===d);
+        if(i>=0) list[i]={d,v}; else list.push({d,v});
+        list.sort((a,b)=>a.d<b.d?-1:1);
+        APP.imports.push({ id:impId, kind:'score', label:inst||'Credit score', ts:Date.now(), summary:`Credit score · ${v}` });
+        return finish(`Logged your credit score — ${v} (${_scoreBand(v).label}). 📊 See the trend in the Debt widget's Score tab.`);
+      }
+      showToast('Score must be 300–850 with a valid date.','error'); return;
+    }
+    return finish('');
+  }
   // Investment -> Net Worth asset + Portfolio positions
   if((type==='investment')||(!!r.accountValue&&!hasTxns)){
     let msg='', assetId=null, holdingIds=[];
@@ -8198,7 +8219,7 @@ async function renderConnectedData(){
   if(_cdTab==='uploads'){
     const ups=_collectImports();
     box.innerHTML = ups.length ? ups.map(im=>{
-      const icon=im.kind==='investment'?'📈':im.kind==='bill'?'🧾':'📄';
+      const icon=im.kind==='investment'?'📈':im.kind==='bill'?'🧾':im.kind==='score'?'📊':'📄';
       return `<div class="cd-row"><div class="cd-meta"><div class="cd-nm">${icon} ${esc(im.label||'Upload')}</div><div class="cd-info">${esc(im.summary||'')}</div></div><button class="cd-rm" onclick="removeImport('${esc(im.id)}')">Remove</button></div>`;
     }).join('') : '<div class="ws-hint">No uploaded documents yet. Use “📄 Upload statement” to add one.</div>';
     return;
