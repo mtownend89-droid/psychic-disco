@@ -3121,11 +3121,25 @@ function engDiscretionaryBudget(){
   const skip=new Set(['savings','emergency fund','emergency']);
   return buckets.filter(b=>!skip.has((b.name||'').toLowerCase())).reduce((s,b)=>s+(b.amt||0),0);
 }
-// Discretionary spend per month (live txns or sample), for the trend sparkline
-function engDiscretionaryMonthly(months){
+/* ── Budget-linked spending: Current Spending tracks exactly the categories that have a
+   Zero-Based Budget envelope (amt>0), so the widget and the budget always agree.
+   Savings-type envelopes are skipped — moving money to savings isn't spending. ── */
+const _BUDGET_SKIP=new Set(['savings','emergency fund','emergency','savings & invest']);
+function _budgetCatSet(){
+  const out=new Set();
+  _zbBuckets().forEach(b=>{ if((b.amt||0)>0 && !_BUDGET_SKIP.has((b.name||'').toLowerCase())) out.add(b.name); });
+  return out;
+}
+function engBudgetLinkedBudget(){
+  const cats=_budgetCatSet();
+  return _zbBuckets().filter(b=>cats.has(b.name)).reduce((s,b)=>s+(b.amt||0),0);
+}
+// Spend per month for the trend sparkline — budget categories when a catSet is given,
+// else the legacy discretionary set.
+function engDiscretionaryMonthly(months, catSet){
   months=months||6;
   const g=engCategoryMonthGrid(months);
-  const discCats=g.cats.filter(c=>isDiscretionary(c.label));
+  const discCats=g.cats.filter(c=>catSet?catSet.has(c.label):isDiscretionary(c.label));
   return g.months.map((mo,i)=>({label:mo, value:Math.round(discCats.reduce((s,c)=>s+(c.vals[i]||0),0))}));
 }
 // tiny inline SVG sparkline
@@ -6158,10 +6172,11 @@ let _acctPick={uid:null, sel:[]};
 function openSpendCatPicker(uid){
   const w=_findWidget(uid); if(!w) return;
   const days=wDays(w);
+  const bcats=_budgetCatSet(); const linked=bcats.size>0;
   let unfiltered;
-  if(dataLoaded){ unfiltered=engDiscretionaryBreakdown(days); }
-  else { const g=engCategoryMonthGrid(6), li=g.months.length-1; unfiltered=g.cats.filter(c=>isDiscretionary(c.label)).map(c=>({label:c.label,value:Math.round((c.vals[li]||0)*(days/30))})).filter(r=>r.value>0); }
-  const labels=Array.from(new Set([ ...unfiltered.map(r=>r.label), ...(w.hiddenCats||[]) ])).sort();
+  if(dataLoaded){ unfiltered=(linked?engCategoryBreakdown(days).filter(r=>bcats.has(r.label)):engDiscretionaryBreakdown(days)); }
+  else { const g=engCategoryMonthGrid(6), li=g.months.length-1; unfiltered=g.cats.filter(c=>linked?bcats.has(c.label):isDiscretionary(c.label)).map(c=>({label:c.label,value:Math.round((c.vals[li]||0)*(days/30))})).filter(r=>r.value>0); }
+  const labels=Array.from(new Set([ ...unfiltered.map(r=>r.label), ...(linked?Array.from(bcats):[]), ...(w.hiddenCats||[]) ])).sort();
   const hidden=new Set(w.hiddenCats||[]);
   gg('manualModal').style.display='flex';
   gg('manualTitle').textContent='Show categories';
@@ -6476,32 +6491,40 @@ function budgetTiersBody(w){
 /* ═══ CURRENT (DISCRETIONARY) SPENDING WIDGET ═══ */
 function discretionarySpendBody(w){
   const days=wDays(w);
-  let disc;
+  // Linked to the Zero-Based Budget: the focus number counts ONLY categories that have a
+  // budget envelope; total spending (all categories) shows alongside. With no budget set
+  // up yet, fall back to the legacy discretionary view.
+  const bcats=_budgetCatSet();
+  const linked=bcats.size>0;
+  let all;
   if(dataLoaded){
-    disc=engDiscretionaryBreakdown(days);
+    all=engCategoryBreakdown(days);
   } else {
     // sample mode: derive from the latest month of the category grid, scaled to window
     const g=engCategoryMonthGrid(6);
     const li=g.months.length-1;
-    disc=g.cats.filter(c=>isDiscretionary(c.label)).map(c=>({label:c.label,value:Math.round((c.vals[li]||0)*(days/30)),color:c.color})).filter(r=>r.value>0).sort((a,b)=>b.value-a.value);
+    all=g.cats.map(c=>({label:c.label,value:Math.round((c.vals[li]||0)*(days/30)),color:c.color})).filter(r=>r.value>0).sort((a,b)=>b.value-a.value);
   }
+  const totalSpend=all.reduce((s,r)=>s+r.value,0);
+  let disc=linked?all.filter(r=>bcats.has(r.label)):all.filter(r=>isDiscretionary(r.label));
   const hidden=(w.hiddenCats||[]);
   if(hidden.length) disc=disc.filter(r=>!hidden.includes(r.label));
   const spend=disc.reduce((s,r)=>s+r.value,0);
   const top=disc[0];
-  const budget=engDiscretionaryBudget()*(days/30);
+  const budget=(linked?engBudgetLinkedBudget():engDiscretionaryBudget())*(days/30);
   const pct = budget>0 ? spend/budget*100 : 0;
   const over = spend>budget;
   const color = pct<85?'var(--green)' : pct<=100?'var(--amber)' : 'var(--red)';
   const remaining = budget-spend;
-  const series=engDiscretionaryMonthly(6);
+  const series=engDiscretionaryMonthly(6, linked?bcats:null);
   const vals=series.map(s=>s.value);
   const prev=vals.length>1?vals[vals.length-2]:0;
   const cur=vals[vals.length-1]||spend;
   const trendUp = cur>prev;
   const trendPct = prev>0?Math.round((cur-prev)/prev*100):0;
   const trendColor = trendUp?'var(--red)':'var(--pos)';  // spending up = bad
-  const sub = (w.tf==='30d'||!w.tf) ? 'discretionary · last 30 days' : `discretionary · ${tfLabel(w.tf)}`;
+  const scope = linked?'in budget':'discretionary';
+  const sub = (w.tf==='30d'||!w.tf) ? scope+' · last 30 days' : `${scope} · ${tfLabel(w.tf)}`;
   const filterBtn=`<button class="cash-pick" onclick="event.stopPropagation();openSpendCatPicker('${w.uid}')" title="Choose which categories to include">⚙︎</button>`;
   return `<div class="wph">
     <div class="wph-stat" style="color:${(budget>0&&spend>budget)?'var(--red)':'var(--pos)'}">${fmtK(spend)}</div>
@@ -6512,6 +6535,10 @@ function discretionarySpendBody(w){
         <span style="color:${over?'var(--red)':'var(--muted)'}">${over?fmtK(-remaining)+' over':fmtK(remaining)+' left'}</span>
       </div>
       <div class="ds-bar"><div class="ds-bar-fill" style="width:${Math.min(100,pct)}%;background:${color}"></div></div>
+      <div class="ds-budget-top" style="margin-top:7px">
+        <span style="color:var(--muted)">Total spending · all categories</span>
+        <span style="font-weight:700">${fmtK(totalSpend)}</span>
+      </div>
     </div>
     <div class="ds-foot">
       <div class="ds-trend">${_sparkline(vals, trendColor, 92, 26)}</div>
@@ -7732,14 +7759,20 @@ function widgetDetailContent(type, days){
   const dl=tfLabel(TIMEFRAMES.find(t=>t.days===days)?TIMEFRAMES.find(t=>t.days===days).key:'30d');
   switch(type){
     case 'spending_month': {
-      let cats;
-      if(live){ cats=engDiscretionaryBreakdown(days); }
-      else { const g=engCategoryMonthGrid(6); const li=g.months.length-1; cats=g.cats.filter(c=>isDiscretionary(c.label)).map(c=>({label:c.label,value:Math.round((c.vals[li]||0)*(days/30)),color:c.color})).filter(r=>r.value>0).sort((a,b)=>b.value-a.value); }
+      const bcats=_budgetCatSet(); const linked=bcats.size>0;
+      let all;
+      if(live){ all=engCategoryBreakdown(days); }
+      else { const g=engCategoryMonthGrid(6); const li=g.months.length-1; all=g.cats.map(c=>({label:c.label,value:Math.round((c.vals[li]||0)*(days/30)),color:c.color})).filter(r=>r.value>0).sort((a,b)=>b.value-a.value); }
+      const totalSpend=all.reduce((s,c)=>s+c.value,0);
+      const cats=linked?all.filter(c=>bcats.has(c.label)):all.filter(c=>isDiscretionary(c.label));
+      const other=linked?all.filter(c=>!bcats.has(c.label)):[];
       const tot=cats.reduce((s,c)=>s+c.value,0);
-      const budget=engDiscretionaryBudget()*(days/30);
+      const budget=(linked?engBudgetLinkedBudget():engDiscretionaryBudget())*(days/30);
       const pct=budget>0?Math.round(tot/budget*100):0;
-      return { title:'Current discretionary spending', sub:`${live?'Last '+dl:'Sample'} · ${fmtK(tot)} of ${fmtK(budget)} budget (${pct}%) · bills & savings excluded`,
-        body:`<div class="wdt-total" style="color:${pct<85?'var(--green)':pct<=100?'var(--amber)':'var(--red)'}">${fmtK(tot)}<span>discretionary · ${pct}% of budget</span></div>${_detailRows(cats,tot)}` };
+      return { title:linked?'Current spending — budget categories':'Current discretionary spending', sub:`${live?'Last '+dl:'Sample'} · ${fmtK(tot)} of ${fmtK(budget)} budget (${pct}%) · ${linked?'linked to your budget':'bills & savings excluded'} · ${fmtK(totalSpend)} total all categories`,
+        body:`<div class="wdt-total" style="color:${pct<85?'var(--green)':pct<=100?'var(--amber)':'var(--red)'}">${fmtK(tot)}<span>${linked?'in budget':'discretionary'} · ${pct}% of budget</span></div>${_detailRows(cats,tot)}`
+          +(other.length?`<div class="wdt-section">Outside the budget · ${fmtK(totalSpend-tot)}</div>${_detailRows(other,totalSpend-tot)}`:'')
+          +`<div class="wdt-row"><span class="wdt-label"><b>Total spending — all categories</b></span><span class="wdt-vals"><b>${fmtK(totalSpend)}</b></span></div>` };
     }
     case 'budget_doughnut': {
       let kids=live?engCategoryBreakdown(days):[{label:'Housing',value:2640},{label:'Dining Out',value:612},{label:'Food & Groceries',value:498},{label:'Auto Payments',value:452},{label:'Utilities',value:320},{label:'Subscriptions',value:142}].map(c=>({...c,color:getCatColor(c.label)}));
