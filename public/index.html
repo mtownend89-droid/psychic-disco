@@ -3449,9 +3449,14 @@ function engBills(){
     const cur=(a.balances&&(a.balances.current))??0;
     if(a.type==='credit'){
       const c=liabByAcct[a.account_id]||{};
+      const owed=Math.abs(cur||c.current_balance||0);
+      // Institutions that return no liabilities detail leave min=0, which used to hide the
+      // card from every Bills view (they filter pay>0). Estimate the minimum (~2% of the
+      // balance, $25 floor), flag it "est." — the account editor's Minimum payment corrects it.
+      const estMin=(c.minimum_payment||0)>0?0:(owed>0?Math.max(25,Math.round(owed*0.02)):0);
       out.push({ name:a.name||c.name||'Credit Card', note:a.institution||'', cat:'CC', account_id:a.account_id,
-        bal:-(Math.abs(cur||c.current_balance||0)), apr:(c.apr!=null?c.apr:0),
-        min:(c.minimum_payment||0), pay:(c.minimum_payment||0),
+        bal:-owed, apr:(c.apr!=null?c.apr:0),
+        min:(c.minimum_payment||estMin), pay:(c.minimum_payment||estMin), estMin:estMin>0,
         limit:((a.balances&&a.balances.limit!=null)?a.balances.limit:(c.limit!=null?c.limit:0)),  // limit from the account, then liabilities
         due:_dueDay(c.next_payment_due_date), promo:'', promoEnd:'', paid:false, source:'plaid' });
     } else if(a.type==='loan'){
@@ -3497,7 +3502,7 @@ function _applyCardData(list){
     if(d.promoAmt!=null && d.promoAmt>0) merged.promoAmt=d.promoAmt;
     if(d.limit!=null && d.limit>0 && !(merged.limit>0)) merged.limit=d.limit;
     if(d.apr!=null && d.apr>0 && !(merged.apr>0)) merged.apr=d.apr;
-    if(d.minPay!=null && d.minPay>0){ merged.min=d.minPay; if(!(merged.pay>0)) merged.pay=d.minPay; }
+    if(d.minPay!=null && d.minPay>0){ const payWasEst=merged.estMin&&merged.pay===merged.min; merged.min=d.minPay; if(!(merged.pay>0)||payWasEst) merged.pay=d.minPay; merged.estMin=false; }
     if(d.dueDay!=null && d.dueDay>0) merged.due=d.dueDay;
     if(d.note) merged.note=d.note;
     return merged;
@@ -5895,10 +5900,10 @@ function billsWidgetBody(w){
     return `<div class="bill-row${paid?' paid':''}">
       <button class="bill-check" onclick="event.stopPropagation();toggleBillPaid('${key}')" title="${paid?'Mark unpaid':'Mark paid'}">${paid?'\u2713':''}</button>
       <div class="bill-info">
-        <div class="bill-nm">${esc(b.name)}${b.manual?`<span class="bill-edit" role="button" onclick="event.stopPropagation();openManualBill(${(APP.manualBills||[]).findIndex(x=>x.name===b.name&&x.cat===b.cat)})" title="Edit">\u270E</span>`:''}</div>
+        <div class="bill-nm">${esc(b.name)}${b.manual?`<span class="bill-edit" role="button" onclick="event.stopPropagation();openManualBill(${(APP.manualBills||[]).findIndex(x=>x.name===b.name&&x.cat===b.cat)})" title="Edit">\u270E</span>`:`<span class="bill-edit" role="button" onclick="event.stopPropagation();openAccountEditor('${esc(b.name).replace(/'/g,"\\'")}')" title="Edit min payment / due day / promo">\u270E</span>`}</div>
         <div class="bill-sub">due ${ord(b.due)}${b.apr?` \u00b7 ${b.apr.toFixed(1)}%`:''}${b.promo?` \u00b7 ${esc(b.promo)}`:''}${_billPayoffLabel(b)}</div>
         <div class="bill-amts">
-          <span class="bill-min">Min <b>${fmtK(b.min)}</b>${live&&!b.manual?' \u00b7 Plaid':''}</span>
+          <span class="bill-min">Min <b>${fmtK(b.min)}</b>${b.estMin?' \u00b7 <span style="color:var(--amber)" title="No minimum reported by the bank \u2014 estimated at ~2% of balance. Tap \u270e to set the real one.">est.</span>':(live&&!b.manual?' \u00b7 Plaid':'')}</span>
           ${Math.abs(diff)>=1?`<span class="bill-diff" style="color:${diff>0?'var(--amber)':'var(--green)'}">${diff>0?'+':''}${fmtK(diff)} vs min</span>`:''}
         </div>
       </div>
