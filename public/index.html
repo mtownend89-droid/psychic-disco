@@ -2998,6 +2998,16 @@ function incomeEditorRender(){
   const list=_incomeList();
   const mo=engMonthlyIncome();
   const freqLabel={weekly:'Weekly',biweekly:'Every 2 weeks',monthly:'Monthly',quarterly:'Quarterly',annual:'Annual'};
+  // Streams detected from transactions tagged 💵 Paycheck — live-linked, per payee.
+  const detected=_paycheckSources();
+  const detRows=detected.map(s=>`<div class="inc-row">
+      <div class="inc-main">
+        <div class="inc-nm">🔗 ${esc(s.name)}</div>
+        <div class="inc-sub">${fmtK(s.amt)} · ${freqLabel[s.freq]||s.freq} · from ${s.count} tagged deposit${s.count!==1?'s':''} · last paid ${new Date(s.anchor+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})} → ${fmtK(Math.round(s.amt*(FREQ_TO_MONTHLY[s.freq]||1)))}/mo</div>
+      </div>
+      <span class="ws-hint" style="align-self:center;flex-shrink:0">auto</span>
+    </div>`).join('');
+  const detSection=detected.length?`<div class="nw-sec-h"><span>🔗 From tagged paychecks</span></div>${detRows}<div class="ws-hint" style="margin:4px 0 10px">Detected from transactions tagged 💵 Paycheck in All Transactions — median amount, real payday cadence. Tag more deposits to refine; untag to remove. Manual streams named "paycheck" are overridden while these exist.</div>`:'';
   const rows=list.map((s,i)=>{
     const perMo=Math.round(s.amt*(FREQ_TO_MONTHLY[s.freq]||1));
     return `<div class="inc-row">
@@ -3013,6 +3023,8 @@ function incomeEditorRender(){
   }).join('');
   gg('manualBody').innerHTML=`
     <div class="inc-total">Total estimated income <b style="color:var(--green)">${fmtK(mo)}/mo</b></div>
+    ${detSection}
+    ${detected.length?`<div class="nw-sec-h"><span>Manual streams</span></div>`:''}
     <div class="inc-list">${rows||'<div class="ws-hint">No income streams yet.</div>'}</div>
     <button class="manual-add-btn" onclick="editIncome(-1)">➕ Add an income stream</button>`;
 }
@@ -3332,27 +3344,38 @@ function engStartCash(cats){
   if(dataLoaded){ return allAccts.filter(a=>a.type==='depository').reduce((s,a)=>s+((a.balances&&(a.balances.available??a.balances.current))||0),0); }
   return nwAssets.filter(a=>a.cat==='Cash & Bank').reduce((s,a)=>s+(a.value||0),0);
 }
-// Build a recurring income source from transactions the user tagged "Paycheck" in the
-// All Transactions widget — the single source of truth for pay. Detects amount + cadence.
-function _paycheckSource(){
+// Build recurring income sources from transactions tagged "Paycheck" in the All
+// Transactions widget — the single source of truth for pay. Grouped by PAYEE so each
+// earner/employer is its own stream (Matt biweekly, Dana weekly, a side gig) — like
+// separate columns in a payroll spreadsheet. Amount uses the MEDIAN deposit, so a
+// bonus or three-paycheck month doesn't distort the base pay; cadence comes from the
+// median gap between real deposits; the anchor is the latest actual payday.
+function _paycheckSources(){
   const pcs=(dataLoaded?allTxns:[]).filter(t=>getTxnTag(t)==='paycheck' && t.amount<0)
                                     .sort((a,b)=>new Date(a.date)-new Date(b.date));
-  if(!pcs.length) return null;
-  const amt=Math.round(pcs.reduce((s,t)=>s+Math.abs(t.amount),0)/pcs.length);
-  let freq='biweekly', anchor=pcs[pcs.length-1].date;
-  if(pcs.length>=2){
-    const gaps=[]; for(let i=1;i<pcs.length;i++) gaps.push((new Date(pcs[i].date)-new Date(pcs[i-1].date))/86400000);
-    gaps.sort((a,b)=>a-b); const med=gaps[Math.floor(gaps.length/2)]||14;
-    freq = med<=8?'weekly' : med<=18?'biweekly' : med<=45?'monthly' : med<=100?'quarterly' : 'monthly';
-  }
-  return {name:'Paycheck (tagged)', amt, freq, anchor, fromTags:true};
+  if(!pcs.length) return [];
+  const groups={};
+  pcs.forEach(t=>{ const k=((t.merchant_name||t.name||'paycheck').toLowerCase().replace(/[^a-z]/g,'').slice(0,14))||'paycheck'; (groups[k]=groups[k]||[]).push(t); });
+  return Object.values(groups).map(list=>{
+    const amts=list.map(t=>Math.abs(t.amount)).sort((a,b)=>a-b);
+    const amt=Math.round(amts[Math.floor(amts.length/2)]);
+    let freq='biweekly';
+    if(list.length>=2){
+      const gaps=[]; for(let i=1;i<list.length;i++) gaps.push((new Date(list[i].date)-new Date(list[i-1].date))/86400000);
+      gaps.sort((a,b)=>a-b); const med=gaps[Math.floor(gaps.length/2)]||14;
+      freq = med<=8?'weekly' : med<=18?'biweekly' : med<=45?'monthly' : med<=100?'quarterly' : 'monthly';
+    }
+    const raw=(list[list.length-1].merchant_name||list[list.length-1].name||'Paycheck');
+    return {name:(raw.length>26?raw.slice(0,26)+'…':raw), amt, freq, anchor:list[list.length-1].date, fromTags:true, count:list.length};
+  }).filter(s=>s.amt>0);
 }
-// Income sources: tagged paychecks win for the paycheck stream (keeping any other manual
-// streams like freelance); otherwise fall back to the user's manual sources / seed.
+function _paycheckSource(){ const s=_paycheckSources(); return s.length?s[0]:null; }   // legacy singular
+// Income sources: tagged paycheck streams win (keeping any manual streams that aren't
+// paychecks, e.g. a quarterly bonus you enter by hand); else manual sources / seed.
 function _effectiveIncomeSources(){
   const base = (APP.incomeSources && APP.incomeSources.length) ? APP.incomeSources : incomeSources;
-  const pc=_paycheckSource();
-  if(pc) return [pc, ...base.filter(s=>!/pay ?check/i.test(s.name||''))];
+  const pcs=_paycheckSources();
+  if(pcs.length) return [...pcs, ...base.filter(s=>!/pay ?check/i.test(s.name||''))];
   return base;
 }
 // generate income events with REAL date-anchored cadence within the window.
