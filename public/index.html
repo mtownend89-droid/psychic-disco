@@ -5771,18 +5771,41 @@ function _zbBuckets(){
   // by name, else sent to Other. Legacy plain-name envelopes get linked here too.
   const reconciled=APP.zeroBuckets.map(b=>{
     const cat=(b.catId && byId[b.catId]) || matchName(b.name) || other;
-    return {catId:cat.id, name:cat.label, amt:Math.max(0, b.amt||0)};
+    return {catId:cat.id, name:cat.label, amt:Math.max(0, b.amt||0), card:b.card||''};   // card = which credit card this envelope is spent on
   });
   // Dedupe by category (sum amounts if two envelopes resolve to the same category)
-  const out={}; reconciled.forEach(b=>{ if(out[b.catId]) out[b.catId].amt+=b.amt; else out[b.catId]={...b}; });
+  const out={}; reconciled.forEach(b=>{ if(out[b.catId]){ out[b.catId].amt+=b.amt; if(!out[b.catId].card&&b.card) out[b.catId].card=b.card; } else out[b.catId]={...b}; });
   const next=Object.values(out);
   if(JSON.stringify(next)!==JSON.stringify(APP.zeroBuckets)){ APP.zeroBuckets=next; APP._zbCatLinked=true; saveState(); }
   return APP.zeroBuckets;
 }
+/* ── Spending cards: cards assigned to budget envelopes. Their payment is money the
+   envelopes already budget (you spend on the card, then pay it from checking), so the
+   covered portion leaves Bills(fixed) — only paydown beyond the envelopes stays fixed. ── */
+function engSpendingCards(){
+  const byCard={};
+  _zbBuckets().forEach(b=>{ if(b.card) byCard[b.card]=(byCard[b.card]||0)+(b.amt||0); });
+  const names=new Set(Object.keys(byCard));
+  let coveredPay=0, extraPaydown=0;
+  if(names.size) engBills().forEach(bill=>{
+    if(!names.has(bill.name)) return;
+    const env=byCard[bill.name]||0, pay=bill.pay||0;
+    coveredPay+=Math.min(pay,env); extraPaydown+=Math.max(0,pay-env);
+  });
+  return {names, byCard, coveredPay, extraPaydown};
+}
+// 30-day purchases on one card account (payments/transfers excluded)
+function _cardSpend30(accountId){
+  if(!accountId||!dataLoaded) return null;
+  const cut=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+  return allTxns.filter(t=>t.account_id===accountId&&t.date>=cut&&t.amount>0&&!_txnExcludedFromSpend(t)).reduce((s,t)=>s+t.amount,0);
+}
 function zbWidgetBody(w){
   const income=engMonthlyIncome();
-  const bills=engMonthlyBills();
+  const sc=engSpendingCards();
+  const bills=engMonthlyBills()-sc.coveredPay;   // spending-card payments live in the envelopes; extra paydown stays fixed
   const buckets=_zbBuckets();
+  const ccNames=Array.from(new Set(engBills().filter(b=>b.cat==='CC').map(b=>b.name)));
   const zbActual={}; if(dataLoaded){ try{ engCategoryBreakdown(30).forEach(r=>{ zbActual[r.label]=r.value; }); }catch(e){} }
   const spentTotal=buckets.reduce((s,b)=>s+(zbActual[b.name]||0),0);
   const envTotal=buckets.reduce((s,z)=>s+z.amt,0);
@@ -5811,6 +5834,7 @@ function zbWidgetBody(w){
       <div class="zb-hstat zb-tobudget"><span>To budget</span><b style="color:${leftColor}">${left>=0?'':'-'}${fmtK(Math.abs(left))} ${Math.abs(left)<1?'✓ balanced':left>0?'left':'over'}</b></div>
     </div>
     <div class="zb-bar"><div class="zb-bar-fill" style="width:${Math.min(100,Math.round(assigned/Math.max(income,1)*100))}%;background:${left<0?'var(--red)':'var(--pos)'}"></div></div>
+    ${sc.coveredPay>0?`<div class="ws-hint" style="margin:0 0 8px">💳 ${fmtK(sc.coveredPay)} of card payments is covered by envelopes and excluded from fixed bills${sc.extraPaydown>0?` · ${fmtK(sc.extraPaydown)} extra paydown stays in fixed`:''}.</div>`:''}
     ${balanceRow}
     <div class="zb-section-label">Category envelopes <span class="ws-hint" style="margin:0">budget vs actual · ${fmtK(spentTotal)} spent of ${fmtK(envTotal)}</span></div>
     <div class="zb-buckets">
@@ -5820,10 +5844,12 @@ function zbWidgetBody(w){
         const over=b.amt>0&&spent>b.amt;
         const barColor=over?'var(--red)':pct>=85?'var(--amber)':'var(--green)';
         const actualLbl=`${fmtK(spent)} spent`+(b.amt>0?` · `+(over?`<b style="color:var(--red)">${fmtK(spent-b.amt)} over</b>`:`${fmtK(Math.max(0,b.amt-spent))} left`):' · no budget');
+        const ccOpts=ccNames.map(n=>`<option value="${esc(n)}"${b.card===n?' selected':''}>\ud83d\udcb3 ${esc(n)}</option>`).join('');
         return `<div class="zb-bucket">
         <div class="zb-bk-top">
           <span class="zb-dot" style="background:${getCatColor(b.name)}"></span>
           <span class="zb-bk-nm">${esc(b.name)}</span>
+          ${ccNames.length?`<select class="txn-cat-sel" title="Which card pays for this category" onclick="event.stopPropagation()" onchange="zbSetCard(${i},this.value,'${w.uid}')"><option value="">\ud83d\udcb3 card\u2026</option>${ccOpts}</select>`:''}
           <div class="zb-bk-edit"><span>$</span><input class="zb-bk-input" type="number" min="0" step="10" value="${b.amt}" onclick="event.stopPropagation()" oninput="zbSetVal(${i},this.value,'${w.uid}','input')" onchange="zbCommit('${w.uid}')" aria-label="Budget for ${esc(b.name)}"></div>
           <button class="zb-bk-del" onclick="event.stopPropagation();zbDelBucket(${i},'${w.uid}')" title="Remove ${esc(b.name)} from budget">\u2715</button>
         </div>
@@ -5847,7 +5873,7 @@ function zbSetVal(i,val,uid,from){
   const sliders=card.querySelectorAll('.zb-slider'), inputs=card.querySelectorAll('.zb-bk-input');
   if(from!=='slider' && sliders[i]){ if(parseInt(sliders[i].max)<b[i].amt) sliders[i].max=Math.ceil(b[i].amt/100)*100; sliders[i].value=b[i].amt; }
   if(from!=='input' && inputs[i] && document.activeElement!==inputs[i]) inputs[i].value=b[i].amt;
-  const income=engMonthlyIncome(), bills=engMonthlyBills();
+  const income=engMonthlyIncome(), bills=engMonthlyBills()-engSpendingCards().coveredPay;
   const assigned=b.reduce((s,z)=>s+z.amt,0)+bills; const left=income-assigned;
   const envEl=card.querySelector('.zb-head .zb-hstat:nth-child(3) b'); if(envEl) envEl.textContent=fmtK(b.reduce((s,z)=>s+z.amt,0));
   const tb=card.querySelector('.zb-tobudget b');
@@ -5855,6 +5881,7 @@ function zbSetVal(i,val,uid,from){
   const bar=card.querySelector('.zb-bar-fill');
   if(bar){ bar.style.width=Math.min(100,Math.round(assigned/Math.max(income,1)*100))+'%'; bar.style.background=left<0?'var(--red)':'var(--pos)'; }
 }
+function zbSetCard(i,val,uid){ const b=_zbBuckets(); if(!b[i]) return; b[i].card=val||''; saveState(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function zbCommit(uid){ saveState(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function zbDelBucket(i,uid){ const b=_zbBuckets(); b.splice(i,1); saveState(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function zbBalance(uid){
@@ -5879,8 +5906,33 @@ function zbAddBucket(uid){
 
 /* ═══ BILLS WIDGET (all bills, timeframe selector) ═══ */
 let _billsTf={};  // per-widget: 'month' | 'week' | 'day'
+const BILLS_TABS=[['month','Monthly'],['week','Weekly'],['day','Daily'],['cards','💳 Cards']];
+function _billsTabStrip(w,tf){ return BILLS_TABS.map(t=>`<button class="bills-tf-btn${tf===t[0]?' active':''}" onclick="event.stopPropagation();setBillsTf('${w.uid}','${t[0]}')">${t[1]}</button>`).join(''); }
+/* Card plan: your Excel workflow — each card shows the envelopes assigned to it (Zero-Based
+   Budget 💳 selector), live 30-day purchases on that card, and its planned payment. */
+function billsCardsPlanBody(w){
+  const sc=engSpendingCards();
+  const cards=engBills().filter(b=>b.cat==='CC');
+  if(!cards.length) return `<div class="wph"><div class="wph-sub">No credit cards yet — connect a bank or add a card manually.</div></div>`;
+  const totalPay=cards.reduce((s,b)=>s+(b.pay||0),0);
+  const fixedBills=engMonthlyBills()-totalPay;
+  const rows=cards.map(b=>{
+    const env=sc.byCard[b.name]||0;
+    const spent=_cardSpend30(b.account_id);
+    const pct=env>0?Math.min(100,Math.round((spent||0)/env*100)):0;
+    const over=env>0&&(spent||0)>env;
+    const cats=_zbBuckets().filter(x=>x.card===b.name).map(x=>x.name);
+    return `<div class="zb-bucket">
+      <div class="zb-bk-top"><span>💳</span><span class="zb-bk-nm">${esc(b.name)}</span><b style="margin-left:auto;font-size:12.5px">${env?fmtK(env)+' budgeted':''}</b></div>
+      <div class="ws-hint" style="margin:2px 0 5px">${cats.length?esc(cats.join(' · ')):'No envelopes assigned — pick this card on categories in the Zero-Based Budget'}${(b.pay||0)>0?` · pays ${fmtK(b.pay)}/mo${sc.names.has(b.name)?' (covered by envelopes)':' (fixed bill)'}`:''}</div>
+      ${env>0?`<div class="zb-actual"><div class="zb-actual-bar"><div class="zb-actual-fill" style="width:${pct}%;background:${over?'var(--red)':pct>=85?'var(--amber)':'var(--green)'}"></div></div><div class="zb-actual-lbl">${spent!=null?fmtK(spent)+' spent (30d)':'no live spend data'} · ${over?`<b style="color:var(--red)">${fmtK((spent||0)-env)} over</b>`:fmtK(Math.max(0,env-(spent||0)))+' left'}</div></div>`:''}
+    </div>`;
+  }).join('');
+  return `<div class="ws-hint" style="margin:4px 0 9px">Leaving checking monthly: ${fmtK(fixedBills)} bills + ${fmtK(totalPay)} card payments = <b>${fmtK(fixedBills+totalPay)}</b></div>${rows}`;
+}
 function billsWidgetBody(w){
   const tf=_billsTf[w.uid]||'month';
+  if(tf==='cards') return `<div class="bills-mgr"><div class="bills-tf">${_billsTabStrip(w,tf)}</div>${billsCardsPlanBody(w)}</div>`;
   const factor={month:1, week:12/52, day:1/30.44}[tf];
   const unit={month:'/mo', week:'/wk', day:'/day'}[tf];
   const all=engBills().filter(b=>b.pay>0);
@@ -5916,7 +5968,7 @@ function billsWidgetBody(w){
     </div>`; }).join('');
   return `<div class="bills-mgr">
     <div class="bills-tf">
-      ${[['month','Monthly'],['week','Weekly'],['day','Daily']].map(t=>`<button class="bills-tf-btn${tf===t[0]?' active':''}" onclick="event.stopPropagation();setBillsTf('${w.uid}','${t[0]}')">${t[1]}</button>`).join('')}
+      ${_billsTabStrip(w,tf)}
     </div>
     <div class="bills-hint">Tap the box on the left to mark a bill paid</div>
     ${rows}
@@ -7986,7 +8038,12 @@ function widgetDetailContent(type, days){
       return { title:'Money flow by category tree', sub:`${fmtK(incT)} in → ${fmtK(spT)} out across ${groups.length} groups`, body };
     }
     case 'zero_budget': {
-      const income=engMonthlyIncome(); const billRows=engBills().filter(b=>b.pay>0).map(b=>({label:b.name,value:b.pay,note:'bill'})); const bucketRows=zeroBuckets.map(z=>({label:z.name,value:z.amt,note:'envelope'}));
+      const income=engMonthlyIncome(); const sc=engSpendingCards();
+      // Spending-card payments are represented by their envelopes — only non-card bills
+      // and paydown beyond the envelopes count as fixed here (same math as the widget).
+      const billRows=engBills().filter(b=>b.pay>0&&!sc.names.has(b.name)).map(b=>({label:b.name,value:b.pay,note:'bill'}));
+      if(sc.extraPaydown>0) billRows.push({label:'Card paydown beyond envelopes',value:sc.extraPaydown,note:'debt paydown'});
+      const bucketRows=_zbBuckets().map(z=>({label:z.name+(z.card?' · 💳 '+z.card:''),value:z.amt,note:'envelope'}));
       const all=[...billRows,...bucketRows]; const assigned=all.reduce((s,i)=>s+i.value,0); const left=income-assigned;
       return { title:'Zero-based budget', sub:`${fmtK(income)} income − ${fmtK(assigned)} assigned = ${left>=0?'':'-'}${fmtK(Math.abs(left))} ${Math.abs(left)<1?'balanced ✓':left>0?'to assign':'over'}`, body:`<div class="wdt-total" style="color:${Math.abs(left)<1?'var(--green)':left>0?'var(--amber)':'var(--red)'}">${left>=0?'':'-'}${fmtK(Math.abs(left))}<span>${Math.abs(left)<1?'balanced':left>0?'left to budget':'over budget'}</span></div><div class="wdt-section">Fixed bills</div>${_detailRows(billRows,assigned)}<div class="wdt-section">Envelopes</div>${_detailRows(bucketRows,assigned)}` };
     }
