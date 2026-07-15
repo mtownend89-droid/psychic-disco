@@ -3531,10 +3531,29 @@ function engCashFlowProjection(days, cats){
    {name, note, pay (monthly), bal (negative), apr, due (day-of-month), cat, source} */
 function plaidHasLiab(){ return !!(plaidLiabilities && ((plaidLiabilities.credit_cards||[]).length || (plaidLiabilities.mortgages||[]).length)); }
 function _dueDay(dateStr){ if(!dateStr) return 1; const d=new Date(dateStr); return isNaN(d)?1:d.getDate(); }
+/* Sum of budget envelopes assigned to each credit card (by display name). */
+function _cardEnvelopeTotals(){
+  const out={}; try{ _zbBuckets().forEach(b=>{ if(b.card) out[b.card]=(out[b.card]||0)+(b.amt||0); }); }catch(e){}
+  return out;
+}
+/* Spending cards: a card with assigned budget envelopes has an expected monthly payment equal
+   to those envelopes (you charge it, then pay it), so it appears in Bills and Cash Flow with
+   that outflow even when its current balance/minimum is $0. A manual "You pay" override wins. */
+function _applyEnvelopePlan(list){
+  const env=_cardEnvelopeTotals(); if(!Object.keys(env).length) return list;
+  const ov=_billOverrides();
+  list.forEach(b=>{
+    if(b.cat!=='CC') return;
+    const e=env[b.name]||0; if(e<=0) return;
+    const hasPayOv=ov[billKey(b)] && ov[billKey(b)].pay!==undefined;
+    if(!hasPayOv && (b.pay||0)<e){ b.pay=e; b.expected=e; b.plannedFromEnvelopes=true; }
+  });
+  return list;
+}
 function engBills(){
   const manual=(APP.manualBills||[]).map(b=>({...b, manual:true, min:b.min!=null?b.min:b.pay}));
   // Not connected → show the example seed so widgets have something to learn from.
-  if(!dataLoaded || !(allAccts||[]).length) return _applyCardData(applyBillOverrides(bills.concat(manual)));
+  if(!dataLoaded || !(allAccts||[]).length) return _applyEnvelopePlan(_applyCardData(applyBillOverrides(bills.concat(manual))));
   // Connected → drive off the ACTUAL accounts (source of truth for what cards/loans exist),
   // and enrich each with Plaid liabilities detail (APR, min payment, due date) when available.
   // This way a credit card shows even when the institution returns no liabilities data.
@@ -3566,7 +3585,7 @@ function engBills(){
         due:_dueDay(m.next_payment_due_date), promo:'', promoEnd:'', paid:false, source:'plaid' });
     }
   });
-  return _applyCardData(applyBillOverrides(out.concat(manual)));
+  return _applyEnvelopePlan(_applyCardData(applyBillOverrides(out.concat(manual))));
 }
 // Persistent overlay so promo end dates / credit limits the user enters survive even
 // when bills are coming live from Plaid (Plaid can't know your 0% promo end date).
@@ -5880,8 +5899,7 @@ function _zbBuckets(){
    envelopes already budget (you spend on the card, then pay it from checking), so the
    covered portion leaves Bills(fixed) — only paydown beyond the envelopes stays fixed. ── */
 function engSpendingCards(){
-  const byCard={};
-  _zbBuckets().forEach(b=>{ if(b.card) byCard[b.card]=(byCard[b.card]||0)+(b.amt||0); });
+  const byCard=_cardEnvelopeTotals();
   const names=new Set(Object.keys(byCard));
   let coveredPay=0, extraPaydown=0;
   if(names.size) engBills().forEach(bill=>{
