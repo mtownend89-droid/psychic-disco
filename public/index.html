@@ -4207,10 +4207,13 @@ function docReviewRender(){
   } else if(isBill){
     detailLbl='Bill';
     const due=(r.amountDue!=null?r.amountDue:r.premium);
-    header=`<div class="doc-hgrid">${field('Provider','docInst',r.institution,'Company')}${field('Account / policy','docAcct',r.accountName,'Name')}${field('Amount due ($)','docDue',due,'0')}${field('Due date','docDueDate',r.dueDate,'YYYY-MM-DD')}</div>`;
+    const hasPromo=(type==='credit_card')||r.promoEndDate||r.promoAPR!=null;
+    header=`<div class="doc-hgrid">${field('Provider','docInst',r.institution,'Company')}${field('Account / policy','docAcct',r.accountName,'Name')}${field('Amount due ($)','docDue',due,'0')}${field('Due date','docDueDate',r.dueDate,'YYYY-MM-DD')}${hasPromo?field('0% promo ends','docPromoEnd',r.promoEndDate,'YYYY-MM-DD')+field('Promo balance ($)','docPromoAmt',r.promoBalance,'blank = full balance'):''}</div>`
+      +(r.promoDescription||r.promoAPR!=null?`<div class="ws-hint">🎁 Promo found: ${esc(r.promoDescription||'promotional rate')}${r.promoAPR!=null?` · ${r.promoAPR}% APR`:''}${r.promoEndDate?` · ends ${esc(r.promoEndDate)}`:''} — saved to this account so the 0% Promo tracker can warn you before it expires.</div>`:'');
     addOpt=`<label class="doc-addbill"><input type="checkbox" id="docAddBill" checked> Add as a bill in Upcoming Bills</label>`;
   } else {
-    header=`<div class="doc-hgrid">${field('Institution','docInst',r.institution,'Bank')}${field('Account / bill','docAcct',r.accountName,'Name')}${field('Amount due ($)','docDue',r.amountDue,'0')}${field('Due date','docDueDate',r.dueDate,'YYYY-MM-DD')}${field('APR (%)','docApr',r.apr,'0')}${field('Credit limit ($)','docLimit',r.creditLimit,'0')}</div>`;
+    header=`<div class="doc-hgrid">${field('Institution','docInst',r.institution,'Bank')}${field('Account / bill','docAcct',r.accountName,'Name')}${field('Amount due ($)','docDue',r.amountDue,'0')}${field('Due date','docDueDate',r.dueDate,'YYYY-MM-DD')}${field('APR (%)','docApr',r.apr,'0')}${field('Credit limit ($)','docLimit',r.creditLimit,'0')}${field('0% promo ends','docPromoEnd',r.promoEndDate,'YYYY-MM-DD')}${field('Promo balance ($)','docPromoAmt',r.promoBalance,'blank = full balance')}</div>`
+      +(r.promoDescription||r.promoAPR!=null?`<div class="ws-hint">🎁 Promo found: ${esc(r.promoDescription||'promotional rate')}${r.promoAPR!=null?` · ${r.promoAPR}% APR`:''}${r.promoEndDate?` · ends ${esc(r.promoEndDate)}`:''} — saved to this card so the 0% Promo tracker can warn you before it expires.</div>`:'');
     if(r.amountDue||r.apr||r.creditLimit) addOpt=`<label class="doc-addbill"><input type="checkbox" id="docAddBill" ${r.amountDue?'checked':''}> Also add this as a bill in Upcoming Bills</label>`;
     const dupCount=txns.filter(t=>t._dup).length, selCount=txns.filter((_,i)=>_docSel[i]).length;
     const rows=txns.map((t,i)=>`<label class="doc-txn${t._dup?' dup':''}">
@@ -4277,16 +4280,23 @@ function docAddSelected(){
     APP.imports.push({ id:impId, kind:'investment', label:nm, ts:Date.now(), assetId, holdingIds, summary:`Investment · ${holdingIds.length} position${holdingIds.length!==1?'s':''}${r.accountValue?' · '+fmtK(r.accountValue):''}` });
     return finish(msg);
   }
+  // Promo details (0% intro APR / deferred interest) from the statement stick to the card
+  // by name via cardData, so the 0% Promo tracker and payoff math see them even when no
+  // bill is added. Values come from the review fields (prefilled by Richie, editable).
+  const pe=((gg('docPromoEnd')&&gg('docPromoEnd').value)||'').trim();
+  const pa=(gg('docPromoAmt')&&gg('docPromoAmt').value!=='')?(parseFloat(gg('docPromoAmt').value)||0):0;
+  if(pe) setCardData(nm, {promoEnd:pe, promoAmt:pa});
+  const promoMsg=pe?` I also logged the 0% promo ending ${pe} — the Promo tracker will warn you before the rate jumps.`:'';
   // Any bill (insurance / phone / cable / utility / loan / generic) -> Upcoming Bills
   if(!hasTxns){
     if(gg('docAddBill')&&gg('docAddBill').checked){
       const due=parseFloat(gg('docDue').value)||r.amountDue||r.premium||0;
       const dd=gg('docDueDate').value, dueDay=dd?Math.max(1,Math.min(31,(new Date(dd+'T12:00:00').getDate()||1))):1;
-      const catMap={insurance:'Insurance',utility:'Utilities',phone:'Utilities',cable:'Utilities',loan:'Loan Payments'};
+      const catMap={insurance:'Insurance',utility:'Utilities',phone:'Utilities',cable:'Utilities',loan:'Loan Payments',credit_card:'CC'};
       APP.manualBills=APP.manualBills||[];
-      if(due>0 && !APP.manualBills.some(b=>(b.name||'').toLowerCase()===nm.toLowerCase())){ APP.manualBills.push({ name:nm, pay:Math.round(due), min:Math.round(due), bal:0, apr:parseFloat((gg('docApr')&&gg('docApr').value))||0, due:dueDay, cat:(catMap[type]||'OTHER'), promoEnd:'', limit:0, promo:'', note:'imported', paid:false }); APP.imports.push({ id:impId, kind:'bill', label:nm, ts:Date.now(), billName:nm, summary:`Bill · ${fmtK(due)}` }); return finish(`Added ${nm} to your Bills \u2014 ${fmtK(due)}.`); }
+      if(due>0 && !APP.manualBills.some(b=>(b.name||'').toLowerCase()===nm.toLowerCase())){ APP.manualBills.push({ name:nm, pay:Math.round(due), min:Math.round(due), bal:0, apr:parseFloat((gg('docApr')&&gg('docApr').value))||0, due:dueDay, cat:(catMap[type]||'OTHER'), promoEnd:pe||'', limit:0, promo:pe?'0% APR':'', note:'imported', paid:false }); APP.imports.push({ id:impId, kind:'bill', label:nm, ts:Date.now(), billName:nm, summary:`Bill · ${fmtK(due)}` }); return finish(`Added ${nm} to your Bills \u2014 ${fmtK(due)}.`+promoMsg); }
     }
-    return finish('');
+    return finish(pe?('Saved the promo details from '+nm+'.'+promoMsg):'');
   }
   // Bank / credit-card -> transactions (+ optional bill)
   APP.importedTxns=APP.importedTxns||[]; let added=0;
@@ -4302,11 +4312,11 @@ function docAddSelected(){
     APP.manualBills=APP.manualBills||[];
     if(due>0 && !APP.manualBills.some(b=>(b.name||'').toLowerCase()===nm.toLowerCase())){
       const dd=gg('docDueDate').value, dueDay=dd?Math.max(1,Math.min(31,(new Date(dd+'T12:00:00').getDate()||1))):1;
-      billName=nm; APP.manualBills.push({ name:nm, pay:Math.round(due), min:Math.round(due), bal:0, apr:parseFloat(gg('docApr').value)||0, due:dueDay, cat:'OTHER', promoEnd:'', limit:parseFloat(gg('docLimit').value)||0, promo:'', note:'imported', paid:false });
+      billName=nm; APP.manualBills.push({ name:nm, pay:Math.round(due), min:Math.round(due), bal:0, apr:parseFloat(gg('docApr').value)||0, due:dueDay, cat:(type==='credit_card'?'CC':'OTHER'), promoEnd:pe||'', limit:parseFloat(gg('docLimit').value)||0, promo:pe?'0% APR':'', note:'imported', paid:false });
     }
   }
   APP.imports.push({ id:impId, kind:'bank', label:importLabel, ts:Date.now(), txnImportId:importId, billName, summary:`${added} transaction${added!==1?'s':''}${billName?' + bill':''}` });
-  finish(added?`Added ${added} transaction${added!==1?'s':''}${addBill?' and a bill':''} from your ${((type||'statement').replace('_',' '))}. \ud83d\udcc4`:`Saved the details from your ${((type||'statement').replace('_',' '))}.`);
+  finish((added?`Added ${added} transaction${added!==1?'s':''}${addBill?' and a bill':''} from your ${((type||'statement').replace('_',' '))}. \ud83d\udcc4`:`Saved the details from your ${((type||'statement').replace('_',' '))}.`)+promoMsg);
 }
 /* ═══ INVESTMENTS / PORTFOLIO (Mogul) — positions from statements + research,
    plus investment accounts & assets linked in from Net Worth ═══ */
