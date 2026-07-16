@@ -714,6 +714,69 @@ function setLoginCookie(res, token) {
 const store = loadTokens();
 console.log(`Loaded ${store.accessTokens.length} saved connection(s)`);
 
+// ── TRANSACTIONS CACHE (per-item cursor + accumulated history) ─────────────────
+// transactionsSync from a stored cursor returns ONLY what changed since last time, so we
+// persist BOTH the cursor and the accumulated transactions per item. (An earlier attempt
+// stored the cursor alone — later loads looked empty because deltas aren't history.)
+// First request per bank does the full pull; later requests apply added/modified/removed
+// deltas — near-instant responses and far fewer Plaid calls. Encrypted at rest like the
+// other stores. If Plaid rejects a stale cursor, that bank self-heals with a full re-pull.
+const TXN_CACHE_FILE = path.join(DATA_DIR, 'txncache.json');
+function loadTxnCache() {
+  try {
+    if (fs.existsSync(TXN_CACHE_FILE)) {
+      const raw = JSON.parse(fs.readFileSync(TXN_CACHE_FILE, 'utf8'));
+      if (raw && raw.v === 1 && raw.data) return decryptJSON(raw);
+      return raw;
+    }
+  } catch (e) { console.warn('Txn cache load:', e.message); }
+  return { items: {} };
+}
+function saveTxnCache() {
+  try {
+    const dir = path.dirname(TXN_CACHE_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(TXN_CACHE_FILE, JSON.stringify(encryptJSON(txnCache)), 'utf8');
+  } catch (e) { console.warn('Txn cache save (ok on free tier):', e.message); }
+}
+const txnCache = loadTxnCache();
+if (!txnCache.items) txnCache.items = {};
+let _txnCacheDirty = false;
+
+async function syncItemTransactions(item) {
+  const cached = txnCache.items[item.itemId] || { cursor: null, txns: [] };
+  const pull = async (fromCursor, baseTxns) => {
+    let cursor = fromCursor, hasMore = true, guard = 0;
+    const added = [], modified = [], removed = [];
+    while (hasMore && guard++ < 80) {
+      const params = { access_token: item.accessToken };
+      if (cursor) params.cursor = cursor;
+      const r = await plaidClient.transactionsSync(params);
+      added.push(...r.data.added); modified.push(...r.data.modified); removed.push(...r.data.removed);
+      cursor = r.data.next_cursor;
+      hasMore = r.data.has_more;
+    }
+    const byId = new Map((baseTxns || []).map(t => [t.transaction_id, t]));
+    added.forEach(t => byId.set(t.transaction_id, t));
+    modified.forEach(t => byId.set(t.transaction_id, t));
+    removed.forEach(rm => byId.delete(rm.transaction_id));
+    return { cursor, txns: Array.from(byId.values()), changed: added.length + modified.length + removed.length };
+  };
+  let result;
+  try {
+    result = await pull(cached.cursor || null, cached.txns || []);
+  } catch (err) {
+    if (!cached.cursor) throw err;                       // full pull failed → real error, let caller handle
+    console.warn(`Cursor sync failed for ${item.institutionName} (${err.response?.data?.error_code || err.message}) — full re-pull`);
+    result = await pull(null, []);                       // stale cursor → rebuild this bank from scratch
+  }
+  if (result.changed > 0 || result.cursor !== cached.cursor) {
+    txnCache.items[item.itemId] = { cursor: result.cursor, txns: result.txns, syncedAt: Date.now() };
+    _txnCacheDirty = true;
+  }
+  return result.txns;
+}
+
 // ── PROTECTED ROUTES ──────────────────────────────────────────────────────────
 app.post('/api/create_link_token', requireAuth, async (req, res) => {
   const base = {
@@ -855,7 +918,7 @@ app.get('/api/items', requireAuth, (req, res) => {
       itemId: t.itemId,
       institutionName: t.institutionName,
       addedAt: t.addedAt || null,
-      hasCursor: !!store.cursor[t.itemId],
+      hasCursor: !!(txnCache.items[t.itemId] && txnCache.items[t.itemId].cursor),
     })),
     count: store.accessTokens.length,
   });
@@ -918,25 +981,13 @@ app.get('/api/transactions', requireAuth, async (req, res) => {
   if (!store.accessTokens.length) return res.json({ transactions: [], accounts: [] });
   const errors = [];
 
-  // Each bank runs in parallel; pagination stays sequential WITHIN a bank (the cursor chains).
+  // Each bank runs in parallel; within a bank, syncItemTransactions applies deltas on top of
+  // the persisted cache (full pull only the first time or after a stale cursor).
   const perItem = await Promise.all(store.accessTokens.map(async item => {
     const txns = [], accts = [];
     try {
-      // Full sync every request (cursor from scratch) so we always return the COMPLETE
-      // transaction history — not just what changed since a stored cursor. Storing the
-      // cursor made later loads return nothing (it only reports NEW activity). transactionsSync
-      // paginates; a handful of pages covers a couple of years.
-      let cursor = null, hasMore = true, guard = 0;
-      const added = [];
-      while (hasMore && guard++ < 80) {
-        const params = { access_token: item.accessToken };
-        if (cursor) params.cursor = cursor;
-        const r = await plaidClient.transactionsSync(params);
-        added.push(...r.data.added);
-        cursor = r.data.next_cursor;
-        hasMore = r.data.has_more;
-      }
-      added.forEach(t => txns.push({ ...t, institution: item.institutionName }));
+      const itemTxns = await syncItemTransactions(item);
+      itemTxns.forEach(t => txns.push({ ...t, institution: item.institutionName }));
 
       const acctRes = await plaidClient.accountsGet({ access_token: item.accessToken });
       acctRes.data.accounts.forEach(a => accts.push({ ...a, institution: item.institutionName, itemId: item.itemId }));
@@ -944,6 +995,9 @@ app.get('/api/transactions', requireAuth, async (req, res) => {
       const code = err.response?.data?.error_code || err.message;
       console.error(`Transaction error for ${item.institutionName}:`, code);
       errors.push({ institution: item.institutionName, error: code });
+      // Bank unreachable → serve its cached history (stale beats missing); balances may still load.
+      const stale = (txnCache.items[item.itemId] || {}).txns || [];
+      stale.forEach(t => txns.push({ ...t, institution: item.institutionName }));
       try {
         const acctRes = await plaidClient.accountsGet({ access_token: item.accessToken });
         acctRes.data.accounts.forEach(a => accts.push({ ...a, institution: item.institutionName, itemId: item.itemId }));
@@ -951,6 +1005,7 @@ app.get('/api/transactions', requireAuth, async (req, res) => {
     }
     return { txns, accts };
   }));
+  if (_txnCacheDirty) { saveTxnCache(); _txnCacheDirty = false; }
   const txns = perItem.flatMap(x => x.txns), accts = perItem.flatMap(x => x.accts);
 
   txns.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -968,6 +1023,7 @@ app.delete('/api/item/:itemId', requireAuth, async (req, res) => {
     store.accessTokens = store.accessTokens.filter(t => t.itemId !== req.params.itemId);
     delete store.cursor[req.params.itemId];
     saveTokens(store);
+    if (txnCache.items[req.params.itemId]) { delete txnCache.items[req.params.itemId]; saveTxnCache(); }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
