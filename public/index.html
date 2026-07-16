@@ -4993,6 +4993,10 @@ function loadState(){
   }catch(e){ console.warn('state load failed',e); }
 }
 function saveState(){ try{ _saveActiveLayout(); LS.setItem('richie_app',JSON.stringify(APP)); syncPush(); }catch(e){} }
+// Deferred persist for derived/reconciled state (e.g. envelope reconciliation) so a getter
+// called during render doesn't serialize the whole APP blob mid-render. Coalesces to one write.
+let _persistTimer=null;
+function _persistSoon(){ clearTimeout(_persistTimer); _persistTimer=setTimeout(()=>{ try{ saveState(); }catch(e){} }, 400); }
 /* ── Cross-device state sync: push edits to the server, pull newer edits from other devices ── */
 const SYNC_KEYS=['mdf_categories','mdf_cat_overrides','mdf_cat_rules','mdf_txn_notes','mdf_txn_tags','mdf_acct_cats','mdf_nw_history','mdf_fire','mdf_gami','richie_setup','richie_proactive','richie_audio','richie_voice'];
 function syncCollect(){ const stores={}; SYNC_KEYS.forEach(k=>{ const v=LS.getItem(k); if(v!=null) stores[k]=v; }); return { app:APP, stores, _ts:Date.now() }; }
@@ -5892,7 +5896,10 @@ function _zbBuckets(){
   // Dedupe by category (sum amounts if two envelopes resolve to the same category)
   const out={}; reconciled.forEach(b=>{ if(out[b.catId]){ out[b.catId].amt+=b.amt; if(!out[b.catId].card&&b.card) out[b.catId].card=b.card; } else out[b.catId]={...b}; });
   const next=Object.values(out);
-  if(JSON.stringify(next)!==JSON.stringify(APP.zeroBuckets)){ APP.zeroBuckets=next; APP._zbCatLinked=true; saveState(); }
+  // Update in memory so callers see reconciled data; persist is deferred (this runs during
+  // render via engBills → _cardEnvelopeTotals, and must not saveState mid-render). Idempotent:
+  // once reconciled, later calls compare equal and skip.
+  if(JSON.stringify(next)!==JSON.stringify(APP.zeroBuckets)){ APP.zeroBuckets=next; APP._zbCatLinked=true; _persistSoon(); }
   return APP.zeroBuckets;
 }
 /* ── Spending cards: cards assigned to budget envelopes. Their payment is money the

@@ -863,25 +863,30 @@ app.get('/api/items', requireAuth, (req, res) => {
 
 app.get('/api/accounts', requireAuth, async (req, res) => {
   if (!store.accessTokens.length) return res.json({ accounts: [], items: [] });
-  const all = [], errors = [];
-  for (const item of store.accessTokens) {
+  const errors = [];
+  // Fetch every bank in parallel — Promise.all preserves item order so dedupe is deterministic.
+  const perItem = await Promise.all(store.accessTokens.map(async item => {
     try {
       const r = await plaidClient.accountsBalanceGet({ access_token: item.accessToken });
-      r.data.accounts.forEach(a => all.push({ ...a, institution: item.institutionName, itemId: item.itemId }));
+      return r.data.accounts.map(a => ({ ...a, institution: item.institutionName, itemId: item.itemId }));
     } catch (err) {
       const code = err.response?.data?.error_code || err.message;
       console.warn(`Accounts error for ${item.institutionName}:`, code);
-      errors.push({ institution: item.institutionName, itemId: item.itemId, error: code });
-      if (code === 'ITEM_LOGIN_REQUIRED') errors[errors.length - 1].needsRelink = true;
+      const e = { institution: item.institutionName, itemId: item.itemId, error: code };
+      if (code === 'ITEM_LOGIN_REQUIRED') e.needsRelink = true;
+      errors.push(e);
+      return [];
     }
-  }
+  }));
+  const all = perItem.flat();
   res.json({ accounts: dedupeAccounts(all), items: store.accessTokens.map(t => ({ itemId: t.itemId, institutionName: t.institutionName })), errors: errors.length ? errors : undefined });
 });
 
 app.get('/api/liabilities', requireAuth, async (req, res) => {
   if (!store.accessTokens.length) return res.json({ credit_cards: [], mortgages: [], student_loans: [] });
-  const cards = [], mortgages = [];
-  for (const item of store.accessTokens) {
+  // Fetch every bank in parallel; each task returns its own cards/mortgages, flattened in order.
+  const perItem = await Promise.all(store.accessTokens.map(async item => {
+    const cards = [], mortgages = [];
     try {
       const r = await plaidClient.liabilitiesGet({ access_token: item.accessToken });
       const acctMap = {};
@@ -902,15 +907,20 @@ app.get('/api/liabilities', requireAuth, async (req, res) => {
         });
       } catch (_) {}
     }
-  }
+    return { cards, mortgages };
+  }));
+  const cards = perItem.flatMap(x => x.cards);
+  const mortgages = perItem.flatMap(x => x.mortgages);
   res.json({ credit_cards: dedupeAccounts(cards), mortgages: dedupeAccounts(mortgages), student_loans: [] });
 });
 
 app.get('/api/transactions', requireAuth, async (req, res) => {
   if (!store.accessTokens.length) return res.json({ transactions: [], accounts: [] });
-  const txns = [], accts = [], errors = [];
+  const errors = [];
 
-  for (const item of store.accessTokens) {
+  // Each bank runs in parallel; pagination stays sequential WITHIN a bank (the cursor chains).
+  const perItem = await Promise.all(store.accessTokens.map(async item => {
+    const txns = [], accts = [];
     try {
       // Full sync every request (cursor from scratch) so we always return the COMPLETE
       // transaction history — not just what changed since a stored cursor. Storing the
@@ -939,7 +949,9 @@ app.get('/api/transactions', requireAuth, async (req, res) => {
         acctRes.data.accounts.forEach(a => accts.push({ ...a, institution: item.institutionName, itemId: item.itemId }));
       } catch (_) {}
     }
-  }
+    return { txns, accts };
+  }));
+  const txns = perItem.flatMap(x => x.txns), accts = perItem.flatMap(x => x.accts);
 
   txns.sort((a, b) => new Date(b.date) - new Date(a.date));
   const keptAccts = dedupeAccounts(accts);
