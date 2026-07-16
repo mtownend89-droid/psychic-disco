@@ -2796,6 +2796,7 @@ async function loadEngineData(){
   const [a,b]=await Promise.all([loadAccounts(),loadTransactions()]);
   loadLiabilities(); // fire-and-forget; enriches SWOT/debt when available
   _rebuildTxns();
+  try{ _memoInvalidate(); }catch(e){}   // fresh bank data → drop any memoized derivations
   dataLoaded=((a||b)&&(allAccts.length>0||allTxns.length>0)) || ((APP.importedTxns||[]).length>0);
   try{ if(typeof checkGoalCompletion==='function') checkGoalCompletion(); }catch(e){}
   try{ if(typeof maybeWarnPromos==='function') maybeWarnPromos(); }catch(e){}
@@ -2862,7 +2863,21 @@ function engPLSample(group){
 /* ── Accounts engine: list with type icons + per-account 30d net ── */
 function _acctIcon(a){ if(a.type==='credit')return '💳'; if(a.type==='loan')return '📄'; if(a.subtype==='savings')return '🏦'; if(a.subtype==='checking')return '🏧'; if(a.type==='investment')return '📈'; return '💰'; }
 function _acctExcluded(nameOrObj){ const nm=(typeof nameOrObj==='string')?nameOrObj:(nameOrObj&&nameOrObj.name); return !!((APP.cardData||{})[_cardKey(nm)]||{}).excluded; }
-function engAccounts(){
+/* ── Frame-scoped memo ──
+   engAccounts()/engBills() are pure derivations called dozens of times inside one
+   synchronous render pass (each widget recomputes them). Inputs can't change mid-pass
+   (single-threaded), so cache for the current frame; a microtask clears it before the
+   next event tick, and saveState()/data loads/sync-pull clear it explicitly — so a
+   mutate-then-rerender in the same tick can never read stale data. ── */
+let _frameMemo=null;
+function _memoFrame(key, fn){
+  if(!_frameMemo){ _frameMemo={}; queueMicrotask(()=>{ _frameMemo=null; }); }
+  if(!(key in _frameMemo)) _frameMemo[key]=fn();
+  return _frameMemo[key];
+}
+function _memoInvalidate(){ _frameMemo=null; }
+function engAccounts(){ return _memoFrame('accounts', _engAccountsRaw); }
+function _engAccountsRaw(){
   const manual=(APP.manualAccounts||[]).map(a=>({...a, manual:true, excluded:_acctExcluded(a.name)}));
   if(!dataLoaded||!allAccts.length){
     return [
@@ -3550,7 +3565,8 @@ function _applyEnvelopePlan(list){
   });
   return list;
 }
-function engBills(){
+function engBills(){ return _memoFrame('bills', _engBillsRaw); }   // frame-scoped memo — see _memoFrame
+function _engBillsRaw(){
   const manual=(APP.manualBills||[]).map(b=>({...b, manual:true, min:b.min!=null?b.min:b.pay}));
   // Not connected → show the example seed so widgets have something to learn from.
   if(!dataLoaded || !(allAccts||[]).length) return _applyEnvelopePlan(_applyCardData(applyBillOverrides(bills.concat(manual))));
@@ -3748,7 +3764,7 @@ async function exportToExcel(){
   (()=>{
     const rows=[['Bills & Debt','','','','','','','Generated',today.toLocaleDateString()],
       ['Category','Name','Note','APR %','Balance','Min Pay','You Pay','Due Day','Months to Payoff','Total Interest','Promo Ends']];
-    engBills().sort((a,b)=>Math.abs(b.bal||0)-Math.abs(a.bal||0)).forEach(b=>{
+    engBills().slice().sort((a,b)=>Math.abs(b.bal||0)-Math.abs(a.bal||0)).forEach(b=>{   // slice: engBills() is memoized/shared — never sort it in place
       const po=payoffMonths(b.bal,b.apr,b.pay||b.min);
       rows.push([b.cat||'',b.name||'',b.note||'',b.apr||0,money(b.bal),money(b.min),money(b.pay),b.due||'',
         po.paidOff?'paid':po.neverPaysOff?'never (pay ≤ interest)':po.months, po.neverPaysOff?'':money(po.interest), b.promoEnd||'']);
@@ -4992,7 +5008,7 @@ function loadState(){
     _initProfiles();   // set up / load per-profile layouts
   }catch(e){ console.warn('state load failed',e); }
 }
-function saveState(){ try{ _saveActiveLayout(); LS.setItem('richie_app',JSON.stringify(APP)); syncPush(); }catch(e){} }
+function saveState(){ try{ _memoInvalidate(); _saveActiveLayout(); LS.setItem('richie_app',JSON.stringify(APP)); syncPush(); }catch(e){} }
 // Deferred persist for derived/reconciled state (e.g. envelope reconciliation) so a getter
 // called during render doesn't serialize the whole APP blob mid-render. Coalesces to one write.
 let _persistTimer=null;
@@ -5008,6 +5024,7 @@ function syncApplyToLS(blob){ try{
     LS.setItem('richie_app', JSON.stringify(blob.app));
   }
   if(blob&&blob.stores) Object.keys(blob.stores).forEach(k=>{ if(blob.stores[k]!=null) LS.setItem(k, blob.stores[k]); });
+  _memoInvalidate();   // another device's state landed → drop memoized derivations
 }catch(e){} }
 let _syncTimer=null;
 function syncPush(){
