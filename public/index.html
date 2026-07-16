@@ -6050,7 +6050,10 @@ function billsWidgetBody(w){
   if(tf==='cards') return `<div class="bills-mgr"><div class="bills-tf">${_billsTabStrip(w,tf)}</div>${billsCardsPlanBody(w)}</div>`;
   const factor={month:1, week:12/52, day:1/30.44}[tf];
   const unit={month:'/mo', week:'/wk', day:'/day'}[tf];
-  const all=engBills().filter(b=>b.pay>0);
+  // Show anything payable: a set payment, a bill you added by hand (even at $0 so you can set
+  // it), or a card/loan carrying a balance (so paid-in-full store cards still appear and can
+  // be given a payment). Cash-flow projection still only counts bills with pay>0.
+  const all=engBills().filter(b=>b.pay>0 || b.manual || Math.abs(b.bal||0)>0);
   if(!all.length) return `<div class="wph"><div class="wph-sub">No bills yet.</div><button class="manual-add-btn" onclick="event.stopPropagation();openManualBill()">\u2795 Add a bill</button></div>`;
   const ord=(d)=>d+(d%10===1&&d!==11?'st':d%10===2&&d!==12?'nd':d%10===3&&d!==13?'rd':'th');
   const live=plaidHasLiab();
