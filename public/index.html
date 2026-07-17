@@ -8520,8 +8520,18 @@ function doFullReset(){
     // defensive sweep of any remaining app-scoped keys
     try{ Object.keys(window.localStorage||{}).forEach(k=>{ if(/^(richie_|mdf_)/.test(k)) window.localStorage.removeItem(k); }); }catch(e){}
   }catch(e){}
-  // reload → start() sees no setup/app → runIntro() (onboarding from the top)
-  location.reload();
+  // Reset the SERVER copy too, with a fresh timestamp — otherwise boot's syncPull sees the
+  // old household state as "newer than this wiped device", adopts it, and silently undoes
+  // the reset (skipping onboarding). mdf_sync_ts is stamped locally so the reloaded page
+  // treats the tombstone as already-seen instead of re-adopting anything.
+  const ts=Date.now();
+  let fired=false;
+  const done=()=>{ if(fired) return; fired=true; try{ LS.setItem('mdf_sync_ts', String(ts)); }catch(e){} location.reload(); };
+  try{
+    fetch('/api/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({state:{app:{_fullReset:ts}, stores:{}, _ts:ts}})})
+      .catch(()=>{}).then(done);
+    setTimeout(done, 2500);   // reload even if the network hangs — reset must not feel stuck
+  }catch(e){ done(); }
 }
 
 function resetWorld(){
@@ -9959,6 +9969,10 @@ function enterApp(){
   updateConnectBtn();
   loadEngineData().then(ok=>{
     updateConnectBtn();
+    // FIRST WIN with banks ALREADY connected (e.g. after a full reset — Plaid tokens live on
+    // the server and survive it): data arriving IS the win. Without this, richieBuildApp only
+    // ever fired from the Plaid-link callback, so returning users stayed at the connect gate.
+    if(ok && APP._awaitingBuild && (allAccts||[]).length){ try{ awardXp(15); }catch(e){} richieBuildApp(); return; }
     try{ if(typeof gamiEvaluate==='function' && !APP._awaitingBuild) gamiEvaluate(); }catch(e){}
     if(ok && APP.activePage && APP.activePage!=='__settings__'){
       const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg) renderCanvas(pg);
