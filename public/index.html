@@ -5016,11 +5016,26 @@ function _persistSoon(){ clearTimeout(_persistTimer); _persistTimer=setTimeout((
 /* ── Cross-device state sync: push edits to the server, pull newer edits from other devices ── */
 const SYNC_KEYS=['mdf_categories','mdf_cat_overrides','mdf_cat_rules','mdf_txn_notes','mdf_txn_tags','mdf_acct_cats','mdf_nw_history','mdf_fire','mdf_gami','richie_setup','richie_proactive','richie_audio','richie_voice'];
 function syncCollect(){ const stores={}; SYNC_KEYS.forEach(k=>{ const v=LS.getItem(k); if(v!=null) stores[k]=v; }); return { app:APP, stores, _ts:Date.now() }; }
+function _widgetCount(pages){ return (pages||[]).reduce((s,p)=>s+((p&&p.widgets||[]).length),0); }
+/* A sync must NEVER shrink a built dashboard. Like XP, widgets only ratchet up: if the
+   incoming (another device / older session) state has fewer widgets for the working pages
+   or any profile layout, keep the local, more-populated version. Prevents a blank phone or
+   a stale session from wiping a full desktop dashboard on the next reload. */
+function _mergeLayoutsPreferPopulated(incoming, local){
+  if(!incoming||!local) return;
+  if(_widgetCount(local.pages) > _widgetCount(incoming.pages)){ incoming.pages=local.pages; incoming.activePage=local.activePage; }
+  incoming.layouts=incoming.layouts||{}; const ll=local.layouts||{};
+  Object.keys(ll).forEach(k=>{
+    const li=incoming.layouts[k];
+    if(!li || _widgetCount((li||{}).pages) < _widgetCount((ll[k]||{}).pages)) incoming.layouts[k]=ll[k];
+  });
+}
 function syncApplyToLS(blob){ try{
   const localApp=JSON.parse(LS.getItem('richie_app')||'{}');
   if(blob&&blob.app){
     blob.app.xp=Math.max(+blob.app.xp||0, +localApp.xp||0);        // XP/level never go backwards
     blob.app.level=Math.max(+blob.app.level||0, +localApp.level||0);
+    _mergeLayoutsPreferPopulated(blob.app, localApp);              // and neither does the dashboard
     LS.setItem('richie_app', JSON.stringify(blob.app));
   }
   if(blob&&blob.stores) Object.keys(blob.stores).forEach(k=>{ if(blob.stores[k]!=null) LS.setItem(k, blob.stores[k]); });
@@ -5074,9 +5089,16 @@ function _initProfiles(){
   if(!APP.layouts[APP.activeProfile] && (APP.pages||[]).length){
     APP.layouts[APP.activeProfile]={ pages:APP.pages, activePage:APP.activePage };
   }
-  // Load the active profile's layout into the working copy.
+  // Load the active profile's layout into the working copy — but never let a widget-less
+  // layout replace saved pages that DO have widgets (that would silently wipe the dashboard).
   const lay=APP.layouts[APP.activeProfile];
-  if(lay && Array.isArray(lay.pages) && lay.pages.length){ APP.pages=lay.pages; APP.activePage=lay.activePage||(lay.pages[0]&&lay.pages[0].id); }
+  if(lay && Array.isArray(lay.pages) && lay.pages.length){
+    if(_widgetCount(lay.pages) >= _widgetCount(APP.pages) || !_widgetCount(APP.pages)){
+      APP.pages=lay.pages; APP.activePage=lay.activePage||(lay.pages[0]&&lay.pages[0].id);
+    } else {
+      APP.layouts[APP.activeProfile]={ pages:APP.pages, activePage:APP.activePage };   // saved pages richer → adopt into the layout
+    }
+  }
 }
 function _saveActiveLayout(){
   if(!APP.layouts) APP.layouts={};
