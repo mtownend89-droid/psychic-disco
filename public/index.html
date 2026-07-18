@@ -4959,7 +4959,20 @@ const COLOR_CHOICES=['#2ecc8a','#f0a540','#5b8def','#38bdf8','#a78bfa','#f05c5c'
 function loadState(){
   try{
     const setup=JSON.parse(LS.getItem('richie_setup')||'null');
-    const saved=JSON.parse(LS.getItem('richie_app')||'null');
+    let saved=JSON.parse(LS.getItem('richie_app')||'null');
+    // Heal a poisoned blank blob: a saved app with NO pages anywhere (main or per-profile
+    // layouts) that isn't awaiting its first-win build, while real onboarding data exists,
+    // is a default-state artifact (e.g. pushed by a pre-login wizard session and adopted by
+    // sync). Prefer the onboarding data; carry the blob's XP/level forward as a floor.
+    if(saved && setup && setup.householdName){
+      const anyPages=(saved.pages&&saved.pages.length)
+        || (saved.layouts && Object.keys(saved.layouts).some(k=>{ const l=saved.layouts[k]; return l&&l.pages&&l.pages.length; }));
+      if(!anyPages && !saved._awaitingBuild){
+        setup.xp=Math.max(+setup.xp||0, +saved.xp||0);
+        setup.level=Math.max(+setup.level||1, +saved.level||1);
+        saved=null;
+      }
+    }
     if(saved){
       APP=Object.assign(APP,saved);
       try{ migratePages(APP.pages); }catch(e){}   // heal folded/removed widget types
@@ -5042,7 +5055,13 @@ function syncApplyToLS(blob){ try{
   _memoInvalidate();   // another device's state landed → drop memoized derivations
 }catch(e){} }
 let _syncTimer=null;
+// No pushes until the app has actually ENTERED (post-login, state loaded). During the
+// onboarding wizard, XP awards call saveState → without this gate, the default APP blob
+// ("My Finance World", no pages) got pushed to a freshly-reset server and then adopted
+// over the real onboarding result at the post-login sync — undoing the user's setup.
+let _appEntered=false;
 function syncPush(){
+  if(!_appEntered) return;
   if(typeof serverAvailable!=='undefined' && !serverAvailable) return;
   clearTimeout(_syncTimer);
   _syncTimer=setTimeout(async ()=>{
@@ -9954,6 +9973,7 @@ function enterApp(){
   _obVoice=false; riAudioOn=false;        // app is silent (voice was onboarding-only)
   try{ syncPull(); }catch(e){}            // adopt newer edits from another device (may reload once)
   loadState();
+  _appEntered=true;                        // sync may push from here on — never from the wizard
   gg('appShell').style.display='block';
   gg('richieAssistant').style.display='block';
   sbRichie=new RichieEmoji(gg('sbRichie'));
