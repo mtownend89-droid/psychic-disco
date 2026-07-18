@@ -912,6 +912,34 @@ app.post('/api/state', requireAuth, (req, res) => {
   res.json({ ok: true, ts: base._ts || Date.now(), xp: maxXp, level: maxLevel });
 });
 
+// ── FULL RESET (explicit, destructive) ────────────────────────────────────────
+// Deletes the synced household state on the SERVER (a client-side wipe alone gets undone:
+// the next syncPull sees the old state as "newer than this wiped device" and adopts it —
+// and the XP max-merge above means even a pushed-up blank state keeps old XP/level).
+// With disconnect_banks, also removes every Plaid item and the transaction cache, so the
+// household starts truly from zero. Login credentials are untouched.
+app.post('/api/full_reset', requireAuth, async (req, res) => {
+  const disconnectBanks = !!(req.body || {}).disconnect_banks;
+  try {
+    try { if (fs.existsSync(STATE_FILE)) fs.unlinkSync(STATE_FILE); } catch (e) { console.warn('full_reset state:', e.message); }
+    if (disconnectBanks) {
+      await Promise.all(store.accessTokens.map(async t => {
+        try { await plaidClient.itemRemove({ access_token: t.accessToken }); }
+        catch (e) { console.warn(`full_reset itemRemove ${t.institutionName}:`, e.response?.data?.error_code || e.message); }
+      }));
+      store.accessTokens = [];
+      store.cursor = {};
+      saveTokens(store);
+      txnCache.items = {};
+      saveTxnCache();
+    }
+    console.log(`Full reset: state cleared${disconnectBanks ? ' + all banks disconnected' : ' (banks kept)'}`);
+    res.json({ ok: true, banks_disconnected: disconnectBanks });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/items', requireAuth, (req, res) => {
   res.json({
     items: store.accessTokens.map(t => ({

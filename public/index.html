@@ -8502,7 +8502,8 @@ function toggleProMode(){ APP.proMode=!APP.proMode; saveState(); gg('proToggle')
 // ── Full reset: wipe all data and revert to onboarding (type-YES confirm) ──
 function openFullResetConfirm(){
   const inp=gg('resetConfirmInput'); if(inp){ inp.value=''; }
-  const btn=gg('resetConfirmBtn'); if(btn){ btn.disabled=true; }
+  const btn=gg('resetConfirmBtn'); if(btn){ btn.disabled=true; btn.textContent='Erase everything & start over'; }
+  const cb=gg('resetBanks'); if(cb) cb.checked=false;
   gg('fullResetModal').style.display='flex';
   setTimeout(()=>{ if(inp) inp.focus(); },50);
 }
@@ -8514,23 +8515,26 @@ function fullResetCheck(){
 function doFullReset(){
   const v=(gg('resetConfirmInput').value||'').trim().toUpperCase();
   if(v!=='YES') return;  // hard guard — only proceeds on an exact YES
+  const disconnectBanks=!!(gg('resetBanks')&&gg('resetBanks').checked);
+  const btn=gg('resetConfirmBtn'); if(btn){ btn.disabled=true; btn.textContent='Resetting…'; }
   try{
     ['richie_setup','richie_app','mdf_categories','mdf_cat_overrides','mdf_txn_notes','mdf_fire','mdf_acct_cats','mdf_txn_tags','mdf_cat_rules'].forEach(k=>{ try{LS.removeItem(k);}catch(e){} });
     try{ SS.removeItem('mdf_token'); SS.removeItem('mdf_auth'); }catch(e){}
     // defensive sweep of any remaining app-scoped keys
     try{ Object.keys(window.localStorage||{}).forEach(k=>{ if(/^(richie_|mdf_)/.test(k)) window.localStorage.removeItem(k); }); }catch(e){}
   }catch(e){}
-  // Reset the SERVER copy too, with a fresh timestamp — otherwise boot's syncPull sees the
-  // old household state as "newer than this wiped device", adopts it, and silently undoes
-  // the reset (skipping onboarding). mdf_sync_ts is stamped locally so the reloaded page
-  // treats the tombstone as already-seen instead of re-adopting anything.
+  // Ask the SERVER to delete the household state (and optionally every Plaid item) — a
+  // client-only wipe gets undone by the next syncPull, and a pushed-up "blank" blob keeps
+  // old XP via the max-merge. The endpoint deletes appstate.json outright, so the reset
+  // really is zero. mdf_sync_ts is stamped as belt-and-braces: if the request fails or
+  // times out, the reloaded page still refuses to adopt the old state (localTs is newer).
   const ts=Date.now();
   let fired=false;
   const done=()=>{ if(fired) return; fired=true; try{ LS.setItem('mdf_sync_ts', String(ts)); }catch(e){} location.reload(); };
   try{
-    fetch('/api/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({state:{app:{_fullReset:ts}, stores:{}, _ts:ts}})})
+    fetch('/api/full_reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({disconnect_banks:disconnectBanks})})
       .catch(()=>{}).then(done);
-    setTimeout(done, 2500);   // reload even if the network hangs — reset must not feel stuck
+    setTimeout(done, 8000);   // generous failsafe — a cold server needs a few seconds to wake
   }catch(e){ done(); }
 }
 
@@ -10048,7 +10052,8 @@ window.addEventListener('load',start);
       <button class="wdt-x" onclick="closeFullReset()">×</button>
     </div>
     <div class="wdt-body-wrap">
-      <p style="font-size:13px;color:var(--text);line-height:1.6;margin-bottom:6px">You're about to permanently delete <b>all of your data</b> — pages, widgets, categories, goals, bank connections, and settings — and restart Richie's intro from scratch. <b>This cannot be undone.</b></p>
+      <p style="font-size:13px;color:var(--text);line-height:1.6;margin-bottom:6px">You're about to permanently delete <b>all of your data</b> — pages, widgets, categories, goals, XP, and settings on every device — and restart Richie's intro from scratch. <b>This cannot be undone.</b></p>
+      <label class="ae-toggle" style="margin:4px 0 8px"><input type="checkbox" id="resetBanks"><span>🔗 Also disconnect all bank connections <span style="color:var(--muted);font-weight:400">(you'd relink each bank; leave off to keep live data flowing after the reset)</span></span></label>
       <label class="mf-label">Type <b style="color:var(--red)">YES</b> to confirm</label>
       <input class="mf-in" id="resetConfirmInput" autocomplete="off" autocapitalize="characters" placeholder="YES" oninput="fullResetCheck()" onkeydown="if(event.key==='Enter')doFullReset()">
       <div class="mf-actions">
