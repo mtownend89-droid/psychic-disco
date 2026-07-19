@@ -918,11 +918,19 @@ app.post('/api/state', requireAuth, (req, res) => {
   // always beats the empty "Richie build" gate, and edits that keep the widget count (rename,
   // theme, add asset) are accepted. This replaces a raw _ts compare that silently rejected
   // every edit forever if a stale/future-dated state ever got stored (clock skew).
-  let base = state;
-  if (existing && _stateMaxWidgets(existing) > _stateMaxWidgets(state)) base = existing;
+  const inW = _stateMaxWidgets(state), exW = _stateMaxWidgets(existing);
+  let base = state, kept = 'incoming';
+  // Keep the stored copy only on CATASTROPHIC shrinkage (blank/near-blank device pushing
+  // over a built world). Deliberate edits legitimately remove widgets — completing a goal
+  // retires its page, users delete widgets — and a pure "never fewer" ratchet rejected the
+  // push, then every later edit bundled in the same blob, reverting whole sessions.
+  if (existing && exW > 0 && inW < exW * 0.5) { base = existing; kept = 'existing'; }
   if (base.app) { base.app.xp = maxXp; base.app.level = maxLevel; }
   saveAppState(base);
-  res.json({ ok: true, ts: base._ts || Date.now(), xp: maxXp, level: maxLevel });
+  // Never hide a discard: log it and TELL the client which copy won and why, so the UI can
+  // surface a rejected push instead of showing "saved" while the edit evaporates.
+  console.log(`state push: incoming ${inW}w vs existing ${exW}w → kept ${kept}`);
+  res.json({ ok: true, kept, incomingWidgets: inW, existingWidgets: exW, ts: base._ts || Date.now(), xp: maxXp, level: maxLevel });
 });
 
 // ── FULL RESET (explicit, destructive) ────────────────────────────────────────
