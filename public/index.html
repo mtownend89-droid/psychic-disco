@@ -2411,6 +2411,7 @@ canvas.chart-interactive{cursor:crosshair;}
       <div class="sb-section-divider"></div>
       <button class="sb-connect" id="sbConnectBtn" onclick="openLinkHandler()">➕ Connect a bank</button>
       <button class="sb-connect sb-upload" id="sbUploadBtn" onclick="docUploadPick()">📄 Upload statement</button>
+      <div id="syncStatus" style="font-size:10.5px;color:var(--muted);padding:3px 10px 5px;text-align:center"></div>
       <button class="sb-utility-btn" onclick="switchPage('__settings__')">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         Settings
@@ -5100,6 +5101,7 @@ async function _syncPushNow(){
     if(!r.ok) throw new Error('push '+r.status);
     serverAvailable=true;   // a landed push proves the server is reachable again
     _syncDirty=false;
+    _syncSetStatus('ok');
     LS.setItem('mdf_sync_ts', String(blob._ts));
     const jd=await r.json().catch(()=>null);
     if(jd && ((+jd.xp||0)>(+APP.xp||0) || (+jd.level||0)>(+APP.level||0))){   // server had higher XP/level → adopt it
@@ -5109,6 +5111,7 @@ async function _syncPushNow(){
     }
   }catch(e){
     // Still dirty — retry soon (cold Render servers take ~30s to wake, so keep trying).
+    _syncSetStatus('retry');
     clearTimeout(_syncRetryTimer);
     _syncRetryTimer=setTimeout(()=>{ if(_syncDirty) _syncPushNow(); }, 15000);
   }
@@ -5119,9 +5122,23 @@ function syncPush(){
   // cold-start 502 and would silently disable every push for the session (stale server copy
   // = lost world for storage-clearing browsers). _syncPushNow retries until one lands.
   _syncDirty=true;
+  _syncSetStatus('saving');
   clearTimeout(_syncTimer);
   _syncTimer=setTimeout(_syncPushNow, 1800);
 }
+// Sidebar sync indicator — makes "is it safe to close?" visible instead of forensic.
+function _syncSetStatus(s){
+  const el=gg('syncStatus'); if(!el) return;
+  if(s==='ok'){ el.textContent='☁️ Saved to cloud'; el.style.color='var(--muted)'; }
+  else if(s==='saving'){ el.textContent='↻ Saving to cloud…'; el.style.color='var(--amber)'; }
+  else if(s==='retry'){ el.textContent='⚠️ Cloud unreachable — retrying (don’t close yet)'; el.style.color='var(--red)'; }
+}
+// Heartbeat: as long as anything is unsynced, keep trying — belt-and-braces over the
+// one-shot retry timer, and it survives any missed re-arm.
+setInterval(()=>{ try{ if(_appEntered && _syncDirty) _syncPushNow(); }catch(e){} }, 20000);
+// If closing would lose unsynced changes (this matters for browsers that clear site data
+// on exit), ask first. No prompt when everything is saved.
+window.addEventListener('beforeunload', (e)=>{ if(_appEntered && _syncDirty){ e.preventDefault(); e.returnValue=''; } });
 // Exit flush: closing/hiding the tab inside the debounce window used to drop the last
 // edits. keepalive lets the request outlive the page; sendBeacon is the fallback.
 function _syncFlush(){
@@ -5132,7 +5149,9 @@ function _syncFlush(){
     let sent=false;
     try{ fetch('/api/state',{method:'POST',headers:{'Content-Type':'application/json'},body,keepalive:true}).catch(()=>{}); sent=true; }catch(e){}
     if(!sent && navigator.sendBeacon){ try{ navigator.sendBeacon('/api/state', new Blob([body],{type:'application/json'})); }catch(e){} }
-    _syncDirty=false;   // best effort — a live session will re-mark dirty on the next edit
+    // NOTE: _syncDirty stays true — the flush can't confirm delivery (a cold server eats
+    // it silently). If the page survives (tab switch), the heartbeat keeps retrying; if
+    // the page dies, the flag dies with it and nothing is worse off.
   }catch(e){}
 }
 window.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') _syncFlush(); });
@@ -5649,6 +5668,9 @@ function richieBuildApp(opts){
   try{ migratePages(APP.pages); }catch(e){}   // fold seeded debt/FIRE widgets into hubs + dedupe
   APP.activePage=APP.pages[0]?APP.pages[0].id:null;
   saveState();
+  // The freshly built world is the most losable state in the app (a storage-clearing
+  // browser + a nap-prone server ate it repeatedly) — push it NOW, not in 1.8s.
+  try{ _syncPushNow(); }catch(e){}
   try{ gamiInit(); }catch(e){}                 // drops in the Journey widget + checks first achievements
   renderShell();
   if(APP.activePage) switchPage(APP.activePage);
