@@ -5100,10 +5100,18 @@ async function _syncPushNow(){
     const r=await fetch('/api/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({state:blob})});
     if(!r.ok) throw new Error('push '+r.status);
     serverAvailable=true;   // a landed push proves the server is reachable again
+    const jd=await r.json().catch(()=>null);
+    // The server reports which copy its merge kept. If it discarded ours, this push did
+    // NOT save — surface it loudly instead of showing "Saved to cloud" over lost data.
+    if(jd && jd.kept==='existing'){
+      _syncDirty=false;   // re-pushing the same blob would lose again — stop and surface
+      _syncSetStatus('conflict', jd);
+      console.warn('sync: server kept its stored copy over this push', jd);
+      return;
+    }
     _syncDirty=false;
     _syncSetStatus('ok');
     LS.setItem('mdf_sync_ts', String(blob._ts));
-    const jd=await r.json().catch(()=>null);
     if(jd && ((+jd.xp||0)>(+APP.xp||0) || (+jd.level||0)>(+APP.level||0))){   // server had higher XP/level → adopt it
       APP.xp=Math.max(+APP.xp||0,+jd.xp||0); APP.level=Math.max(+APP.level||0,+jd.level||0);
       LS.setItem('richie_app', JSON.stringify(APP));
@@ -5127,11 +5135,12 @@ function syncPush(){
   _syncTimer=setTimeout(_syncPushNow, 1800);
 }
 // Sidebar sync indicator — makes "is it safe to close?" visible instead of forensic.
-function _syncSetStatus(s){
+function _syncSetStatus(s, info){
   const el=gg('syncStatus'); if(!el) return;
   if(s==='ok'){ el.textContent='☁️ Saved to cloud'; el.style.color='var(--muted)'; }
   else if(s==='saving'){ el.textContent='↻ Saving to cloud…'; el.style.color='var(--amber)'; }
   else if(s==='retry'){ el.textContent='⚠️ Cloud unreachable — retrying (don’t close yet)'; el.style.color='var(--red)'; }
+  else if(s==='conflict'){ el.textContent=`⚠️ Cloud kept another copy (${(info&&info.incomingWidgets)??'?'} vs ${(info&&info.existingWidgets)??'?'} widgets) — not saved`; el.style.color='var(--red)'; }
 }
 // Heartbeat: as long as anything is unsynced, keep trying — belt-and-braces over the
 // one-shot retry timer, and it survives any missed re-arm.
