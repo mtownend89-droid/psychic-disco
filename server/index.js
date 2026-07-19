@@ -13,7 +13,7 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(compression());   // gzip responses (client-negotiated) — biggest win for the ~660KB index.html
 app.use('/api/analyze_document', express.json({ limit: '30mb' }));   // statement/bill uploads (base64) can be several MB
-app.use('/api/state', express.json({ limit: '6mb' }));               // full app-state sync blob
+app.use('/api/state', express.json({ limit: '25mb' }));              // full app-state sync blob (9 banks + per-profile layouts + txn notes/tags can exceed 6mb → 413 → nothing saves)
 app.use(express.json({ limit: '50kb' }));
 // ── CORS: locked to an allowlist. Set ALLOWED_ORIGINS in env (comma-separated) if
 //    you ever call the API from a different domain. Same-origin app calls are
@@ -897,6 +897,16 @@ function saveAppState(blob) {
   } catch (e) { console.warn('state save (ok on free tier):', e.message); }
 }
 app.get('/api/state', requireAuth, (req, res) => { res.json({ state: loadAppState() }); });
+// Richest single dashboard a state contains (max widgets across the working pages and each
+// per-profile layout). Used to decide sync winners without trusting client clocks.
+function _stateMaxWidgets(s) {
+  if (!s || !s.app) return 0;
+  const count = pages => (pages || []).reduce((n, p) => n + (((p && p.widgets) || []).length), 0);
+  let mx = count(s.app.pages);
+  const lays = s.app.layouts || {};
+  Object.keys(lays).forEach(k => { mx = Math.max(mx, count((lays[k] || {}).pages)); });
+  return mx;
+}
 app.post('/api/state', requireAuth, (req, res) => {
   const { state } = req.body || {};
   if (!state || typeof state !== 'object') return res.status(400).json({ error: 'no state' });
@@ -904,9 +914,12 @@ app.post('/api/state', requireAuth, (req, res) => {
   // XP and level are accumulative — always keep the highest any device has reported.
   const maxXp = Math.max(+((state.app || {}).xp) || 0, +((existing && existing.app || {}).xp) || 0);
   const maxLevel = Math.max(+((state.app || {}).level) || 0, +((existing && existing.app || {}).level) || 0);
-  // Newest by timestamp wins for everything else (layouts, edits); older push keeps the server's edits.
+  // Prefer the MORE-populated dashboard: widgets ratchet up, never down. A real dashboard
+  // always beats the empty "Richie build" gate, and edits that keep the widget count (rename,
+  // theme, add asset) are accepted. This replaces a raw _ts compare that silently rejected
+  // every edit forever if a stale/future-dated state ever got stored (clock skew).
   let base = state;
-  if (existing && existing._ts && state._ts && state._ts < existing._ts) base = existing;
+  if (existing && _stateMaxWidgets(existing) > _stateMaxWidgets(state)) base = existing;
   if (base.app) { base.app.xp = maxXp; base.app.level = maxLevel; }
   saveAppState(base);
   res.json({ ok: true, ts: base._ts || Date.now(), xp: maxXp, level: maxLevel });
