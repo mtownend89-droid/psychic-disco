@@ -2816,9 +2816,12 @@ function engNetBalance(){
 }
 // Account IDs whose account the user excluded — their transactions drop out of ALL analytics.
 function _excludedAcctIds(){
-  const set=new Set();
-  engAccounts().forEach(a=>{ if(a.excluded&&a.id) set.add(a.id); });
-  return set;
+  // Frame-memoized: engRecent calls this for every spend/income scan in a render pass.
+  return _memoFrame('exclAcctIds', ()=>{
+    const set=new Set();
+    engAccounts().forEach(a=>{ if(a.excluded&&a.id) set.add(a.id); });
+    return set;
+  });
 }
 function engRecent(days){ const cut=new Date(Date.now()-days*86400000); const ex=_excludedAcctIds(); return allTxns.filter(t=>new Date(t.date)>=cut && !ex.has(t.account_id)); }
 
@@ -3185,13 +3188,19 @@ function engIncome30(){ return engRecent(30).filter(_isIncomeTxn).reduce((s,t)=>
 // Generalized windowed spend/income (any day count)
 function engSpend(days){ return engRecent(days).filter(t=>t.amount>0 && !_txnExcludedFromSpend(t)).reduce((s,t)=>s+t.amount,0); }
 // Any inflow landing on a liability account (credit card, loan, mortgage) is a debt paydown, not income.
-function _txnIsToDebtAcct(t){
-  const a=(allAccts||[]).find(x=>x.account_id===t.account_id);
-  if(!a) return false;
-  if(a.type==='credit'||a.type==='loan') return true;
-  try{ const def=ACCT_CAT_BY_ID[getAccountCategory(a)]; if(def&&def.kind==='liability') return true; }catch(e){}
-  return false;
+// Set of liability account ids, built once per frame — the old per-transaction
+// allAccts.find() made every income scan O(accounts × transactions).
+function _debtAcctIds(){
+  return _memoFrame('debtAcctIds', ()=>{
+    const set=new Set();
+    (allAccts||[]).forEach(a=>{
+      if(a.type==='credit'||a.type==='loan'){ set.add(a.account_id); return; }
+      try{ const def=ACCT_CAT_BY_ID[getAccountCategory(a)]; if(def&&def.kind==='liability') set.add(a.account_id); }catch(e){}
+    });
+    return set;
+  });
 }
+function _txnIsToDebtAcct(t){ return _debtAcctIds().has(t.account_id); }
 // Categories that are NEVER income — debt/liability payments and internal transfers.
 const NON_INCOME_CATEGORIES=new Set(['Loan Payments','Auto Payments','Mortgage','Credit Card','Loans','Loan','Savings & Invest','Debt','Housing']);
 // A transaction counts as income only if it's an inflow that isn't a tagged transfer/refund,
@@ -4257,23 +4266,32 @@ function buildChartWidget(canvasId, type, labels, values, colors, opts){
   opts=opts||{};
   const el=gg(canvasId); if(!el||typeof Chart==='undefined') return null;
   const surfC=getComputedStyle(document.documentElement).getPropertyValue('--surface').trim()||'#161920';
-  if(_charts[canvasId]&&_charts[canvasId].destroy) _charts[canvasId].destroy();
-  const inst=new Chart(el,{
-    type:type,
-    data:{labels:labels,datasets:(opts.datasets||[{
-      data:values, backgroundColor:colors,
-      borderWidth:opts.borderWidth!==undefined?opts.borderWidth:2, borderColor:surfC,
-      borderRadius:opts.borderRadius||0, fill:opts.fill||false, tension:opts.tension||0.3, borderSkipped:false,
-    }])},
-    options:Object.assign({
-      responsive:true, maintainAspectRatio:false, cutout:opts.cutout||'0%',
-      plugins:{ legend:{display:!!opts.builtinLegend, labels:{color:'#8b8fa8',font:{size:11}}},
-        tooltip:{ backgroundColor:'rgba(13,15,20,0.95)',titleColor:'#e4e6f0',bodyColor:'#b0b4cc',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,padding:10,
-          callbacks:{ label:ctx=>' '+esc(ctx.label)+':  '+fmtK(ctx.parsed.r||ctx.parsed.y||ctx.parsed||0) } } },
-      scales:opts.noScales?undefined:{ x:{grid:{display:false},ticks:{color:'#8b8fa8',font:{size:10}}}, y:{grid:{color:'rgba(128,128,128,0.07)'},ticks:{color:'#8b8fa8',font:{size:10},callback:v=>fmtM(v)}} }
-    }, opts.chartOptions||{})
-  });
-  _charts[canvasId]=inst;
+  const data={labels:labels,datasets:(opts.datasets||[{
+    data:values, backgroundColor:colors,
+    borderWidth:opts.borderWidth!==undefined?opts.borderWidth:2, borderColor:surfC,
+    borderRadius:opts.borderRadius||0, fill:opts.fill||false, tension:opts.tension||0.3, borderSkipped:false,
+  }])};
+  const options=Object.assign({
+    responsive:true, maintainAspectRatio:false, cutout:opts.cutout||'0%',
+    plugins:{ legend:{display:!!opts.builtinLegend, labels:{color:'#8b8fa8',font:{size:11}}},
+      tooltip:{ backgroundColor:'rgba(13,15,20,0.95)',titleColor:'#e4e6f0',bodyColor:'#b0b4cc',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,padding:10,
+        callbacks:{ label:ctx=>' '+esc(ctx.label)+':  '+fmtK(ctx.parsed.r||ctx.parsed.y||ctx.parsed||0) } } },
+    scales:opts.noScales?undefined:{ x:{grid:{display:false},ticks:{color:'#8b8fa8',font:{size:10}}}, y:{grid:{color:'rgba(128,128,128,0.07)'},ticks:{color:'#8b8fa8',font:{size:10},callback:v=>fmtM(v)}} }
+  }, opts.chartOptions||{});
+  // Same live canvas + same type → update in place (no destroy/recreate, no flicker).
+  // This is the hot path for slider-driven charts (FIRE calculator) where every input
+  // event redraws; a rebuilt canvas (renderCanvas innerHTML) never matches and falls
+  // through to the destroy+create path as before.
+  const prev=_charts[canvasId];
+  let inst;
+  if(prev && prev.canvas===el && prev.config && prev.config.type===type){
+    prev.data=data; prev.options=options; prev.update('none');
+    inst=prev;
+  } else {
+    if(prev&&prev.destroy) prev.destroy();
+    inst=new Chart(el,{ type:type, data:data, options:options });
+    _charts[canvasId]=inst;
+  }
   if(opts.legendId){ const total=values.reduce((s,v)=>s+v,0); buildChartLegend(opts.legendId, labels.map((l,i)=>({label:l,value:values[i],color:colors[i]})), {total:total,showAmt:opts.showAmt!==false}); }
   return inst;
 }
@@ -5023,7 +5041,15 @@ function loadState(){
     _initProfiles();   // set up / load per-profile layouts
   }catch(e){ console.warn('state load failed',e); }
 }
-function saveState(){ try{ _memoInvalidate(); _saveActiveLayout(); LS.setItem('richie_app',JSON.stringify(APP)); syncPush(); }catch(e){} }
+/* saveState: the localStorage write serializes the whole APP blob (~100KB+), and some
+   handlers call saveState per keystroke. The write is debounced 250ms and flushed on
+   tab hide/close; sync is unaffected (syncCollect reads the live APP, not localStorage). */
+let _lsWriteTimer=null, _lsDirty=false;
+function _writeStateNow(){ _lsDirty=false; clearTimeout(_lsWriteTimer); try{ _saveActiveLayout(); LS.setItem('richie_app',JSON.stringify(APP)); }catch(e){} }
+function _cancelPendingStateWrite(){ _lsDirty=false; clearTimeout(_lsWriteTimer); }   // when richie_app is about to be replaced/wiped deliberately
+function saveState(){ try{ _memoInvalidate(); _lsDirty=true; clearTimeout(_lsWriteTimer); _lsWriteTimer=setTimeout(_writeStateNow, 250); syncPush(); }catch(e){} }
+window.addEventListener('pagehide', ()=>{ if(_lsDirty) _writeStateNow(); });
+window.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden' && _lsDirty) _writeStateNow(); });
 // Deferred persist for derived/reconciled state (e.g. envelope reconciliation) so a getter
 // called during render doesn't serialize the whole APP blob mid-render. Coalesces to one write.
 let _persistTimer=null;
@@ -5046,6 +5072,7 @@ function _mergeLayoutsPreferPopulated(incoming, local){
   });
 }
 function syncApplyToLS(blob){ try{
+  _cancelPendingStateWrite();   // the adopted blob must not be clobbered by a stale debounced write
   const localApp=JSON.parse(LS.getItem('richie_app')||'{}');
   if(blob&&blob.app){
     blob.app.xp=Math.max(+blob.app.xp||0, +localApp.xp||0);        // XP/level never go backwards
@@ -8568,6 +8595,7 @@ function doFullReset(){
   if(v!=='YES') return;  // hard guard — only proceeds on an exact YES
   const disconnectBanks=!!(gg('resetBanks')&&gg('resetBanks').checked);
   const btn=gg('resetConfirmBtn'); if(btn){ btn.disabled=true; btn.textContent='Resetting…'; }
+  try{ _cancelPendingStateWrite(); }catch(e){}   // a pending debounced write must not resurrect the erased world
   try{
     ['richie_setup','richie_app','mdf_categories','mdf_cat_overrides','mdf_txn_notes','mdf_fire','mdf_acct_cats','mdf_txn_tags','mdf_cat_rules'].forEach(k=>{ try{LS.removeItem(k);}catch(e){} });
     try{ SS.removeItem('mdf_token'); SS.removeItem('mdf_auth'); }catch(e){}
