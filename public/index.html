@@ -2776,7 +2776,9 @@ async function _fetchJSON(url){
   try{ r=await fetch(url); }catch(e){ serverAvailable=false; return null; }
   const ct=(r.headers.get('content-type')||'').toLowerCase();
   if(!r.ok || !ct.includes('json')){ serverAvailable=false; return null; } // server returned HTML/error → not connected
-  try{ return await r.json(); }catch(e){ serverAvailable=false; return null; }
+  // Self-heal: one cold-start 502 must not latch the flag false for the whole session —
+  // that silently disabled every state push, so the server copy went permanently stale.
+  try{ const j=await r.json(); serverAvailable=true; return j; }catch(e){ serverAvailable=false; return null; }
 }
 let _acctErrors=[];  // per-institution sync failures from /api/accounts (e.g. ITEM_LOGIN_REQUIRED → bank needs reconnect)
 async function loadAccounts(){
@@ -5069,6 +5071,7 @@ async function _syncPushNow(){
     const blob=syncCollect();
     const r=await fetch('/api/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({state:blob})});
     if(!r.ok) throw new Error('push '+r.status);
+    serverAvailable=true;   // a landed push proves the server is reachable again
     _syncDirty=false;
     LS.setItem('mdf_sync_ts', String(blob._ts));
     const jd=await r.json().catch(()=>null);
@@ -5085,7 +5088,9 @@ async function _syncPushNow(){
 }
 function syncPush(){
   if(!_appEntered) return;
-  if(typeof serverAvailable!=='undefined' && !serverAvailable) return;
+  // NOTE: deliberately NOT gated on serverAvailable — that flag latches false on a single
+  // cold-start 502 and would silently disable every push for the session (stale server copy
+  // = lost world for storage-clearing browsers). _syncPushNow retries until one lands.
   _syncDirty=true;
   clearTimeout(_syncTimer);
   _syncTimer=setTimeout(_syncPushNow, 1800);
