@@ -9783,10 +9783,19 @@ async function doLogin(){
       return;
     }
     if(d.token || d.ok || d.success){ setToken(1); try{ SS.setItem('mdf_user',u); }catch(e){} }
-    btn.disabled=false; btn.textContent='Sign in';
     gg('loginScreen').style.display='none';
     gg('loginPass').value='';
     showLoader('Loading your money world…');
+    // Storage-cleared device (no local world): restore the household state from the server
+    // BEFORE entering, so enterApp's loadState finds the real dashboard instead of seeding a
+    // blank one and re-triggering the Richie-build gate.
+    try{
+      if(!LS.getItem('richie_app')){
+        const sd=await _fetchJSON('/api/state');
+        if(sd && sd.state){ syncApplyToLS(sd.state); if(sd.state._ts) LS.setItem('mdf_sync_ts', String(sd.state._ts)); }
+      }
+    }catch(e){}
+    btn.disabled=false; btn.textContent='Sign in';
     await loadEngineData();
     runWelcomeBack();
   }catch(e){
@@ -10135,13 +10144,29 @@ function showStorageWarning(){
   bar.innerHTML="⚠️ Your browser is blocking storage (Tracking Prevention / private mode). The app works, but won't remember your setup between visits. To fix: click the shield icon in the address bar → turn Tracking Prevention <b>off for this site</b> → reload. <span style='cursor:pointer;text-decoration:underline;margin-left:8px' onclick=\"this.closest('#storageWarn').remove()\">Dismiss</span>";
   document.body.appendChild(bar);
 }
-function start(){
+async function start(){
   showStorageWarning();
   let hasSetup=false;
   try{ hasSetup=!!(LS.getItem('richie_setup')||LS.getItem('richie_app')); }catch(e){}
-  if(!hasSetup){ runIntro(); hideLoader(); return; }            // brand new → intro → wizard → login
-  if(isLoggedIn()){ enterApp(); }                 // already authenticated this session
-  else { showLogin(); hideLoader(); }               // returning → login → welcome-back SWOT
+  if(hasSetup){
+    if(isLoggedIn()){ enterApp(); }                 // already authenticated this session
+    else { showLogin(); hideLoader(); }             // returning → login → welcome-back SWOT
+    return;
+  }
+  // No local data. This is EITHER a brand-new install OR a returning user whose browser
+  // cleared storage on close (the login cookie is gone too). Ask the server before assuming
+  // "new" — otherwise a wiped device restarts onboarding ("Richie build") every reopen and
+  // never restores the saved world. doLogin() then pulls the state back down.
+  try{
+    const r=await fetch('/api/auth_status');
+    const d=await r.json().catch(()=>({}));
+    if(d && d.configured){                          // a login already exists → returning user
+      if(isLoggedIn()){ enterApp(); }               // (cookie somehow survived) → straight in
+      else { showLogin("Welcome back! Sign in and I’ll bring your whole dashboard right back."); hideLoader(); }
+      return;
+    }
+  }catch(e){ /* server unreachable → fall through to intro */ }
+  runIntro(); hideLoader();                          // genuinely new → onboarding
 }
 window.addEventListener('load',start);
 </script>
