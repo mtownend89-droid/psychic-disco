@@ -5033,7 +5033,11 @@ function loadState(){
       APP._awaitingBuild=true;
       APP.pages=[{ id:'welcome', name:'Welcome', icon:'👋', color:'#2ecc8a', widgets:[] }];
       APP.activePage='welcome';
-      saveState();
+      // IN-MEMORY ONLY — do NOT persist or push this blank gate. Reaching here means local
+      // richie_app was missing; a returning user whose browser cleared storage still has the
+      // real dashboard on the server. Persisting the gate would make it stick (blocking the
+      // enterApp server-restore next reopen) and pushing it would OVERWRITE the server — the
+      // exact "reverts to Richie build" bug. Leaving richie_app empty lets enterApp restore.
     } else {
       // no setup yet — seed a default world
       APP.pages=seedPages('overview');
@@ -10083,8 +10087,14 @@ function hideLoader(){ const l=gg('bootLoader'); if(!l)return; l.classList.add('
 function boot(){
   enterApp();
 }
-function enterApp(){
+async function enterApp(){
   _obVoice=false; riAudioOn=false;        // app is silent (voice was onboarding-only)
+  // Local state cleared (tracking prevention / storage wipe) but a world lives on the server?
+  // Restore it BEFORE loadState — otherwise loadState's "setup but no app" branch shows the
+  // blank build gate. This runs on the isLoggedIn-direct boot path where doLogin never ran.
+  if(!LS.getItem('richie_app')){
+    try{ const sd=await _fetchJSON('/api/state'); if(sd && sd.state){ syncApplyToLS(sd.state); if(sd.state._ts) LS.setItem('mdf_sync_ts', String(sd.state._ts)); } }catch(e){}
+  }
   try{ syncPull(); }catch(e){}            // adopt newer edits from another device (may reload once)
   loadState();
   _appEntered=true;                        // sync may push from here on — never from the wizard
