@@ -5048,7 +5048,12 @@ function loadState(){
 let _lsWriteTimer=null, _lsDirty=false;
 function _writeStateNow(){ _lsDirty=false; clearTimeout(_lsWriteTimer); try{ _saveActiveLayout(); LS.setItem('richie_app',JSON.stringify(APP)); }catch(e){} }
 function _cancelPendingStateWrite(){ _lsDirty=false; clearTimeout(_lsWriteTimer); }   // when richie_app is about to be replaced/wiped deliberately
-function saveState(){ try{ _memoInvalidate(); _lsDirty=true; clearTimeout(_lsWriteTimer); _lsWriteTimer=setTimeout(_writeStateNow, 250); syncPush(); }catch(e){} }
+// SYNCHRONOUS on purpose: _saveActiveLayout() must fold live pages into APP.layouts BEFORE
+// any push captures APP — the restore path reads the dashboard from layouts, and syncCollect
+// pushes layouts. Deferring this (a past "debounce the localStorage write" optimization)
+// let immediate/flush/heartbeat pushes ship stale empty layouts, which restored as the blank
+// "Richie build" gate. Correctness beats the micro-optimization here.
+function saveState(){ try{ _memoInvalidate(); _saveActiveLayout(); LS.setItem('richie_app',JSON.stringify(APP)); syncPush(); }catch(e){} }
 window.addEventListener('pagehide', ()=>{ if(_lsDirty) _writeStateNow(); });
 window.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden' && _lsDirty) _writeStateNow(); });
 // Deferred persist for derived/reconciled state (e.g. envelope reconciliation) so a getter
@@ -5057,7 +5062,8 @@ let _persistTimer=null;
 function _persistSoon(){ clearTimeout(_persistTimer); _persistTimer=setTimeout(()=>{ try{ saveState(); }catch(e){} }, 400); }
 /* ── Cross-device state sync: push edits to the server, pull newer edits from other devices ── */
 const SYNC_KEYS=['mdf_categories','mdf_cat_overrides','mdf_cat_rules','mdf_txn_notes','mdf_txn_tags','mdf_acct_cats','mdf_nw_history','mdf_fire','mdf_gami','richie_setup','richie_proactive','richie_audio','richie_voice'];
-function syncCollect(){ const stores={}; SYNC_KEYS.forEach(k=>{ const v=LS.getItem(k); if(v!=null) stores[k]=v; }); return { app:APP, stores, _ts:Date.now() }; }
+function syncCollect(){ try{ _saveActiveLayout(); }catch(e){}   /* fold live pages into layouts before EVERY push (immediate/flush/heartbeat), else a push can ship stale layouts */
+  const stores={}; SYNC_KEYS.forEach(k=>{ const v=LS.getItem(k); if(v!=null) stores[k]=v; }); return { app:APP, stores, _ts:Date.now() }; }
 function _widgetCount(pages){ return (pages||[]).reduce((s,p)=>s+((p&&p.widgets||[]).length),0); }
 /* A sync must NEVER shrink a built dashboard. Like XP, widgets only ratchet up: if the
    incoming (another device / older session) state has fewer widgets for the working pages
