@@ -897,16 +897,6 @@ function saveAppState(blob) {
   } catch (e) { console.warn('state save (ok on free tier):', e.message); }
 }
 app.get('/api/state', requireAuth, (req, res) => { res.json({ state: loadAppState() }); });
-// Richest single dashboard a state contains (max widgets across the working pages and each
-// per-profile layout). Used to decide sync winners without trusting client clocks.
-function _stateMaxWidgets(s) {
-  if (!s || !s.app) return 0;
-  const count = pages => (pages || []).reduce((n, p) => n + (((p && p.widgets) || []).length), 0);
-  let mx = count(s.app.pages);
-  const lays = s.app.layouts || {};
-  Object.keys(lays).forEach(k => { mx = Math.max(mx, count((lays[k] || {}).pages)); });
-  return mx;
-}
 app.post('/api/state', requireAuth, (req, res) => {
   const { state } = req.body || {};
   if (!state || typeof state !== 'object') return res.status(400).json({ error: 'no state' });
@@ -914,23 +904,15 @@ app.post('/api/state', requireAuth, (req, res) => {
   // XP and level are accumulative — always keep the highest any device has reported.
   const maxXp = Math.max(+((state.app || {}).xp) || 0, +((existing && existing.app || {}).xp) || 0);
   const maxLevel = Math.max(+((state.app || {}).level) || 0, +((existing && existing.app || {}).level) || 0);
-  // Prefer the MORE-populated dashboard: widgets ratchet up, never down. A real dashboard
-  // always beats the empty "Richie build" gate, and edits that keep the widget count (rename,
-  // theme, add asset) are accepted. This replaces a raw _ts compare that silently rejected
-  // every edit forever if a stale/future-dated state ever got stored (clock skew).
-  const inW = _stateMaxWidgets(state), exW = _stateMaxWidgets(existing);
-  let base = state, kept = 'incoming';
-  // Keep the stored copy only on CATASTROPHIC shrinkage (blank/near-blank device pushing
-  // over a built world). Deliberate edits legitimately remove widgets — completing a goal
-  // retires its page, users delete widgets — and a pure "never fewer" ratchet rejected the
-  // push, then every later edit bundled in the same blob, reverting whole sessions.
-  if (existing && exW > 0 && inW < exW * 0.5) { base = existing; kept = 'existing'; }
+  // Newest save wins — the client is the source of truth on each push. It restores from the
+  // server at login and gates pushes until the app has entered, so a wiped device can't
+  // clobber with a blank state. NO widget-ratchet / timestamp second-guessing: deciding
+  // which copy to "keep" kept discarding real edits (completing a goal or deleting a widget
+  // shrinks the count) and reverting whole sessions. Your latest save is what comes back.
+  const base = state;
   if (base.app) { base.app.xp = maxXp; base.app.level = maxLevel; }
   saveAppState(base);
-  // Never hide a discard: log it and TELL the client which copy won and why, so the UI can
-  // surface a rejected push instead of showing "saved" while the edit evaporates.
-  console.log(`state push: incoming ${inW}w vs existing ${exW}w → kept ${kept}`);
-  res.json({ ok: true, kept, incomingWidgets: inW, existingWidgets: exW, ts: base._ts || Date.now(), xp: maxXp, level: maxLevel });
+  res.json({ ok: true, kept: 'incoming', ts: base._ts || Date.now(), xp: maxXp, level: maxLevel });
 });
 
 // ── FULL RESET (explicit, destructive) ────────────────────────────────────────
