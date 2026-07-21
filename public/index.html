@@ -10129,10 +10129,20 @@ function boot(){
 async function enterApp(){
   _obVoice=false; riAudioOn=false;        // app is silent (voice was onboarding-only)
   // Local state cleared (tracking prevention / storage wipe) but a world lives on the server?
-  // Restore it BEFORE loadState — otherwise loadState's "setup but no app" branch shows the
-  // blank build gate. This runs on the isLoggedIn-direct boot path where doLogin never ran.
+  // Restore it BEFORE loadState — otherwise loadState's "setup but no app" branch flashes the
+  // blank build gate ("Let's build your app") on every reload. Keep the loader up and RETRY
+  // the restore because a cold Render server takes ~30s to wake; a returning user with a
+  // dashboard must never drop to the connect-a-bank gate just because the server was napping.
   if(!LS.getItem('richie_app')){
-    try{ const sd=await _fetchJSON('/api/state'); if(sd && sd.state){ syncApplyToLS(sd.state); if(sd.state._ts) LS.setItem('mdf_sync_ts', String(sd.state._ts)); } }catch(e){}
+    try{ showLoader('Restoring your dashboard…'); }catch(e){}
+    for(let i=0;i<6;i++){
+      let sd=null; try{ sd=await _fetchJSON('/api/state'); }catch(e){ sd=null; }
+      if(sd){   // server ANSWERED (dashboard present, or genuinely empty for a new user) → stop retrying
+        if(sd.state){ syncApplyToLS(sd.state); if(sd.state._ts) LS.setItem('mdf_sync_ts', String(sd.state._ts)); }
+        break;
+      }
+      await new Promise(r=>setTimeout(r,2500));   // sd===null = unreachable/cold → wait and try again
+    }
   }
   try{ syncPull(); }catch(e){}            // adopt newer edits from another device (may reload once)
   loadState();
