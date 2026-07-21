@@ -2760,6 +2760,9 @@ function getTxnNote(t){ return _txnNotes[_txnKey(t)]||''; }
 
 /* ── Live data layer (Plaid-backed via server API) ── */
 let allAccts=[], allTxns=[], _plaidTxns=[], dataLoaded=false, serverAvailable=true;
+// Once a real dashboard (any widgets) has been seen this session, the client must NEVER push
+// a widget-less/gate state over it — that overwrote the server on storage-clearing browsers.
+let _sawWidgets=false;
 function _rebuildTxns(){ allTxns=(_plaidTxns||[]).concat(APP.importedTxns||[]); }
 /* ── Pending transactions (Plaid sends them with pending:true) — used for "expected" totals.
    Expected balance = current balance minus the net of pending amounts (Plaid amount>0 = money out),
@@ -4996,6 +4999,7 @@ function loadState(){
     }
     if(saved){
       APP=Object.assign(APP,saved);
+      if(_stateHasWidgets(APP)) _sawWidgets=true;   // real dashboard loaded → arm the no-blank-push guard
       try{ migratePages(APP.pages); }catch(e){}   // heal folded/removed widget types
       // Migration: heal worlds saved before widgets were seeded into bundle pages.
       const hasAnyWidget=(APP.pages||[]).some(p=>p.widgets&&p.widgets.length>0);
@@ -5092,6 +5096,7 @@ function syncApplyToLS(blob){ try{
     LS.setItem('richie_app', JSON.stringify(blob.app));
   }
   if(blob&&blob.stores) Object.keys(blob.stores).forEach(k=>{ if(blob.stores[k]!=null) LS.setItem(k, blob.stores[k]); });
+  if(blob&&blob.app&&_stateHasWidgets(blob.app)) _sawWidgets=true;   // restored a real dashboard → arm the no-blank-push guard
   _memoInvalidate();   // another device's state landed → drop memoized derivations
 }catch(e){} }
 let _syncTimer=null;
@@ -5102,6 +5107,11 @@ let _syncTimer=null;
 let _appEntered=false;
 let _syncDirty=false, _syncRetryTimer=null;
 async function _syncPushNow(){
+  // GUARD: never push a widget-less/gate state once this session has seen a real dashboard.
+  // A storage clear + the gate seed can blank APP; pushing that blanked its server copy too
+  // (proven by diagnostics: server went 3 pages/13 widgets → 1 page/0 widgets on reopen).
+  if(_stateHasWidgets(APP)) _sawWidgets=true;
+  else if(_sawWidgets){ _syncDirty=false; return; }   // refuse — the good dashboard stays on the server
   // One real upload attempt. mdf_sync_ts is stamped ONLY on success — stamping before the
   // POST made a failed push (cold server, network blip, closed tab) look synced forever,
   // leaving the server copy stale; a device that lost local storage then restored nothing.
@@ -5162,6 +5172,7 @@ window.addEventListener('beforeunload', (e)=>{ if(_appEntered && _syncDirty){ e.
 // edits. keepalive lets the request outlive the page; sendBeacon is the fallback.
 function _syncFlush(){
   if(!_appEntered || !_syncDirty) return;
+  if(_sawWidgets && !_stateHasWidgets(APP)) return;   // never flush a blank over the real dashboard
   try{
     clearTimeout(_syncTimer);
     const body=JSON.stringify({state:syncCollect()});
