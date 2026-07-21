@@ -2616,7 +2616,10 @@ const _memStore={};
 const _memSession={};
 function _makeSafe(real, mem){
   return {
-    getItem(k){ try{ return real.getItem(k); }catch(e){ return (k in mem)?mem[k]:null; } },
+    // Fall back to the in-memory copy whenever real storage yields nothing — not only when it
+    // THROWS. Edge tracking prevention silently drops writes and returns null on read (no
+    // throw), which stranded a just-restored dashboard as unreadable → stuck at the build gate.
+    getItem(k){ try{ const v=real.getItem(k); if(v!=null) return v; }catch(e){} return (k in mem)?mem[k]:null; },
     setItem(k,v){ mem[k]=String(v); try{ real.setItem(k,v); }catch(e){} },
     removeItem(k){ delete mem[k]; try{ real.removeItem(k); }catch(e){} },
   };
@@ -5677,6 +5680,18 @@ function wDays(w){ return tfDays(w&&w.tf||'30d'); }
 function buildGateHTML(){
   const ic=(RICHIE_PERSONAS[APP.persona]&&RICHIE_PERSONAS[APP.persona].icon)||'💰';
   const goals=(APP.goals||[]).map(g=>g.icon+' '+g.name).join('  ·  ');
+  // Returning user (banks already linked or a dashboard exists on the server) should NOT see
+  // the "Connect my bank" first-run prompt while their dashboard restores — show a loading
+  // screen instead. richieBuildApp keeps retrying the restore underneath it.
+  const returning=(dataLoaded && (allAccts||[]).length>0) || !!APP.plaidConnected || _sawWidgets;
+  if(returning){
+    return `<div class="canvas-page"><div class="bgate">
+      <div class="bgate-bag" style="animation:richie-float 3s ease-in-out infinite">${ic}</div>
+      <div class="bgate-title">Loading your dashboard…</div>
+      <div class="bgate-sub">Fetching your latest saved layout. This only takes a moment.</div>
+      <div class="xp-bar" style="max-width:220px;margin:18px auto 0"><div class="xp-fill" style="width:60%;animation:richie-pulse-fab 1.4s ease-in-out infinite"></div></div>
+    </div></div>`;
+  }
   return `<div class="canvas-page"><div class="bgate">
     <div class="bgate-bag">${ic}</div>
     <div class="bgate-title">Let's build your app</div>
