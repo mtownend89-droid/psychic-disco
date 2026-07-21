@@ -897,6 +897,15 @@ function saveAppState(blob) {
   } catch (e) { console.warn('state save (ok on free tier):', e.message); }
 }
 app.get('/api/state', requireAuth, (req, res) => { res.json({ state: loadAppState() }); });
+// Widgets across the working pages and every per-profile layout — the richest single count.
+function _stateMaxWidgets(s) {
+  if (!s || !s.app) return 0;
+  const count = pages => (pages || []).reduce((n, p) => n + (((p && p.widgets) || []).length), 0);
+  let mx = count(s.app.pages);
+  const lays = s.app.layouts || {};
+  Object.keys(lays).forEach(k => { mx = Math.max(mx, count((lays[k] || {}).pages)); });
+  return mx;
+}
 app.post('/api/state', requireAuth, (req, res) => {
   const { state } = req.body || {};
   if (!state || typeof state !== 'object') return res.status(400).json({ error: 'no state' });
@@ -904,15 +913,16 @@ app.post('/api/state', requireAuth, (req, res) => {
   // XP and level are accumulative — always keep the highest any device has reported.
   const maxXp = Math.max(+((state.app || {}).xp) || 0, +((existing && existing.app || {}).xp) || 0);
   const maxLevel = Math.max(+((state.app || {}).level) || 0, +((existing && existing.app || {}).level) || 0);
-  // Newest save wins — the client is the source of truth on each push. It restores from the
-  // server at login and gates pushes until the app has entered, so a wiped device can't
-  // clobber with a blank state. NO widget-ratchet / timestamp second-guessing: deciding
-  // which copy to "keep" kept discarding real edits (completing a goal or deleting a widget
-  // shrinks the count) and reverting whole sessions. Your latest save is what comes back.
-  const base = state;
+  // NARROW anti-wipe guard (server-side, so page reloads / cleared storage can't slip past it):
+  // reject ONLY a push that would replace a populated dashboard with a ZERO-widget gate. This
+  // is unambiguously the "reverts to Richie build" corruption — a real edit (rename, add asset,
+  // complete a goal) keeps its widgets, so it always passes. Otherwise newest save wins.
+  const inW = _stateMaxWidgets(state), exW = _stateMaxWidgets(existing);
+  let base = state, kept = 'incoming';
+  if (exW > 0 && inW === 0) { base = existing; kept = 'existing'; console.log(`state push REJECTED: gate (0w) over dashboard (${exW}w)`); }
   if (base.app) { base.app.xp = maxXp; base.app.level = maxLevel; }
   saveAppState(base);
-  res.json({ ok: true, kept: 'incoming', ts: base._ts || Date.now(), xp: maxXp, level: maxLevel });
+  res.json({ ok: true, kept, incomingWidgets: inW, existingWidgets: exW, ts: base._ts || Date.now(), xp: maxXp, level: maxLevel });
 });
 
 // ── FULL RESET (explicit, destructive) ────────────────────────────────────────
