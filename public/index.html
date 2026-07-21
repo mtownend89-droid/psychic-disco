@@ -5195,7 +5195,12 @@ async function syncPull(){
       if(d.state._ts > localTs){          // another device has newer edits → adopt them
         syncApplyToLS(d.state);
         LS.setItem('mdf_sync_ts', String(d.state._ts));
-        if(!SS.getItem('_didSync')){ SS.setItem('_didSync','1'); location.reload(); return true; }
+        // Apply in place — NO location.reload(). A reload on a storage-clearing browser wipes
+        // richie_app again and restarts the clear→gate→restore cycle (the "rebuild every
+        // reload"). If we've entered, re-render from the adopted state; if not, enterApp's
+        // loadState (which runs next) already reads the freshly-written richie_app.
+        try{ if(_appEntered){ loadState(); renderShell(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg) renderCanvas(pg); } }catch(e){}
+        return true;
       }
     } else {
       syncPush();                          // no server copy yet → push this device up as the baseline
@@ -10169,7 +10174,11 @@ async function enterApp(){
     // FIRST WIN with banks ALREADY connected (e.g. after a full reset — Plaid tokens live on
     // the server and survive it): data arriving IS the win. Without this, richieBuildApp only
     // ever fired from the Plaid-link callback, so returning users stayed at the connect gate.
-    if(ok && APP._awaitingBuild && (allAccts||[]).length){ try{ awardXp(15); }catch(e){} richieBuildApp(); return; }
+    // Awaiting build: ALWAYS run richieBuildApp — it restores the real dashboard from the
+    // server (or retries while the server is cold). Gating this on ok/banks meant a cold
+    // server left the user stuck at the build gate forever, with nothing retrying once it
+    // woke. Award the first-win XP only when banks actually loaded (a genuine first build).
+    if(APP._awaitingBuild){ if(ok && (allAccts||[]).length){ try{ awardXp(15); }catch(e){} } richieBuildApp(); return; }
     try{ if(typeof gamiEvaluate==='function' && !APP._awaitingBuild) gamiEvaluate(); }catch(e){}
     if(ok && APP.activePage && APP.activePage!=='__settings__'){
       const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg) renderCanvas(pg);
