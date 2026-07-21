@@ -5672,8 +5672,28 @@ function buildGateHTML(){
     <div class="bgate-note">🔒 Bank-level encryption · read-only · disconnect anytime</div>
   </div></div>`;
 }
-function richieBuildApp(opts){
+function _stateHasWidgets(app){
+  if(!app) return false;
+  const has=pp=>(pp||[]).some(p=>p&&p.widgets&&p.widgets.length>0);
+  if(has(app.pages)) return true;
+  const lays=app.layouts||{}; return Object.keys(lays).some(k=>has((lays[k]||{}).pages));
+}
+async function richieBuildApp(opts){
   opts=opts||{};
+  // A rebuild RESEEDS pages — it must NEVER clobber a dashboard that already exists. This
+  // fires whenever _awaitingBuild is true, which happens after a COLD-SERVER restore failed
+  // (gate seeded locally) even though the real dashboard is safe on the server. Guard both:
+  if(_stateHasWidgets(APP)){ APP._awaitingBuild=false; saveState(); return; }   // local already built
+  if(!opts.sample){
+    try{
+      const sd=await _fetchJSON('/api/state');   // the earlier fetch may have failed on a cold server; retry now that it's warm
+      if(sd && sd.state && _stateHasWidgets(sd.state.app)){
+        syncApplyToLS(sd.state); if(sd.state._ts) LS.setItem('mdf_sync_ts', String(sd.state._ts));
+        loadState(); renderShell(); if(APP.activePage&&APP.activePage!=='__settings__') switchPage(APP.activePage); else if(APP.pages[0]) switchPage(APP.pages[0].id);
+        return;   // restored the real dashboard — do NOT reseed over it
+      }
+    }catch(e){}
+  }
   let setup=null; try{ setup=JSON.parse(LS.getItem('richie_setup')||'null'); }catch(e){} setup=setup||{};
   const cg=(setup.chosenGoals&&setup.chosenGoals.length)?setup.chosenGoals:((setupConfig&&setupConfig.chosenGoals)||[]);
   if(!APP.goals||!APP.goals.length){
