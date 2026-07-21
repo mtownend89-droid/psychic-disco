@@ -5696,14 +5696,22 @@ async function richieBuildApp(opts){
   // (gate seeded locally) even though the real dashboard is safe on the server. Guard both:
   if(_stateHasWidgets(APP)){ APP._awaitingBuild=false; saveState(); return; }   // local already built
   if(!opts.sample){
-    try{
-      const sd=await _fetchJSON('/api/state');   // the earlier fetch may have failed on a cold server; retry now that it's warm
-      if(sd && sd.state && _stateHasWidgets(sd.state.app)){
-        syncApplyToLS(sd.state); if(sd.state._ts) LS.setItem('mdf_sync_ts', String(sd.state._ts));
-        loadState(); renderShell(); if(APP.activePage&&APP.activePage!=='__settings__') switchPage(APP.activePage); else if(APP.pages[0]) switchPage(APP.pages[0].id);
-        return;   // restored the real dashboard — do NOT reseed over it
-      }
-    }catch(e){}
+    let sd=null;
+    try{ sd=await _fetchJSON('/api/state'); }catch(e){ sd=null; }   // retry the restore now the server may be warm
+    if(sd && sd.state && _stateHasWidgets(sd.state.app)){
+      syncApplyToLS(sd.state); if(sd.state._ts) LS.setItem('mdf_sync_ts', String(sd.state._ts));
+      loadState(); renderShell(); if(APP.activePage&&APP.activePage!=='__settings__') switchPage(APP.activePage); else if(APP.pages[0]) switchPage(APP.pages[0].id);
+      return;   // restored the real dashboard — do NOT reseed over it
+    }
+    // CRITICAL: sd===null means the server was UNREACHABLE (cold/asleep), NOT that it's empty
+    // (an empty server returns {state:null}, which is not null). Reseeding here would build a
+    // fresh default and push its 13 widgets over the real dashboard the server still holds —
+    // the "edits don't cache" bug. Wait and retry the restore instead of clobbering.
+    if(sd===null){
+      _syncSetStatus('retry');
+      setTimeout(()=>{ try{ if(APP._awaitingBuild) richieBuildApp(); }catch(e){} }, 8000);
+      return;
+    }
   }
   let setup=null; try{ setup=JSON.parse(LS.getItem('richie_setup')||'null'); }catch(e){} setup=setup||{};
   const cg=(setup.chosenGoals&&setup.chosenGoals.length)?setup.chosenGoals:((setupConfig&&setupConfig.chosenGoals)||[]);
