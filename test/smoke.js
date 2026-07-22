@@ -9,6 +9,9 @@
  *          "fixing" the test — you're probably reintroducing that bug.
  * Tier 3 — behavioral: actually executes the two root-cause pieces
  *          (_makeSafe storage fallback; server widget-count anti-wipe rule).
+ *
+ * Layout-robust: the frontend JS lives in public/app.js when externalized,
+ * or inline in public/index.html otherwise — this reads whichever exists.
  */
 'use strict';
 const fs = require('fs');
@@ -18,6 +21,10 @@ const vm = require('vm');
 const ROOT = path.join(__dirname, '..');
 const HTML = fs.readFileSync(path.join(ROOT, 'public', 'index.html'), 'utf8');
 const SERVER = fs.readFileSync(path.join(ROOT, 'server', 'index.js'), 'utf8');
+const APP_JS = path.join(ROOT, 'public', 'app.js');
+const JS = fs.existsSync(APP_JS)
+  ? fs.readFileSync(APP_JS, 'utf8')
+  : [...HTML.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]).join('\n');
 
 let failures = 0;
 const ok = name => console.log('  ✓ ' + name);
@@ -40,30 +47,32 @@ function sliceFunction(src, signature) {
 }
 
 console.log('\n1. Syntax & structure');
-(() => {
-  const scripts = [...HTML.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]);
-  try { scripts.forEach(s => new vm.Script(s)); ok(`frontend inline <script> parses (${scripts.length} block)`); }
-  catch (e) { fail('frontend inline <script> parses', e.message); }
-})();
+try { new vm.Script(JS); ok(`frontend JS parses (${fs.existsSync(APP_JS) ? 'public/app.js' : 'inline'})`); }
+catch (e) { fail('frontend JS parses', e.message); }
 try { new vm.Script(SERVER, { filename: 'server/index.js' }); ok('server/index.js parses'); }
 catch (e) { fail('server/index.js parses', e.message); }
 (() => {
   const o = (HTML.match(/<div/g) || []).length, c = (HTML.match(/<\/div>/g) || []).length;
-  assert(o === c, `balanced <div> tags (${o}/${c})`, `${o} open vs ${c} close`);
+  assert(o === c, `balanced <div> tags in shell (${o}/${c})`, `${o} open vs ${c} close`);
 })();
+// If externalized, the shell must reference the extracted files.
+if (fs.existsSync(APP_JS)) {
+  assert(/<script src="app\.js"><\/script>/.test(HTML), 'index.html references app.js');
+  assert(/<link rel="stylesheet" href="app\.css">/.test(HTML), 'index.html references app.css');
+}
 
 console.log('\n2. Persistence/sync invariants (regressions here = the reload-wipe saga)');
-assert(/function saveState\(\)\{[^]*?_saveActiveLayout\(\);[^]*?LS\.setItem\('richie_app'[^]*?syncPush\(\)/.test(HTML),
+assert(/function saveState\(\)\{[^]*?_saveActiveLayout\(\);[^]*?LS\.setItem\('richie_app'[^]*?syncPush\(\)/.test(JS),
   'saveState stays synchronous (_saveActiveLayout → write → push)',
   'do NOT re-add the debounced LS write — it ships stale/empty layouts');
-assert(/function syncCollect\(\)\{\s*try\{\s*_saveActiveLayout\(\)/.test(HTML),
+assert(/function syncCollect\(\)\{\s*try\{\s*_saveActiveLayout\(\)/.test(JS),
   'syncCollect folds the active layout before every push');
-assert(/if\(_stateHasWidgets\(APP\)\)\s*_sawWidgets=true;\s*else if\(_sawWidgets\)\{\s*_syncDirty=false;\s*return;/.test(HTML),
+assert(/if\(_stateHasWidgets\(APP\)\)\s*_sawWidgets=true;\s*else if\(_sawWidgets\)\{\s*_syncDirty=false;\s*return;/.test(JS),
   'client refuses to push a widget-less state once a dashboard was seen (_sawWidgets)');
 (() => {
-  const i = HTML.indexOf('// START BLANK');
-  const j = HTML.indexOf('} else {', i);
-  const seg = (i >= 0 && j > i) ? HTML.slice(i, j) : '';
+  const i = JS.indexOf('// START BLANK');
+  const j = JS.indexOf('} else {', i);
+  const seg = (i >= 0 && j > i) ? JS.slice(i, j) : '';
   assert(seg && !/saveState\(\)/.test(seg) && !/LS\.setItem\('richie_app'/.test(seg),
     'build-gate seed branch is in-memory only (never persists or pushes)',
     'the gate must not be saved/pushed — it overwrites the real dashboard');
@@ -73,7 +82,7 @@ assert(/exW\s*>\s*0\s*&&\s*inW\s*===\s*0/.test(SERVER),
 
 console.log('\n3. Behavioral: _makeSafe storage fallback (Edge silent-drop root cause)');
 (() => {
-  const src = sliceFunction(HTML, 'function _makeSafe(real, mem)');
+  const src = sliceFunction(JS, 'function _makeSafe(real, mem)');
   if (!src) return fail('extract _makeSafe');
   const _makeSafe = new Function(src + '\nreturn _makeSafe;')();
   const edge = { getItem: () => null, setItem: () => {}, removeItem: () => {} }; // silently drops, never throws
