@@ -2213,7 +2213,7 @@ const PERSONA_VOICE={
 // Selectable base voices (male/female + styles). Each prefers matching device
 // voices, and falls back to pitch/rate shaping so they stay distinct anywhere.
 const VOICE_PRESETS=[
-  {id:'guy',  label:'Guy',   emoji:'🧔', gender:'male',   rate:1.0,  pitch:0.82, oai:'cedar',  style:'a friendly, natural adult male voice', match:/(daniel|alex|aaron|tom|fred|nathan|oliver|david|mark|reed|eddy|\bmale\b)/, sample:"Hey, I'm Richie. Let's grow your money."},
+  {id:'guy',  label:'Guy',   emoji:'🧔', gender:'male',   rate:1.06, pitch:0.84, oai:'cedar',  style:'a warm, upbeat, friendly adult male voice — energetic and encouraging, but easy to listen to', match:/(daniel|alex|aaron|tom|fred|nathan|oliver|david|mark|reed|eddy|\bmale\b)/, sample:"Hey, I'm Richie. Let's grow your money."},
   {id:'gal',  label:'Gal',   emoji:'👩', gender:'female', rate:1.0,  pitch:1.16, oai:'marin',  style:'a friendly, natural adult female voice', match:/(samantha|karen|victoria|moira|tessa|fiona|serena|allison|ava|susan|nora|kate|google us english|\bfemale\b)/, sample:"Hi, I'm Richie. Let's grow your money."},
   {id:'hype', label:'Hype',  emoji:'🔥', gender:'any',    rate:1.16, pitch:1.22, oai:'fable',  style:'fast, high-energy and excited', match:/(samantha|google|natural|neural)/, sample:"WOO! I'm Richie and we are gonna CRUSH this!"},
   {id:'calm', label:'Calm',  emoji:'🧊', gender:'any',    rate:0.9,  pitch:0.96, oai:'sage',   style:'slow, calm and soothing', match:/(daniel|serena|natural|neural)/, sample:"Take a breath. I'm Richie. We'll do this together."},
@@ -6645,7 +6645,7 @@ function runIntro(){
   gg('riDots').innerHTML=RICHIE_STORY.map((_,i)=>`<div class="ri-dot" id="riDot-${i}"></div>`).join('');
   riChar=new RichieEmoji(gg('riChar'), gg('riZzz')); riChar.sleep(true);
   gg('richieIntro').style.display='flex';
-  const vc=gg('riVoiceChips'); if(vc) vc.innerHTML=voiceChipsHTML();
+  const vb=gg('riVoiceBar'); if(vb) vb.style.display='none';   // voice chooser removed — Richie has one locked voice
   riSyncVoiceUI();
   riScene=0; riRenderScene();
 }
@@ -6790,6 +6790,8 @@ async function riPickAnswer(i){
   wrap.innerHTML=`<div class="ri-choices-title">\u2026</div>`;
   if(riChar) riChar.emotion('happy');
   const nq=await riFetchNextQuestion();
+  // Call-and-response: Richie reacts to what you just said BEFORE asking the next question.
+  if(nq.reaction){ riTypeText(nq.reaction); await new Promise(r=>setTimeout(r, Math.min(2800, 950+nq.reaction.length*42))); }
   _obBusy=false;
   riAskInterview(nq.q, nq.opts);
 }
@@ -6797,10 +6799,10 @@ async function riFetchNextQuestion(){
   try{
     const res=await fetch('/api/onboard',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({ history:_obHistory.map(h=>({q:h.q,a:h.a})), mode:'next' })});
-    if(res.ok){ const j=await res.json(); if(j&&j.question&&Array.isArray(j.options)&&j.options.length) return {q:j.question.trim(), opts:j.options.slice(0,5)}; }
+    if(res.ok){ const j=await res.json(); if(j&&j.question&&Array.isArray(j.options)&&j.options.length) return {q:j.question.trim(), opts:j.options.slice(0,5), reaction:(j.reaction||'').trim()}; }
   }catch(e){}
   const fb=OB_FLOW[Math.min(_obRound, OB_FLOW.length-1)];
-  return {q:fb.q, opts:fb.opts};
+  return {q:fb.q, opts:fb.opts, reaction:''};
 }
 async function riFetchProfile(){
   try{
@@ -6828,26 +6830,32 @@ function _obFallbackProfile(){
   else if(/invest|retire|wealth|portfolio/.test(text)) persona='investor';
   return {level, persona, goals};
 }
-function _aiGoalToPreset(g){
+// Turn one AI goal into a real goal object. WIDENED: preserve the AI's SPECIFIC goal
+// (its exact name, metric, and dollar/percent target) instead of forcing it into a fixed
+// preset — so Richie can propose "Save $8k for the wedding", not just "Save $10,000".
+// Falls back to a matching preset only when the AI gave no usable name.
+const _AI_GOAL_ICONS={emergency:'🛟',debt:'✂️',savings:'💰',networth:'💎',savingsrate:'📊',retirement:'🔥',custom:'🎯'};
+function _aiGoalToPreset(g, i){
   const metric=((g&&g.metric)||'').toLowerCase();
-  const map={ emergency:'ef3mo', debt:'debtfree', savings:'save10k', networth:'nw100k', savingsrate:'sr20', retirement:'fire25', invest:'nw100k', budget:'save10k' };
-  let key=map[metric];
-  if(!key && g&&g.name){ const n=g.name.toLowerCase();
-    if(/debt|credit/.test(n))key='debtfree'; else if(/emergency|safety/.test(n))key='ef3mo';
-    else if(/retire|fire|coast/.test(n))key='fire25'; else if(/net.?worth|wealth|six.?figure/.test(n))key='nw100k';
-    else if(/save|saving/.test(n))key='save10k'; }
-  const preset=GOAL_PRESETS.find(p=>p.key===(key||'ef3mo'))||GOAL_PRESETS[0];
-  const clone=Object.assign({}, preset);
-  if(g&&g.name && g.name.length<=34) clone.name=g.name;   // personalize the label
-  return clone;
+  const m=_AI_GOAL_ICONS[metric]?metric:'custom';
+  const name=(g&&g.name)?String(g.name).trim().slice(0,42):'';
+  if(!name){ // no specifics → fall back to the closest preset
+    const byMetric={emergency:'ef3mo',debt:'debtfree',savings:'save10k',networth:'nw100k',savingsrate:'sr20',retirement:'fire25'};
+    const preset=GOAL_PRESETS.find(p=>p.key===(byMetric[m]||'ef3mo'))||GOAL_PRESETS[0];
+    return Object.assign({}, preset, {key:'ai_'+i});
+  }
+  const target=(g&&g.target!=null&&isFinite(+g.target)&&+g.target>0)?Math.round(+g.target):null;
+  const icon=(g&&g.icon&&String(g.icon).trim().length<=4)?String(g.icon).trim():(_AI_GOAL_ICONS[m]||'🎯');
+  return { key:'ai_'+i, name, metric:m, target, icon, note:(g&&g.note)?String(g.note).slice(0,60):'', ai:true };
 }
 function riApplyProfile(profile){
   profile=profile||_obFallbackProfile();
   setupConfig.level=1;   // all new users start at Level 1 and earn their way up
   const pk=(typeof PERSONA_ORDER!=='undefined'&&PERSONA_ORDER.includes(profile.persona))?profile.persona:'coach';
   setupConfig.persona=pk; setupConfig._aiPersona=true; introApplyAccent();
-  const seen={}; const goals=(profile.goals||[]).slice(0,4).map(_aiGoalToPreset).filter(g=>{ if(!g||seen[g.key])return false; seen[g.key]=1; return true; });
-  setupConfig.chosenGoals = goals.length?goals:[_aiGoalToPreset({metric:'emergency'})];
+  const seen={}; const goals=(profile.goals||[]).slice(0,4).map((g,i)=>_aiGoalToPreset(g,i)).filter(g=>{ const k=(g&&g.name||'').toLowerCase(); if(!g||seen[k])return false; seen[k]=1; return true; });
+  setupConfig._aiGoals = goals.length?goals:[_aiGoalToPreset({metric:'emergency'},0)];   // Richie's suggested set (survives deselection so it can be re-picked)
+  setupConfig.chosenGoals = setupConfig._aiGoals.slice(0,3);
   const wrap=gg('riChoices'); wrap.style.display='none'; wrap.classList.remove('ri-interview');
   document.querySelector('.ri-bubble-wrap').style.display='block';
   if(riChar) riChar.emotion('excited');
@@ -6859,20 +6867,25 @@ function riApplyProfile(profile){
 /* ── Narrated goals picker (now part of the intro, before naming) ── */
 function riRenderGoals(){
   const chosen=setupConfig.chosenGoals||[];
+  const ai=(setupConfig._aiGoals||[]);
   const wrap=gg('riChoices'); wrap.style.display='grid'; wrap.style.gridTemplateColumns=''; wrap.classList.remove('ri-quiz'); wrap.classList.add('ri-goals');
-  wrap.innerHTML=`<div class="ri-choices-title">Pick up to 3 \u2014 ${chosen.length}/3 chosen</div>`+
-    GOAL_PRESETS.map(g=>{ const sel=chosen.some(c=>c.key===g.key); const dim=!sel&&chosen.length>=3;
-      return `<div class="ri-choice ri-goal${sel?' sel':''}${dim?' dim':''}" onclick="${dim?'':`riToggleGoal('${g.key}',event)`}"><div class="ri-choice-icon">${g.icon}</div><div class="ri-choice-name">${g.name}</div><div class="ri-choice-desc">${g.blurb||''}</div></div>`;
-    }).join('')+
+  const chip=(g)=>{ const sel=chosen.some(c=>c.key===g.key); const dim=!sel&&chosen.length>=3;
+    return `<div class="ri-choice ri-goal${sel?' sel':''}${dim?' dim':''}${g.ai?' ri-goal-ai':''}" onclick="${dim?'':`riToggleGoal('${g.key}',event)`}"><div class="ri-choice-icon">${g.icon}</div><div class="ri-choice-name">${esc(g.name)}</div><div class="ri-choice-desc">${esc(g.note||g.blurb||'')}</div></div>`; };
+  // Richie's tailored picks first (when the interview produced them), then the standard menu.
+  const head = ai.length ? `<div class="ri-choices-title">\u2728 Richie's picks, just for you \u2014 ${chosen.length}/3</div>` : `<div class="ri-choices-title">Pick up to 3 \u2014 ${chosen.length}/3 chosen</div>`;
+  const aiHtml = ai.map(chip).join('');
+  const presets = GOAL_PRESETS.filter(p=>!ai.some(a=>a.key===p.key));
+  const presetHtml = (ai.length?`<div class="ri-goals-more">Or add one of these:</div>`:'') + presets.map(chip).join('');
+  wrap.innerHTML = head + aiHtml + presetHtml +
     `<div class="ri-goals-foot"><button class="ri-cta-btn${chosen.length?'':' disabled'}" onclick="riGoalsDone(event)">${chosen.length?`Continue with ${chosen.length} goal${chosen.length>1?'s':''} \u2192`:'Pick at least one'}</button></div>`;
 }
 function riToggleGoal(key,e){
   if(e)e.stopPropagation();
-  const g=GOAL_PRESETS.find(x=>x.key===key); if(!g) return;
+  const g=(setupConfig._aiGoals||[]).find(x=>x.key===key) || GOAL_PRESETS.find(x=>x.key===key); if(!g) return;
   setupConfig.chosenGoals=setupConfig.chosenGoals||[];
   const i=setupConfig.chosenGoals.findIndex(c=>c.key===key);
   if(i>=0) setupConfig.chosenGoals.splice(i,1);
-  else { if(setupConfig.chosenGoals.length>=3) return; setupConfig.chosenGoals.push({key:g.key,name:g.name,metric:g.metric,target:g.target,icon:g.icon,auto:g.auto}); }
+  else { if(setupConfig.chosenGoals.length>=3) return; setupConfig.chosenGoals.push({key:g.key,name:g.name,metric:g.metric,target:g.target,icon:g.icon,auto:g.auto,note:g.note,ai:g.ai}); }
   if(riChar) riChar.do('bounce');
   riRenderGoals();
 }
@@ -6896,9 +6909,7 @@ let riAudioOn = false;   // voice is OFF in the app; ON only during onboarding (
 try{ const s=LS.getItem('richie_audio'); if(s!==null) riAudioOn = s==='1'; }catch(e){}
 riAudioOn = false;       // start silent; runIntro() turns it on, wizFinish()/enterApp() turn it back off
 let _obVoice = false;    // true ONLY during the onboarding intro/interview/wizard — Richie speaks then, silent after
-let riVoiceId='guy';
-try{ const g=LS.getItem('richie_voice'); if(g&&VOICE_PRESETS.some(p=>p.id===g)) riVoiceId=g;
-     else { const old=LS.getItem('richie_voice_gender'); if(old==='female') riVoiceId='gal'; } }catch(e){}
+let riVoiceId='guy';   // LOCKED to one warm, upbeat male voice — the voice chooser was removed
 let _riVoice=null, _riVoiceForId=null;
 const _FEMALE_VOICES=/(female|woman|samantha|victoria|karen|moira|tessa|fiona|serena|allison|ava|susan|zira|kate|catherine|nora|sandy|veena|amelie|anna|google us english|google uk english female)/;
 const _MALE_VOICES=/(\bmale\b|\bman\b|daniel|alex|fred|tom|aaron|nathan|oliver|david|mark|gordon|arthur|reed|eddy|junior|ralph|albert|bruce|lee|rishi|google uk english male)/;
@@ -7049,9 +7060,7 @@ function riToggleAudio(){
   else { const pre=currentPreset(); riSpeak(riFullText||pre.sample); }
   riSyncVoiceUI();
 }
-function voiceChipsHTML(){
-  return VOICE_PRESETS.map(p=>`<button class="ri-vchip${p.id===riVoiceId?' active':''}" data-vid="${p.id}" onclick="event.stopPropagation();riSetVoice('${p.id}')" title="${esc(p.label)} voice">${p.emoji} ${p.label}</button>`).join('');
-}
+function voiceChipsHTML(){ return ''; }   // voice chooser removed — Richie speaks in one locked upbeat male voice
 // warm up voices list (some browsers load async) and cache the best one
 try{ if(typeof window!=='undefined' && window.speechSynthesis){ window.speechSynthesis.onvoiceschanged=()=>{ _riVoiceForId=null; _resolveVoice(); }; window.speechSynthesis.getVoices(); } }catch(e){}
 function riFinishIntro(){

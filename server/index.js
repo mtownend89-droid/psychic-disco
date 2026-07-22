@@ -379,22 +379,22 @@ app.post('/api/onboard', async (req, res) => {
     }
     const convo = history.map(h => `Richie: ${h.q}\nUser: ${h.a || ''}`).join('\n') || '(no answers yet)';
 
-    let sys, wantJson = false;
+    let sys, wantJson = true;
     if (mode === 'finalize') {
-      wantJson = true;
-      sys = 'You are Richie, a money coach. From this onboarding conversation, infer the user\'s profile. '
+      sys = 'You are Richie — a warm, emotionally intelligent personal money coach who just finished an intimate first conversation with a new user. '
+        + 'Infer their profile and design goals SPECIFIC to what they actually told you. '
         + 'Return ONLY valid JSON (no markdown, no prose) with exactly these keys: '
         + '"level" (integer 1-5 for financial literacy/experience), '
-        + '"persona" (one of: coach, crusher, accountant, mascot, retired, investor — the coaching style that fits them best), '
-        + '"goals" (array of 1-4 objects, each {"name": short label under 5 words, "metric": one of emergency, debt, savings, networth, savingsrate, retirement}), '
-        + '"summary" (one short sentence). Base everything strictly on what the user actually said.';
+        + '"persona" (one of: coach, crusher, accountant, mascot, retired, investor — the coaching style that fits this person best), '
+        + '"goals" (array of 1-4 objects, each {"name": a SPECIFIC short label under 6 words drawn from what they said — e.g. "Save $8k for the wedding", "Kill the $12k card", not generic; "metric": one of emergency, debt, savings, networth, savingsrate, retirement, custom (use custom for anything that does not fit the others); "target": the dollar amount or percent as a plain number when they implied one, else null; "icon": one fitting emoji; "note": one short warm phrase on why this fits them}), '
+        + '"summary" (one warm, personal sentence spoken TO them). Ground everything strictly in what the user said; invent nothing.';
     } else {
-      wantJson = true;
-      sys = 'You are Richie, a warm, sharp money coach onboarding a new user. '
-        + 'Based on the conversation so far, ask ONE short, friendly, specific question (max 18 words) to learn their financial literacy, situation, or goals, '
-        + 'AND provide 3-4 short multiple-choice answer options (each max 8 words) spanning the likely range of answers so they can just tap one. '
-        + 'Adapt to what they have already said; never repeat an earlier question; vary the angle. '
-        + 'Return ONLY valid JSON: {"question":"...","options":["...","...","..."]}';
+      sys = 'You are Richie — a warm, emotionally intelligent personal money coach meeting a new user one-on-one for the first time. This is an intimate conversation, not a form. '
+        + 'Speak like a trusted friend who happens to be great with money: first person, "we"/"let\'s", genuinely curious, and NEVER judgmental about debt, income, or mistakes. '
+        + 'Based on the conversation so far, return ONLY valid JSON: {"reaction":"...","question":"...","options":["...","...","..."]}. '
+        + '"reaction": a SHORT, genuine, human response to their last answer (max 14 words) that makes them feel seen; on the very first turn make it a warm welcome instead. '
+        + '"question": ONE short, caring, specific question (max 18 words) that goes a little deeper into their money life, feelings, or dreams — vary the angle, never repeat an earlier one. '
+        + '"options": 3-4 tap-able answers (each max 8 words) spanning the honest range, including the vulnerable/struggling option so no one feels judged.';
     }
 
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -406,8 +406,9 @@ app.post('/api/onboard', async (req, res) => {
       body: JSON.stringify({
         model: process.env.OPENAI_COACH_MODEL || 'gpt-4o-mini',
         messages: [{ role: 'system', content: sys }, { role: 'user', content: convo }],
-        max_tokens: wantJson ? 260 : 60,
-        temperature: mode === 'finalize' ? 0.3 : 0.8,
+        max_tokens: mode === 'finalize' ? 420 : 220,
+        temperature: mode === 'finalize' ? 0.4 : 0.85,
+        response_format: { type: 'json_object' },
       }),
     });
     if (!r.ok) {

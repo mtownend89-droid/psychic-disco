@@ -844,6 +844,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .ri-choices.ri-goals{grid-template-columns:1fr 1fr;}
 .ri-goal{position:relative;}
 .ri-goal.sel{border-color:var(--green);background:rgba(46,204,138,0.12);}
+.ri-goal-ai{border-color:rgba(46,204,138,0.35);box-shadow:0 0 0 1px rgba(46,204,138,0.15) inset;}
+.ri-goal-ai::after{content:'✨';position:absolute;top:6px;right:8px;font-size:11px;opacity:.8;}
+.ri-goals-more{grid-column:1/-1;text-align:center;color:var(--hint);font-size:11px;letter-spacing:.06em;margin:10px 0 2px;}
 .ri-goal.dim{opacity:0.4;pointer-events:none;}
 .ri-goals-foot{grid-column:1/-1;margin-top:6px;display:flex;justify-content:center;}
 .ri-goals-foot .ri-cta-btn.disabled{opacity:0.5;pointer-events:none;}
