@@ -1000,6 +1000,9 @@ function _engBillsRaw(){
   // This way a credit card shows even when the institution returns no liabilities data.
   const liabByAcct={}; (plaidLiabilities&&plaidLiabilities.credit_cards||[]).forEach(c=>{ if(c.account_id) liabByAcct[c.account_id]=c; });
   const mortByAcct={}; (plaidLiabilities&&plaidLiabilities.mortgages||[]).forEach(m=>{ if(m.account_id) mortByAcct[m.account_id]=m; });
+  // Detail for ANY loan (mortgage + student). Auto/other loans aren't in Plaid's Liabilities
+  // product at all, so they simply won't have an entry here — handled with an estimate below.
+  const loanByAcct={}; [].concat(plaidLiabilities&&plaidLiabilities.mortgages||[], plaidLiabilities&&plaidLiabilities.student_loans||[]).forEach(x=>{ if(x.account_id) loanByAcct[x.account_id]=x; });
   const out=[];
   (allAccts||[]).forEach(a=>{
     if(_acctExcluded(a.name||a.official_name)) return;   // excluded accounts stay out of debt/bills too
@@ -1017,12 +1020,20 @@ function _engBillsRaw(){
         limit:((a.balances&&a.balances.limit!=null)?a.balances.limit:(c.limit!=null?c.limit:0)),  // limit from the account, then liabilities
         due:_dueDay(c.next_payment_due_date), promo:'', promoEnd:'', paid:false, source:'plaid' });
     } else if(a.type==='loan'){
-      const m=mortByAcct[a.account_id]||{};
+      const m=loanByAcct[a.account_id]||{};
       const sub=(a.subtype||'').toLowerCase();
-      const cat=(sub==='mortgage'||m.account_id)?'HM':(sub==='auto'?'CAR':'LOAN');
+      const cat=(mortByAcct[a.account_id]||/mortgage|home|heloc|equity/.test(sub))?'HM':(sub==='auto'?'CAR':'LOAN');
+      const owed=Math.abs(cur||m.current_balance||0);
+      const planPay=(m.minimum_payment||0);
+      // Plaid's Liabilities product only details credit/mortgage/student loans. Auto & other
+      // loans arrive as accounts WITH a balance but NO payment/APR/due — and a $0 payment used
+      // to filter them out of every Bills view entirely. Estimate a payment (~5-yr amortization,
+      // $50 floor) so the loan stays VISIBLE with its balance and payoff math; flag it "est." —
+      // the account editor's Monthly payment / APR / due-day correct it and persist via cardData.
+      const estPay=planPay>0?0:(owed>0?Math.max(50,Math.round(owed/60)):0);
       out.push({ name:a.name||m.name||'Loan', note:a.institution||'', cat, account_id:a.account_id,
-        bal:-(Math.abs(cur||m.current_balance||0)), apr:(m.interest_rate!=null?m.interest_rate:0),
-        min:(m.minimum_payment||0), pay:(m.minimum_payment||0), limit:0,
+        bal:-owed, apr:(m.interest_rate!=null?m.interest_rate:0),
+        min:(planPay||estPay), pay:(planPay||estPay), estMin:estPay>0, limit:0,
         due:_dueDay(m.next_payment_due_date), promo:'', promoEnd:'', paid:false, source:'plaid' });
     }
   });
@@ -7499,27 +7510,41 @@ function buildSWOT(){
   const S=[],W=[],O=[],T=[];
   const nw = live ? (engNetBalance()+engNWAssets()-engNWLiab()) : engNetWorth();
   const monthlyIncome=engMonthlyIncome(), monthlyBills=engMonthlyBills();
-  // Prefer real Plaid liabilities (actual APRs/min payments) when connected
+  // Debt split — credit cards (the high-APR priority) vs long-term installment
+  // (mortgage/auto/HELOC). Keeps the SWOT from framing the whole unattainable pile as one fight.
+  const grp = (live && typeof engDebtGroups==='function') ? engDebtGroups() : null;
   const liabCards = (plaidLiabilities&&plaidLiabilities.credit_cards)||[];
-  const ccDebt = liabCards.length ? liabCards.reduce((s,c)=>s+Math.abs(c.current_balance||0),0)
-                : live ? engTotalDebt()
+  const ccDebt = grp ? grp.revTotal
+                : liabCards.length ? liabCards.reduce((s,c)=>s+Math.abs(c.current_balance||0),0)
                 : bills.filter(b=>b.cat==='CC').reduce((s,b)=>s+Math.abs(b.bal||0),0);
-  const highApr = liabCards.length ? liabCards.filter(c=>(c.apr||0)>=25)
+  const longTermDebt = grp ? grp.instTotal : 0;
+  const focusItems = grp ? grp.focusItems : [];
+  const focusTotal = grp ? grp.focusTotal : ccDebt;
+  const highApr = grp ? grp.revolving.filter(c=>(c.apr||0)>=25)
+                : liabCards.length ? liabCards.filter(c=>(c.apr||0)>=25)
                 : bills.filter(b=>b.apr>=25&&b.bal<0);
   const totalDebt = live ? engTotalDebt() : engBillsDebt();
+  // Concrete payoff nudge: extra $/mo to clear the focus set (default CC) in ~2 years.
+  const _fBal=focusItems.reduce((s,x)=>s+Math.abs(x.bal||0),0);
+  const _wApr=_fBal>0?focusItems.reduce((s,x)=>s+Math.abs(x.bal||0)*(x.apr||0),0)/_fBal:0;
+  const _curPay=focusItems.reduce((s,x)=>s+(x.pay||x.min||0),0);
+  const _r=_wApr/100/12; const _pmt24=focusTotal>0?(_r<=0?focusTotal/24:focusTotal*_r/(1-Math.pow(1+_r,-24))):0;
+  const _extra=Math.max(0, Math.ceil(_pmt24)-_curPay);
   // Strengths
   if(nw>0) S.push(`Net worth is positive at ${fmtM(nw)}.`);
   if(monthlyIncome>monthlyBills) S.push(`Income (${fmtK(monthlyIncome)}/mo) covers your bills (${fmtK(monthlyBills)}/mo).`);
   const cushion=monthlyIncome-monthlyBills;
   if(cushion>0) S.push(`You have ${fmtK(cushion)}/mo of breathing room after fixed bills.`);
+  if(longTermDebt>0 && longTermDebt>=ccDebt) S.push(`Most of your debt is long-term & lower-rate (${fmtM(longTermDebt)} mortgage/auto/HELOC) — steady, not the fire to fight first.`);
   if(!S.length) S.push(`You're here and looking — that's the first win.`);
-  // Weaknesses
-  if(ccDebt>0) W.push(`${fmtK(ccDebt)} in credit-card balances.`);
+  // Weaknesses — credit cards are the priority, called out on their own
+  if(ccDebt>0) W.push(`${fmtK(ccDebt)} in credit-card debt — your highest-rate balances and the payoff to prioritize.`);
   if(highApr.length) W.push(`${highApr.length} card${highApr.length>1?'s':''} above 25% APR draining cash.`);
   if(cushion<=0) W.push(`Bills eat all of your income — no monthly cushion.`);
   if(!W.length) W.push(`Nothing major — keep the momentum.`);
   // Opportunities
-  if(ccDebt>0){ const extra=200; O.push(`Put an extra ${fmtK(extra)}/mo on the highest-APR card to cut months off payoff.`); }
+  if(focusTotal>0 && _extra>0) O.push(`Add ~${fmtK(_extra)}/mo to your ${grp&&!_focusIsCC(grp)?'focus':'card'} payoff and you're clear in about 2 years.`);
+  else if(focusTotal>0) O.push(`You're already on pace to clear your priority payoff — keep it up.`);
   if(cushion>200) O.push(`Auto-invest part of that ${fmtK(cushion)}/mo cushion toward FIRE.`);
   const promo=bills.filter(b=>b.promo&&/0%/.test(b.promo));
   if(promo.length) O.push(`${promo.length} balance${promo.length>1?'s are':' is'} on 0% promos — pay them before the rate jumps.`);

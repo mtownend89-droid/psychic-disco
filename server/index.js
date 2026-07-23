@@ -999,7 +999,7 @@ app.get('/api/liabilities', requireAuth, async (req, res) => {
   if (!store.accessTokens.length) return res.json({ credit_cards: [], mortgages: [], student_loans: [] });
   // Fetch every bank in parallel; each task returns its own cards/mortgages, flattened in order.
   const perItem = await Promise.all(store.accessTokens.map(async item => {
-    const cards = [], mortgages = [];
+    const cards = [], mortgages = [], student = [];
     try {
       const r = await plaidClient.liabilitiesGet({ access_token: item.accessToken });
       const acctMap = {};
@@ -1010,7 +1010,13 @@ app.get('/api/liabilities', requireAuth, async (req, res) => {
       });
       r.data.liabilities.mortgage?.forEach(m => {
         const a = acctMap[m.account_id] || {};
-        mortgages.push({ account_id: m.account_id, name: a.name || 'Mortgage', institution: item.institutionName, current_balance: m.current_outstanding_balance ?? 0, minimum_payment: m.next_monthly_payment ?? 0, next_payment_due_date: m.next_payment_due_date, interest_rate: m.interest_rate?.percentage ?? null, is_overdue: m.is_overdue ?? false });
+        mortgages.push({ account_id: m.account_id, name: a.name || 'Mortgage', institution: item.institutionName, mask: a.mask, current_balance: (a.balances?.current ?? m.current_outstanding_balance) ?? 0, minimum_payment: m.next_monthly_payment ?? 0, next_payment_due_date: m.next_payment_due_date, interest_rate: m.interest_rate?.percentage ?? null, is_overdue: m.is_overdue ?? false });
+      });
+      // Student loans carry full detail (rate/min/due) like mortgages — Plaid just files them
+      // under a different array, so collect them too or they'd render bare like auto loans.
+      r.data.liabilities.student?.forEach(s => {
+        const a = acctMap[s.account_id] || {};
+        student.push({ account_id: s.account_id, name: a.name || s.loan_name || 'Student loan', institution: item.institutionName, mask: a.mask, current_balance: a.balances?.current ?? 0, minimum_payment: s.minimum_payment_amount ?? 0, next_payment_due_date: s.next_payment_due_date, interest_rate: s.interest_rate_percentage ?? null, is_overdue: s.is_overdue ?? false });
       });
     } catch (e) {
       try {
@@ -1020,11 +1026,12 @@ app.get('/api/liabilities', requireAuth, async (req, res) => {
         });
       } catch (_) {}
     }
-    return { cards, mortgages };
+    return { cards, mortgages, student };
   }));
   const cards = perItem.flatMap(x => x.cards);
   const mortgages = perItem.flatMap(x => x.mortgages);
-  res.json({ credit_cards: dedupeAccounts(cards), mortgages: dedupeAccounts(mortgages), student_loans: [] });
+  const student_loans = perItem.flatMap(x => x.student);
+  res.json({ credit_cards: dedupeAccounts(cards), mortgages: dedupeAccounts(mortgages), student_loans: dedupeAccounts(student_loans) });
 });
 
 app.get('/api/transactions', requireAuth, async (req, res) => {
