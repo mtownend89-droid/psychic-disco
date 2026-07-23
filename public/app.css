@@ -1184,6 +1184,26 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .nw-cat{font-size:10.5px;color:var(--muted);font-weight:500;}
 .nw-val{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0;}
 .nw-ed{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:0 3px;flex-shrink:0;}
+/* Debt widget — Priority (focus) vs Long-term split */
+.dbt-wrap{display:flex;flex-direction:column;}
+.dbt-list{display:flex;flex-direction:column;margin:2px 0;}
+.dbt-list.dbt-dim{opacity:.72;}
+.dbt-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);}
+.dbt-row:last-child{border-bottom:none;}
+.dbt-star{background:none;border:none;cursor:pointer;font-size:15px;line-height:1;color:var(--muted);padding:0 1px;flex-shrink:0;transition:color .12s,transform .12s;}
+.dbt-star:hover{transform:scale(1.15);}
+.dbt-star.on{color:var(--amber);}
+.dbt-ic{font-size:15px;flex-shrink:0;width:20px;text-align:center;}
+.dbt-nm{flex:1;min-width:0;font-size:12.5px;font-weight:600;color:var(--text);display:flex;flex-direction:column;gap:1px;overflow:hidden;text-overflow:ellipsis;}
+.dbt-apr{font-size:10px;color:var(--muted);font-weight:500;font-style:normal;}
+.dbt-val{font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0;color:var(--text);}
+.dbt-empty{font-size:11.5px;color:var(--muted);padding:8px 2px;line-height:1.5;}
+.dbt-longhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-top:11px;padding-top:9px;border-top:1px solid var(--border);font-size:12.5px;font-weight:700;color:var(--text);}
+.dbt-longhead i{font-style:normal;font-weight:500;font-size:10px;color:var(--muted);text-align:right;}
+.dbt-foot{margin-top:9px;font-size:11px;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums;}
+.dbt-goal{display:block;width:100%;margin:8px 0 2px;padding:9px;border-radius:9px;border:1px dashed var(--red);background:var(--red-dim,rgba(240,92,92,.1));color:var(--red);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;text-align:center;}
+.dbt-goal:hover{filter:brightness(1.08);}
+.dbt-goal.on{border-style:solid;border-color:var(--green);background:var(--green-dim);color:var(--green);cursor:default;}
 .nw-ed:hover{color:var(--text);}
 .nw-add{width:100%;margin-top:9px;padding:9px;border:1px dashed var(--border);background:var(--surface2);color:var(--text);border-radius:9px;font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;}
 .nw-add:hover{border-color:var(--green);}

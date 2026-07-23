@@ -1353,6 +1353,32 @@ function engCCDebt(){
   const fromAccts=engAccounts().filter(a=>!a.excluded&&a.type==='credit').reduce((s,a)=>s+Math.abs(a.bal||0),0);
   return Math.max(fromBills,fromAccts);
 }
+/* ═══ DEBT GROUPING & FOCUS ═══
+   Total debt lumps credit cards in with the mortgage/auto/HELOC and looks unattainable.
+   Split it: "revolving" (credit cards — the high-APR fight worth winning first) vs
+   "long-term/installment" (mortgage, auto, HELOC, other loans — the marathon). The user
+   can also ⭐ any long-term balance into their Focus set (or un-star a card), so the
+   tracked payoff number is the fight they actually chose. Overrides live in
+   APP.debtFocus {key:true|false}; absent = default (credit cards in, everything else out). */
+function _debtKey(b){ return b && (b.account_id ? 'a:'+b.account_id : 'n:'+String(b.name||'').toLowerCase()); }
+function _debtFocusMap(){ if(!APP.debtFocus||typeof APP.debtFocus!=='object') APP.debtFocus={}; return APP.debtFocus; }
+function _debtInFocus(b){ const m=_debtFocusMap(), k=_debtKey(b); return (k in m)?!!m[k]:(b&&b.cat==='CC'); }
+function engDebtGroups(){
+  const debts=engBills().filter(b=>Math.abs(b.bal||0)>0.005);
+  const byBal=(a,b)=>Math.abs(b.bal||0)-Math.abs(a.bal||0);
+  const revolving=debts.filter(b=>b.cat==='CC').sort(byBal);
+  const installment=debts.filter(b=>b.cat!=='CC').sort(byBal);
+  const focusItems=debts.filter(_debtInFocus).sort(byBal);
+  const rest=debts.filter(b=>!_debtInFocus(b)).sort(byBal);
+  const sum=arr=>arr.reduce((s,b)=>s+Math.abs(b.bal||0),0);
+  return { revolving, installment, focusItems, rest,
+    revTotal:sum(revolving), instTotal:sum(installment), focusTotal:sum(focusItems), restTotal:sum(rest),
+    total:sum(debts), count:debts.length };
+}
+function engFocusDebt(){ return engDebtGroups().focusTotal; }
+// Is the current Focus set exactly "all credit cards, nothing else"? If so the tracked goal
+// uses the existing ccdebt metric ("Kill credit-card debt"); otherwise a custom focus-debt goal.
+function _focusIsCC(g){ g=g||engDebtGroups(); return !!(g.focusItems.length && g.focusItems.length===g.revolving.length && g.rest.every(b=>b.cat!=='CC')); }
 function engCreditUtil(){
   const cards=engBills().filter(b=>b.cat==='CC' && (b.limit||0)>0);
   const limit=cards.reduce((s,c)=>s+(c.limit||0),0);
@@ -1408,6 +1434,7 @@ const GOAL_METRICS={
   networth:   {label:'Net worth',          icon:'📈', dir:'up',   get:()=>dataLoaded?engNetBalance()+engNWAssets()-engNWLiab():engNetWorth(), unit:'$'},
   debt:       {label:'Total debt',         icon:'💳', dir:'down', get:()=>engBillsDebt()||engTotalDebt(), unit:'$'},
   ccdebt:     {label:'Credit-card debt',   icon:'✂️', dir:'down', get:()=>engCCDebt(), unit:'$'},
+  focusdebt:  {label:'Focus-debt payoff',  icon:'🎯', dir:'down', get:()=>engFocusDebt(), unit:'$'},
   emergency:  {label:'Emergency fund',     icon:'🛟', dir:'up',   get:()=>engEmergencyFund(), unit:'$'},
   creditutil: {label:'Credit utilization', icon:'📉', dir:'down', get:()=>Math.round(engCreditUtil().pct), unit:'%'},
   creditlimit:{label:'Total credit limit', icon:'💳', dir:'up',   get:()=>Math.round(engCreditUtil().limit), unit:'$'},
@@ -1466,6 +1493,7 @@ const GOAL_PLANS={
     teach:["Break a big goal into monthly milestones.","Track progress regularly so you stay motivated.","Celebrate small wins along the way."] },
 };
 GOAL_PLANS.ccdebt=GOAL_PLANS.debt;   // CC-only goal uses the same page/widgets/coaching as debt
+GOAL_PLANS.focusdebt=GOAL_PLANS.debt;   // hand-picked focus payoff uses the same debt page/coaching
 function goalPlanFor(metric){ return GOAL_PLANS[metric]||GOAL_PLANS.custom; }
 function goalAutoTarget(kind){
   if(kind==='3mo') return Math.round(engMonthlyBills()*3)||3000;
@@ -4120,11 +4148,55 @@ function acctCatResetAll(){ try{ LS.removeItem('mdf_acct_cats'); }catch(e){} _ac
 
 /* ═══ CREDIT UTILIZATION + DTI WIDGET ═══ */
 /* ═══ DEBT: extracted bodies + consolidated hub ═══ */
+function _debtCatIcon(b){ return b.cat==='CC'?'💳':b.cat==='HM'?'🏡':b.cat==='CAR'?'🚗':'📄'; }
 function debtSummaryBody(w){
-  const debts=engBills().filter(b=>b.bal<0);
-  const d=debts.reduce((s,b)=>s+Math.abs(b.bal),0);
-  const hi=debts.slice().sort((a,b)=>(b.apr||0)-(a.apr||0))[0];
-  return `<div class="wph"><div class="wph-stat" style="color:var(--red)">${fmtK(d)}</div><div class="wph-sub">across ${debts.length} balance${debts.length!==1?'s':''}</div>${hi&&hi.apr?`<div class="wph-inline"><span>Highest APR: ${esc(hi.name)}</span><b style="color:var(--amber)">${hi.apr.toFixed(1)}%</b></div>`:''}</div>`;
+  const g=engDebtGroups();
+  if(!g.count) return `<div class="wph"><div class="wph-stat" style="color:var(--green)">${fmtK(0)}</div><div class="wph-sub">No debt tracked — nice.</div></div>`;
+  const focusIsCC=_focusIsCC(g);
+  const metric=focusIsCC?'ccdebt':'focusdebt';
+  const goal=_goals().find(x=>x&&x.metric===metric&&!x.completed);
+  const hi=g.focusItems.slice().sort((a,b)=>(b.apr||0)-(a.apr||0))[0];
+  const focusLabel=focusIsCC?'Credit-card payoff':'Focus payoff';
+  const row=(b)=>{ const inF=_debtInFocus(b); const k=String(_debtKey(b)).replace(/'/g,"\\'");
+    return `<div class="dbt-row"><button class="dbt-star${inF?' on':''}" title="${inF?'In your focus payoff — tap to drop':'Tap to add to your focus payoff'}" onclick="event.stopPropagation();toggleDebtFocus('${w.uid}','${k}')">${inF?'★':'☆'}</button>`
+      +`<span class="dbt-ic">${_debtCatIcon(b)}</span>`
+      +`<span class="dbt-nm">${esc(b.name)}${b.apr?`<i class="dbt-apr">${b.apr.toFixed(1)}% APR</i>`:''}</span>`
+      +`<span class="dbt-val">${fmtK(Math.abs(b.bal||0))}</span></div>`; };
+  const focusRows=g.focusItems.length?g.focusItems.map(row).join(''):`<div class="dbt-empty">Nothing in focus yet — ☆ star a balance below to build your payoff.</div>`;
+  const restRows=g.rest.map(row).join('');
+  const goalBtn = g.focusTotal<=0 ? '' : (goal
+    ? `<div class="dbt-goal on">🎯 Tracking as a goal · ${goalProgress(goal).pct}% paid off</div>`
+    : `<button class="dbt-goal" onclick="event.stopPropagation();debtTrackGoal('${w.uid}')">🎯 Track this ${focusIsCC?'card':'focus'} payoff as my goal</button>`);
+  return `<div class="dbt-wrap">
+    <div class="wph" style="padding-bottom:4px">
+      <div class="wph-sub">${focusLabel} · your priority</div>
+      <div class="wph-stat" style="color:var(--red)">${fmtK(g.focusTotal)}</div>
+      <div class="wph-sub">across ${g.focusItems.length} balance${g.focusItems.length!==1?'s':''}${hi&&hi.apr?` · top APR ${hi.apr.toFixed(1)}%`:''}</div>
+    </div>
+    <div class="dbt-list">${focusRows}</div>
+    ${goalBtn}
+    ${g.rest.length?`<div class="dbt-longhead"><span>Long-term · ${fmtK(g.restTotal)}</span><i>mortgage · auto · HELOC — the marathon</i></div><div class="dbt-list dbt-dim">${restRows}</div>`:''}
+    <div class="dbt-foot">All debt combined · ${fmtK(g.total)}</div>
+  </div>`;
+}
+function toggleDebtFocus(uid,key){
+  const b=engBills().find(x=>String(_debtKey(x))===String(key)); if(!b) return;
+  const m=_debtFocusMap(); const now=!_debtInFocus(b);
+  if(now===(b.cat==='CC')) delete m[String(key)];   // back to the default → drop the override, keep state tidy
+  else m[String(key)]=now;
+  saveState();
+  const w=_findWidget(uid); if(w) debtHubMount(w);
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg) renderCanvas(pg);
+}
+function debtTrackGoal(uid){
+  const g=engDebtGroups(); if(g.focusTotal<=0) return;
+  const focusIsCC=_focusIsCC(g);
+  const metric=focusIsCC?'ccdebt':'focusdebt';
+  let goal=_goals().find(x=>x&&x.metric===metric&&!x.completed);
+  if(goal){ goal.start=null; saveState(); }   // already tracking → re-anchor baseline to today's balance
+  else addGoal({ name: focusIsCC?'Kill credit-card debt':'Pay off my focus debts', metric, target:0, presetKey: focusIsCC?'cc0':undefined });
+  const w=_findWidget(uid); if(w) debtHubMount(w);
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg) renderCanvas(pg);
 }
 function debtPayoffBody(w){
   const _b=engBills(); const totDebt=engBillsDebt(); const totPay=engMonthlyBills();
