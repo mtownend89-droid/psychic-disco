@@ -397,20 +397,28 @@ app.post('/api/onboard', async (req, res) => {
         + '"options": 3-4 tap-able answers (each max 8 words) spanning the honest range, including the vulnerable/struggling option so no one feels judged.';
     }
 
-    const r = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: process.env.OPENAI_COACH_MODEL || 'gpt-4o-mini',
-        messages: [{ role: 'system', content: sys }, { role: 'user', content: convo }],
-        max_tokens: mode === 'finalize' ? 420 : 220,
-        temperature: mode === 'finalize' ? 0.4 : 0.85,
-        response_format: { type: 'json_object' },
-      }),
-    });
+    const ctl = new AbortController();
+    const killer = setTimeout(() => { try { ctl.abort(); } catch (e) {} }, 15000);   // never hang the client
+    let r;
+    try {
+      r = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: process.env.OPENAI_COACH_MODEL || 'gpt-4o-mini',
+          messages: [{ role: 'system', content: sys }, { role: 'user', content: convo }],
+          max_tokens: mode === 'finalize' ? 420 : 220,
+          temperature: mode === 'finalize' ? 0.4 : 0.85,
+          response_format: { type: 'json_object' },
+        }),
+        signal: ctl.signal,
+      });
+    } finally {
+      clearTimeout(killer);
+    }
     if (!r.ok) {
       const detail = await r.text().catch(() => '');
       console.error('OpenAI onboard error', r.status, detail);
