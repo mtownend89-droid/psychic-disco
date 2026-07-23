@@ -6702,7 +6702,9 @@ function riTypeText(txt){
         clearTimeout(guard);
         if(settled || mySeq!==_riTypeSeq){ resolve(); return; }
         settled=true; _stopTts(); _ttsMode='cloud'; _ttsAudio=audio; _ttsSeq++;
-        const play=()=>{ if(mySeq!==_riTypeSeq || !riTyping){ resolve(); return; }   // superseded or already skipped
+        let started=false;
+        const play=()=>{ if(started) return; started=true;                          // 'loadedmetadata' AND the fallback timer can both fire — type only once
+          if(mySeq!==_riTypeSeq || !riTyping){ resolve(); return; }                  // superseded or already skipped
           let dur=audio.duration; if(!dur||!isFinite(dur)||dur<=0) dur=Math.max(1.4, clean.length/14);
           const per=Math.max(13, Math.min(55, (dur*1000)/Math.max(txt.length,1)));
           audio.play().catch(()=>{});
@@ -6833,7 +6835,7 @@ async function riPickAnswer(i){
   if(riChar) riChar.emotion('happy');
   const nq=await riFetchNextQuestion();
   // Call-and-response: Richie reacts to what you just said (in sync voice+text), then asks.
-  if(nq.reaction){ await riTypeText(nq.reaction); await new Promise(r=>setTimeout(r,450)); }
+  if(nq.reaction){ await riTypeText(nq.reaction); await new Promise(r=>setTimeout(r,200)); }
   _obBusy=false;
   riAskInterview(nq.q, nq.opts);
 }
