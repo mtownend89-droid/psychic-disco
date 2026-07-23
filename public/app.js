@@ -6666,21 +6666,63 @@ function riRenderScene(){
   riTypeText(scene.text);
   hint.style.display = (riScene===RICHIE_STORY.length-1)?'none':'inline';
 }
+let _riTypeSeq=0;
+// Types a line and \u2014 during onboarding \u2014 speaks it IN SYNC: the words appear at the pace
+// of the spoken audio so Richie's voice tracks the text. Returns a promise that resolves
+// when the line is fully delivered (audio finished), so callers can pace what comes next.
+// Falls back to plain fixed-pace typing when voice is off or TTS is slow/unavailable.
 function riTypeText(txt){
   clearTimeout(riTypeTimer); riFullText=txt; riTyping=true; if(riChar) riChar.talk(true);
-  riSpeak(txt);
-  const el=gg('riText'); let i=0; el.innerHTML='<span class="ri-cursor"></span>';
-  (function step(){
-    if(i<=txt.length){ el.innerHTML=esc(txt.slice(0,i))+'<span class="ri-cursor"></span>'; i++; riTypeTimer=setTimeout(step,20+Math.random()*28); }
-    else { el.innerHTML=esc(txt); riTyping=false; if(riChar)riChar.talk(false);
-      if(riScene===RICHIE_STORY.length-1){ gg('riCta').style.display='block'; gg('riCtaBtn').textContent="Let's build it \u2192"; } }
-  })();
+  const el=gg('riText'); if(!el) return Promise.resolve();
+  const mySeq=++_riTypeSeq;
+  return new Promise(resolve=>{
+    let done=false;
+    const finish=()=>{ if(done) return; done=true;
+      if(mySeq===_riTypeSeq){ el.innerHTML=esc(txt); riTyping=false; if(riChar)riChar.talk(false);
+        if(riScene===RICHIE_STORY.length-1){ gg('riCta').style.display='block'; gg('riCtaBtn').textContent="Let's build it \u2192"; } }
+      resolve();
+    };
+    // Typewriter at perMs/char. onEnd runs when the visual finishes (defaults to finish()).
+    const typeAt=(perMs,onEnd)=>{ let i=0; clearTimeout(riTypeTimer);
+      (function step(){
+        if(mySeq!==_riTypeSeq || !riTyping){ resolve(); return; }   // superseded by a newer line, or skipped
+        if(i<=txt.length){ el.innerHTML=esc(txt.slice(0,i))+'<span class="ri-cursor"></span>'; i++; riTypeTimer=setTimeout(step, perMs); }
+        else (onEnd||finish)();
+      })();
+    };
+    // Onboarding: fetch the voice first, then type paced to its real duration so the
+    // words land exactly as they're spoken; resolve when the audio actually ends.
+    if(_obVoice && riAudioOn && _ttsMode!=='browser'){
+      _stopTts(); el.innerHTML='<span class="ri-cursor"></span>';
+      const clean=(txt||'').replace(/[\u{1F000}-\u{1FAFF}\u2190-\u27bf\u2b00-\u2bff\ufe0f\u2022]/gu,'').replace(/\s+/g,' ').trim();
+      let settled=false;
+      const fixed=()=>{ if(settled) return; settled=true; if(mySeq===_riTypeSeq) typeAt(26); else resolve(); };
+      const guard=setTimeout(fixed, 2800);   // never block the flow waiting on TTS
+      _ttsFetchAudio(clean).then(audio=>{
+        clearTimeout(guard);
+        if(settled || mySeq!==_riTypeSeq){ resolve(); return; }
+        settled=true; _stopTts(); _ttsMode='cloud'; _ttsAudio=audio; _ttsSeq++;
+        const play=()=>{ if(mySeq!==_riTypeSeq || !riTyping){ resolve(); return; }   // superseded or already skipped
+          let dur=audio.duration; if(!dur||!isFinite(dur)||dur<=0) dur=Math.max(1.4, clean.length/14);
+          const per=Math.max(13, Math.min(55, (dur*1000)/Math.max(txt.length,1)));
+          audio.play().catch(()=>{});
+          audio.addEventListener('ended', finish, {once:true});
+          setTimeout(finish, (dur*1000)+2000);            // safety net if 'ended' never fires
+          typeAt(per, ()=>{ if(mySeq===_riTypeSeq) el.innerHTML=esc(txt); });   // visual done; resolve waits for the voice
+        };
+        if(audio.readyState>=1) play(); else { audio.addEventListener('loadedmetadata', play, {once:true}); setTimeout(play, 600); }
+      }).catch(()=>{ clearTimeout(guard); fixed(); });
+      return;
+    }
+    // No voice (in-app, or forced browser mode): plain typewriter.
+    el.innerHTML='<span class="ri-cursor"></span>'; typeAt(20+Math.random()*10);
+  });
 }
 function riAdvance(e){
   if(e&&e.target&&e.target.closest&&e.target.closest('.ri-choice, .ri-cta-btn')) return;
   const scene=RICHIE_STORY[riScene];
   if(scene && scene.choice) return;
-  if(riTyping){ clearTimeout(riTypeTimer); gg('riText').innerHTML=riFullText; riTyping=false; if(riChar)riChar.talk(false);
+  if(riTyping){ clearTimeout(riTypeTimer); try{_stopTts();}catch(e){} gg('riText').innerHTML=riFullText; riTyping=false; if(riChar)riChar.talk(false);
     if(riScene===RICHIE_STORY.length-1){gg('riCta').style.display='block';gg('riCtaBtn').textContent="Let's build it \u2192";} return; }
   if(riScene>=RICHIE_STORY.length-1) return;
   riScene++; riRenderScene();
@@ -6787,18 +6829,25 @@ async function riPickAnswer(i){
     riApplyProfile(profile);
     return;
   }
-  wrap.innerHTML=`<div class="ri-choices-title">\u2026</div>`;
+  wrap.innerHTML=`<div class="ri-choices-title ri-thinking">Richie's thinking<span class="ri-dots"></span></div>`;
   if(riChar) riChar.emotion('happy');
   const nq=await riFetchNextQuestion();
-  // Call-and-response: Richie reacts to what you just said BEFORE asking the next question.
-  if(nq.reaction){ riTypeText(nq.reaction); await new Promise(r=>setTimeout(r, Math.min(2800, 950+nq.reaction.length*42))); }
+  // Call-and-response: Richie reacts to what you just said (in sync voice+text), then asks.
+  if(nq.reaction){ await riTypeText(nq.reaction); await new Promise(r=>setTimeout(r,450)); }
   _obBusy=false;
   riAskInterview(nq.q, nq.opts);
 }
+// POST /api/onboard with a hard timeout so a slow/hung OpenAI call can NEVER freeze the
+// interview \u2014 on timeout/error we abort and let the caller fall back to its scripted path.
+async function _obFetch(body){
+  const ctl=(typeof AbortController!=='undefined')?new AbortController():null;
+  const t=ctl?setTimeout(()=>{try{ctl.abort();}catch(e){}},13000):null;
+  try{ return await fetch('/api/onboard',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:ctl?ctl.signal:undefined}); }
+  finally{ if(t) clearTimeout(t); }
+}
 async function riFetchNextQuestion(){
   try{
-    const res=await fetch('/api/onboard',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ history:_obHistory.map(h=>({q:h.q,a:h.a})), mode:'next' })});
+    const res=await _obFetch({ history:_obHistory.map(h=>({q:h.q,a:h.a})), mode:'next' });
     if(res.ok){ const j=await res.json(); if(j&&j.question&&Array.isArray(j.options)&&j.options.length) return {q:j.question.trim(), opts:j.options.slice(0,5), reaction:(j.reaction||'').trim()}; }
   }catch(e){}
   const fb=OB_FLOW[Math.min(_obRound, OB_FLOW.length-1)];
@@ -6806,8 +6855,7 @@ async function riFetchNextQuestion(){
 }
 async function riFetchProfile(){
   try{
-    const res=await fetch('/api/onboard',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ history:_obHistory.map(h=>({q:h.q,a:h.a})), mode:'finalize' })});
+    const res=await _obFetch({ history:_obHistory.map(h=>({q:h.q,a:h.a})), mode:'finalize' });
     if(res.ok){ const j=await res.json(); if(j&&(j.level||j.persona||(j.goals&&j.goals.length))) return j; }
   }catch(e){}
   return _obFallbackProfile();
