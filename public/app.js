@@ -4199,11 +4199,33 @@ function debtTrackGoal(uid){
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg) renderCanvas(pg);
 }
 function debtPayoffBody(w){
-  const _b=engBills(); const totDebt=engBillsDebt(); const totPay=engMonthlyBills();
-  const avgApr=_b.filter(b=>b.bal<0&&b.apr>0).reduce((s,b,_,a)=>s+b.apr/a.length,0)||5;
-  const r=avgApr/100/12; const months=(totPay>totDebt*r)?Math.ceil(Math.log(totPay/(totPay-totDebt*r))/Math.log(1+r)):999;
+  const g=engDebtGroups();
+  if(!g.focusItems.length){
+    return `<div class="wph"><div class="wph-stat" style="color:var(--green)">🎉</div><div class="wph-sub">No focus debt to pay off — ☆ star a balance in the Owed tab to plan its payoff.</div></div>`;
+  }
+  const focusIsCC=_focusIsCC(g);
+  const label=focusIsCC?'Credit cards':'Your focus debts';
+  const P=g.focusTotal;
+  const pay=g.focusItems.reduce((s,b)=>s+(b.pay||b.min||0),0);   // what you're actually putting toward the focus set
+  const bals=g.focusItems.reduce((s,b)=>s+Math.abs(b.bal||0),0);
+  const wApr=bals>0?g.focusItems.reduce((s,b)=>s+Math.abs(b.bal||0)*(b.apr||0),0)/bals:0;   // balance-weighted APR
+  const r=wApr/100/12;
+  const monthsAt=(pmt)=>{ if(pmt<=0) return 999; if(r<=0) return Math.ceil(P/pmt); return (pmt>P*r)?Math.ceil(Math.log(pmt/(pmt-P*r))/Math.log(1+r)):999; };
+  const months=monthsAt(pay);
   const yrs=Math.floor(months/12), mo=months%12;
-  return `<div class="wph"><div class="wph-sub">Debt-free in (avalanche)${plaidHasLiab()?' · live':''}</div><div class="wph-stat">${months>=999?'—':yrs+' yr '+mo+' mo'}</div><div class="wph-sub">${fmtM(totDebt)} at ${avgApr.toFixed(1)}% avg APR</div></div>`;
+  const timeStr=months>=999?'—':(yrs?yrs+' yr ':'')+mo+' mo';
+  // Motivating nudge: what monthly payment clears the focus set inside 24 months?
+  const pmtFor=(n)=>r<=0?P/n:P*r/(1-Math.pow(1+r,-n));
+  const extra=Math.max(0, Math.ceil(pmtFor(24))-pay);
+  const nudge=(months>24 && P>0)
+    ? `<div class="wph-inline"><span>Add ~${fmtK(extra)}/mo${pay>0?' more':''}</span><b style="color:var(--green)">→ done in 2 yr</b></div>`
+    : '';
+  return `<div class="wph">
+    <div class="wph-sub">${label} paid off in${plaidHasLiab()?' · live':''}</div>
+    <div class="wph-stat">${timeStr}</div>
+    <div class="wph-sub">${fmtM(P)} at ${wApr.toFixed(1)}% avg APR · paying ${fmtK(pay)}/mo</div>
+    ${nudge}
+  </div>`;
 }
 // One "Debt" widget with tabs — replaces the separate Total Debt / Payoff / Credit / Promo cards.
 const DEBT_TABS=[{id:'owed',label:'Owed',fn:'debtSummaryBody'},{id:'payoff',label:'Payoff',fn:'debtPayoffBody'},{id:'credit',label:'Credit',fn:'creditUtilBody'},{id:'score',label:'Score',fn:'creditScoreBody'},{id:'promo',label:'0% Promo',fn:'promoTrackerBody'}];
