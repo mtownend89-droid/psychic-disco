@@ -2717,7 +2717,18 @@ function addProfile(){
 
 /* ═══════════════ RENDER SHELL ═══════════════ */
 /* ═══ APPEARANCE / THEME (per profile) ═══ */
+/* Optional decorative background patterns (layered over --bg via --bg-pattern). Kept subtle —
+   widgets sit on opaque --surface, so patterns only show in the background gutters. */
+const _PAT={
+  stars:'radial-gradient(1px 1px at 12% 20%,rgba(255,255,255,.7),transparent),radial-gradient(1px 1px at 78% 32%,rgba(180,220,255,.6),transparent),radial-gradient(1.5px 1.5px at 42% 72%,rgba(255,255,255,.55),transparent),radial-gradient(1px 1px at 88% 66%,rgba(255,255,255,.5),transparent),radial-gradient(1px 1px at 26% 84%,rgba(200,220,255,.5),transparent),radial-gradient(1.5px 1.5px at 62% 14%,rgba(255,255,255,.45),transparent),radial-gradient(1px 1px at 8% 54%,rgba(255,255,255,.4),transparent),radial-gradient(1px 1px at 54% 44%,rgba(255,255,255,.35),transparent),radial-gradient(1px 1px at 34% 8%,rgba(255,255,255,.4),transparent)',
+  stripes:'repeating-linear-gradient(45deg,rgba(154,230,48,.06) 0 12px,transparent 12px 26px)',
+  grid:'repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 1px,transparent 1px 38px),repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 1px,transparent 1px 38px)',
+  neon:'repeating-linear-gradient(0deg,rgba(255,79,216,.06) 0 1px,transparent 1px 40px),repeating-linear-gradient(90deg,rgba(79,225,255,.05) 0 1px,transparent 1px 40px)',
+  sparkle:'radial-gradient(2px 2px at 16% 22%,rgba(230,160,40,.55),transparent),radial-gradient(1.5px 1.5px at 64% 66%,rgba(236,79,170,.4),transparent),radial-gradient(2px 2px at 84% 30%,rgba(230,160,40,.5),transparent),radial-gradient(1.5px 1.5px at 32% 80%,rgba(236,79,170,.38),transparent),radial-gradient(1.5px 1.5px at 74% 86%,rgba(230,160,40,.45),transparent),radial-gradient(1.5px 1.5px at 46% 42%,rgba(236,79,170,.3),transparent)',
+  weave:'repeating-linear-gradient(45deg,rgba(140,110,70,.05) 0 7px,transparent 7px 14px),repeating-linear-gradient(-45deg,rgba(140,110,70,.04) 0 7px,transparent 7px 14px)',
+};
 const THEME_PRESETS=[
+  // ── Dark ──
   {id:'midnight',name:'Midnight',bg:'#0d0f14',sidebar:'#111318',surface:'#161920',surface2:'#1c1f28',surface3:'#232734',text:'#e4e6f0',muted:'#8b8fa8',border:'rgba(255,255,255,0.06)',border2:'rgba(255,255,255,0.1)',accent:'#2ecc8a'},
   {id:'ocean',name:'Ocean',bg:'#0a141f',sidebar:'#0c1a28',surface:'#122130',surface2:'#182a3d',surface3:'#20364d',text:'#e2ecf5',muted:'#7d94a8',border:'rgba(120,180,255,0.08)',border2:'rgba(120,180,255,0.14)',accent:'#38bdf8'},
   {id:'forest',name:'Forest',bg:'#0b140f',sidebar:'#0e1a13',surface:'#12211a',surface2:'#182b21',surface3:'#20382b',text:'#e0f0e6',muted:'#7ea08c',border:'rgba(120,255,180,0.07)',border2:'rgba(120,255,180,0.13)',accent:'#4ade80'},
@@ -2725,7 +2736,22 @@ const THEME_PRESETS=[
   {id:'sunset',name:'Sunset',bg:'#1a0f12',sidebar:'#22131a',surface:'#2b1820',surface2:'#3a1f2a',surface3:'#4d2836',text:'#f5e2e8',muted:'#a8858f',border:'rgba(255,120,150,0.08)',border2:'rgba(255,120,150,0.14)',accent:'#fb7185'},
   {id:'gold',name:'Midas',bg:'#14110a',sidebar:'#1a160d',surface:'#211c10',surface2:'#2b2416',surface3:'#382f1e',text:'#f5efe0',muted:'#a89a7e',border:'rgba(255,210,120,0.08)',border2:'rgba(255,210,120,0.14)',accent:'#f0c040'},
   {id:'mono',name:'Carbon',bg:'#0d0d0d',sidebar:'#121212',surface:'#181818',surface2:'#1f1f1f',surface3:'#282828',text:'#e8e8e8',muted:'#909090',border:'rgba(255,255,255,0.06)',border2:'rgba(255,255,255,0.1)',accent:'#e4e4e7'},
-  {id:'daylight',name:'Daylight',bg:'#f4f6fb',sidebar:'#e9edf5',surface:'#ffffff',surface2:'#f0f3f9',surface3:'#e4e9f2',text:'#1a1d29',muted:'#697089',border:'rgba(0,0,0,0.08)',border2:'rgba(0,0,0,0.13)',accent:'#10b981'},
+  // Fun / character (original palettes inspired by the vibe — no logos/artwork)
+  {id:'galaxy',name:'Galaxy',bg:'#05060e',sidebar:'#080a15',surface:'#0c1020',surface2:'#12172b',surface3:'#1a2140',text:'#e6e9f7',muted:'#8990b5',border:'rgba(130,160,255,0.09)',border2:'rgba(130,160,255,0.17)',accent:'#37e0a0',pattern:_PAT.stars},   // a galaxy far, far away — starfield + saber-green
+  {id:'afterlife',name:'Afterlife',bg:'#0b0f08',sidebar:'#0e1309',surface:'#12180c',surface2:'#182210',surface3:'#212e16',text:'#eaf6d8',muted:'#8aa072',border:'rgba(154,230,48,0.11)',border2:'rgba(154,230,48,0.19)',accent:'#9ae62e',pattern:_PAT.stripes},   // ghost-with-the-most black & venom green
+  {id:'neon',name:'Neon City',bg:'#0a0713',sidebar:'#0e0a1b',surface:'#140e24',surface2:'#1c132f',surface3:'#271a40',text:'#f3e9ff',muted:'#9585b5',border:'rgba(255,79,216,0.11)',border2:'rgba(79,225,255,0.18)',accent:'#ff2bd6',pattern:_PAT.neon},   // teen cyberpunk
+  {id:'slime',name:'Slime',bg:'#0c0f0a',sidebar:'#0f130c',surface:'#141a0f',surface2:'#1b2315',surface3:'#25301d',text:'#e9f5df',muted:'#8ba07d',border:'rgba(163,255,18,0.10)',border2:'rgba(163,255,18,0.17)',accent:'#a3ff12',pattern:_PAT.grid},   // teen gamer neon
+  {id:'espresso',name:'Espresso',bg:'#130f0b',sidebar:'#181310',surface:'#1f1813',surface2:'#291f18',surface3:'#352a20',text:'#f2e8dc',muted:'#a8957e',border:'rgba(201,162,103,0.09)',border2:'rgba(201,162,103,0.16)',accent:'#c9a267'},   // mature, warm & refined
+  {id:'merlot',name:'Merlot',bg:'#140a0e',sidebar:'#1a0d12',surface:'#221016',surface2:'#2d151d',surface3:'#3b1d27',text:'#f2e3e8',muted:'#a8838f',border:'rgba(200,90,120,0.09)',border2:'rgba(200,90,120,0.16)',accent:'#c04d6a'},   // mature, deep wine
+  // ── Bright ──
+  {id:'daylight',name:'Daylight',light:true,bg:'#f4f6fb',sidebar:'#e9edf5',surface:'#ffffff',surface2:'#f0f3f9',surface3:'#e4e9f2',text:'#1a1d29',muted:'#697089',border:'rgba(0,0,0,0.08)',border2:'rgba(0,0,0,0.13)',accent:'#10b981'},
+  {id:'princess',name:'Princess',light:true,bg:'#fff4fa',sidebar:'#ffe9f4',surface:'#ffffff',surface2:'#fff0f7',surface3:'#ffe3f0',text:'#4a2036',muted:'#a06d88',border:'rgba(236,79,170,0.14)',border2:'rgba(236,79,170,0.24)',accent:'#ec4faa',pattern:_PAT.sparkle},   // pink & gold sparkle
+  {id:'bubblegum',name:'Bubblegum',light:true,bg:'#fdf0f8',sidebar:'#fbe4f1',surface:'#ffffff',surface2:'#fbeaf4',surface3:'#f7dcec',text:'#3a1a2e',muted:'#9a6a84',border:'rgba(244,63,142,0.13)',border2:'rgba(60,180,240,0.20)',accent:'#f43f8e'},   // teen bright pop
+  {id:'mint',name:'Mint',light:true,bg:'#f0faf4',sidebar:'#e4f4ea',surface:'#ffffff',surface2:'#eefaf2',surface3:'#e0f2e7',text:'#12352a',muted:'#5f8a76',border:'rgba(16,185,129,0.12)',border2:'rgba(16,185,129,0.20)',accent:'#10b981'},
+  {id:'sky',name:'Sky',light:true,bg:'#eff6ff',sidebar:'#e3eefc',surface:'#ffffff',surface2:'#eef5ff',surface3:'#e0ecfb',text:'#12233a',muted:'#5f7797',border:'rgba(59,130,246,0.12)',border2:'rgba(59,130,246,0.20)',accent:'#3b82f6'},
+  {id:'sunrise',name:'Sunrise',light:true,bg:'#fff5ee',sidebar:'#ffe9db',surface:'#ffffff',surface2:'#fff0e6',surface3:'#ffe1cf',text:'#3a2317',muted:'#9c7a63',border:'rgba(251,146,60,0.13)',border2:'rgba(251,146,60,0.22)',accent:'#fb7a3c'},
+  {id:'linen',name:'Linen',light:true,bg:'#f7f3ec',sidebar:'#efe9df',surface:'#fffdf9',surface2:'#f4efe6',surface3:'#eae3d6',text:'#332b20',muted:'#8a7c66',border:'rgba(140,110,70,0.12)',border2:'rgba(140,110,70,0.20)',accent:'#a9804f',pattern:_PAT.weave},   // mature, elegant
+  {id:'paper',name:'Paper',light:true,bg:'#faf9f6',sidebar:'#f0efeb',surface:'#ffffff',surface2:'#f4f3ef',surface3:'#e9e8e3',text:'#1a1a1a',muted:'#6b6b6b',border:'rgba(0,0,0,0.08)',border2:'rgba(0,0,0,0.14)',accent:'#111827'},   // mature, minimalist
 ];
 const THEME_BY_ID={}; THEME_PRESETS.forEach(t=>THEME_BY_ID[t.id]=t);
 const FONT_OPTS=[
@@ -2749,6 +2775,7 @@ function applyAppearance(){
   const preset=THEME_BY_ID[a.preset||'midnight']||THEME_PRESETS[0];
   const r=document.documentElement.style, set=(k,v)=>r.setProperty(k,v);
   set('--bg', a.bg||preset.bg); set('--sidebar', preset.sidebar);
+  set('--bg-pattern', preset.pattern||'none');   // decorative backdrop for fun themes (else none)
   set('--surface', a.surface||preset.surface); set('--surface2', preset.surface2); set('--surface3', preset.surface3);
   set('--text', a.text||preset.text); set('--muted', preset.muted);
   set('--border', preset.border); set('--border2', preset.border2);
@@ -6112,7 +6139,13 @@ function renderAppearance(){
   const preset=THEME_BY_ID[a.preset||'midnight']||THEME_PRESETS[0];
   const persona=RICHIE_PERSONAS[APP.persona];
   const tw=gg('apThemes');
-  if(tw) tw.innerHTML=THEME_PRESETS.map(p=>`<button class="ap-theme${(a.preset||'midnight')===p.id?' on':''}" onclick="setThemePreset('${p.id}')" title="${esc(p.name)}"><span class="ap-sw" style="background:${p.bg};border-color:${p.border2}"><i style="background:${p.accent}"></i><i style="background:${p.surface}"></i><i style="background:${p.text}"></i></span><span class="ap-theme-nm">${esc(p.name)}</span></button>`).join('');
+  if(tw){
+    const cur=a.preset||'midnight';
+    const btn=p=>`<button class="ap-theme${cur===p.id?' on':''}" onclick="setThemePreset('${p.id}')" title="${esc(p.name)}${p.pattern?' · patterned':''}"><span class="ap-sw" style="background-color:${p.bg};background-image:${p.pattern||'none'};border-color:${p.border2}"><i style="background:${p.accent}"></i><i style="background:${p.surface}"></i><i style="background:${p.text}"></i></span><span class="ap-theme-nm">${esc(p.name)}</span></button>`;
+    const dark=THEME_PRESETS.filter(p=>!p.light), light=THEME_PRESETS.filter(p=>p.light);
+    tw.innerHTML=`<div class="ap-theme-cat">🌙 Dark</div><div class="ap-themes-grid">${dark.map(btn).join('')}</div>`
+      +`<div class="ap-theme-cat">☀️ Bright</div><div class="ap-themes-grid">${light.map(btn).join('')}</div>`;
+  }
   const fw=gg('apFonts');
   if(fw) fw.innerHTML=FONT_OPTS.map(f=>`<button class="ap-font${(a.font||'dm')===f.id?' on':''}" style="font-family:${f.css}" onclick="setThemeFont('${f.id}')">${esc(f.name)}</button>`).join('');
   const cw=gg('apColors');
