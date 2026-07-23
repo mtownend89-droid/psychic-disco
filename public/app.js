@@ -1034,7 +1034,8 @@ function _engBillsRaw(){
       out.push({ name:a.name||m.name||'Loan', note:a.institution||'', cat, account_id:a.account_id,
         bal:-owed, apr:(m.interest_rate!=null?m.interest_rate:0),
         min:(planPay||estPay), pay:(planPay||estPay), estMin:estPay>0, limit:0,
-        due:_dueDay(m.next_payment_due_date), promo:'', promoEnd:'', paid:false, source:'plaid' });
+        due:_dueDay(m.next_payment_due_date), dueEst:!m.next_payment_due_date,
+        promo:'', promoEnd:'', paid:false, source:'plaid' });
     }
   });
   return _applyEnvelopePlan(_applyCardData(applyBillOverrides(out.concat(manual))));
@@ -1071,7 +1072,7 @@ function _applyCardData(list){
     if(d.limit!=null && d.limit>0 && !(merged.limit>0)) merged.limit=d.limit;
     if(d.apr!=null && d.apr>0 && !(merged.apr>0)) merged.apr=d.apr;
     if(d.minPay!=null && d.minPay>0){ const payWasEst=merged.estMin&&merged.pay===merged.min; merged.min=d.minPay; if(!(merged.pay>0)||payWasEst) merged.pay=d.minPay; merged.estMin=false; }
-    if(d.dueDay!=null && d.dueDay>0) merged.due=d.dueDay;
+    if(d.dueDay!=null && d.dueDay>0){ merged.due=d.dueDay; merged.dueEst=false; }
     if(d.note) merged.note=d.note;
     return merged;
   });
@@ -3737,15 +3738,21 @@ function billsWidgetBody(w){
   const totPay=all.filter(b=>!b.paid).reduce((s,b)=>s+(b.pay||0),0)*factor;
   const rows=sorted.map(b=>{ const key=billKey(b).replace(/'/g,"\\'"); const paid=b.paid; const diff=(b.pay||0)-(b.min||0);
     const dispPay=tf==='month'?Math.round(b.pay):(b.pay*factor).toFixed(tf==='day'?2:0);
+    // Auto/other loans arrive from Plaid with a balance but no APR/payment/due — prompt to fill
+    // them in (once entered via the account editor, they persist and this disappears).
+    const isLoan=['HM','CAR','LOAN'].includes(b.cat);
+    const miss=[]; if(isLoan && !b.manual){ if(!(b.apr>0)) miss.push('APR'); if(b.estMin) miss.push('payment'); if(b.dueEst) miss.push('due date'); }
+    const fillPrompt=miss.length?`<button class="bill-fill" onclick="event.stopPropagation();openAccountEditor('${esc(b.name).replace(/'/g,"\\'")}')" title="Plaid doesn't send these for this loan — add them once and they stick everywhere">＋ Add ${miss.join(' · ')}</button>`:'';
     return `<div class="bill-row${paid?' paid':''}">
       <button class="bill-check" onclick="event.stopPropagation();toggleBillPaid('${key}')" title="${paid?'Mark unpaid':'Mark paid'}">${paid?'\u2713':''}</button>
       <div class="bill-info">
         <div class="bill-nm">${esc(b.name)}${b.manual?`<span class="bill-edit" role="button" onclick="event.stopPropagation();openManualBill(${(APP.manualBills||[]).findIndex(x=>x.name===b.name&&x.cat===b.cat)})" title="Edit">\u270E</span>`:`<span class="bill-edit" role="button" onclick="event.stopPropagation();openAccountEditor('${esc(b.name).replace(/'/g,"\\'")}')" title="Edit min payment / due day / promo">\u270E</span>`}</div>
-        <div class="bill-sub">due ${ord(b.due)}${b.apr?` \u00b7 ${b.apr.toFixed(1)}%`:''}${b.promo?` \u00b7 ${esc(b.promo)}`:''}${_billPayoffLabel(b)}</div>
+        <div class="bill-sub">${b.dueEst?'<span style="color:var(--muted)">due date not set</span>':'due '+ord(b.due)}${b.apr?` \u00b7 ${b.apr.toFixed(1)}%`:''}${b.promo?` \u00b7 ${esc(b.promo)}`:''}${_billPayoffLabel(b)}</div>
         <div class="bill-amts">
           <span class="bill-min">Min <b>${fmtK(b.min)}</b>${b.estMin?' \u00b7 <span style="color:var(--amber)" title="No minimum reported by the bank \u2014 estimated at ~2% of balance. Tap \u270e to set the real one.">est.</span>':(live&&!b.manual?' \u00b7 Plaid':'')}</span>
           ${Math.abs(diff)>=1?`<span class="bill-diff" style="color:${diff>0?'var(--amber)':'var(--green)'}">${diff>0?'+':''}${fmtK(diff)} vs min</span>`:''}
         </div>
+        ${fillPrompt}
       </div>
       <div class="bill-paywrap">
         <label class="bill-paylabel">You pay${tf!=='month'?' '+unit:''}</label>

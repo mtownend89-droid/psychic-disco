@@ -1443,6 +1443,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font
 .bill-amts{display:flex;align-items:center;gap:8px;margin-top:3px;flex-wrap:wrap;}
 .bill-min{font-size:10.5px;color:var(--muted);}
 .bill-min b{color:var(--text);font-weight:600;}
+.bill-fill{display:inline-flex;align-items:center;gap:4px;margin-top:5px;padding:3px 9px;border-radius:999px;border:1px dashed var(--amber);background:transparent;color:var(--amber);font-family:var(--font);font-size:10.5px;font-weight:700;cursor:pointer;line-height:1.3;}
+.bill-fill:hover{background:var(--amber);color:var(--surface);}
 .bills-foot-amts{display:flex;align-items:center;gap:10px;}
 .bills-foot-min{font-size:11px;color:var(--muted);}
 .bills-tf{display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;width:fit-content;margin-bottom:12px;}
