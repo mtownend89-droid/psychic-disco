@@ -491,6 +491,23 @@ body{font-family:var(--font);background-color:var(--bg);background-image:var(--b
 .ap-themes-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
 .ap-theme-cat{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em;margin:8px 0 2px;}
 .ap-theme-cat:first-child{margin-top:0;}
+/* ── Theme ambient animations ── */
+#themeFx{position:fixed;inset:0;pointer-events:none;z-index:35;overflow:hidden;}
+.fx-bit{position:absolute;font-size:var(--sz);opacity:var(--op);line-height:1;will-change:transform;}
+.fx-drift .fx-bit{top:var(--y);left:0;animation:fx-drift var(--dur) linear var(--delay) infinite;}
+.fx-fall  .fx-bit{left:var(--x);top:0;animation:fx-fall var(--dur) linear var(--delay) infinite;}
+.fx-rise  .fx-bit{left:var(--x);bottom:0;animation:fx-rise var(--dur) linear var(--delay) infinite;}
+.fx-float .fx-bit{left:var(--x);top:var(--y);animation:fx-float var(--dur) ease-in-out var(--delay) infinite;}
+@keyframes fx-drift{from{transform:translateX(-60px)}to{transform:translateX(calc(100vw + 60px))}}
+@keyframes fx-fall{0%{transform:translateY(-40px) translateX(0) rotate(0)}100%{transform:translateY(calc(100vh + 40px)) translateX(var(--drift)) rotate(340deg)}}
+@keyframes fx-rise{0%{transform:translateY(0) translateX(0)}100%{transform:translateY(calc(-100vh - 60px)) translateX(var(--drift))}}
+@keyframes fx-float{0%,100%{transform:translateY(0) translateX(0)}50%{transform:translateY(-16px) translateX(var(--drift))}}
+/* Slime theme: gooey drip pooling at each widget's bottom edge */
+body.fx-slime .canvas-widget-card::after{content:'';position:absolute;left:-2%;right:-2%;bottom:0;height:15px;pointer-events:none;z-index:3;
+  background:radial-gradient(11px 15px at 16% -3px,var(--green) 62%,transparent 64%),radial-gradient(9px 20px at 40% -3px,var(--green) 62%,transparent 64%),radial-gradient(13px 13px at 66% -3px,var(--green) 62%,transparent 64%),radial-gradient(8px 18px at 88% -3px,var(--green) 62%,transparent 64%);
+  opacity:.5;transform-origin:top center;animation:fx-ooze 5.5s ease-in-out infinite;}
+@keyframes fx-ooze{0%,100%{transform:scaleY(1)}50%{transform:scaleY(1.5)}}
+@media(prefers-reduced-motion:reduce){#themeFx{display:none!important;}body.fx-slime .canvas-widget-card::after{display:none!important;}}
 .ap-theme{display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:none;cursor:pointer;padding:4px 2px;border-radius:9px;font-family:var(--font);}
 .ap-theme.on{background:var(--surface2);}
 .ap-sw{display:flex;gap:2px;align-items:center;justify-content:center;width:100%;height:34px;border-radius:8px;border:1px solid var(--border2);overflow:hidden;padding:5px;}
@@ -1645,6 +1662,12 @@ select.mf-in{appearance:none;cursor:pointer;}
 .e-hopping{animation:e-hop .42s ease-in-out infinite;}
 .r-zzz{position:absolute;font-size:18px;font-weight:800;color:#a78bfa;font-style:italic;opacity:0;}
 /* ── Settings page ── */
+/* Settings fills the page like the widget canvas — headers span full width, cards flow into
+   as many ~460px columns as fit (masonry via multicol; cards never split). */
+.settings-page{max-width:none;columns:460px;column-gap:16px;}
+.settings-page>h2,.settings-page>p{column-span:all;-webkit-column-span:all;}
+.settings-page .set-card{break-inside:avoid;-webkit-column-break-inside:avoid;}
+@media(max-width:560px){.settings-page{columns:1;}}
 .set-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:14px;}
 .set-card-label{font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;}
 .persona-row{display:flex;flex-wrap:wrap;gap:10px;}

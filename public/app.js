@@ -2728,21 +2728,21 @@ const _PAT={
   weave:'repeating-linear-gradient(45deg,rgba(140,110,70,.05) 0 7px,transparent 7px 14px),repeating-linear-gradient(-45deg,rgba(140,110,70,.04) 0 7px,transparent 7px 14px)',
 };
 const THEME_PRESETS=[
-  // ── Dark ──
-  {id:'midnight',name:'Midnight',bg:'#0d0f14',sidebar:'#111318',surface:'#161920',surface2:'#1c1f28',surface3:'#232734',text:'#e4e6f0',muted:'#8b8fa8',border:'rgba(255,255,255,0.06)',border2:'rgba(255,255,255,0.1)',accent:'#2ecc8a'},
-  {id:'ocean',name:'Ocean',bg:'#0a141f',sidebar:'#0c1a28',surface:'#122130',surface2:'#182a3d',surface3:'#20364d',text:'#e2ecf5',muted:'#7d94a8',border:'rgba(120,180,255,0.08)',border2:'rgba(120,180,255,0.14)',accent:'#38bdf8'},
-  {id:'forest',name:'Forest',bg:'#0b140f',sidebar:'#0e1a13',surface:'#12211a',surface2:'#182b21',surface3:'#20382b',text:'#e0f0e6',muted:'#7ea08c',border:'rgba(120,255,180,0.07)',border2:'rgba(120,255,180,0.13)',accent:'#4ade80'},
-  {id:'grape',name:'Grape',bg:'#120e1c',sidebar:'#170f24',surface:'#1e142f',surface2:'#271a3d',surface3:'#33224d',text:'#ece2f5',muted:'#9585a8',border:'rgba(180,120,255,0.08)',border2:'rgba(180,120,255,0.14)',accent:'#a78bfa'},
-  {id:'sunset',name:'Sunset',bg:'#1a0f12',sidebar:'#22131a',surface:'#2b1820',surface2:'#3a1f2a',surface3:'#4d2836',text:'#f5e2e8',muted:'#a8858f',border:'rgba(255,120,150,0.08)',border2:'rgba(255,120,150,0.14)',accent:'#fb7185'},
-  {id:'gold',name:'Midas',bg:'#14110a',sidebar:'#1a160d',surface:'#211c10',surface2:'#2b2416',surface3:'#382f1e',text:'#f5efe0',muted:'#a89a7e',border:'rgba(255,210,120,0.08)',border2:'rgba(255,210,120,0.14)',accent:'#f0c040'},
-  {id:'mono',name:'Carbon',bg:'#0d0d0d',sidebar:'#121212',surface:'#181818',surface2:'#1f1f1f',surface3:'#282828',text:'#e8e8e8',muted:'#909090',border:'rgba(255,255,255,0.06)',border2:'rgba(255,255,255,0.1)',accent:'#e4e4e7'},
+  // ── Dark (deep, tinted charcoals — not pure black) ──
+  {id:'midnight',name:'Midnight',bg:'#191c24',sidebar:'#1e222c',surface:'#242833',surface2:'#2b303d',surface3:'#353b4a',text:'#e4e6f0',muted:'#9297b0',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.12)',accent:'#2ecc8a'},
+  {id:'ocean',name:'Ocean',bg:'#111e2b',sidebar:'#152535',surface:'#1c2f43',surface2:'#243b53',surface3:'#2f4864',text:'#e2ecf5',muted:'#88a0b6',border:'rgba(120,180,255,0.09)',border2:'rgba(120,180,255,0.16)',accent:'#38bdf8'},
+  {id:'forest',name:'Forest',bg:'#141f19',sidebar:'#192921',surface:'#1f3329',surface2:'#274133',surface3:'#32523f',text:'#e0f0e6',muted:'#87ab97',border:'rgba(120,255,180,0.08)',border2:'rgba(120,255,180,0.15)',accent:'#4ade80'},
+  {id:'grape',name:'Grape',bg:'#1b1628',sidebar:'#211a33',surface:'#29203f',surface2:'#33294e',surface3:'#403460',text:'#ece2f5',muted:'#a091b3',border:'rgba(180,120,255,0.09)',border2:'rgba(180,120,255,0.16)',accent:'#a78bfa'},
+  {id:'sunset',name:'Sunset',bg:'#241820',sidebar:'#2d1e28',surface:'#372531',surface2:'#462f3d',surface3:'#583a4a',text:'#f5e2e8',muted:'#b48f9a',border:'rgba(255,120,150,0.09)',border2:'rgba(255,120,150,0.16)',accent:'#fb7185'},
+  {id:'gold',name:'Midas',bg:'#1f1b12',sidebar:'#262117',surface:'#302819',surface2:'#3c3322',surface3:'#4a3f2b',text:'#f5efe0',muted:'#b3a488',border:'rgba(255,210,120,0.09)',border2:'rgba(255,210,120,0.16)',accent:'#f0c040'},
+  {id:'mono',name:'Carbon',bg:'#1a1a1a',sidebar:'#202020',surface:'#262626',surface2:'#2e2e2e',surface3:'#383838',text:'#e8e8e8',muted:'#9a9a9a',border:'rgba(255,255,255,0.07)',border2:'rgba(255,255,255,0.12)',accent:'#e4e4e7'},
   // Fun / character (original palettes inspired by the vibe — no logos/artwork)
-  {id:'galaxy',name:'Galaxy',bg:'#05060e',sidebar:'#080a15',surface:'#0c1020',surface2:'#12172b',surface3:'#1a2140',text:'#e6e9f7',muted:'#8990b5',border:'rgba(130,160,255,0.09)',border2:'rgba(130,160,255,0.17)',accent:'#37e0a0',pattern:_PAT.stars},   // a galaxy far, far away — starfield + saber-green
-  {id:'afterlife',name:'Afterlife',bg:'#0b0f08',sidebar:'#0e1309',surface:'#12180c',surface2:'#182210',surface3:'#212e16',text:'#eaf6d8',muted:'#8aa072',border:'rgba(154,230,48,0.11)',border2:'rgba(154,230,48,0.19)',accent:'#9ae62e',pattern:_PAT.stripes},   // ghost-with-the-most black & venom green
-  {id:'neon',name:'Neon City',bg:'#0a0713',sidebar:'#0e0a1b',surface:'#140e24',surface2:'#1c132f',surface3:'#271a40',text:'#f3e9ff',muted:'#9585b5',border:'rgba(255,79,216,0.11)',border2:'rgba(79,225,255,0.18)',accent:'#ff2bd6',pattern:_PAT.neon},   // teen cyberpunk
-  {id:'slime',name:'Slime',bg:'#0c0f0a',sidebar:'#0f130c',surface:'#141a0f',surface2:'#1b2315',surface3:'#25301d',text:'#e9f5df',muted:'#8ba07d',border:'rgba(163,255,18,0.10)',border2:'rgba(163,255,18,0.17)',accent:'#a3ff12',pattern:_PAT.grid},   // teen gamer neon
-  {id:'espresso',name:'Espresso',bg:'#130f0b',sidebar:'#181310',surface:'#1f1813',surface2:'#291f18',surface3:'#352a20',text:'#f2e8dc',muted:'#a8957e',border:'rgba(201,162,103,0.09)',border2:'rgba(201,162,103,0.16)',accent:'#c9a267'},   // mature, warm & refined
-  {id:'merlot',name:'Merlot',bg:'#140a0e',sidebar:'#1a0d12',surface:'#221016',surface2:'#2d151d',surface3:'#3b1d27',text:'#f2e3e8',muted:'#a8838f',border:'rgba(200,90,120,0.09)',border2:'rgba(200,90,120,0.16)',accent:'#c04d6a'},   // mature, deep wine
+  {id:'galaxy',name:'Galaxy',bg:'#12152a',sidebar:'#171c38',surface:'#1d2342',surface2:'#262d52',surface3:'#333c68',text:'#e6e9f7',muted:'#9096bd',border:'rgba(130,160,255,0.10)',border2:'rgba(130,160,255,0.18)',accent:'#37e0a0',pattern:_PAT.stars},   // a galaxy far, far away — starfield + saber-green
+  {id:'afterlife',name:'Afterlife',bg:'#141a0f',sidebar:'#192113',surface:'#202b16',surface2:'#29371c',surface3:'#354627',text:'#eaf6d8',muted:'#93a97b',border:'rgba(154,230,48,0.12)',border2:'rgba(154,230,48,0.20)',accent:'#9ae62e',pattern:_PAT.stripes},   // ghost-with-the-most black & venom green
+  {id:'neon',name:'Neon City',bg:'#150f26',sidebar:'#1a1330',surface:'#21193c',surface2:'#2a2149',surface3:'#372c5c',text:'#f3e9ff',muted:'#9d8dbd',border:'rgba(255,79,216,0.12)',border2:'rgba(79,225,255,0.20)',accent:'#ff2bd6',pattern:_PAT.neon},   // teen cyberpunk
+  {id:'slime',name:'Slime',bg:'#151a10',sidebar:'#1a2115',surface:'#212b18',surface2:'#2a361f',surface3:'#37472a',text:'#e9f5df',muted:'#92a884',border:'rgba(163,255,18,0.11)',border2:'rgba(163,255,18,0.18)',accent:'#a3ff12',pattern:_PAT.grid},   // teen gamer neon
+  {id:'espresso',name:'Espresso',bg:'#211a13',sidebar:'#28201a',surface:'#312820',surface2:'#3d3228',surface3:'#4b3e30',text:'#f2e8dc',muted:'#b09d86',border:'rgba(201,162,103,0.10)',border2:'rgba(201,162,103,0.18)',accent:'#c9a267'},   // mature, warm & refined
+  {id:'merlot',name:'Merlot',bg:'#241419',sidebar:'#2c1921',surface:'#361f28',surface2:'#442833',surface3:'#553341',text:'#f2e3e8',muted:'#b08b97',border:'rgba(200,90,120,0.10)',border2:'rgba(200,90,120,0.18)',accent:'#c04d6a'},   // mature, deep wine
   // ── Bright ──
   {id:'daylight',name:'Daylight',light:true,bg:'#f4f6fb',sidebar:'#e9edf5',surface:'#ffffff',surface2:'#f0f3f9',surface3:'#e4e9f2',text:'#1a1d29',muted:'#697089',border:'rgba(0,0,0,0.08)',border2:'rgba(0,0,0,0.13)',accent:'#10b981'},
   {id:'princess',name:'Princess',light:true,bg:'#fff4fa',sidebar:'#ffe9f4',surface:'#ffffff',surface2:'#fff0f7',surface3:'#ffe3f0',text:'#4a2036',muted:'#a06d88',border:'rgba(236,79,170,0.14)',border2:'rgba(236,79,170,0.24)',accent:'#ec4faa',pattern:_PAT.sparkle},   // pink & gold sparkle
@@ -2785,8 +2785,55 @@ function applyAppearance(){
   set('--pos', a.pos||'#2ecc8a'); set('--pos-dim', _hexToRgba(a.pos||'#2ecc8a',0.12));   // money-in stays its own color
   set('--red', a.neg||'#f05c5c'); set('--red-dim', _hexToRgba(a.neg||'#f05c5c',0.1));
   const font=FONT_BY_ID[a.font||'dm']||FONT_OPTS[0]; set('--font', font.css);
+  try{ applyThemeFx(preset.id); }catch(e){}   // themed ambient animations (opt-out, reduced-motion aware)
 }
 function applyAccent(){ applyAppearance(); }   // persona/appearance both flow through here
+
+/* ── Theme ambient animations (fun, optional, per profile) ──
+   A body-level, pointer-events-none overlay drifts a few themed emoji across the screen;
+   some themes also enable per-widget CSS effects via a body.fx-<id> class (e.g. slime drip).
+   Off automatically under prefers-reduced-motion; toggle in Settings → Appearance. */
+const THEME_FX={
+  galaxy:   {emojis:['🚀','🛸','🌟','✨'], anim:'drift', count:7, size:[13,24], op:0.55, dur:[16,34]},
+  slime:    {emojis:['🫧','💚','🟢'],       anim:'float', count:5, size:[13,22], op:0.40, dur:[8,15]},
+  princess: {emojis:['👑','💖','✨','🌸'], anim:'float', count:8, size:[14,24], op:0.60, dur:[9,18]},
+  forest:   {emojis:['🍃','🍂','🌿'],       anim:'fall',  count:9, size:[14,22], op:0.70, dur:[8,16]},
+  ocean:    {emojis:['🫧','🐠','🐚'],       anim:'rise',  count:8, size:[12,22], op:0.50, dur:[9,18]},
+  afterlife:{emojis:['👻','🪲','🕸️'],       anim:'float', count:6, size:[15,26], op:0.45, dur:[10,20]},
+  neon:     {emojis:['✦','💫','⚡'],         anim:'float', count:7, size:[12,20], op:0.50, dur:[8,16]},
+  sunset:   {emojis:['🌸','🍑','☀️'],       anim:'fall',  count:7, size:[14,22], op:0.50, dur:[9,17]},
+  gold:     {emojis:['🪙','✨','💰'],       anim:'fall',  count:6, size:[14,22], op:0.50, dur:[9,16]},
+  grape:    {emojis:['🍇','🔮','✨'],       anim:'float', count:6, size:[14,22], op:0.45, dur:[10,18]},
+  merlot:   {emojis:['🍷','🍇'],             anim:'float', count:5, size:[15,24], op:0.40, dur:[12,22]},
+};
+let _fxLayer=null;
+function _ensureFxLayer(){
+  if(_fxLayer && document.body && document.body.contains(_fxLayer)) return _fxLayer;
+  _fxLayer=document.getElementById('themeFx');
+  if(!_fxLayer){ _fxLayer=document.createElement('div'); _fxLayer.id='themeFx'; if(document.body) document.body.appendChild(_fxLayer); }
+  return _fxLayer;
+}
+function applyThemeFx(presetId){
+  if(typeof document==='undefined' || !document.body) return;
+  const layer=_ensureFxLayer(); if(!layer) return;
+  [...document.body.classList].forEach(c=>{ if(c.indexOf('fx-')===0) document.body.classList.remove(c); });
+  layer.className=''; layer.innerHTML='';
+  const a=_appearance();
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const fx=THEME_FX[presetId];
+  if(a.fx===false || reduce || !fx) return;
+  document.body.classList.add('fx-'+presetId);      // enables per-widget CSS effects (slime drip, etc.)
+  layer.className='fx-'+fx.anim;
+  const rnd=(lo,hi)=>lo+Math.random()*(hi-lo);
+  let html='';
+  for(let i=0;i<fx.count;i++){
+    const em=fx.emojis[i%fx.emojis.length];
+    const dur=rnd(fx.dur[0],fx.dur[1]);
+    html+=`<span class="fx-bit" style="--x:${rnd(3,95).toFixed(1)}%;--y:${rnd(4,92).toFixed(1)}%;--sz:${rnd(fx.size[0],fx.size[1]).toFixed(0)}px;--dur:${dur.toFixed(1)}s;--delay:${(-rnd(0,dur)).toFixed(1)}s;--op:${(fx.op*rnd(0.7,1)).toFixed(2)};--drift:${rnd(-45,45).toFixed(0)}px">${em}</span>`;
+  }
+  layer.innerHTML=html;
+}
+function setThemeAnim(on){ _setAppearance({fx:!!on}); applyThemeFx(_appearance().preset||'midnight'); saveState(); renderAppearance(); }
 
 function renderShell(){
   applyAccent();
@@ -5992,7 +6039,7 @@ function renderSettings(){
   gg('tbTitle').textContent='Settings';
   const p=RICHIE_PERSONAS[APP.persona];
   gg('page-content').innerHTML=`
-    <div style="max-width:620px">
+    <div class="settings-page">
       <h2 style="font-size:19px;margin-bottom:4px">Settings</h2>
       <p style="color:var(--muted);font-size:13px;margin-bottom:22px">Tune how Richie guides you. More options arrive as we build.</p>
 
@@ -6011,6 +6058,13 @@ function renderSettings(){
         <div style="font-size:12px;color:var(--muted);margin:2px 0 12px;line-height:1.5">Pick a theme, tweak any color, and choose a font. Starts from your Richie persona — change it whenever you like. Saved per profile.</div>
         <div class="ap-sub">Theme</div>
         <div class="ap-themes" id="apThemes"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:13px">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--text)">✨ Theme animations</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">Playful ambient motion for fun themes — spaceships for Galaxy, sparkles for Princess, falling leaves for Forest, slime drip for Slime, and more. Auto-off if your device prefers reduced motion.</div>
+          </div>
+          <button class="toggle${_appearance().fx!==false?' on':''}" id="animToggle" onclick="setThemeAnim(_appearance().fx===false)" aria-label="Toggle theme animations"><span class="toggle-knob"></span></button>
+        </div>
         <div class="ap-sub" style="margin-top:15px">Font</div>
         <div class="ap-fonts" id="apFonts"></div>
         <div class="ap-sub" style="margin-top:15px">Custom colors</div>
