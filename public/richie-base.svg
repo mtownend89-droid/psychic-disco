@@ -1,95 +1,96 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 490" width="340" height="490">
-<!-- ============ RICHIE — cartoony vertical dollar-bill mascot (for Rive) ============
-  Portrait dollar-bill body with rubber-hose arms (white gloves) and little legs (shoes),
-  a big cartoon face in the center oval, ornate border, corner rosettes, and a $ emblem.
-  Every animatable part is a named group/shape so Rive imports them as riggable nodes:
-    • pupil_left / pupil_right  → look around; scale eye_* groups to blink
-    • brow_left / brow_right    → rotate/raise for emotion (mood input)
-    • mouth (group)             → swap/scale between smile & open-talk (talking, mood)
-    • arm_left / arm_right       → set origin at the shoulder, rotate to wave
-    • leg_left / leg_right        → little walk/idle bounce
-    • Richie (root)              → squash/stretch + bob for idle / bounce / celebrate
-  Original stylized bill (not a facsimile of real currency). Recolor freely in Rive.
+<!-- ============ RICHIE — cartoony rippling dollar-bill mascot (for Rive) ============
+  A fluttering, wavy banknote body (undulating edges + ripple-shading + sheen) with ornate
+  engraving: double guilloche border, corner "1" medallions, two seals flanking a $, header/
+  footer flourishes, portrait filigree, margin hairlines. Rubber-hose arms (gloves) + legs
+  (shoes). Big cartoon face in the center oval.
+  Named, riggable groups for Rive:
+    pupil_left/right · eye_left/right · brow_left/right · mouth · cheek_* ·
+    arm_left/right · leg_left/right · bill_body · Richie(root)
+  Original stylized bill (not a real-currency facsimile). Recolor freely in Rive.
 ================================================================================= -->
   <defs>
-    <linearGradient id="billGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#9ed492"/>
-      <stop offset="1" stop-color="#6fae74"/>
+    <linearGradient id="billGrad" x1="0.1" y1="0" x2="0.2" y2="1">
+      <stop offset="0" stop-color="#a9dc9c"/><stop offset="0.5" stop-color="#84c07f"/><stop offset="1" stop-color="#6aa870"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.22"/><stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/><stop offset="1" stop-color="#2f5f3d" stop-opacity="0.14"/>
     </linearGradient>
   </defs>
 
   <g id="Richie">
 
-    <!-- legs (behind the bill) -->
+    <!-- legs (behind bill) -->
     <g id="legs">
-      <g id="leg_left">
-        <path d="M142 404 C140 428 134 444 132 452" fill="none" stroke="#6fae74" stroke-width="17" stroke-linecap="round"/>
-        <ellipse cx="120" cy="458" rx="29" ry="14" fill="#2b2f36"/>
-        <ellipse cx="120" cy="461" rx="29" ry="7" fill="#171a1f"/>
-      </g>
-      <g id="leg_right">
-        <path d="M198 404 C200 428 206 444 208 452" fill="none" stroke="#6fae74" stroke-width="17" stroke-linecap="round"/>
-        <ellipse cx="220" cy="458" rx="29" ry="14" fill="#2b2f36"/>
-        <ellipse cx="220" cy="461" rx="29" ry="7" fill="#171a1f"/>
-      </g>
+      <g id="leg_left"><path d="M142 404 C140 428 134 444 132 452" fill="none" stroke="#6fae74" stroke-width="17" stroke-linecap="round"/><ellipse cx="120" cy="458" rx="29" ry="14" fill="#2b2f36"/><ellipse cx="120" cy="461" rx="29" ry="7" fill="#171a1f"/></g>
+      <g id="leg_right"><path d="M198 404 C200 428 206 444 208 452" fill="none" stroke="#6fae74" stroke-width="17" stroke-linecap="round"/><ellipse cx="220" cy="458" rx="29" ry="14" fill="#2b2f36"/><ellipse cx="220" cy="461" rx="29" ry="7" fill="#171a1f"/></g>
     </g>
 
-    <!-- arms (behind the bill) -->
+    <!-- arms (behind bill) -->
     <g id="arms">
-      <g id="arm_left">
-        <path d="M82 214 C56 222 42 246 48 266" fill="none" stroke="#6fae74" stroke-width="17" stroke-linecap="round"/>
-        <circle cx="48" cy="270" r="16" fill="#ffffff" stroke="#3f7a4f" stroke-width="4"/>
+      <g id="arm_left"><path d="M82 214 C56 222 42 246 48 266" fill="none" stroke="#6fae74" stroke-width="17" stroke-linecap="round"/><circle cx="48" cy="270" r="16" fill="#ffffff" stroke="#3f7a4f" stroke-width="4"/></g>
+      <g id="arm_right"><path d="M258 214 C284 222 298 246 292 266" fill="none" stroke="#6fae74" stroke-width="17" stroke-linecap="round"/><circle cx="292" cy="270" r="16" fill="#ffffff" stroke="#3f7a4f" stroke-width="4"/></g>
+    </g>
+
+    <!-- bill body (wavy, rippling sheet) -->
+    <g id="bill">
+      <path id="bill_body" d="M82 104 C84 90 96 84 112 84 C140 84 150 92 170 88 C190 84 214 84 240 86 C252 87 260 92 260 106 C263 180 263 300 259 380 C258 394 250 400 236 399 C214 396 200 404 172 402 C148 400 130 405 108 401 C96 399 80 397 78 384 C74 300 74 180 78 108 C79 100 80 104 82 104 Z" fill="url(#billGrad)" stroke="#3f7a4f" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M82 104 C84 90 96 84 112 84 C140 84 150 92 170 88 C190 84 214 84 240 86 C252 87 260 92 260 106 C263 180 263 300 259 380 C258 394 250 400 236 399 C214 396 200 404 172 402 C148 400 130 405 108 401 C96 399 80 397 78 384 C74 300 74 180 78 108 C79 100 80 104 82 104 Z" fill="url(#sheen)"/>
+
+      <!-- ripple-shading bands (front-to-back flutter) -->
+      <g id="ripples">
+        <path d="M80 150 C130 138 210 160 260 146 L260 165 C210 179 130 157 80 169 Z" fill="#ffffff" opacity="0.09"/>
+        <path d="M78 250 C130 264 210 242 262 258 L262 277 C210 261 130 283 78 269 Z" fill="#2f5f3d" opacity="0.07"/>
+        <path d="M80 336 C130 326 210 346 260 332 L260 350 C210 364 130 344 80 354 Z" fill="#ffffff" opacity="0.07"/>
       </g>
-      <g id="arm_right">
-        <path d="M258 214 C284 222 298 246 292 266" fill="none" stroke="#6fae74" stroke-width="17" stroke-linecap="round"/>
-        <circle cx="292" cy="270" r="16" fill="#ffffff" stroke="#3f7a4f" stroke-width="4"/>
+
+      <!-- margin hairline engraving -->
+      <g stroke="#3f7a4f" stroke-width="0.8" opacity="0.3">
+        <line x1="86" y1="140" x2="86" y2="360"/><line x1="90" y1="152" x2="90" y2="348"/>
+        <line x1="254" y1="140" x2="254" y2="360"/><line x1="250" y1="152" x2="250" y2="348"/>
+      </g>
+
+      <!-- double wavy guilloche border -->
+      <path d="M96 118 C98 106 108 102 122 102 C146 103 156 110 172 106 C190 102 210 103 230 106 C242 107 248 114 248 126 C251 190 251 300 247 372 C246 384 240 389 228 388 C208 385 196 391 172 389 C150 387 134 391 114 388 C104 387 92 381 92 370 C88 300 88 190 92 126 C93 116 94 118 96 118 Z" fill="none" stroke="#3f7a4f" stroke-width="2.5"/>
+      <path d="M104 128 C106 118 114 114 126 115 C148 116 158 122 172 118 C188 114 206 115 224 118 C236 119 240 126 240 136 C243 195 243 300 239 366 C238 376 232 381 222 380 C204 377 194 382 172 381 C152 379 138 382 120 380 C110 379 100 374 100 364 C97 300 97 195 100 136 C101 128 102 128 104 128 Z" fill="none" stroke="#3f7a4f" stroke-width="1" stroke-dasharray="2 3" opacity="0.55"/>
+
+      <!-- corner "1" medallions -->
+      <g id="corners">
+        <g transform="translate(104 104)"><circle r="14" fill="#fdf8e9" stroke="#3f7a4f" stroke-width="2.5"/><circle r="10" fill="none" stroke="#3f7a4f" stroke-width="1"/><path d="M-3 -5 L2 -8 L2 7 M-4 7 L6 7" fill="none" stroke="#3f7a4f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+        <g transform="translate(236 104)"><circle r="14" fill="#fdf8e9" stroke="#3f7a4f" stroke-width="2.5"/><circle r="10" fill="none" stroke="#3f7a4f" stroke-width="1"/><path d="M-3 -5 L2 -8 L2 7 M-4 7 L6 7" fill="none" stroke="#3f7a4f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+        <g transform="translate(104 380)"><circle r="14" fill="#fdf8e9" stroke="#3f7a4f" stroke-width="2.5"/><circle r="10" fill="none" stroke="#3f7a4f" stroke-width="1"/><path d="M-3 -5 L2 -8 L2 7 M-4 7 L6 7" fill="none" stroke="#3f7a4f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+        <g transform="translate(236 380)"><circle r="14" fill="#fdf8e9" stroke="#3f7a4f" stroke-width="2.5"/><circle r="10" fill="none" stroke="#3f7a4f" stroke-width="1"/><path d="M-3 -5 L2 -8 L2 7 M-4 7 L6 7" fill="none" stroke="#3f7a4f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+      </g>
+
+      <!-- engraved seals flanking the denomination -->
+      <g id="seal_left" transform="translate(112 322)"><circle r="22" fill="#fdf8e9" stroke="#3f7a4f" stroke-width="2"/><circle r="22" fill="none" stroke="#3f7a4f" stroke-width="2" stroke-dasharray="2.5 3.5"/><circle r="15" fill="none" stroke="#3f7a4f" stroke-width="1"/><path d="M6 0 L13 0 M3 5.2 L6.5 11.3 M-3 5.2 L-6.5 11.3 M-6 0 L-13 0 M-3 -5.2 L-6.5 -11.3 M3 -5.2 L6.5 -11.3" stroke="#3f7a4f" stroke-width="1"/><circle r="4" fill="#3f7a4f"/></g>
+      <g id="seal_right" transform="translate(228 322)"><circle r="22" fill="#fdf8e9" stroke="#3f7a4f" stroke-width="2"/><circle r="22" fill="none" stroke="#3f7a4f" stroke-width="2" stroke-dasharray="2.5 3.5"/><circle r="15" fill="none" stroke="#3f7a4f" stroke-width="1"/><path d="M6 0 L13 0 M3 5.2 L6.5 11.3 M-3 5.2 L-6.5 11.3 M-6 0 L-13 0 M-3 -5.2 L-6.5 -11.3 M3 -5.2 L6.5 -11.3" stroke="#3f7a4f" stroke-width="1"/><circle r="4" fill="#3f7a4f"/></g>
+
+      <!-- header / footer flourishes -->
+      <g transform="translate(170 114)"><rect x="-5" y="-5" width="10" height="10" transform="rotate(45)" fill="#fdf8e9" stroke="#3f7a4f" stroke-width="2"/><path d="M-14 0 Q-24 -7 -32 1 Q-26 -3 -19 1" fill="none" stroke="#3f7a4f" stroke-width="2" stroke-linecap="round"/><path d="M14 0 Q24 -7 32 1 Q26 -3 19 1" fill="none" stroke="#3f7a4f" stroke-width="2" stroke-linecap="round"/></g>
+      <g transform="translate(170 370)"><rect x="-4.5" y="-4.5" width="9" height="9" transform="rotate(45)" fill="#fdf8e9" stroke="#3f7a4f" stroke-width="2"/><path d="M-13 0 Q-22 6 -29 -1 Q-24 3 -18 -1" fill="none" stroke="#3f7a4f" stroke-width="2" stroke-linecap="round"/><path d="M13 0 Q22 6 29 -1 Q24 3 18 -1" fill="none" stroke="#3f7a4f" stroke-width="2" stroke-linecap="round"/></g>
+
+      <!-- $ denomination emblem (embossed) -->
+      <g id="money">
+        <line x1="170" y1="306" x2="170" y2="362" stroke="#3f7a4f" stroke-width="8" stroke-linecap="round"/>
+        <path d="M189 317 C189 309 174 307 165 312 C154 318 157 329 170 332 C183 335 186 345 176 351 C167 356 152 354 150 345" fill="none" stroke="#3f7a4f" stroke-width="8" stroke-linecap="round"/>
+        <line x1="168" y1="305" x2="168" y2="360" stroke="#d6efc9" stroke-width="2.5" stroke-linecap="round"/>
       </g>
     </g>
 
-    <!-- bill body -->
-    <g id="bill">
-      <rect x="80" y="72" width="180" height="336" rx="18" fill="url(#billGrad)" stroke="#3f7a4f" stroke-width="5"/>
-      <rect x="94" y="86" width="152" height="308" rx="12" fill="none" stroke="#3f7a4f" stroke-width="2.5"/>
-      <rect x="101" y="93" width="138" height="294" rx="9" fill="none" stroke="#3f7a4f" stroke-width="1" opacity="0.5"/>
-      <ellipse cx="120" cy="150" rx="24" ry="66" fill="#ffffff" opacity="0.10" transform="rotate(-18 120 150)"/>
-      <!-- corner rosettes -->
-      <g id="corners" fill="#fdf8e9" stroke="#3f7a4f" stroke-width="2.5">
-        <circle cx="106" cy="100" r="12"/><circle cx="234" cy="100" r="12"/>
-        <circle cx="106" cy="380" r="12"/><circle cx="234" cy="380" r="12"/>
-      </g>
-      <g fill="#3f7a4f" stroke="none">
-        <circle cx="106" cy="100" r="4"/><circle cx="234" cy="100" r="4"/>
-        <circle cx="106" cy="380" r="4"/><circle cx="234" cy="380" r="4"/>
-      </g>
-      <!-- $ denomination emblem -->
-      <g id="money" fill="none" stroke="#3f7a4f" stroke-width="8" stroke-linecap="round">
-        <line x1="170" y1="306" x2="170" y2="362"/>
-        <path d="M189 317 C189 309 174 307 165 312 C154 318 157 329 170 332 C183 335 186 345 176 351 C167 356 152 354 150 345"/>
-      </g>
-    </g>
+    <!-- portrait filigree brackets -->
+    <path d="M99 172 Q91 205 99 238" fill="none" stroke="#3f7a4f" stroke-width="1.5" opacity="0.6"/>
+    <path d="M241 172 Q249 205 241 238" fill="none" stroke="#3f7a4f" stroke-width="1.5" opacity="0.6"/>
 
     <!-- face -->
     <g id="face">
       <ellipse id="face_frame" cx="170" cy="205" rx="64" ry="74" fill="#fdf8e9" stroke="#3f7a4f" stroke-width="4"/>
-
-      <ellipse id="cheek_left"  cx="120" cy="222" rx="15" ry="10" fill="#ff8fa3" opacity="0.55"/>
+      <ellipse id="cheek_left" cx="120" cy="222" rx="15" ry="10" fill="#ff8fa3" opacity="0.55"/>
       <ellipse id="cheek_right" cx="220" cy="222" rx="15" ry="10" fill="#ff8fa3" opacity="0.55"/>
-
-      <rect id="brow_left"  x="124" y="160" width="42" height="12" rx="6" fill="#2f5f3d" transform="rotate(-10 145 166)"/>
+      <rect id="brow_left" x="124" y="160" width="42" height="12" rx="6" fill="#2f5f3d" transform="rotate(-10 145 166)"/>
       <rect id="brow_right" x="174" y="160" width="42" height="12" rx="6" fill="#2f5f3d" transform="rotate(10 195 166)"/>
-
-      <g id="eye_left">
-        <ellipse cx="146" cy="193" rx="20" ry="24" fill="#ffffff" stroke="#3f7a4f" stroke-width="2"/>
-        <circle id="pupil_left" cx="150" cy="198" r="10" fill="#22303a"/>
-        <circle cx="145" cy="189" r="3.6" fill="#ffffff"/>
-      </g>
-      <g id="eye_right">
-        <ellipse cx="194" cy="193" rx="20" ry="24" fill="#ffffff" stroke="#3f7a4f" stroke-width="2"/>
-        <circle id="pupil_right" cx="190" cy="198" r="10" fill="#22303a"/>
-        <circle cx="189" cy="189" r="3.6" fill="#ffffff"/>
-      </g>
-
-      <!-- big cartoon smile: mouth / teeth / tongue -->
+      <g id="eye_left"><ellipse cx="146" cy="193" rx="20" ry="24" fill="#ffffff" stroke="#3f7a4f" stroke-width="2"/><circle id="pupil_left" cx="150" cy="198" r="10" fill="#22303a"/><circle cx="145" cy="189" r="3.6" fill="#ffffff"/></g>
+      <g id="eye_right"><ellipse cx="194" cy="193" rx="20" ry="24" fill="#ffffff" stroke="#3f7a4f" stroke-width="2"/><circle id="pupil_right" cx="190" cy="198" r="10" fill="#22303a"/><circle cx="189" cy="189" r="3.6" fill="#ffffff"/></g>
       <g id="mouth">
         <path d="M137 231 Q170 236 203 231 Q198 270 170 272 Q142 270 137 231 Z" fill="#6e2b3a" stroke="#3a1720" stroke-width="3" stroke-linejoin="round"/>
         <path d="M142 233 Q170 238 198 233 L195 244 Q170 248 145 244 Z" fill="#ffffff"/>
