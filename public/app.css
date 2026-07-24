@@ -1372,6 +1372,23 @@ body.fx-slime .canvas-widget-card::after{content:'';position:absolute;left:-2%;r
 .cfp-lowflag.ok{background:rgba(46,204,138,0.1);color:#7fe0b0;border:1px solid rgba(46,204,138,0.22);}
 .cfp-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:4px 0 9px;}
 .cfp-events{display:flex;flex-direction:column;gap:5px;max-height:280px;overflow-y:auto;}
+/* Extra Funds Triage — surplus waterfall (reuses .zb-head/.zb-hstat/.zb-tozero) */
+.ft-wrap{display:flex;flex-direction:column;}
+.ft-extra-edit{display:flex;align-items:center;gap:10px;margin:2px 0 10px;}
+.ft-extra-edit>span{font-size:12px;font-weight:600;color:var(--muted);}
+.ft-auto{margin-left:auto;background:var(--surface3);border:1px solid var(--border);color:var(--muted);border-radius:8px;font-family:var(--font);font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;}
+.ft-auto:hover{color:var(--text);}
+.ft-edit{display:flex;align-items:center;gap:2px;background:var(--surface3);border:1px solid var(--border);border-radius:8px;padding:0 8px;flex-shrink:0;}
+.ft-edit>span{color:var(--muted);font-size:11px;}
+.ft-edit input{width:70px;height:30px;background:none;border:none;color:var(--text);font-size:14px;font-weight:700;text-align:right;outline:none;font-variant-numeric:tabular-nums;}
+.ft-row{background:var(--surface2);border-radius:10px;padding:10px 12px;margin-bottom:8px;}
+.ft-row-top{display:flex;align-items:center;gap:10px;}
+.ft-ic{font-size:20px;flex-shrink:0;width:26px;text-align:center;}
+.ft-meta{flex:1;min-width:0;}
+.ft-nm{font-size:13px;font-weight:700;color:var(--text);}
+.ft-desc{font-size:11px;color:var(--muted);margin-top:1px;}
+.ft-bar{height:7px;border-radius:4px;background:var(--surface3);overflow:hidden;margin-top:9px;}
+.ft-bar-fill{height:100%;border-radius:4px;transition:width .2s;}
 .cfp-ev{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;background:var(--surface2);}
 .cfp-ev-header{display:flex;align-items:center;gap:10px;padding:4px 10px;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--hint);font-weight:700;}
 .cfp-ev-amt-h{margin-left:auto;}

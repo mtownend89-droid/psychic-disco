@@ -2036,6 +2036,38 @@ function engPlannedContrib(){
   engPosOnlyAccounts().forEach(p=>{ s+=(+p.contrib||0); });
   return s;
 }
+/* ═══ EXTRA-FUNDS TRIAGE ═══
+   Zero-budget-style waterfall for the monthly surplus, in priority order:
+   1) high-interest debt (credit cards + any loan at/above the APR threshold),
+   2) savings buckets (this month's funding need), 3) investing (the rest — folds in the
+   planned contributions you're already making). Allocations are overridable per row. */
+function engHighInterestDebt(threshold){
+  threshold=(threshold==null)?8:threshold;
+  const g=(typeof engDebtGroups==='function')?engDebtGroups():{revolving:[],installment:[]};
+  return [...g.revolving, ...g.installment].filter(b=> b.cat==='CC' || (b.apr||0)>=threshold)
+    .reduce((s,b)=>s+Math.abs(b.bal||0),0);
+}
+function _ft(){ APP.fundTriage=APP.fundTriage||{extra:null, alloc:{}}; if(!APP.fundTriage.alloc) APP.fundTriage.alloc={}; return APP.fundTriage; }
+function engFundTriage(){
+  const income=Math.round(engMonthlyIncome());
+  const sc=(typeof engSpendingCards==='function')?engSpendingCards():{coveredPay:0};
+  const bills=Math.max(0, Math.round(engMonthlyBills()-(sc.coveredPay||0)));
+  const everyday=Math.round(engDiscretionaryBudget());
+  const poolAuto=Math.max(0, income-bills-everyday);
+  const ft=_ft();
+  const pool=(ft.extra!=null && isFinite(ft.extra))?Math.max(0,Math.round(ft.extra)):poolAuto;
+  const highIntDebt=Math.round(engHighInterestDebt());
+  const savingsNeed=Math.round(engSavingsBuckets().filter(b=>!b.done).reduce((s,b)=>s+(+b.monthly||0),0));
+  const plannedInvest=Math.round(engPlannedContrib());
+  // priority waterfall (defaults) — debt, then savings, then whatever's left to investing
+  const dDef=Math.min(pool, highIntDebt);
+  const sDef=Math.min(Math.max(0,pool-dDef), savingsNeed);
+  const iDef=Math.max(0, pool-dDef-sDef);
+  const a=ft.alloc||{};
+  const pick=(v,def)=>(v!=null && isFinite(v))?Math.max(0,Math.round(v)):Math.round(def);
+  const debt=pick(a.debt,dDef), savings=pick(a.savings,sDef), invest=pick(a.invest,iDef);
+  return {income,bills,everyday,poolAuto,pool,highIntDebt,savingsNeed,plannedInvest,debt,savings,invest,left:Math.round(pool-debt-savings-invest)};
+}
 function portfolioBody(w){
   const H=engHoldings();
   const IA=engInvestAccounts();
@@ -3079,6 +3111,7 @@ const WIDGET_CATALOG=[
   {id:'cashflow_chart',name:'Cash Flow',icon:'🌊',cat:'Cash Flow',span:2,minLevel:1,desc:'Your projected running balance — the same forward line as the Cash Flow Planner.'},
   {id:'pl_panel',name:'Profit & Loss',icon:'📊',cat:'Cash Flow',span:2,minLevel:1,desc:'Income, spending, net & savings rate by day/week/month.'},
   {id:'cashflow_planner',name:'Cash Flow Planner',icon:'📅',cat:'Cash Flow',span:2,minLevel:1,desc:'Project your running balance forward — edit bills, see your low point before it hits.'},
+  {id:'fund_triage',name:'Extra Funds Triage',icon:'💸',cat:'Cash Flow',span:2,minLevel:1,desc:'Delegate your monthly surplus by priority — high-interest debt, then savings, then investing.'},
   {id:'goals',name:'Financial Goals',icon:'🎯',cat:'Overview',span:2,minLevel:1,desc:'Set goals, track progress automatically, and let Richie coach you to the finish.'},
   {id:'accounts_list',name:'All Accounts',icon:'🏦',cat:'Overview',span:2,minLevel:1,desc:'Every account with balances — tap to see transactions.'},
   {id:'all_transactions',name:'All Transactions',icon:'🧾',cat:'Cash Flow',span:2,minLevel:1,desc:'Every transaction — search, categorize, and tag (paycheck, transfer, business…).'},
@@ -5204,6 +5237,57 @@ function cfpMount(w){
 }
 function cfpRefresh(uid){ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 
+/* ═══ EXTRA FUNDS TRIAGE WIDGET ═══ */
+function fundTriageBody(w){
+  const t=engFundTriage();
+  const barPct=v=>t.pool>0?Math.min(100,Math.round(v/t.pool*100)):0;
+  const row=(icon,name,desc,val,key,color)=>`
+    <div class="ft-row">
+      <div class="ft-row-top">
+        <span class="ft-ic">${icon}</span>
+        <div class="ft-meta"><div class="ft-nm">${name}</div><div class="ft-desc">${desc}</div></div>
+        <div class="ft-edit"><span>$</span><input type="number" min="0" step="10" value="${val}" onclick="event.stopPropagation()" oninput="ftSetAlloc('${key}',this.value)" onblur="ftCommit('${w.uid}')" aria-label="${esc(name)} allocation"></div>
+      </div>
+      <div class="ft-bar"><div class="ft-bar-fill" style="width:${barPct(val)}%;background:${color}"></div></div>
+    </div>`;
+  const debtDesc = t.highIntDebt>0?`${fmtK(t.highIntDebt)} high-interest balance to attack`:'No high-interest debt — skip ✓';
+  const savDesc  = t.savingsNeed>0?`${fmtK(t.savingsNeed)}/mo to fully fund your buckets`:'Buckets funded — top up anytime';
+  const invDesc  = t.plannedInvest>0?`Includes your ${fmtK(t.plannedInvest)}/mo planned contributions`:'Long-term growth — the last stop';
+  const balanceRow = Math.abs(t.left)<1
+    ? `<div class="zb-balanced">✓ Every extra dollar has a job.</div>`
+    : t.left>0
+      ? `<div class="zb-tozero"><span>${fmtK(t.left)} still to delegate</span><button onclick="event.stopPropagation();ftAuto('${w.uid}')">Auto-split by priority →</button></div>`
+      : `<div class="zb-tozero over"><span>${fmtK(-t.left)} over your extra</span><button onclick="event.stopPropagation();ftAuto('${w.uid}')">Reset split →</button></div>`;
+  let note='';
+  if(t.highIntDebt>0 && t.plannedInvest>0){
+    note=`<div class="ws-hint" style="margin-top:9px">🔥 You're investing ${fmtK(t.plannedInvest)}/mo while carrying ${fmtK(t.highIntDebt)} in high-interest debt. Paying that down is a guaranteed return equal to its APR — priority says send it there first.</div>`;
+  } else if(t.plannedInvest>0 && t.invest<t.plannedInvest){
+    note=`<div class="ws-hint" style="margin-top:9px">⚠️ After debt & savings, this leaves less than your ${fmtK(t.plannedInvest)}/mo planned investing — trim a bucket or ease a contribution.</div>`;
+  } else if(t.plannedInvest>0 && t.invest>=t.plannedInvest){
+    note=`<div class="ws-hint" style="margin-top:9px">✅ Covers your ${fmtK(t.plannedInvest)}/mo planned contributions plus ${fmtK(t.invest-t.plannedInvest)} extra.</div>`;
+  }
+  return `<div class="ft-wrap">
+    <div class="zb-head">
+      <div class="zb-hstat"><span>Monthly income</span><b>${fmtK(t.income)}</b></div>
+      <div class="zb-hstat"><span>Bills (fixed)</span><b style="color:var(--red)">${fmtK(t.bills)}</b></div>
+      <div class="zb-hstat"><span>Everyday spending</span><b style="color:var(--red)">${fmtK(t.everyday)}</b></div>
+      <div class="zb-hstat zb-tobudget"><span>Available extra</span><b style="color:var(--green)">${fmtK(t.pool)}</b></div>
+    </div>
+    <div class="ft-extra-edit"><span>Extra to delegate</span><div class="ft-edit"><span>$</span><input type="number" min="0" step="10" value="${t.pool}" onclick="event.stopPropagation()" oninput="ftSetExtra(this.value)" onblur="ftCommit('${w.uid}')" aria-label="Extra funds to delegate"></div><button class="ft-auto" onclick="event.stopPropagation();ftReset('${w.uid}')" title="Reset to computed surplus & priority split">↺ Auto</button></div>
+    ${balanceRow}
+    <div class="zb-section-label">Priority order <span class="ws-hint" style="margin:0">high-interest debt → savings → investing</span></div>
+    ${row('🔥','1 · Kill high-interest debt', debtDesc, t.debt, 'debt', 'var(--red)')}
+    ${row('🪣','2 · Fund savings buckets', savDesc, t.savings, 'savings', 'var(--blue)')}
+    ${row('📈','3 · Invest the rest', invDesc, t.invest, 'invest', 'var(--green)')}
+    ${note}
+  </div>`;
+}
+function ftSetExtra(v){ const ft=_ft(); const n=parseFloat(v); ft.extra=isNaN(n)?null:Math.max(0,n); ft.alloc={}; saveState(); }   // new extra → re-run the waterfall
+function ftSetAlloc(key,v){ const ft=_ft(); ft.alloc=ft.alloc||{}; const n=parseFloat(v); ft.alloc[key]=isNaN(n)?null:Math.max(0,n); saveState(); }
+function ftAuto(uid){ const ft=_ft(); ft.alloc={}; saveState(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); if(sbRichie)sbRichie.do('nod'); }
+function ftReset(uid){ const ft=_ft(); ft.extra=null; ft.alloc={}; saveState(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+function ftCommit(uid){ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+
 /* ═══ PROFIT & LOSS WIDGET ═══ */
 let _plGroup={};  // per-widget grouping (daily/weekly/monthly)
 function plWidgetBody(w){
@@ -6022,6 +6106,7 @@ function renderWidgetBody(w){
     case 'debt_payoff': return debtPayoffBody(w);
     case 'debt_hub': return debtHubBody(w);
     case 'zero_budget': return zbWidgetBody(w);
+    case 'fund_triage': return fundTriageBody(w);
     case 'budget_actual': return budgetActualBody(w);
     case 'savings_buckets': return savingsBucketsBody(w);
     case 'fire_drill': return fdWidgetBody(w);
