@@ -1,80 +1,100 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 420" width="400" height="420">
-<!-- ================= RICHIE — money-bag mascot base for Rive =================
-  Every part is a named group/shape so Rive imports them as riggable nodes.
-  Suggested rig:
-    • pupil_left / pupil_right  → move for "look"; scale eyes for blink
-    • brow_left / brow_right    → rotate/translate for emotion (mood input)
-    • mouth                     → swap/scale between smile & talk shapes (talking, mood)
-    • arm_left / arm_right      → set origin at the shoulder, rotate for wave
-    • Richie (root)             → squash/stretch + bob for idle / bounce / celebrate
-  Palette follows the app's money-green. Recolor freely in Rive.
-============================================================================= -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 490" width="340" height="490">
+<!-- ============ RICHIE — cartoony vertical dollar-bill mascot (for Rive) ============
+  Portrait dollar-bill body with rubber-hose arms (white gloves) and little legs (shoes),
+  a big cartoon face in the center oval, ornate border, corner rosettes, and a $ emblem.
+  Every animatable part is a named group/shape so Rive imports them as riggable nodes:
+    • pupil_left / pupil_right  → look around; scale eye_* groups to blink
+    • brow_left / brow_right    → rotate/raise for emotion (mood input)
+    • mouth (group)             → swap/scale between smile & open-talk (talking, mood)
+    • arm_left / arm_right       → set origin at the shoulder, rotate to wave
+    • leg_left / leg_right        → little walk/idle bounce
+    • Richie (root)              → squash/stretch + bob for idle / bounce / celebrate
+  Original stylized bill (not a facsimile of real currency). Recolor freely in Rive.
+================================================================================= -->
   <defs>
-    <linearGradient id="bagGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#45e4a6"/>
-      <stop offset="1" stop-color="#20a06a"/>
+    <linearGradient id="billGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9ed492"/>
+      <stop offset="1" stop-color="#6fae74"/>
     </linearGradient>
   </defs>
 
   <g id="Richie">
 
-    <!-- arms (behind the body so they can swing) -->
+    <!-- legs (behind the bill) -->
+    <g id="legs">
+      <g id="leg_left">
+        <path d="M142 404 C140 428 134 444 132 452" fill="none" stroke="#6fae74" stroke-width="17" stroke-linecap="round"/>
+        <ellipse cx="120" cy="458" rx="29" ry="14" fill="#2b2f36"/>
+        <ellipse cx="120" cy="461" rx="29" ry="7" fill="#171a1f"/>
+      </g>
+      <g id="leg_right">
+        <path d="M198 404 C200 428 206 444 208 452" fill="none" stroke="#6fae74" stroke-width="17" stroke-linecap="round"/>
+        <ellipse cx="220" cy="458" rx="29" ry="14" fill="#2b2f36"/>
+        <ellipse cx="220" cy="461" rx="29" ry="7" fill="#171a1f"/>
+      </g>
+    </g>
+
+    <!-- arms (behind the bill) -->
     <g id="arms">
       <g id="arm_left">
-        <path d="M96 252 C70 244 52 262 60 284 C64 296 80 296 90 286 Z" fill="#2ecc8a" stroke="#178a58" stroke-width="5" stroke-linejoin="round"/>
-        <circle cx="60" cy="272" r="15" fill="#2ecc8a" stroke="#178a58" stroke-width="5"/>
+        <path d="M82 214 C56 222 42 246 48 266" fill="none" stroke="#6fae74" stroke-width="17" stroke-linecap="round"/>
+        <circle cx="48" cy="270" r="16" fill="#ffffff" stroke="#3f7a4f" stroke-width="4"/>
       </g>
       <g id="arm_right">
-        <path d="M304 252 C330 244 348 262 340 284 C336 296 320 296 310 286 Z" fill="#2ecc8a" stroke="#178a58" stroke-width="5" stroke-linejoin="round"/>
-        <circle cx="340" cy="272" r="15" fill="#2ecc8a" stroke="#178a58" stroke-width="5"/>
+        <path d="M258 214 C284 222 298 246 292 266" fill="none" stroke="#6fae74" stroke-width="17" stroke-linecap="round"/>
+        <circle cx="292" cy="270" r="16" fill="#ffffff" stroke="#3f7a4f" stroke-width="4"/>
       </g>
     </g>
 
-    <!-- feet -->
-    <g id="feet">
-      <ellipse id="foot_left"  cx="164" cy="390" rx="27" ry="15" fill="#178a58"/>
-      <ellipse id="foot_right" cx="236" cy="390" rx="27" ry="15" fill="#178a58"/>
-    </g>
-
-    <!-- body / bag -->
-    <g id="body">
-      <path id="bag" d="M165 145 C120 160 74 205 74 268 C74 340 128 386 200 386 C272 386 326 340 326 268 C326 205 280 160 235 145 C214 156 186 156 165 145 Z" fill="url(#bagGrad)" stroke="#178a58" stroke-width="6" stroke-linejoin="round"/>
-      <path id="belly_shine" d="M110 210 C95 240 96 275 112 300 C128 250 150 225 190 210 C160 196 128 196 110 210 Z" fill="#ffffff" opacity="0.12"/>
-    </g>
-
-    <!-- gathered top + drawstring -->
-    <g id="tie">
-      <path id="bag_top" d="M172 140 C168 116 176 100 190 104 C194 92 206 92 210 104 C224 100 232 116 228 140 Z" fill="url(#bagGrad)" stroke="#178a58" stroke-width="5" stroke-linejoin="round"/>
-      <ellipse id="tie_band" cx="200" cy="140" rx="42" ry="15" fill="#c9a05a" stroke="#9c7736" stroke-width="4"/>
-      <path id="tie_knot" d="M188 150 C182 162 176 160 174 172 M212 150 C218 162 224 160 226 172" fill="none" stroke="#9c7736" stroke-width="6" stroke-linecap="round"/>
-    </g>
-
-    <!-- dollar sign on the belly -->
-    <g id="money">
-      <line x1="200" y1="284" x2="200" y2="348" stroke="#fdf7e3" stroke-width="7" stroke-linecap="round"/>
-      <path d="M220 296 C220 288 202 285 192 291 C180 298 183 309 198 313 C213 317 217 327 206 334 C196 340 180 338 178 329" fill="none" stroke="#fdf7e3" stroke-width="9" stroke-linecap="round"/>
+    <!-- bill body -->
+    <g id="bill">
+      <rect x="80" y="72" width="180" height="336" rx="18" fill="url(#billGrad)" stroke="#3f7a4f" stroke-width="5"/>
+      <rect x="94" y="86" width="152" height="308" rx="12" fill="none" stroke="#3f7a4f" stroke-width="2.5"/>
+      <rect x="101" y="93" width="138" height="294" rx="9" fill="none" stroke="#3f7a4f" stroke-width="1" opacity="0.5"/>
+      <ellipse cx="120" cy="150" rx="24" ry="66" fill="#ffffff" opacity="0.10" transform="rotate(-18 120 150)"/>
+      <!-- corner rosettes -->
+      <g id="corners" fill="#fdf8e9" stroke="#3f7a4f" stroke-width="2.5">
+        <circle cx="106" cy="100" r="12"/><circle cx="234" cy="100" r="12"/>
+        <circle cx="106" cy="380" r="12"/><circle cx="234" cy="380" r="12"/>
+      </g>
+      <g fill="#3f7a4f" stroke="none">
+        <circle cx="106" cy="100" r="4"/><circle cx="234" cy="100" r="4"/>
+        <circle cx="106" cy="380" r="4"/><circle cx="234" cy="380" r="4"/>
+      </g>
+      <!-- $ denomination emblem -->
+      <g id="money" fill="none" stroke="#3f7a4f" stroke-width="8" stroke-linecap="round">
+        <line x1="170" y1="306" x2="170" y2="362"/>
+        <path d="M189 317 C189 309 174 307 165 312 C154 318 157 329 170 332 C183 335 186 345 176 351 C167 356 152 354 150 345"/>
+      </g>
     </g>
 
     <!-- face -->
     <g id="face">
-      <ellipse id="cheek_left"  cx="140" cy="240" rx="16" ry="11" fill="#ff8fa3" opacity="0.5"/>
-      <ellipse id="cheek_right" cx="260" cy="240" rx="16" ry="11" fill="#ff8fa3" opacity="0.5"/>
+      <ellipse id="face_frame" cx="170" cy="205" rx="64" ry="74" fill="#fdf8e9" stroke="#3f7a4f" stroke-width="4"/>
 
-      <rect id="brow_left"  x="150" y="178" width="34" height="9" rx="4.5" fill="#14684a" transform="rotate(-8 167 182)"/>
-      <rect id="brow_right" x="216" y="178" width="34" height="9" rx="4.5" fill="#14684a" transform="rotate(8 233 182)"/>
+      <ellipse id="cheek_left"  cx="120" cy="222" rx="15" ry="10" fill="#ff8fa3" opacity="0.55"/>
+      <ellipse id="cheek_right" cx="220" cy="222" rx="15" ry="10" fill="#ff8fa3" opacity="0.55"/>
+
+      <rect id="brow_left"  x="124" y="160" width="42" height="12" rx="6" fill="#2f5f3d" transform="rotate(-10 145 166)"/>
+      <rect id="brow_right" x="174" y="160" width="42" height="12" rx="6" fill="#2f5f3d" transform="rotate(10 195 166)"/>
 
       <g id="eye_left">
-        <ellipse cx="168" cy="212" rx="19" ry="23" fill="#ffffff" stroke="#178a58" stroke-width="2"/>
-        <circle id="pupil_left" cx="172" cy="216" r="9" fill="#263038"/>
-        <circle cx="168" cy="209" r="3.2" fill="#ffffff"/>
+        <ellipse cx="146" cy="193" rx="20" ry="24" fill="#ffffff" stroke="#3f7a4f" stroke-width="2"/>
+        <circle id="pupil_left" cx="150" cy="198" r="10" fill="#22303a"/>
+        <circle cx="145" cy="189" r="3.6" fill="#ffffff"/>
       </g>
       <g id="eye_right">
-        <ellipse cx="232" cy="212" rx="19" ry="23" fill="#ffffff" stroke="#178a58" stroke-width="2"/>
-        <circle id="pupil_right" cx="228" cy="216" r="9" fill="#263038"/>
-        <circle cx="228" cy="209" r="3.2" fill="#ffffff"/>
+        <ellipse cx="194" cy="193" rx="20" ry="24" fill="#ffffff" stroke="#3f7a4f" stroke-width="2"/>
+        <circle id="pupil_right" cx="190" cy="198" r="10" fill="#22303a"/>
+        <circle cx="189" cy="189" r="3.6" fill="#ffffff"/>
       </g>
 
-      <path id="mouth" d="M174 250 Q200 272 226 250" fill="none" stroke="#123f2a" stroke-width="7" stroke-linecap="round"/>
+      <!-- big cartoon smile: mouth / teeth / tongue -->
+      <g id="mouth">
+        <path d="M137 231 Q170 236 203 231 Q198 270 170 272 Q142 270 137 231 Z" fill="#6e2b3a" stroke="#3a1720" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M142 233 Q170 238 198 233 L195 244 Q170 248 145 244 Z" fill="#ffffff"/>
+        <ellipse cx="170" cy="262" rx="16" ry="9" fill="#ff7a8f"/>
+      </g>
     </g>
 
   </g>
