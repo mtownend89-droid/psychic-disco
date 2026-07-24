@@ -961,9 +961,57 @@ function _billEvents(days){
   });
   return out;
 }
+/* ── Bank business-day awareness (weekends + US federal/bank holidays) ── */
+function _nthWeekdayOfMonth(y,m,wd,n){ const first=new Date(y,m,1); const day=1+((wd-first.getDay()+7)%7)+(n-1)*7; return new Date(y,m,day); }
+function _lastWeekdayOfMonth(y,m,wd){ const last=new Date(y,m+1,0); const day=last.getDate()-((last.getDay()-wd+7)%7); return new Date(y,m,day); }
+function _observedHoliday(d){ const wd=d.getDay(); if(wd===6) return new Date(d.getTime()-86400000); if(wd===0) return new Date(d.getTime()+86400000); return d; }
+const _holCache={};
+function _bankHolidaySet(year){
+  if(_holCache[year]) return _holCache[year];
+  const s=new Set(); const key=d=>d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate(); const add=d=>s.add(key(d));
+  add(_observedHoliday(new Date(year,0,1)));    // New Year's Day
+  add(_nthWeekdayOfMonth(year,0,1,3));          // MLK Day (3rd Mon Jan)
+  add(_nthWeekdayOfMonth(year,1,1,3));          // Presidents' Day (3rd Mon Feb)
+  add(_lastWeekdayOfMonth(year,4,1));           // Memorial Day (last Mon May)
+  add(_observedHoliday(new Date(year,5,19)));   // Juneteenth
+  add(_observedHoliday(new Date(year,6,4)));    // Independence Day
+  add(_nthWeekdayOfMonth(year,8,1,1));          // Labor Day (1st Mon Sep)
+  add(_nthWeekdayOfMonth(year,9,1,2));          // Columbus Day (2nd Mon Oct)
+  add(_observedHoliday(new Date(year,10,11)));  // Veterans Day
+  add(_nthWeekdayOfMonth(year,10,4,4));         // Thanksgiving (4th Thu Nov)
+  add(_observedHoliday(new Date(year,11,25)));  // Christmas
+  _holCache[year]=s; return s;
+}
+function _isBankClosed(d){ const wd=d.getDay(); if(wd===0||wd===6) return true; return _bankHolidaySet(d.getFullYear()).has(d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate()); }
+// Deposits post the prior business day (dir -1); autopay drafts the next business day (dir +1).
+function _shiftBusinessDay(date, dir){ const d=new Date(date); let g=0; while(_isBankClosed(d) && g++<12){ d.setDate(d.getDate()+dir); } return d; }
+
+/* ── Planned savings / goal contributions as scheduled outflows ──
+   Sinking-fund buckets you're actively funding draw cash out of the spendable pool each month
+   (placed on the 1st), shown as their own line so the projection reflects money you've
+   committed to save — not just bills. */
+function _savingsEvents(days){
+  const out=[]; const today=new Date(); today.setHours(0,0,0,0);
+  const horizon=new Date(today); horizon.setDate(horizon.getDate()+days);
+  let monthly=0; try{ monthly=engSavingsBuckets().filter(b=>!b.done).reduce((s,b)=>s+(+b.monthly||0),0); }catch(e){}
+  if(monthly<=0) return out;
+  let cur=new Date(today.getFullYear(), today.getMonth(), 1);
+  if(cur<today) cur=new Date(today.getFullYear(), today.getMonth()+1, 1);
+  while(cur<=horizon){
+    const off=Math.round((cur-today)/86400000);
+    if(off>=0 && off<=days) out.push({day:off, amt:-Math.round(monthly), name:'Planned savings', type:'savings', noShift:true});
+    cur=new Date(cur.getFullYear(), cur.getMonth()+1, 1);
+  }
+  return out;
+}
 function engCashFlowProjection(days, cats){
   const start=engStartCash(cats);
-  const events=[..._incomeEvents(days), ..._billEvents(days)].sort((a,b)=>a.day-b.day);
+  const today=new Date(); today.setHours(0,0,0,0);
+  const events=[..._incomeEvents(days), ..._billEvents(days), ..._savingsEvents(days)];
+  // Shift to real banking days (deposits land the prior business day; drafts the next).
+  events.forEach(e=>{ if(e.noShift) return; const sd=_shiftBusinessDay(_projDate(e.day), e.type==='income'?-1:1); let off=Math.round((sd-today)/86400000); if(off<0) off=0; e.day=off; });
+  // sort by day, income first within a day (deposit before draft — truer intraday low point)
+  events.sort((a,b)=> a.day-b.day || (a.type==='income'? -1 : b.type==='income'? 1 : 0));
   let bal=start; const series=[{day:0, bal:start, label:'Today'}];
   let low={day:0, bal:start}; const byDay={};
   events.forEach(e=>{ byDay[e.day]=byDay[e.day]||[]; byDay[e.day].push(e); });
@@ -972,9 +1020,10 @@ function engCashFlowProjection(days, cats){
     series.push({day:d, bal});
     if(bal<low.bal) low={day:d, bal};
   }
-  const totalIn=events.filter(e=>e.amt>0).reduce((s,e)=>s+e.amt,0);
-  const totalOut=events.filter(e=>e.amt<0).reduce((s,e)=>s+Math.abs(e.amt),0);
-  return {start, end:bal, series, events, low, totalIn, totalOut, net:totalIn-totalOut, byDay, days};
+  const totalIn=events.filter(e=>e.type==='income').reduce((s,e)=>s+e.amt,0);
+  const totalOut=events.filter(e=>e.type==='bill').reduce((s,e)=>s+Math.abs(e.amt),0);
+  const totalSaved=events.filter(e=>e.type==='savings').reduce((s,e)=>s+Math.abs(e.amt),0);
+  return {start, end:bal, series, events, low, totalIn, totalOut, totalSaved, net:bal-start, byDay, days};
 }
 
 /* ── Unified bills/liabilities layer ──
@@ -1102,7 +1151,7 @@ function engSafeToSpend(){
   const proj=engCashFlowProjection(35);
   const inc=(proj.events||[]).filter(e=>e.type==='income').sort((a,b)=>a.day-b.day)[0];
   const horizon=inc?Math.max(1,inc.day):14;
-  const billsDue=(proj.events||[]).filter(e=>e.type!=='income'&&e.day<=horizon).reduce((s,e)=>s+Math.abs(e.amt),0);
+  const billsDue=(proj.events||[]).filter(e=>e.type==='bill'&&e.day<=horizon).reduce((s,e)=>s+Math.abs(e.amt),0);  // savings handled via goalPortion below — don't double-count
   const goalMonthly=(typeof engSavingsBuckets==='function')?engSavingsBuckets().reduce((s,b)=>s+(b.monthly||0),0):0;
   const goalPortion=goalMonthly*(horizon/30.44);
   const buffer=50;
@@ -5046,6 +5095,7 @@ function cfcMount(w){
     <div class="cfp-stat"><div class="cfp-stat-l">Starting cash</div><div class="cfp-stat-v">${fmtK(p.start)}</div></div>
     <div class="cfp-stat"><div class="cfp-stat-l">Income in</div><div class="cfp-stat-v" style="color:var(--green)">+${fmtK(p.totalIn)}</div></div>
     <div class="cfp-stat"><div class="cfp-stat-l">Bills out</div><div class="cfp-stat-v" style="color:var(--red)">-${fmtK(p.totalOut)}</div></div>
+    ${p.totalSaved>0?`<div class="cfp-stat"><div class="cfp-stat-l">Set aside</div><div class="cfp-stat-v" style="color:var(--blue)">-${fmtK(p.totalSaved)}</div></div>`:''}
     <div class="cfp-stat"><div class="cfp-stat-l">End balance</div><div class="cfp-stat-v" style="color:${p.end>=0?'var(--pos)':'var(--red)'}">${fmtK(p.end)}</div></div>`;
   }
   const chart=gg('cfcchart_'+w.uid);
@@ -5090,6 +5140,7 @@ function cfpMount(w){
     <div class="cfp-stat"><div class="cfp-stat-l">Starting cash</div><div class="cfp-stat-v">${fmtK(p.start)}</div></div>
     <div class="cfp-stat"><div class="cfp-stat-l">Income in</div><div class="cfp-stat-v" style="color:var(--green)">+${fmtK(p.totalIn)}</div></div>
     <div class="cfp-stat"><div class="cfp-stat-l">Bills out</div><div class="cfp-stat-v" style="color:var(--red)">-${fmtK(p.totalOut)}</div></div>
+    ${p.totalSaved>0?`<div class="cfp-stat"><div class="cfp-stat-l">Set aside</div><div class="cfp-stat-v" style="color:var(--blue)">-${fmtK(p.totalSaved)}</div></div>`:''}
     <div class="cfp-stat"><div class="cfp-stat-l">End balance</div><div class="cfp-stat-v" style="color:${p.end>=0?'var(--pos)':'var(--red)'}">${fmtK(p.end)}</div></div>`;
   }
   // running balance line (mini SVG sparkline so it works everywhere, no Chart.js dependency)
@@ -5106,24 +5157,36 @@ function cfpMount(w){
   // editable upcoming events (bills editable, income shown)
   const ev=gg('cfpev_'+w.uid);
   if(ev){
-    const sorted=[...p.events].sort((a,b)=>a.day-b.day).slice(0,40);
+    const sorted=[...p.events].sort((a,b)=> a.day-b.day || (a.type==='income'?-1:b.type==='income'?1:0)).slice(0,80);
+    // group events under a date header with the day's net (calendar-register style)
+    const groups=[]; sorted.forEach(e=>{ let g=groups[groups.length-1]; if(!g||g.day!==e.day){ g={day:e.day, items:[]}; groups.push(g); } g.items.push(e); });
     let run=p.start;
-    const rows=sorted.map(e=>{
-      const dt=_projDate(e.day);
-      const when=`<span class="cfp-ev-date">${e.day===0?'Today':dt.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span><span class="cfp-ev-dow">${e.day===0?'':dt.toLocaleDateString('en-US',{weekday:'short'})}</span>`;
-      run+=e.amt;  // running balance after this event (checkbook register)
-      const runColor=run<0?'var(--red)':run<200?'var(--amber)':'var(--text)';
-      const runBadge=`<span class="cfp-ev-run" style="color:${runColor}">${run<0?'-':''}${fmtK(Math.abs(run))}</span>`;
-      if(e.type==='income'){
-        return `<div class="cfp-ev income"><span class="cfp-ev-when">${when}</span><span class="cfp-ev-nm">${esc(e.name)}</span><span class="cfp-ev-amt" style="color:var(--green)">+${fmtK(e.amt)}</span>${runBadge}</div>`;
-      }
-      const key=(e.key||'').replace(/'/g,"\\'");
-      return `<div class="cfp-ev bill"><span class="cfp-ev-when">${when}</span><span class="cfp-ev-nm">${esc(e.name)}</span><div class="cfp-ev-edit"><span>$</span><input type="number" value="${Math.round(Math.abs(e.amt))}" min="0" step="10" onclick="event.stopPropagation()" oninput="setBillPay('${key}',this.value)" onblur="cfpRefresh('${w.uid}')"></div>${runBadge}</div>`;
+    const body=groups.map(g=>{
+      const dt=_projDate(g.day);
+      const dateLbl=g.day===0?'Today':dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      const dow=g.day===0?'':dt.toLocaleDateString('en-US',{weekday:'short'});
+      let dayNet=0;
+      const items=g.items.map(e=>{
+        run+=e.amt; dayNet+=e.amt;  // running balance after this event (checkbook register)
+        const runColor=run<0?'var(--red)':run<200?'var(--amber)':'var(--text)';
+        const runBadge=`<span class="cfp-ev-run" style="color:${runColor}">${run<0?'-':''}${fmtK(Math.abs(run))}</span>`;
+        if(e.type==='income'){
+          return `<div class="cfp-ev income"><span class="cfp-ev-ind"></span><span class="cfp-ev-nm">${esc(e.name)}</span><span class="cfp-ev-amt" style="color:var(--green)">+${fmtK(e.amt)}</span>${runBadge}</div>`;
+        }
+        if(e.type==='savings'){
+          return `<div class="cfp-ev savings"><span class="cfp-ev-ind"></span><span class="cfp-ev-nm">💰 ${esc(e.name)}</span><span class="cfp-ev-amt" style="color:var(--blue)">-${fmtK(Math.abs(e.amt))}</span>${runBadge}</div>`;
+        }
+        const key=(e.key||'').replace(/'/g,"\\'");
+        return `<div class="cfp-ev bill"><span class="cfp-ev-ind"></span><span class="cfp-ev-nm">${esc(e.name)}</span><div class="cfp-ev-edit"><span>$</span><input type="number" value="${Math.round(Math.abs(e.amt))}" min="0" step="10" onclick="event.stopPropagation()" oninput="setBillPay('${key}',this.value)" onblur="cfpRefresh('${w.uid}')"></div>${runBadge}</div>`;
+      }).join('');
+      const netColor=dayNet>=0?'var(--pos)':'var(--red)';
+      const header=`<div class="cfp-day"><span class="cfp-day-date">${dateLbl}</span><span class="cfp-day-dow">${dow}</span><span class="cfp-day-net" style="color:${netColor}">${dayNet>=0?'+':'-'}${fmtK(Math.abs(dayNet))}</span></div>`;
+      return header+items;
     }).join('');
-    ev.innerHTML=rows
-      ? `<div class="cfp-ev-header"><span class="cfp-ev-when">When</span><span class="cfp-ev-nm">Transaction</span><span class="cfp-ev-amt-h">Amount</span><span class="cfp-ev-run-h">Balance</span></div>
-         <div class="cfp-ev-start"><span></span><span class="cfp-ev-nm">Starting balance</span><span></span><span class="cfp-ev-run">${fmtK(p.start)}</span></div>
-         ${rows}`
+    ev.innerHTML=body
+      ? `<div class="cfp-ev-header"><span class="cfp-ev-ind"></span><span class="cfp-ev-nm">Transaction</span><span class="cfp-ev-amt-h">Amount</span><span class="cfp-ev-run-h">Balance</span></div>
+         <div class="cfp-ev-start"><span class="cfp-ev-ind"></span><span class="cfp-ev-nm">Starting balance</span><span></span><span class="cfp-ev-run">${fmtK(p.start)}</span></div>
+         ${body}`
       : '<div class="ws-hint">No upcoming events in this window.</div>';
   }
 }
