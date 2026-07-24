@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 420" width="400" height="420">
+<!-- ================= RICHIE — money-bag mascot base for Rive =================
+  Every part is a named group/shape so Rive imports them as riggable nodes.
+  Suggested rig:
+    • pupil_left / pupil_right  → move for "look"; scale eyes for blink
+    • brow_left / brow_right    → rotate/translate for emotion (mood input)
+    • mouth                     → swap/scale between smile & talk shapes (talking, mood)
+    • arm_left / arm_right      → set origin at the shoulder, rotate for wave
+    • Richie (root)             → squash/stretch + bob for idle / bounce / celebrate
+  Palette follows the app's money-green. Recolor freely in Rive.
+============================================================================= -->
+  <defs>
+    <linearGradient id="bagGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#45e4a6"/>
+      <stop offset="1" stop-color="#20a06a"/>
+    </linearGradient>
+  </defs>
+
+  <g id="Richie">
+
+    <!-- arms (behind the body so they can swing) -->
+    <g id="arms">
+      <g id="arm_left">
+        <path d="M96 252 C70 244 52 262 60 284 C64 296 80 296 90 286 Z" fill="#2ecc8a" stroke="#178a58" stroke-width="5" stroke-linejoin="round"/>
+        <circle cx="60" cy="272" r="15" fill="#2ecc8a" stroke="#178a58" stroke-width="5"/>
+      </g>
+      <g id="arm_right">
+        <path d="M304 252 C330 244 348 262 340 284 C336 296 320 296 310 286 Z" fill="#2ecc8a" stroke="#178a58" stroke-width="5" stroke-linejoin="round"/>
+        <circle cx="340" cy="272" r="15" fill="#2ecc8a" stroke="#178a58" stroke-width="5"/>
+      </g>
+    </g>
+
+    <!-- feet -->
+    <g id="feet">
+      <ellipse id="foot_left"  cx="164" cy="390" rx="27" ry="15" fill="#178a58"/>
+      <ellipse id="foot_right" cx="236" cy="390" rx="27" ry="15" fill="#178a58"/>
+    </g>
+
+    <!-- body / bag -->
+    <g id="body">
+      <path id="bag" d="M165 145 C120 160 74 205 74 268 C74 340 128 386 200 386 C272 386 326 340 326 268 C326 205 280 160 235 145 C214 156 186 156 165 145 Z" fill="url(#bagGrad)" stroke="#178a58" stroke-width="6" stroke-linejoin="round"/>
+      <path id="belly_shine" d="M110 210 C95 240 96 275 112 300 C128 250 150 225 190 210 C160 196 128 196 110 210 Z" fill="#ffffff" opacity="0.12"/>
+    </g>
+
+    <!-- gathered top + drawstring -->
+    <g id="tie">
+      <path id="bag_top" d="M172 140 C168 116 176 100 190 104 C194 92 206 92 210 104 C224 100 232 116 228 140 Z" fill="url(#bagGrad)" stroke="#178a58" stroke-width="5" stroke-linejoin="round"/>
+      <ellipse id="tie_band" cx="200" cy="140" rx="42" ry="15" fill="#c9a05a" stroke="#9c7736" stroke-width="4"/>
+      <path id="tie_knot" d="M188 150 C182 162 176 160 174 172 M212 150 C218 162 224 160 226 172" fill="none" stroke="#9c7736" stroke-width="6" stroke-linecap="round"/>
+    </g>
+
+    <!-- dollar sign on the belly -->
+    <g id="money">
+      <line x1="200" y1="284" x2="200" y2="348" stroke="#fdf7e3" stroke-width="7" stroke-linecap="round"/>
+      <path d="M220 296 C220 288 202 285 192 291 C180 298 183 309 198 313 C213 317 217 327 206 334 C196 340 180 338 178 329" fill="none" stroke="#fdf7e3" stroke-width="9" stroke-linecap="round"/>
+    </g>
+
+    <!-- face -->
+    <g id="face">
+      <ellipse id="cheek_left"  cx="140" cy="240" rx="16" ry="11" fill="#ff8fa3" opacity="0.5"/>
+      <ellipse id="cheek_right" cx="260" cy="240" rx="16" ry="11" fill="#ff8fa3" opacity="0.5"/>
+
+      <rect id="brow_left"  x="150" y="178" width="34" height="9" rx="4.5" fill="#14684a" transform="rotate(-8 167 182)"/>
+      <rect id="brow_right" x="216" y="178" width="34" height="9" rx="4.5" fill="#14684a" transform="rotate(8 233 182)"/>
+
+      <g id="eye_left">
+        <ellipse cx="168" cy="212" rx="19" ry="23" fill="#ffffff" stroke="#178a58" stroke-width="2"/>
+        <circle id="pupil_left" cx="172" cy="216" r="9" fill="#263038"/>
+        <circle cx="168" cy="209" r="3.2" fill="#ffffff"/>
+      </g>
+      <g id="eye_right">
+        <ellipse cx="232" cy="212" rx="19" ry="23" fill="#ffffff" stroke="#178a58" stroke-width="2"/>
+        <circle id="pupil_right" cx="228" cy="216" r="9" fill="#263038"/>
+        <circle cx="228" cy="209" r="3.2" fill="#ffffff"/>
+      </g>
+
+      <path id="mouth" d="M174 250 Q200 272 226 250" fill="none" stroke="#123f2a" stroke-width="7" stroke-linecap="round"/>
+    </g>
+
+  </g>
+</svg>
