@@ -2167,6 +2167,88 @@ class RichieEmoji{
   _setZzz(on){ if(!this.zzz)return; this.zzz.innerHTML=on?'<span class="r-zzz" style="animation:zzz 2.4s ease-out infinite">z</span><span class="r-zzz" style="font-size:15px;animation:zzz 2.4s ease-out .8s infinite">z</span><span class="r-zzz" style="font-size:11px;animation:zzz 2.4s ease-out 1.6s infinite">z</span>':''; }
 }
 
+/* ═══════════════ RIVE-POWERED RICHIE (optional, drop-in for RichieEmoji) ═══════════════
+   HOW TO TURN ON:
+   1. In Rive (rive.app), build/obtain a Richie artboard with a State Machine, then export a
+      .riv and drop it in /public as  richie.riv .
+   2. Give the State Machine these INPUTS (exact names — case-sensitive):
+        talking   (boolean)  — mouth/idle-talk loop while Richie speaks
+        sleeping  (boolean)  — sleepy idle (the onboarding "zzz" state)
+        walking   (boolean)  — optional hop/walk loop
+        mood      (number)   — 0 idle · 1 happy/positive · 2 sad/negative
+        celebrate (trigger)  — big one-shot (tada/flip/spin/pulse/heart/pop, "excited")
+        nod       (trigger)  — small acknowledgement (nod/bounce)
+        wave      (trigger)  — wave/turn/wiggle
+        no        (trigger)  — shake / disappointed
+      (Missing inputs are ignored safely — start with talking + mood + nod and add the rest later.)
+   3. Set RIVE_RICHIE.enabled = true (and `machine` to your State Machine's exact name).
+   If the runtime or file fails to load, every Richie silently falls back to the emoji version,
+   so nothing breaks. Runtime + wasm load from jsdelivr (already allowed by the app's CSP). */
+const RIVE_RICHIE = {
+  enabled: false,                         // ← flip to true once richie.riv is in /public
+  src: 'richie.riv',                      // same-origin file in /public
+  artboard: undefined,                    // optional — omit to use the .riv's default artboard
+  machine: 'State Machine 1',             // ← must match the State Machine name in your .riv
+  script: 'https://cdn.jsdelivr.net/npm/@rive-app/[email protected]',
+  wasm:   'https://cdn.jsdelivr.net/npm/@rive-app/[email protected]/rive.wasm',   // keep this version == script's
+};
+let _rivePromise = null;
+function ensureRive(){
+  if(typeof window!=='undefined' && window.rive) return Promise.resolve(window.rive);
+  if(_rivePromise) return _rivePromise;
+  _rivePromise = new Promise((resolve, reject)=>{
+    const s=document.createElement('script'); s.src=RIVE_RICHIE.script; s.async=true;
+    s.onload=()=>{ try{ if(RIVE_RICHIE.wasm && window.rive && window.rive.RuntimeLoader) window.rive.RuntimeLoader.setWasmUrl(RIVE_RICHIE.wasm); }catch(e){} window.rive?resolve(window.rive):reject(new Error('rive missing')); };
+    s.onerror=()=>reject(new Error('rive runtime failed to load'));
+    document.head.appendChild(s);
+  });
+  return _rivePromise;
+}
+/* Mirrors the RichieEmoji API 1:1 so every existing richie.do()/emotion()/talk() call just works. */
+class RichieRive{
+  constructor(el, zzzEl){
+    this.el=el; this.zzz=zzzEl||null; this.talking=false; this.sleeping=false; this._inputs={}; this._fallback=null;
+    if(!el) return;
+    const cv=document.createElement('canvas'); cv.style.width='100%'; cv.style.height='100%'; cv.style.display='block';
+    el.innerHTML=''; el.appendChild(cv); this.canvas=cv;
+    ensureRive().then(rive=>{
+      this.r=new rive.Rive({ src:RIVE_RICHIE.src, canvas:cv, autoplay:true,
+        artboard:RIVE_RICHIE.artboard, stateMachines:RIVE_RICHIE.machine,
+        onLoad:()=>{ try{ this.r.resizeDrawingSurfaceToCanvas(); }catch(e){}
+          (this.r.stateMachineInputs(RIVE_RICHIE.machine)||[]).forEach(i=>{ this._inputs[i.name]=i; });
+          // re-apply any state set before load finished
+          this._bool('talking',this.talking); this._bool('sleeping',this.sleeping); } });
+      if(window.ResizeObserver){ this._ro=new ResizeObserver(()=>{ try{ this.r&&this.r.resizeDrawingSurfaceToCanvas(); }catch(e){} }); this._ro.observe(el); }
+    }).catch(()=>{ try{ el.innerHTML=''; this._fallback=new RichieEmoji(el, zzzEl); }catch(e){} });
+  }
+  _bool(n,v){ const i=this._inputs[n]; if(i) i.value=!!v; }
+  _num(n,v){ const i=this._inputs[n]; if(i) i.value=+v; }
+  _fire(n){ const i=this._inputs[n]; if(i&&i.fire) i.fire(); }
+  do(anim){ if(this._fallback) return this._fallback.do(anim); if(!anim) return;
+    if(['tada','flip','spin','pulse','heart','pop'].includes(anim)) this._fire('celebrate');
+    else if(['shake','sad'].includes(anim)) this._fire('no');
+    else if(anim==='turn'||anim==='wiggle') this._fire('wave');
+    else this._fire('nod'); }
+  emotion(name){ if(this._fallback) return this._fallback.emotion(name);
+    const mood={idle:0,happy:1,excited:1,proud:1,celebrate:1,curious:1,love:1,surprised:1,sad:2,no:2}[name];
+    if(mood!==undefined) this._num('mood', mood);
+    if(['celebrate','excited','proud','love','surprised'].includes(name)) this._fire('celebrate');
+    else if(name==='sad'||name==='no') this._fire('no'); }
+  express(name){ this.emotion(name); }
+  talk(on){ this.talking=on; if(this._fallback) return this._fallback.talk(on); this._bool('talking', on); }
+  sleep(on){ this.sleeping=on; this.talking=false; if(this._fallback) return this._fallback.sleep(on); this._bool('sleeping', on); }
+  setWalking(on){ if(this._fallback) return this._fallback.setWalking(on); this._bool('walking', on); }
+  turnAround(){ this.do('turn'); }
+  wave(){ if(this._fallback) return this._fallback.wave(); this._fire('wave'); }
+  idleMode(){ if(this._fallback) return this._fallback.idleMode(); this._num('mood',0); this._bool('talking',false); this._bool('sleeping',false); }
+  face(){} look(){}
+}
+/* Every Richie mount goes through here: Rive when enabled + working, else the emoji Richie. */
+function spawnRichie(el, zzz){
+  if(RIVE_RICHIE.enabled){ try{ return new RichieRive(el, zzz); }catch(e){} }
+  return new RichieEmoji(el, zzz);
+}
+
 /* ═══════════════ PERSONAS & LEVELS ═══════════════ */
 const RICHIE_PERSONAS={
   coach:{name:"Friendly Coach",icon:"🤝",accent:"#2ecc8a",blurb:"Warm & encouraging. Celebrates every win.",introLine:"A coach! Love it. We're a team now — I'll cheer you on every step. No shame, just progress. Let's GO!",quips:["Hey, you showed up today — that's the habit working. Proud of you!","Small wins count. Paid one bill early? Victory lap.","Your savings rate is climbing. Keep stacking those choices!","Progress over perfection, always.","Let's set one tiny money goal this week. I believe in you."]},
@@ -6597,7 +6679,7 @@ function richieShow(msg, opts){
 }
 function richieHopOut(){ if(_raBusy){ richieGoHome(); return; } richieCoachNow(); }
 function _raEmerge(then){
-  if(!_raChar){ try{ _raChar=new RichieEmoji(gg('raChar')); }catch(e){} }
+  if(!_raChar){ try{ _raChar=spawnRichie(gg('raChar')); }catch(e){} }
   const op=gg('richiePanel'); if(op) op.classList.remove('open');   // make sure the old panel is never up
   const ff=gg('richieFab'); if(ff) ff.classList.add('open');       // roof opens
   const fc=gg('fabChar'); if(fc) fc.style.opacity='0';              // the bag leaves the house
@@ -6842,7 +6924,7 @@ function runIntro(){
   _obVoice=true; riAudioOn=true;        // Richie speaks during onboarding only
   const stars=gg('riStars'); if(stars){ let sh=''; for(let i=0;i<40;i++) sh+=`<div class="ri-star" style="left:${Math.random()*100}%;top:${Math.random()*100}%;--dur:${2+Math.random()*3}s;--delay:${Math.random()*3}s"></div>`; stars.innerHTML=sh; }
   gg('riDots').innerHTML=RICHIE_STORY.map((_,i)=>`<div class="ri-dot" id="riDot-${i}"></div>`).join('');
-  riChar=new RichieEmoji(gg('riChar'), gg('riZzz')); riChar.sleep(true);
+  riChar=spawnRichie(gg('riChar'), gg('riZzz')); riChar.sleep(true);
   gg('richieIntro').style.display='flex';
   const vb=gg('riVoiceBar'); if(vb) vb.style.display='none';   // voice chooser removed — Richie has one locked voice
   riSyncVoiceUI();
@@ -7336,7 +7418,7 @@ const WIZ_BUNDLES=[
 ];
 const WIZ_TITLES={1:"Who are we building this for?",2:"Your plan is ready"};
 const WIZ_QUIPS={1:"Don't worry, this is the easy part.",2:"Look at you. A plan and a coach. Let's go."};
-function startWizard(){ gg('setupWizard').style.display='flex'; if(!wizChar) wizChar=new RichieEmoji(gg('wizRichie')); wizChar.do('bounce'); wizGoTo(1); }
+function startWizard(){ gg('setupWizard').style.display='flex'; if(!wizChar) wizChar=spawnRichie(gg('wizRichie')); wizChar.do('bounce'); wizGoTo(1); }
 function wizGoTo(step){
   wizStep=step;
   document.querySelectorAll('.wiz-step-tab').forEach(t=>{const s=+t.dataset.step;t.className='wiz-step-tab'+(s===step?' active':s<step?' done':'');});
@@ -7367,7 +7449,7 @@ function wizRenderBody(){
         <div class="summary-chip">Level: <b>${lv?lv.icon+' '+lv.name:'\u2014'}</b></div>
       </div>
       <p style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:4px">Next: sign in to secure your plan. Once you're in, I'll connect your bank and walk you through each goal. \u{1F3E6}</p></div>`;
-    setTimeout(()=>{ const el=gg('wizSuccessChar'); if(el){ const sc=new RichieEmoji(el); sc.do('celebrate'); } },120);
+    setTimeout(()=>{ const el=gg('wizSuccessChar'); if(el){ const sc=spawnRichie(el); sc.do('celebrate'); } },120);
   }
 }
 function wizRenderProfiles(){
@@ -7593,7 +7675,7 @@ function showLogin(greet){
   gg('loginScreen').style.display='flex';
   if(greet){ setLoginMode('signin'); gg('loginSub').textContent=greet; }
   else { initLoginScreen(); }
-  if(!window._loginRichie) window._loginRichie=new RichieEmoji(gg('loginRichie'));
+  if(!window._loginRichie) window._loginRichie=spawnRichie(gg('loginRichie'));
   setTimeout(()=>{ if(window._loginRichie) window._loginRichie.wave(); },300);
   setTimeout(()=>{ const el=gg('loginUser'); if(el) el.focus(); },400);
 }
@@ -7655,7 +7737,7 @@ function runWelcomeBack(){
   try{ hideLoader(); }catch(e){}
   gg('welcomeBack').style.display='flex';
   const stars=gg('wbStars'); if(stars){ let s=''; for(let i=0;i<30;i++) s+=`<div class="ri-star" style="left:${Math.random()*100}%;top:${Math.random()*100}%;--dur:${2+Math.random()*3}s;--delay:${Math.random()*3}s"></div>`; stars.innerHTML=s; }
-  const wb=new RichieEmoji(gg('wbRichie')); window._wbRichie=wb;
+  const wb=spawnRichie(gg('wbRichie')); window._wbRichie=wb;
   wb.do('bounce');
   const name=(JSON.parse(LS.getItem('richie_setup')||'{}').householdName)||(APP&&APP.household)||'friend';
   const swot=buildSWOT();
@@ -7725,7 +7807,7 @@ function richieWizard(cfg){
   gg('richieWiz').style.display='flex';
   gg('rwizTitle').textContent=_rwiz.title;
   gg('rwizDots').innerHTML=_rwiz.steps.map((_,i)=>'<span class="rwiz-dot" id="rwizDot-'+i+'"></span>').join('');
-  try{ if(!_rwizChar) _rwizChar=new RichieEmoji(gg('rwizChar')); }catch(e){}
+  try{ if(!_rwizChar) _rwizChar=spawnRichie(gg('rwizChar')); }catch(e){}
   rwizRender();
 }
 function rwizRender(){
@@ -7848,9 +7930,9 @@ async function enterApp(){
   _appEntered=true;                        // sync may push from here on — never from the wizard
   gg('appShell').style.display='block';
   gg('richieAssistant').style.display='block';
-  sbRichie=new RichieEmoji(gg('sbRichie'));
-  fabChar=new RichieEmoji(gg('fabChar'));
-  rpChar=new RichieEmoji(gg('rpChar'));
+  sbRichie=spawnRichie(gg('sbRichie'));
+  fabChar=spawnRichie(gg('fabChar'));
+  rpChar=spawnRichie(gg('rpChar'));
   renderShell();
   try{ hideLoader(); }catch(e){}
   try{ refreshEnvBadge(); }catch(e){}

@@ -43,12 +43,14 @@ app.use((req, _res, next) => {
 // ── Security headers on every response ──
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.plaid.com",
+  // 'wasm-unsafe-eval' lets the Rive animation runtime instantiate its WebAssembly module
+  "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://cdn.plaid.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: https:",
   "media-src 'self' data: blob:",
-  "connect-src 'self' https://*.plaid.com",
+  // jsdelivr added so the Rive runtime can fetch its .wasm; .riv files are served same-origin ('self')
+  "connect-src 'self' https://*.plaid.com https://cdn.jsdelivr.net",
   "frame-src https://cdn.plaid.com https://*.plaid.com",
   "object-src 'none'",
   "base-uri 'self'",
