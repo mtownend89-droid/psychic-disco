@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 490" width="340" height="490">
+<!-- RICHIE — SAD pose. Same rig as richie-base.svg; worried brows, frown, down pupils, a tear. -->
+  <defs>
+    <linearGradient id="billGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9ed492"/><stop offset="1" stop-color="#6fae74"/>
+    </linearGradient>
+  </defs>
+  <g id="Richie">
+    <g id="legs">
+      <g id="leg_left"><path d="M142 404 C140 428 134 444 132 452" fill="none" stroke="#6fae74" stroke-width="17" stroke-linecap="round"/><ellipse cx="120" cy="458" rx="29" ry="14" fill="#2b2f36"/><ellipse cx="120" cy="461" rx="29" ry="7" fill="#171a1f"/></g>
+      <g id="leg_right"><path d="M198 404 C200 428 206 444 208 452" fill="none" stroke="#6fae74" stroke-width="17" stroke-linecap="round"/><ellipse cx="220" cy="458" rx="29" ry="14" fill="#2b2f36"/><ellipse cx="220" cy="461" rx="29" ry="7" fill="#171a1f"/></g>
+    </g>
+    <g id="arms">
+      <g id="arm_left"><path d="M82 214 C56 226 46 252 52 272" fill="none" stroke="#6fae74" stroke-width="17" stroke-linecap="round"/><circle cx="52" cy="276" r="16" fill="#ffffff" stroke="#3f7a4f" stroke-width="4"/></g>
+      <g id="arm_right"><path d="M258 214 C284 226 294 252 288 272" fill="none" stroke="#6fae74" stroke-width="17" stroke-linecap="round"/><circle cx="288" cy="276" r="16" fill="#ffffff" stroke="#3f7a4f" stroke-width="4"/></g>
+    </g>
+    <g id="bill">
+      <rect x="80" y="72" width="180" height="336" rx="18" fill="url(#billGrad)" stroke="#3f7a4f" stroke-width="5"/>
+      <rect x="94" y="86" width="152" height="308" rx="12" fill="none" stroke="#3f7a4f" stroke-width="2.5"/>
+      <rect x="101" y="93" width="138" height="294" rx="9" fill="none" stroke="#3f7a4f" stroke-width="1" opacity="0.5"/>
+      <ellipse cx="120" cy="150" rx="24" ry="66" fill="#ffffff" opacity="0.10" transform="rotate(-18 120 150)"/>
+      <g fill="#fdf8e9" stroke="#3f7a4f" stroke-width="2.5"><circle cx="106" cy="100" r="12"/><circle cx="234" cy="100" r="12"/><circle cx="106" cy="380" r="12"/><circle cx="234" cy="380" r="12"/></g>
+      <g fill="#3f7a4f"><circle cx="106" cy="100" r="4"/><circle cx="234" cy="100" r="4"/><circle cx="106" cy="380" r="4"/><circle cx="234" cy="380" r="4"/></g>
+      <g id="money" fill="none" stroke="#3f7a4f" stroke-width="8" stroke-linecap="round"><line x1="170" y1="306" x2="170" y2="362"/><path d="M189 317 C189 309 174 307 165 312 C154 318 157 329 170 332 C183 335 186 345 176 351 C167 356 152 354 150 345"/></g>
+    </g>
+    <g id="face">
+      <ellipse id="face_frame" cx="170" cy="205" rx="64" ry="74" fill="#fdf8e9" stroke="#3f7a4f" stroke-width="4"/>
+      <ellipse id="cheek_left" cx="120" cy="224" rx="15" ry="10" fill="#ff8fa3" opacity="0.35"/>
+      <ellipse id="cheek_right" cx="220" cy="224" rx="15" ry="10" fill="#ff8fa3" opacity="0.35"/>
+      <path id="brow_left" d="M128 172 Q146 158 164 163" fill="none" stroke="#2f5f3d" stroke-width="12" stroke-linecap="round"/>
+      <path id="brow_right" d="M176 163 Q194 158 212 172" fill="none" stroke="#2f5f3d" stroke-width="12" stroke-linecap="round"/>
+      <g id="eye_left"><ellipse cx="146" cy="195" rx="20" ry="24" fill="#ffffff" stroke="#3f7a4f" stroke-width="2"/><circle id="pupil_left" cx="149" cy="204" r="10" fill="#22303a"/><circle cx="145" cy="199" r="3.6" fill="#ffffff"/></g>
+      <g id="eye_right"><ellipse cx="194" cy="195" rx="20" ry="24" fill="#ffffff" stroke="#3f7a4f" stroke-width="2"/><circle id="pupil_right" cx="191" cy="204" r="10" fill="#22303a"/><circle cx="187" cy="199" r="3.6" fill="#ffffff"/></g>
+      <path id="tear" d="M215 203 C209 213 209 221 215 223 C221 221 221 213 215 203 Z" fill="#8fd0ff" stroke="#4a9fe0" stroke-width="2"/>
+      <g id="mouth"><path d="M142 266 Q170 244 198 266" fill="none" stroke="#3a1720" stroke-width="7" stroke-linecap="round"/></g>
+    </g>
+  </g>
+</svg>

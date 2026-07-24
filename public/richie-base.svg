@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 520" width="380" height="520">
+<!-- ============ RICHIE — portrait dollar-bill mascot (for Rive) ============
+  Built from a flat dollar-bill icon (SVG Repo, CC0), reoriented to portrait, with a cartoon
+  face added in the center oval plus rubber-hose arms (gloves) and legs (shoes).
+  Palette from the source icon: #74D24F green · #FFEFBC cream · #869B55 olive.
+  Named riggable groups for Rive: pupil_left/right · eye_left/right · brow_left/right · mouth ·
+  cheek_* · glove_left/right (in arm_left/right) · leg_left/right · bill_body · Richie(root).
+================================================================================= -->
+  <g id="Richie">
+
+    <ellipse cx="180" cy="504" rx="104" ry="12" fill="#3a5a2a" opacity="0.16"/>
+
+    <!-- legs + shoes -->
+    <g id="legs">
+      <g id="leg_left">
+        <path d="M150 424 C146 452 142 474 142 484" fill="none" stroke="#5fae3d" stroke-width="16" stroke-linecap="round"/>
+        <g id="shoe_left" transform="translate(133 492)">
+          <path d="M-22 -8 C-25 6 -12 11 6 10 L16 10 C24 9 26 2 22 -4 C10 -10 -8 -10 -22 -8 Z" fill="#869B55" stroke="#5c6f3a" stroke-width="2.5" stroke-linejoin="round"/>
+          <path d="M-23 6 C-10 13 12 12 24 8 L24 12 C10 16 -12 16 -24 11 Z" fill="#FFEFBC" stroke="#5c6f3a" stroke-width="2" stroke-linejoin="round"/>
+        </g>
+      </g>
+      <g id="leg_right">
+        <path d="M210 424 C214 452 218 474 218 484" fill="none" stroke="#5fae3d" stroke-width="16" stroke-linecap="round"/>
+        <g id="shoe_right" transform="translate(227 492) scale(-1 1)">
+          <path d="M-22 -8 C-25 6 -12 11 6 10 L16 10 C24 9 26 2 22 -4 C10 -10 -8 -10 -22 -8 Z" fill="#869B55" stroke="#5c6f3a" stroke-width="2.5" stroke-linejoin="round"/>
+          <path d="M-23 6 C-10 13 12 12 24 8 L24 12 C10 16 -12 16 -24 11 Z" fill="#FFEFBC" stroke="#5c6f3a" stroke-width="2" stroke-linejoin="round"/>
+        </g>
+      </g>
+    </g>
+
+    <!-- arms + gloved hands -->
+    <g id="arms">
+      <g id="arm_left">
+        <path d="M80 250 C58 222 46 188 44 164" fill="none" stroke="#5fae3d" stroke-width="16" stroke-linecap="round"/>
+        <g id="glove_left" transform="translate(40 150) rotate(-12)" fill="#FFEFBC" stroke="#5c6f3a" stroke-width="3" stroke-linejoin="round">
+          <rect x="-16" y="-31" width="7.5" height="25" rx="3.75"/>
+          <rect x="-6.5" y="-35" width="7.5" height="29" rx="3.75"/>
+          <rect x="3" y="-34" width="7.5" height="28" rx="3.75"/>
+          <rect x="12.5" y="-29" width="7.5" height="23" rx="3.75"/>
+          <path d="M-15 -3 C-28 -5 -31 -16 -25 -21 C-18 -16 -13 -11 -9 -7 Z"/>
+          <circle cx="0" cy="-2" r="15"/>
+        </g>
+      </g>
+      <g id="arm_right">
+        <path d="M280 258 C304 264 322 276 330 292" fill="none" stroke="#5fae3d" stroke-width="16" stroke-linecap="round"/>
+        <g id="glove_right" transform="translate(336 296) rotate(38)" fill="#FFEFBC" stroke="#5c6f3a" stroke-width="3" stroke-linejoin="round">
+          <rect x="-16" y="-31" width="7.5" height="25" rx="3.75"/>
+          <rect x="-6.5" y="-35" width="7.5" height="29" rx="3.75"/>
+          <rect x="3" y="-34" width="7.5" height="28" rx="3.75"/>
+          <rect x="12.5" y="-29" width="7.5" height="23" rx="3.75"/>
+          <path d="M-15 -3 C-28 -5 -31 -16 -25 -21 C-18 -16 -13 -11 -9 -7 Z"/>
+          <circle cx="0" cy="-2" r="15"/>
+        </g>
+      </g>
+    </g>
+
+    <!-- bill body (portrait) -->
+    <g id="bill">
+      <rect id="bill_body" x="70" y="56" width="220" height="372" rx="18" fill="#74D24F"/>
+      <rect x="84" y="70" width="192" height="344" rx="12" fill="#FFEFBC"/>
+      <!-- corner dots -->
+      <circle cx="100" cy="90" r="13" fill="#869B55"/><circle cx="260" cy="90" r="13" fill="#869B55"/>
+      <circle cx="100" cy="394" r="13" fill="#869B55"/><circle cx="260" cy="394" r="13" fill="#869B55"/>
+      <!-- denomination circles (top & bottom) -->
+      <g>
+        <circle cx="180" cy="98" r="17" fill="#74D24F"/>
+        <g transform="translate(180 98) scale(1.5)" fill="none" stroke="#4f7a33" stroke-width="1.7" stroke-linecap="round"><path d="M3 -5 C3 -7 -2 -8 -4 -5 C-6 -3 -3 -1 0 0 C3 1 5 3 3 6 C1 8 -3 7 -3 5 M0 -8 L0 8"/></g>
+      </g>
+      <g>
+        <circle cx="180" cy="344" r="17" fill="#74D24F"/>
+        <g transform="translate(180 344) scale(1.5)" fill="none" stroke="#4f7a33" stroke-width="1.7" stroke-linecap="round"><path d="M3 -5 C3 -7 -2 -8 -4 -5 C-6 -3 -3 -1 0 0 C3 1 5 3 3 6 C1 8 -3 7 -3 5 M0 -8 L0 8"/></g>
+      </g>
+      <!-- portrait oval (the face medallion) -->
+      <ellipse id="face_oval" cx="180" cy="214" rx="66" ry="90" fill="#869B55"/>
+      <ellipse cx="180" cy="214" rx="59" ry="83" fill="none" stroke="#728449" stroke-width="2"/>
+    </g>
+
+    <!-- face -->
+    <g id="face">
+      <path id="brow_left" d="M138 179 Q156 171 175 180" fill="none" stroke="#3f5228" stroke-width="4" stroke-linecap="round"/>
+      <path id="brow_right" d="M185 180 Q204 171 222 179" fill="none" stroke="#3f5228" stroke-width="4" stroke-linecap="round"/>
+      <g id="eye_left">
+        <ellipse cx="156" cy="201" rx="19" ry="22" fill="#ffffff" stroke="#3f5228" stroke-width="2"/>
+        <circle id="pupil_left" cx="159" cy="203" r="11.5" fill="#57b153" stroke="#2f6b2f" stroke-width="1.4"/>
+        <circle cx="159" cy="203" r="6" fill="#173a18"/>
+        <circle cx="154" cy="198" r="3.2" fill="#ffffff"/>
+      </g>
+      <g id="eye_right">
+        <ellipse cx="204" cy="201" rx="19" ry="22" fill="#ffffff" stroke="#3f5228" stroke-width="2"/>
+        <circle id="pupil_right" cx="201" cy="203" r="11.5" fill="#57b153" stroke="#2f6b2f" stroke-width="1.4"/>
+        <circle cx="201" cy="203" r="6" fill="#173a18"/>
+        <circle cx="196" cy="198" r="3.2" fill="#ffffff"/>
+      </g>
+      <ellipse id="cheek_left" cx="137" cy="232" rx="14" ry="9" fill="#ef9aa8" opacity="0.75"/>
+      <ellipse id="cheek_right" cx="223" cy="232" rx="14" ry="9" fill="#ef9aa8" opacity="0.75"/>
+      <g id="mouth">
+        <path d="M152 244 Q180 250 208 244 Q202 274 180 276 Q158 274 152 244 Z" fill="#6e2b3a" stroke="#3a1720" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M157 246 Q180 251 203 246 L200 256 Q180 260 160 256 Z" fill="#ffffff"/>
+        <ellipse cx="180" cy="268" rx="15" ry="8" fill="#ff8fa0"/>
+      </g>
+    </g>
+
+  </g>
+</svg>

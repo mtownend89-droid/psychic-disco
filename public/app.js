@@ -940,18 +940,78 @@ function _incomeEvents(days){
   });
   return out;
 }
-// bill events: place each unpaid bill on its due-day within the window (using expected pay)
+// A bill's real due date in a given month, clamped to the month's last day (so a "31st" bill
+// lands on Feb 28, Apr 30, etc. instead of rolling into the next month).
+function _dueDateInMonth(y,m,dom){ const last=new Date(y,m+1,0).getDate(); return new Date(y,m,Math.min(Math.max(dom||1,1),last)); }
+// today-relative day offset → a real Date at midnight (for showing actual due dates)
+function _projDate(off){ const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()+(off||0)); return d; }
+// bill events: place each unpaid bill on its REAL due date each calendar month within the window
+// (not a rough 30-day step, which drifts off the actual statement date over time).
 function _billEvents(days){
-  const out=[]; const todayDate=new Date().getDate();
+  const out=[]; const today=new Date(); today.setHours(0,0,0,0);
+  const horizon=new Date(today); horizon.setDate(horizon.getDate()+days);
   engUpcomingBills().filter(b=>!b.paid && b.pay>0).forEach(b=>{
-    let d=b.due-todayDate; if(d<0) d+=30; // next occurrence this cycle
-    while(d<=days){ out.push({day:d, amt:-(b.pay), name:b.name, type:'bill', key:billKey(b)}); d+=30; }
+    let cur=_dueDateInMonth(today.getFullYear(), today.getMonth(), b.due);
+    if(cur<today) cur=_dueDateInMonth(today.getFullYear(), today.getMonth()+1, b.due);
+    while(cur<=horizon){
+      const off=Math.round((cur-today)/86400000);
+      if(off>=0 && off<=days) out.push({day:off, amt:-(b.pay), name:b.name, type:'bill', key:billKey(b), due:b.due});
+      cur=_dueDateInMonth(cur.getFullYear(), cur.getMonth()+1, b.due);
+    }
   });
+  return out;
+}
+/* ── Bank business-day awareness (weekends + US federal/bank holidays) ── */
+function _nthWeekdayOfMonth(y,m,wd,n){ const first=new Date(y,m,1); const day=1+((wd-first.getDay()+7)%7)+(n-1)*7; return new Date(y,m,day); }
+function _lastWeekdayOfMonth(y,m,wd){ const last=new Date(y,m+1,0); const day=last.getDate()-((last.getDay()-wd+7)%7); return new Date(y,m,day); }
+function _observedHoliday(d){ const wd=d.getDay(); if(wd===6) return new Date(d.getTime()-86400000); if(wd===0) return new Date(d.getTime()+86400000); return d; }
+const _holCache={};
+function _bankHolidaySet(year){
+  if(_holCache[year]) return _holCache[year];
+  const s=new Set(); const key=d=>d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate(); const add=d=>s.add(key(d));
+  add(_observedHoliday(new Date(year,0,1)));    // New Year's Day
+  add(_nthWeekdayOfMonth(year,0,1,3));          // MLK Day (3rd Mon Jan)
+  add(_nthWeekdayOfMonth(year,1,1,3));          // Presidents' Day (3rd Mon Feb)
+  add(_lastWeekdayOfMonth(year,4,1));           // Memorial Day (last Mon May)
+  add(_observedHoliday(new Date(year,5,19)));   // Juneteenth
+  add(_observedHoliday(new Date(year,6,4)));    // Independence Day
+  add(_nthWeekdayOfMonth(year,8,1,1));          // Labor Day (1st Mon Sep)
+  add(_nthWeekdayOfMonth(year,9,1,2));          // Columbus Day (2nd Mon Oct)
+  add(_observedHoliday(new Date(year,10,11)));  // Veterans Day
+  add(_nthWeekdayOfMonth(year,10,4,4));         // Thanksgiving (4th Thu Nov)
+  add(_observedHoliday(new Date(year,11,25)));  // Christmas
+  _holCache[year]=s; return s;
+}
+function _isBankClosed(d){ const wd=d.getDay(); if(wd===0||wd===6) return true; return _bankHolidaySet(d.getFullYear()).has(d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate()); }
+// Deposits post the prior business day (dir -1); autopay drafts the next business day (dir +1).
+function _shiftBusinessDay(date, dir){ const d=new Date(date); let g=0; while(_isBankClosed(d) && g++<12){ d.setDate(d.getDate()+dir); } return d; }
+
+/* ── Planned savings / goal contributions as scheduled outflows ──
+   Sinking-fund buckets you're actively funding draw cash out of the spendable pool each month
+   (placed on the 1st), shown as their own line so the projection reflects money you've
+   committed to save — not just bills. */
+function _savingsEvents(days){
+  const out=[]; const today=new Date(); today.setHours(0,0,0,0);
+  const horizon=new Date(today); horizon.setDate(horizon.getDate()+days);
+  let monthly=0; try{ monthly=engSavingsBuckets().filter(b=>!b.done).reduce((s,b)=>s+(+b.monthly||0),0); }catch(e){}
+  if(monthly<=0) return out;
+  let cur=new Date(today.getFullYear(), today.getMonth(), 1);
+  if(cur<today) cur=new Date(today.getFullYear(), today.getMonth()+1, 1);
+  while(cur<=horizon){
+    const off=Math.round((cur-today)/86400000);
+    if(off>=0 && off<=days) out.push({day:off, amt:-Math.round(monthly), name:'Planned savings', type:'savings', noShift:true});
+    cur=new Date(cur.getFullYear(), cur.getMonth()+1, 1);
+  }
   return out;
 }
 function engCashFlowProjection(days, cats){
   const start=engStartCash(cats);
-  const events=[..._incomeEvents(days), ..._billEvents(days)].sort((a,b)=>a.day-b.day);
+  const today=new Date(); today.setHours(0,0,0,0);
+  const events=[..._incomeEvents(days), ..._billEvents(days), ..._savingsEvents(days)];
+  // Shift to real banking days (deposits land the prior business day; drafts the next).
+  events.forEach(e=>{ if(e.noShift) return; const sd=_shiftBusinessDay(_projDate(e.day), e.type==='income'?-1:1); let off=Math.round((sd-today)/86400000); if(off<0) off=0; e.day=off; });
+  // sort by day, income first within a day (deposit before draft — truer intraday low point)
+  events.sort((a,b)=> a.day-b.day || (a.type==='income'? -1 : b.type==='income'? 1 : 0));
   let bal=start; const series=[{day:0, bal:start, label:'Today'}];
   let low={day:0, bal:start}; const byDay={};
   events.forEach(e=>{ byDay[e.day]=byDay[e.day]||[]; byDay[e.day].push(e); });
@@ -960,9 +1020,10 @@ function engCashFlowProjection(days, cats){
     series.push({day:d, bal});
     if(bal<low.bal) low={day:d, bal};
   }
-  const totalIn=events.filter(e=>e.amt>0).reduce((s,e)=>s+e.amt,0);
-  const totalOut=events.filter(e=>e.amt<0).reduce((s,e)=>s+Math.abs(e.amt),0);
-  return {start, end:bal, series, events, low, totalIn, totalOut, net:totalIn-totalOut, byDay, days};
+  const totalIn=events.filter(e=>e.type==='income').reduce((s,e)=>s+e.amt,0);
+  const totalOut=events.filter(e=>e.type==='bill').reduce((s,e)=>s+Math.abs(e.amt),0);
+  const totalSaved=events.filter(e=>e.type==='savings').reduce((s,e)=>s+Math.abs(e.amt),0);
+  return {start, end:bal, series, events, low, totalIn, totalOut, totalSaved, net:bal-start, byDay, days};
 }
 
 /* ── Unified bills/liabilities layer ──
@@ -1090,7 +1151,7 @@ function engSafeToSpend(){
   const proj=engCashFlowProjection(35);
   const inc=(proj.events||[]).filter(e=>e.type==='income').sort((a,b)=>a.day-b.day)[0];
   const horizon=inc?Math.max(1,inc.day):14;
-  const billsDue=(proj.events||[]).filter(e=>e.type!=='income'&&e.day<=horizon).reduce((s,e)=>s+Math.abs(e.amt),0);
+  const billsDue=(proj.events||[]).filter(e=>e.type==='bill'&&e.day<=horizon).reduce((s,e)=>s+Math.abs(e.amt),0);  // savings handled via goalPortion below — don't double-count
   const goalMonthly=(typeof engSavingsBuckets==='function')?engSavingsBuckets().reduce((s,b)=>s+(b.monthly||0),0):0;
   const goalPortion=goalMonthly*(horizon/30.44);
   const buffer=50;
@@ -2165,6 +2226,88 @@ class RichieEmoji{
   setWalking(on){ if(!this.el)return; this.el.classList.toggle('e-hopping',on); if(!on&&!this.sleeping) this.idleMode(); }
   face(){} look(){}
   _setZzz(on){ if(!this.zzz)return; this.zzz.innerHTML=on?'<span class="r-zzz" style="animation:zzz 2.4s ease-out infinite">z</span><span class="r-zzz" style="font-size:15px;animation:zzz 2.4s ease-out .8s infinite">z</span><span class="r-zzz" style="font-size:11px;animation:zzz 2.4s ease-out 1.6s infinite">z</span>':''; }
+}
+
+/* ═══════════════ RIVE-POWERED RICHIE (optional, drop-in for RichieEmoji) ═══════════════
+   HOW TO TURN ON:
+   1. In Rive (rive.app), build/obtain a Richie artboard with a State Machine, then export a
+      .riv and drop it in /public as  richie.riv .
+   2. Give the State Machine these INPUTS (exact names — case-sensitive):
+        talking   (boolean)  — mouth/idle-talk loop while Richie speaks
+        sleeping  (boolean)  — sleepy idle (the onboarding "zzz" state)
+        walking   (boolean)  — optional hop/walk loop
+        mood      (number)   — 0 idle · 1 happy/positive · 2 sad/negative
+        celebrate (trigger)  — big one-shot (tada/flip/spin/pulse/heart/pop, "excited")
+        nod       (trigger)  — small acknowledgement (nod/bounce)
+        wave      (trigger)  — wave/turn/wiggle
+        no        (trigger)  — shake / disappointed
+      (Missing inputs are ignored safely — start with talking + mood + nod and add the rest later.)
+   3. Set RIVE_RICHIE.enabled = true (and `machine` to your State Machine's exact name).
+   If the runtime or file fails to load, every Richie silently falls back to the emoji version,
+   so nothing breaks. Runtime + wasm load from jsdelivr (already allowed by the app's CSP). */
+const RIVE_RICHIE = {
+  enabled: false,                         // ← flip to true once richie.riv is in /public
+  src: 'richie.riv',                      // same-origin file in /public
+  artboard: undefined,                    // optional — omit to use the .riv's default artboard
+  machine: 'State Machine 1',             // ← must match the State Machine name in your .riv
+  script: 'https://cdn.jsdelivr.net/npm/@rive-app/[email protected]',
+  wasm:   'https://cdn.jsdelivr.net/npm/@rive-app/[email protected]/rive.wasm',   // keep this version == script's
+};
+let _rivePromise = null;
+function ensureRive(){
+  if(typeof window!=='undefined' && window.rive) return Promise.resolve(window.rive);
+  if(_rivePromise) return _rivePromise;
+  _rivePromise = new Promise((resolve, reject)=>{
+    const s=document.createElement('script'); s.src=RIVE_RICHIE.script; s.async=true;
+    s.onload=()=>{ try{ if(RIVE_RICHIE.wasm && window.rive && window.rive.RuntimeLoader) window.rive.RuntimeLoader.setWasmUrl(RIVE_RICHIE.wasm); }catch(e){} window.rive?resolve(window.rive):reject(new Error('rive missing')); };
+    s.onerror=()=>reject(new Error('rive runtime failed to load'));
+    document.head.appendChild(s);
+  });
+  return _rivePromise;
+}
+/* Mirrors the RichieEmoji API 1:1 so every existing richie.do()/emotion()/talk() call just works. */
+class RichieRive{
+  constructor(el, zzzEl){
+    this.el=el; this.zzz=zzzEl||null; this.talking=false; this.sleeping=false; this._inputs={}; this._fallback=null;
+    if(!el) return;
+    const cv=document.createElement('canvas'); cv.style.width='100%'; cv.style.height='100%'; cv.style.display='block';
+    el.innerHTML=''; el.appendChild(cv); this.canvas=cv;
+    ensureRive().then(rive=>{
+      this.r=new rive.Rive({ src:RIVE_RICHIE.src, canvas:cv, autoplay:true,
+        artboard:RIVE_RICHIE.artboard, stateMachines:RIVE_RICHIE.machine,
+        onLoad:()=>{ try{ this.r.resizeDrawingSurfaceToCanvas(); }catch(e){}
+          (this.r.stateMachineInputs(RIVE_RICHIE.machine)||[]).forEach(i=>{ this._inputs[i.name]=i; });
+          // re-apply any state set before load finished
+          this._bool('talking',this.talking); this._bool('sleeping',this.sleeping); } });
+      if(window.ResizeObserver){ this._ro=new ResizeObserver(()=>{ try{ this.r&&this.r.resizeDrawingSurfaceToCanvas(); }catch(e){} }); this._ro.observe(el); }
+    }).catch(()=>{ try{ el.innerHTML=''; this._fallback=new RichieEmoji(el, zzzEl); }catch(e){} });
+  }
+  _bool(n,v){ const i=this._inputs[n]; if(i) i.value=!!v; }
+  _num(n,v){ const i=this._inputs[n]; if(i) i.value=+v; }
+  _fire(n){ const i=this._inputs[n]; if(i&&i.fire) i.fire(); }
+  do(anim){ if(this._fallback) return this._fallback.do(anim); if(!anim) return;
+    if(['tada','flip','spin','pulse','heart','pop'].includes(anim)) this._fire('celebrate');
+    else if(['shake','sad'].includes(anim)) this._fire('no');
+    else if(anim==='turn'||anim==='wiggle') this._fire('wave');
+    else this._fire('nod'); }
+  emotion(name){ if(this._fallback) return this._fallback.emotion(name);
+    const mood={idle:0,happy:1,excited:1,proud:1,celebrate:1,curious:1,love:1,surprised:1,sad:2,no:2}[name];
+    if(mood!==undefined) this._num('mood', mood);
+    if(['celebrate','excited','proud','love','surprised'].includes(name)) this._fire('celebrate');
+    else if(name==='sad'||name==='no') this._fire('no'); }
+  express(name){ this.emotion(name); }
+  talk(on){ this.talking=on; if(this._fallback) return this._fallback.talk(on); this._bool('talking', on); }
+  sleep(on){ this.sleeping=on; this.talking=false; if(this._fallback) return this._fallback.sleep(on); this._bool('sleeping', on); }
+  setWalking(on){ if(this._fallback) return this._fallback.setWalking(on); this._bool('walking', on); }
+  turnAround(){ this.do('turn'); }
+  wave(){ if(this._fallback) return this._fallback.wave(); this._fire('wave'); }
+  idleMode(){ if(this._fallback) return this._fallback.idleMode(); this._num('mood',0); this._bool('talking',false); this._bool('sleeping',false); }
+  face(){} look(){}
+}
+/* Every Richie mount goes through here: Rive when enabled + working, else the emoji Richie. */
+function spawnRichie(el, zzz){
+  if(RIVE_RICHIE.enabled){ try{ return new RichieRive(el, zzz); }catch(e){} }
+  return new RichieEmoji(el, zzz);
 }
 
 /* ═══════════════ PERSONAS & LEVELS ═══════════════ */
@@ -4952,15 +5095,17 @@ function cfcMount(w){
     <div class="cfp-stat"><div class="cfp-stat-l">Starting cash</div><div class="cfp-stat-v">${fmtK(p.start)}</div></div>
     <div class="cfp-stat"><div class="cfp-stat-l">Income in</div><div class="cfp-stat-v" style="color:var(--green)">+${fmtK(p.totalIn)}</div></div>
     <div class="cfp-stat"><div class="cfp-stat-l">Bills out</div><div class="cfp-stat-v" style="color:var(--red)">-${fmtK(p.totalOut)}</div></div>
+    ${p.totalSaved>0?`<div class="cfp-stat"><div class="cfp-stat-l">Set aside</div><div class="cfp-stat-v" style="color:var(--blue)">-${fmtK(p.totalSaved)}</div></div>`:''}
     <div class="cfp-stat"><div class="cfp-stat-l">End balance</div><div class="cfp-stat-v" style="color:${p.end>=0?'var(--pos)':'var(--red)'}">${fmtK(p.end)}</div></div>`;
   }
   const chart=gg('cfcchart_'+w.uid);
   if(chart){ chart.innerHTML=cfpLineSVG(p, 'cfc'+w.uid, 300, 80); }
   const low=gg('cfclow_'+w.uid);
   if(low){
-    if(p.low.bal<0){ low.className='cfp-lowflag danger'; low.innerHTML=`⚠️ Dips to <b>${fmtK(p.low.bal)}</b> on day ${p.low.day}. Open the Planner to adjust.`; }
-    else if(p.low.bal<200){ low.className='cfp-lowflag warn'; low.innerHTML=`⚡ Tight — low point <b>${fmtK(p.low.bal)}</b> around day ${p.low.day}.`; }
-    else { low.className='cfp-lowflag ok'; low.innerHTML=`✅ Stays above <b>${fmtK(p.low.bal)}</b> (low point day ${p.low.day}).`; }
+    const lowWhen=p.low.day===0?'today':_projDate(p.low.day).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    if(p.low.bal<0){ low.className='cfp-lowflag danger'; low.innerHTML=`⚠️ Dips to <b>${fmtK(p.low.bal)}</b> on <b>${lowWhen}</b>. Open the Planner to adjust.`; }
+    else if(p.low.bal<200){ low.className='cfp-lowflag warn'; low.innerHTML=`⚡ Tight — low point <b>${fmtK(p.low.bal)}</b> around <b>${lowWhen}</b>.`; }
+    else { low.className='cfp-lowflag ok'; low.innerHTML=`✅ Stays above <b>${fmtK(p.low.bal)}</b> (low point <b>${lowWhen}</b>).`; }
   }
 }
 
@@ -4995,6 +5140,7 @@ function cfpMount(w){
     <div class="cfp-stat"><div class="cfp-stat-l">Starting cash</div><div class="cfp-stat-v">${fmtK(p.start)}</div></div>
     <div class="cfp-stat"><div class="cfp-stat-l">Income in</div><div class="cfp-stat-v" style="color:var(--green)">+${fmtK(p.totalIn)}</div></div>
     <div class="cfp-stat"><div class="cfp-stat-l">Bills out</div><div class="cfp-stat-v" style="color:var(--red)">-${fmtK(p.totalOut)}</div></div>
+    ${p.totalSaved>0?`<div class="cfp-stat"><div class="cfp-stat-l">Set aside</div><div class="cfp-stat-v" style="color:var(--blue)">-${fmtK(p.totalSaved)}</div></div>`:''}
     <div class="cfp-stat"><div class="cfp-stat-l">End balance</div><div class="cfp-stat-v" style="color:${p.end>=0?'var(--pos)':'var(--red)'}">${fmtK(p.end)}</div></div>`;
   }
   // running balance line (mini SVG sparkline so it works everywhere, no Chart.js dependency)
@@ -5003,30 +5149,44 @@ function cfpMount(w){
   // low-point flag
   const low=gg('cfplow_'+w.uid);
   if(low){
-    if(p.low.bal<0){ low.className='cfp-lowflag danger'; low.innerHTML=`⚠️ Projected shortfall: balance dips to <b>${fmtK(p.low.bal)}</b> on day ${p.low.day}. Adjust a bill below or move income.`; }
-    else if(p.low.bal<200){ low.className='cfp-lowflag warn'; low.innerHTML=`⚡ Tight: lowest balance is <b>${fmtK(p.low.bal)}</b> around day ${p.low.day}.`; }
-    else { low.className='cfp-lowflag ok'; low.innerHTML=`✅ Safe: your balance stays above <b>${fmtK(p.low.bal)}</b> (low point day ${p.low.day}).`; }
+    const lowWhen=p.low.day===0?'today':_projDate(p.low.day).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    if(p.low.bal<0){ low.className='cfp-lowflag danger'; low.innerHTML=`⚠️ Projected shortfall: balance dips to <b>${fmtK(p.low.bal)}</b> on <b>${lowWhen}</b>. Adjust a bill below or move income.`; }
+    else if(p.low.bal<200){ low.className='cfp-lowflag warn'; low.innerHTML=`⚡ Tight: lowest balance is <b>${fmtK(p.low.bal)}</b> around <b>${lowWhen}</b>.`; }
+    else { low.className='cfp-lowflag ok'; low.innerHTML=`✅ Safe: your balance stays above <b>${fmtK(p.low.bal)}</b> (low point <b>${lowWhen}</b>).`; }
   }
   // editable upcoming events (bills editable, income shown)
   const ev=gg('cfpev_'+w.uid);
   if(ev){
-    const sorted=[...p.events].sort((a,b)=>a.day-b.day).slice(0,40);
+    const sorted=[...p.events].sort((a,b)=> a.day-b.day || (a.type==='income'?-1:b.type==='income'?1:0)).slice(0,80);
+    // group events under a date header with the day's net (calendar-register style)
+    const groups=[]; sorted.forEach(e=>{ let g=groups[groups.length-1]; if(!g||g.day!==e.day){ g={day:e.day, items:[]}; groups.push(g); } g.items.push(e); });
     let run=p.start;
-    const rows=sorted.map(e=>{
-      const when=e.day===0?'today':'day '+e.day;
-      run+=e.amt;  // running balance after this event (checkbook register)
-      const runColor=run<0?'var(--red)':run<200?'var(--amber)':'var(--text)';
-      const runBadge=`<span class="cfp-ev-run" style="color:${runColor}">${run<0?'-':''}${fmtK(Math.abs(run))}</span>`;
-      if(e.type==='income'){
-        return `<div class="cfp-ev income"><span class="cfp-ev-when">${when}</span><span class="cfp-ev-nm">${esc(e.name)}</span><span class="cfp-ev-amt" style="color:var(--green)">+${fmtK(e.amt)}</span>${runBadge}</div>`;
-      }
-      const key=(e.key||'').replace(/'/g,"\\'");
-      return `<div class="cfp-ev bill"><span class="cfp-ev-when">${when}</span><span class="cfp-ev-nm">${esc(e.name)}</span><div class="cfp-ev-edit"><span>$</span><input type="number" value="${Math.round(Math.abs(e.amt))}" min="0" step="10" onclick="event.stopPropagation()" oninput="setBillPay('${key}',this.value)" onblur="cfpRefresh('${w.uid}')"></div>${runBadge}</div>`;
+    const body=groups.map(g=>{
+      const dt=_projDate(g.day);
+      const dateLbl=g.day===0?'Today':dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      const dow=g.day===0?'':dt.toLocaleDateString('en-US',{weekday:'short'});
+      let dayNet=0;
+      const items=g.items.map(e=>{
+        run+=e.amt; dayNet+=e.amt;  // running balance after this event (checkbook register)
+        const runColor=run<0?'var(--red)':run<200?'var(--amber)':'var(--text)';
+        const runBadge=`<span class="cfp-ev-run" style="color:${runColor}">${run<0?'-':''}${fmtK(Math.abs(run))}</span>`;
+        if(e.type==='income'){
+          return `<div class="cfp-ev income"><span class="cfp-ev-ind"></span><span class="cfp-ev-nm">${esc(e.name)}</span><span class="cfp-ev-amt" style="color:var(--green)">+${fmtK(e.amt)}</span>${runBadge}</div>`;
+        }
+        if(e.type==='savings'){
+          return `<div class="cfp-ev savings"><span class="cfp-ev-ind"></span><span class="cfp-ev-nm">💰 ${esc(e.name)}</span><span class="cfp-ev-amt" style="color:var(--blue)">-${fmtK(Math.abs(e.amt))}</span>${runBadge}</div>`;
+        }
+        const key=(e.key||'').replace(/'/g,"\\'");
+        return `<div class="cfp-ev bill"><span class="cfp-ev-ind"></span><span class="cfp-ev-nm">${esc(e.name)}</span><div class="cfp-ev-edit"><span>$</span><input type="number" value="${Math.round(Math.abs(e.amt))}" min="0" step="10" onclick="event.stopPropagation()" oninput="setBillPay('${key}',this.value)" onblur="cfpRefresh('${w.uid}')"></div>${runBadge}</div>`;
+      }).join('');
+      const netColor=dayNet>=0?'var(--pos)':'var(--red)';
+      const header=`<div class="cfp-day"><span class="cfp-day-date">${dateLbl}</span><span class="cfp-day-dow">${dow}</span><span class="cfp-day-net" style="color:${netColor}">${dayNet>=0?'+':'-'}${fmtK(Math.abs(dayNet))}</span></div>`;
+      return header+items;
     }).join('');
-    ev.innerHTML=rows
-      ? `<div class="cfp-ev-header"><span class="cfp-ev-when">When</span><span class="cfp-ev-nm">Transaction</span><span class="cfp-ev-amt-h">Amount</span><span class="cfp-ev-run-h">Balance</span></div>
-         <div class="cfp-ev-start"><span></span><span class="cfp-ev-nm">Starting balance</span><span></span><span class="cfp-ev-run">${fmtK(p.start)}</span></div>
-         ${rows}`
+    ev.innerHTML=body
+      ? `<div class="cfp-ev-header"><span class="cfp-ev-ind"></span><span class="cfp-ev-nm">Transaction</span><span class="cfp-ev-amt-h">Amount</span><span class="cfp-ev-run-h">Balance</span></div>
+         <div class="cfp-ev-start"><span class="cfp-ev-ind"></span><span class="cfp-ev-nm">Starting balance</span><span></span><span class="cfp-ev-run">${fmtK(p.start)}</span></div>
+         ${body}`
       : '<div class="ws-hint">No upcoming events in this window.</div>';
   }
 }
@@ -6597,7 +6757,7 @@ function richieShow(msg, opts){
 }
 function richieHopOut(){ if(_raBusy){ richieGoHome(); return; } richieCoachNow(); }
 function _raEmerge(then){
-  if(!_raChar){ try{ _raChar=new RichieEmoji(gg('raChar')); }catch(e){} }
+  if(!_raChar){ try{ _raChar=spawnRichie(gg('raChar')); }catch(e){} }
   const op=gg('richiePanel'); if(op) op.classList.remove('open');   // make sure the old panel is never up
   const ff=gg('richieFab'); if(ff) ff.classList.add('open');       // roof opens
   const fc=gg('fabChar'); if(fc) fc.style.opacity='0';              // the bag leaves the house
@@ -6842,7 +7002,7 @@ function runIntro(){
   _obVoice=true; riAudioOn=true;        // Richie speaks during onboarding only
   const stars=gg('riStars'); if(stars){ let sh=''; for(let i=0;i<40;i++) sh+=`<div class="ri-star" style="left:${Math.random()*100}%;top:${Math.random()*100}%;--dur:${2+Math.random()*3}s;--delay:${Math.random()*3}s"></div>`; stars.innerHTML=sh; }
   gg('riDots').innerHTML=RICHIE_STORY.map((_,i)=>`<div class="ri-dot" id="riDot-${i}"></div>`).join('');
-  riChar=new RichieEmoji(gg('riChar'), gg('riZzz')); riChar.sleep(true);
+  riChar=spawnRichie(gg('riChar'), gg('riZzz')); riChar.sleep(true);
   gg('richieIntro').style.display='flex';
   const vb=gg('riVoiceBar'); if(vb) vb.style.display='none';   // voice chooser removed — Richie has one locked voice
   riSyncVoiceUI();
@@ -7336,7 +7496,7 @@ const WIZ_BUNDLES=[
 ];
 const WIZ_TITLES={1:"Who are we building this for?",2:"Your plan is ready"};
 const WIZ_QUIPS={1:"Don't worry, this is the easy part.",2:"Look at you. A plan and a coach. Let's go."};
-function startWizard(){ gg('setupWizard').style.display='flex'; if(!wizChar) wizChar=new RichieEmoji(gg('wizRichie')); wizChar.do('bounce'); wizGoTo(1); }
+function startWizard(){ gg('setupWizard').style.display='flex'; if(!wizChar) wizChar=spawnRichie(gg('wizRichie')); wizChar.do('bounce'); wizGoTo(1); }
 function wizGoTo(step){
   wizStep=step;
   document.querySelectorAll('.wiz-step-tab').forEach(t=>{const s=+t.dataset.step;t.className='wiz-step-tab'+(s===step?' active':s<step?' done':'');});
@@ -7367,7 +7527,7 @@ function wizRenderBody(){
         <div class="summary-chip">Level: <b>${lv?lv.icon+' '+lv.name:'\u2014'}</b></div>
       </div>
       <p style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:4px">Next: sign in to secure your plan. Once you're in, I'll connect your bank and walk you through each goal. \u{1F3E6}</p></div>`;
-    setTimeout(()=>{ const el=gg('wizSuccessChar'); if(el){ const sc=new RichieEmoji(el); sc.do('celebrate'); } },120);
+    setTimeout(()=>{ const el=gg('wizSuccessChar'); if(el){ const sc=spawnRichie(el); sc.do('celebrate'); } },120);
   }
 }
 function wizRenderProfiles(){
@@ -7593,7 +7753,7 @@ function showLogin(greet){
   gg('loginScreen').style.display='flex';
   if(greet){ setLoginMode('signin'); gg('loginSub').textContent=greet; }
   else { initLoginScreen(); }
-  if(!window._loginRichie) window._loginRichie=new RichieEmoji(gg('loginRichie'));
+  if(!window._loginRichie) window._loginRichie=spawnRichie(gg('loginRichie'));
   setTimeout(()=>{ if(window._loginRichie) window._loginRichie.wave(); },300);
   setTimeout(()=>{ const el=gg('loginUser'); if(el) el.focus(); },400);
 }
@@ -7655,7 +7815,7 @@ function runWelcomeBack(){
   try{ hideLoader(); }catch(e){}
   gg('welcomeBack').style.display='flex';
   const stars=gg('wbStars'); if(stars){ let s=''; for(let i=0;i<30;i++) s+=`<div class="ri-star" style="left:${Math.random()*100}%;top:${Math.random()*100}%;--dur:${2+Math.random()*3}s;--delay:${Math.random()*3}s"></div>`; stars.innerHTML=s; }
-  const wb=new RichieEmoji(gg('wbRichie')); window._wbRichie=wb;
+  const wb=spawnRichie(gg('wbRichie')); window._wbRichie=wb;
   wb.do('bounce');
   const name=(JSON.parse(LS.getItem('richie_setup')||'{}').householdName)||(APP&&APP.household)||'friend';
   const swot=buildSWOT();
@@ -7725,7 +7885,7 @@ function richieWizard(cfg){
   gg('richieWiz').style.display='flex';
   gg('rwizTitle').textContent=_rwiz.title;
   gg('rwizDots').innerHTML=_rwiz.steps.map((_,i)=>'<span class="rwiz-dot" id="rwizDot-'+i+'"></span>').join('');
-  try{ if(!_rwizChar) _rwizChar=new RichieEmoji(gg('rwizChar')); }catch(e){}
+  try{ if(!_rwizChar) _rwizChar=spawnRichie(gg('rwizChar')); }catch(e){}
   rwizRender();
 }
 function rwizRender(){
@@ -7848,9 +8008,9 @@ async function enterApp(){
   _appEntered=true;                        // sync may push from here on — never from the wizard
   gg('appShell').style.display='block';
   gg('richieAssistant').style.display='block';
-  sbRichie=new RichieEmoji(gg('sbRichie'));
-  fabChar=new RichieEmoji(gg('fabChar'));
-  rpChar=new RichieEmoji(gg('rpChar'));
+  sbRichie=spawnRichie(gg('sbRichie'));
+  fabChar=spawnRichie(gg('fabChar'));
+  rpChar=spawnRichie(gg('rpChar'));
   renderShell();
   try{ hideLoader(); }catch(e){}
   try{ refreshEnvBadge(); }catch(e){}
