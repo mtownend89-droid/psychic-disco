@@ -1381,7 +1381,10 @@ body.fx-slime .canvas-widget-card::after{content:'';position:absolute;left:-2%;r
 .cfp-ev-start .cfp-ev-nm{flex:1;}
 .cfp-ev.income{border-left:3px solid var(--green);}
 .cfp-ev.bill{border-left:3px solid var(--red);}
-.cfp-ev-when{font-size:10.5px;color:var(--muted);width:48px;flex-shrink:0;}
+.cfp-ev-when{display:flex;flex-direction:column;justify-content:center;line-height:1.15;font-size:11px;color:var(--text);width:60px;flex-shrink:0;}
+.cfp-ev-date{font-weight:600;font-variant-numeric:tabular-nums;}
+.cfp-ev-dow{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;}
+.cfp-ev-header .cfp-ev-when{color:var(--hint);}
 .cfp-ev-nm{flex:1;font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .cfp-ev-amt{font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums;}
 .cfp-ev-edit{display:flex;align-items:center;gap:2px;background:var(--surface3);border:1px solid var(--border);border-radius:7px;padding:0 7px;}

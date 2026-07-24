@@ -940,12 +940,24 @@ function _incomeEvents(days){
   });
   return out;
 }
-// bill events: place each unpaid bill on its due-day within the window (using expected pay)
+// A bill's real due date in a given month, clamped to the month's last day (so a "31st" bill
+// lands on Feb 28, Apr 30, etc. instead of rolling into the next month).
+function _dueDateInMonth(y,m,dom){ const last=new Date(y,m+1,0).getDate(); return new Date(y,m,Math.min(Math.max(dom||1,1),last)); }
+// today-relative day offset → a real Date at midnight (for showing actual due dates)
+function _projDate(off){ const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()+(off||0)); return d; }
+// bill events: place each unpaid bill on its REAL due date each calendar month within the window
+// (not a rough 30-day step, which drifts off the actual statement date over time).
 function _billEvents(days){
-  const out=[]; const todayDate=new Date().getDate();
+  const out=[]; const today=new Date(); today.setHours(0,0,0,0);
+  const horizon=new Date(today); horizon.setDate(horizon.getDate()+days);
   engUpcomingBills().filter(b=>!b.paid && b.pay>0).forEach(b=>{
-    let d=b.due-todayDate; if(d<0) d+=30; // next occurrence this cycle
-    while(d<=days){ out.push({day:d, amt:-(b.pay), name:b.name, type:'bill', key:billKey(b)}); d+=30; }
+    let cur=_dueDateInMonth(today.getFullYear(), today.getMonth(), b.due);
+    if(cur<today) cur=_dueDateInMonth(today.getFullYear(), today.getMonth()+1, b.due);
+    while(cur<=horizon){
+      const off=Math.round((cur-today)/86400000);
+      if(off>=0 && off<=days) out.push({day:off, amt:-(b.pay), name:b.name, type:'bill', key:billKey(b), due:b.due});
+      cur=_dueDateInMonth(cur.getFullYear(), cur.getMonth()+1, b.due);
+    }
   });
   return out;
 }
@@ -5040,9 +5052,10 @@ function cfcMount(w){
   if(chart){ chart.innerHTML=cfpLineSVG(p, 'cfc'+w.uid, 300, 80); }
   const low=gg('cfclow_'+w.uid);
   if(low){
-    if(p.low.bal<0){ low.className='cfp-lowflag danger'; low.innerHTML=`⚠️ Dips to <b>${fmtK(p.low.bal)}</b> on day ${p.low.day}. Open the Planner to adjust.`; }
-    else if(p.low.bal<200){ low.className='cfp-lowflag warn'; low.innerHTML=`⚡ Tight — low point <b>${fmtK(p.low.bal)}</b> around day ${p.low.day}.`; }
-    else { low.className='cfp-lowflag ok'; low.innerHTML=`✅ Stays above <b>${fmtK(p.low.bal)}</b> (low point day ${p.low.day}).`; }
+    const lowWhen=p.low.day===0?'today':_projDate(p.low.day).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    if(p.low.bal<0){ low.className='cfp-lowflag danger'; low.innerHTML=`⚠️ Dips to <b>${fmtK(p.low.bal)}</b> on <b>${lowWhen}</b>. Open the Planner to adjust.`; }
+    else if(p.low.bal<200){ low.className='cfp-lowflag warn'; low.innerHTML=`⚡ Tight — low point <b>${fmtK(p.low.bal)}</b> around <b>${lowWhen}</b>.`; }
+    else { low.className='cfp-lowflag ok'; low.innerHTML=`✅ Stays above <b>${fmtK(p.low.bal)}</b> (low point <b>${lowWhen}</b>).`; }
   }
 }
 
@@ -5085,9 +5098,10 @@ function cfpMount(w){
   // low-point flag
   const low=gg('cfplow_'+w.uid);
   if(low){
-    if(p.low.bal<0){ low.className='cfp-lowflag danger'; low.innerHTML=`⚠️ Projected shortfall: balance dips to <b>${fmtK(p.low.bal)}</b> on day ${p.low.day}. Adjust a bill below or move income.`; }
-    else if(p.low.bal<200){ low.className='cfp-lowflag warn'; low.innerHTML=`⚡ Tight: lowest balance is <b>${fmtK(p.low.bal)}</b> around day ${p.low.day}.`; }
-    else { low.className='cfp-lowflag ok'; low.innerHTML=`✅ Safe: your balance stays above <b>${fmtK(p.low.bal)}</b> (low point day ${p.low.day}).`; }
+    const lowWhen=p.low.day===0?'today':_projDate(p.low.day).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    if(p.low.bal<0){ low.className='cfp-lowflag danger'; low.innerHTML=`⚠️ Projected shortfall: balance dips to <b>${fmtK(p.low.bal)}</b> on <b>${lowWhen}</b>. Adjust a bill below or move income.`; }
+    else if(p.low.bal<200){ low.className='cfp-lowflag warn'; low.innerHTML=`⚡ Tight: lowest balance is <b>${fmtK(p.low.bal)}</b> around <b>${lowWhen}</b>.`; }
+    else { low.className='cfp-lowflag ok'; low.innerHTML=`✅ Safe: your balance stays above <b>${fmtK(p.low.bal)}</b> (low point <b>${lowWhen}</b>).`; }
   }
   // editable upcoming events (bills editable, income shown)
   const ev=gg('cfpev_'+w.uid);
@@ -5095,7 +5109,8 @@ function cfpMount(w){
     const sorted=[...p.events].sort((a,b)=>a.day-b.day).slice(0,40);
     let run=p.start;
     const rows=sorted.map(e=>{
-      const when=e.day===0?'today':'day '+e.day;
+      const dt=_projDate(e.day);
+      const when=`<span class="cfp-ev-date">${e.day===0?'Today':dt.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span><span class="cfp-ev-dow">${e.day===0?'':dt.toLocaleDateString('en-US',{weekday:'short'})}</span>`;
       run+=e.amt;  // running balance after this event (checkbook register)
       const runColor=run<0?'var(--red)':run<200?'var(--amber)':'var(--text)';
       const runBadge=`<span class="cfp-ev-run" style="color:${runColor}">${run<0?'-':''}${fmtK(Math.abs(run))}</span>`;
