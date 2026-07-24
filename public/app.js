@@ -987,19 +987,26 @@ function _isBankClosed(d){ const wd=d.getDay(); if(wd===0||wd===6) return true; 
 function _shiftBusinessDay(date, dir){ const d=new Date(date); let g=0; while(_isBankClosed(d) && g++<12){ d.setDate(d.getDate()+dir); } return d; }
 
 /* ── Planned savings / goal contributions as scheduled outflows ──
-   Sinking-fund buckets you're actively funding draw cash out of the spendable pool each month
-   (placed on the 1st), shown as their own line so the projection reflects money you've
-   committed to save — not just bills. */
-function _savingsEvents(days){
+   Sinking-fund buckets you're actively funding draw cash out of the spendable pool each month —
+   placed on that month's first payday ("pay yourself first"), falling back to the 1st in any
+   month with no modeled income. Shown as their own line so the projection reflects money you've
+   committed to save, not just bills. `incomeEvents` are the already-shifted paydays. */
+function _savingsEvents(days, incomeEvents){
   const out=[]; const today=new Date(); today.setHours(0,0,0,0);
   const horizon=new Date(today); horizon.setDate(horizon.getDate()+days);
   let monthly=0; try{ monthly=engSavingsBuckets().filter(b=>!b.done).reduce((s,b)=>s+(+b.monthly||0),0); }catch(e){}
   if(monthly<=0) return out;
-  let cur=new Date(today.getFullYear(), today.getMonth(), 1);
-  if(cur<today) cur=new Date(today.getFullYear(), today.getMonth()+1, 1);
+  // earliest payday offset within each calendar month
+  const firstPayday={};
+  (incomeEvents||[]).forEach(e=>{ if(e.type!=='income') return; const d=_projDate(e.day); const k=d.getFullYear()+'-'+d.getMonth(); if(firstPayday[k]===undefined || e.day<firstPayday[k]) firstPayday[k]=e.day; });
+  let cur=new Date(today.getFullYear(), today.getMonth(), 1); const seen={};
   while(cur<=horizon){
-    const off=Math.round((cur-today)/86400000);
-    if(off>=0 && off<=days) out.push({day:off, amt:-Math.round(monthly), name:'Planned savings', type:'savings', noShift:true});
+    const k=cur.getFullYear()+'-'+cur.getMonth();
+    if(!seen[k]){ seen[k]=1;
+      let off=firstPayday[k];
+      if(off===undefined){ const first=new Date(cur.getFullYear(), cur.getMonth(), 1); off=Math.round((first-today)/86400000); }
+      if(off>=0 && off<=days) out.push({day:off, amt:-Math.round(monthly), name:'Planned savings', type:'savings', noShift:true});
+    }
     cur=new Date(cur.getFullYear(), cur.getMonth()+1, 1);
   }
   return out;
@@ -1007,11 +1014,16 @@ function _savingsEvents(days){
 function engCashFlowProjection(days, cats){
   const start=engStartCash(cats);
   const today=new Date(); today.setHours(0,0,0,0);
-  const events=[..._incomeEvents(days), ..._billEvents(days), ..._savingsEvents(days)];
-  // Shift to real banking days (deposits land the prior business day; drafts the next).
-  events.forEach(e=>{ if(e.noShift) return; const sd=_shiftBusinessDay(_projDate(e.day), e.type==='income'?-1:1); let off=Math.round((sd-today)/86400000); if(off<0) off=0; e.day=off; });
-  // sort by day, income first within a day (deposit before draft — truer intraday low point)
-  events.sort((a,b)=> a.day-b.day || (a.type==='income'? -1 : b.type==='income'? 1 : 0));
+  // Shift each source to real banking days BEFORE combining: deposits land the prior business
+  // day, drafts the next. Savings then land on the already-shifted first payday of each month.
+  const shiftOff=(e,dir)=>{ const sd=_shiftBusinessDay(_projDate(e.day), dir); let off=Math.round((sd-today)/86400000); if(off<0) off=0; e.day=off; };
+  const income=_incomeEvents(days); income.forEach(e=>shiftOff(e,-1));
+  const bills=_billEvents(days); bills.forEach(e=>shiftOff(e,1));
+  const savings=_savingsEvents(days, income);
+  const events=[...income, ...bills, ...savings];
+  // sort by day; within a day: income → savings → bills ("pay yourself first", truer low point)
+  const rank=t=>t==='income'?0:t==='savings'?1:2;
+  events.sort((a,b)=> a.day-b.day || rank(a.type)-rank(b.type));
   let bal=start; const series=[{day:0, bal:start, label:'Today'}];
   let low={day:0, bal:start}; const byDay={};
   events.forEach(e=>{ byDay[e.day]=byDay[e.day]||[]; byDay[e.day].push(e); });
