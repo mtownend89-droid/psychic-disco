@@ -3062,6 +3062,7 @@ function switchPage(id){
   gg('tbIcon').textContent=pg.icon;
   gg('tbTitle').textContent=pg.name;
   renderPage(pg);
+  try{ updateReviewBadge(); }catch(e){}
   if(window.innerWidth<=900) closeSidebar();
 }
 
@@ -7959,7 +7960,7 @@ function wbEnter(){
   richieStopAllSpeech();              // stop the SWOT greeting/voice the moment you move on
   _raSnoozeUntil=0; _raLastPop=0;     // the first app screen greets right away (no fixed hold)
   gg('welcomeBack').style.display='none';
-  Promise.resolve(enterApp()).then(()=>{ setTimeout(()=>{ try{ maybeShowBriefing(); }catch(e){} }, 550); });
+  Promise.resolve(enterApp()).then(()=>{ setTimeout(()=>{ try{ updateReviewBadge(); }catch(e){} try{ maybeShowBriefing(); }catch(e){} }, 550); });
 }
 
 /* ═══════════════ MONEY TO-DO BRIEFING (post-SWOT pop-out) ═══════════════
@@ -8058,7 +8059,7 @@ function briefNext(){ if(_briefStep>=_briefSteps.length-1) briefFinish(); else _
 function briefBack(){ if(_briefStep>0) _briefGoStep(_briefStep-1); }
 function briefSkip(){ briefNext(); }
 function briefBypass(){ briefFinish(); }
-function briefFinish(){ const el=gg('briefModal'); if(el){ el.classList.remove('show'); setTimeout(()=>{ el.style.display='none'; }, 200); } try{ if(_briefChar)_briefChar.talk(false); }catch(e){} _markBriefingSeen(); }
+function briefFinish(){ const el=gg('briefModal'); if(el){ el.classList.remove('show'); setTimeout(()=>{ el.style.display='none'; }, 200); } try{ if(_briefChar)_briefChar.talk(false); }catch(e){} _markBriefingSeen(); try{ updateReviewBadge(); }catch(e){} }
 function _pageWithWidget(type){ for(const p of (APP.pages||[])){ if((p.widgets||[]).some(w=>w&&w.type===type)) return p.id; } return null; }
 function briefGoto(type){ const id=_pageWithWidget(type); briefFinish(); if(id){ try{ switchPage(id); }catch(e){} } }
 function briefOpen(fn){ briefFinish(); setTimeout(()=>{ try{ if(typeof window[fn]==='function') window[fn](); }catch(e){} }, 240); }
@@ -8073,6 +8074,22 @@ function showBriefing(){
   _briefSteps=buildBriefSteps(); _briefStep=0;
   requestAnimationFrame(()=>el.classList.add('show'));
   _briefGoStep(0);
+}
+// On-demand open (topbar Review button) — always shows, with an all-clear step when nothing's pending.
+function openBriefing(){
+  const el=_briefEl(); el.style.display='flex';
+  try{ if(!_briefChar) _briefChar=spawnRichie(gg('briefChar')); }catch(e){}
+  _briefSteps=buildBriefSteps();
+  if(!_briefSteps.length){ _briefSteps=[{ id:'allclear', icon:'✅', title:'All caught up', say:`Nice — nothing needs you right now. Everything's reviewed and on track. I'll flag anything new next time you're in.`, body:`<div class="brief-allclear">You're all set. 🎉</div>` }]; }
+  _briefStep=0;
+  requestAnimationFrame(()=>el.classList.add('show'));
+  _briefGoStep(0);
+}
+// Topbar Review badge — count of things worth handling (0 hides it).
+function updateReviewBadge(){
+  const b=gg('tbReviewBadge'); if(!b) return;
+  let n=0; try{ if(dataLoaded) n=buildBriefSteps().length; }catch(e){}
+  if(n>0){ b.textContent=n; b.style.display='inline-flex'; } else { b.style.display='none'; }
 }
 function _doSignOut(greet){
   // Revoke the session cookie server-side (sent automatically), then return to login.
