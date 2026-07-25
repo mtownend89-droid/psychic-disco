@@ -3081,14 +3081,20 @@ function maybeCoachPage(pg){
   setTimeout(()=>{
     if(goal){ const p=goalProgress(goal);
       if(p.pct>=100){ richieSay(`"${goal.name}" looks complete — nice work! 🎉`); }
-      else if(p.pace && !p.pace.onTrack){
-        // behind a deadline → urgent, pace-aware nudge
-        richieSay(`"${goal.name}" is ${p.pct}% done but behind pace for ${p.pace.deadline.toLocaleDateString('en-US',{month:'short',year:'numeric'})}. ${goalCadenceNudge(goal,'monthly')}`);
-      } else {
-        // rotate through cadence nudges so it feels like an ongoing plan
-        const cadences=['daily','weekly','monthly','quarterly'];
-        const cad=cadences[Math.floor(Math.random()*cadences.length)];
-        richieSay(`You're ${p.pct}% toward "${goal.name}". ${cad.charAt(0).toUpperCase()+cad.slice(1)} move: ${goalCadenceNudge(goal,cad)}`);
+      else {
+        // Pop a short NOTE first, then let the user decide to see the plan (Richie flies to the goal).
+        const behind = !!(p.pace && !p.pace.onTrack);
+        const note = behind
+          ? `"${goal.name}" is ${p.pct}% done but running behind pace — want the catch-up plan?`
+          : `You're ${p.pct}% toward "${goal.name}". Want your next move?`;
+        const cad = behind ? 'monthly' : ['daily','weekly','monthly','quarterly'][Math.floor(Math.random()*4)];
+        const detail = behind
+          ? `Behind pace for ${p.pace.deadline.toLocaleDateString('en-US',{month:'short',year:'numeric'})}. ${goalCadenceNudge(goal,'monthly')}`
+          : `${cad.charAt(0).toUpperCase()+cad.slice(1)} move: ${goalCadenceNudge(goal,cad)}`;
+        richieShow(note, {emo: behind?'curious':'happy', actions:[
+          {label:'📋 Show me →', cls:'ra-go', on:()=>richieSpotlightAt({widgetType:'goals', message:detail, emo:(behind?'curious':'happy')})},
+          {label:'Not now', on:richieDismiss}
+        ]});
       }
       if(sbRichie)sbRichie.do('wiggle');
     }
@@ -6945,7 +6951,7 @@ function richieMaybeProactive(pg){
   const off=(now-_raOffTrackAt>480000) ? richieOffTrackSignal(pg) : null;   // surface off-track at most ~every 8 min
   setTimeout(()=>{ if(_raBusy||document.hidden||APP.activePage!==pg.id) return;
     if(off){ _raOffTrackAt=Date.now(); richieShow(off.msg, {emo:'curious', actions:[
-        {label:off.cta||'Show me', cls:'ra-go', on:()=>richieTakeTo(off.widget, null)},
+        {label:off.cta||'Show me', cls:'ra-go', on:()=>richieSpotlightAt(Object.assign({widgetType:off.widget}, RICHIE_SPOTS[off.widget]||{}))},   // decide first, THEN Richie flies to the spot
         {label:'Not now', on:richieDismiss}
       ]}); }
     else { richieShow(richiePageLine(pg), {emo:'happy', actions:[      // short + instant; no network
@@ -8201,6 +8207,7 @@ const RICHIE_SPOTS={
   fund_triage:{ focusSel:'.ft-extra-edit input', message:"Set your extra funds right here 👇 and I'll split them by priority for you." },
   savings_buckets:{ message:"Grow your safety-net bucket here 👇 — a little each payday adds up fast." },
   bills_list:{ focusSel:'.bill-row', message:"Here are your bills 👇 — mark them paid or tweak what you'll pay." },
+  top_categories:{ message:"Here's where your money's going 👇 — pick a category to trim this month." },
 };
 function briefGoto(type){
   const spot=RICHIE_SPOTS[type]||{};
