@@ -591,6 +591,10 @@ body.fx-slime .canvas-widget-card::after{content:'';position:absolute;left:-2%;r
 .ra-acts button{font-size:12px;font-weight:700;border-radius:9px;padding:6px 11px;border:1px solid #dfe2ea;background:#f3f5f8;color:#1b1e26;cursor:pointer;}
 .ra-acts #raMore,.ra-acts .ra-go{background:var(--green);border-color:var(--green);color:#06281c;}
 .canvas-widget-card.ra-spot{box-shadow:0 0 0 2px var(--green), 0 0 30px 5px var(--green-glow)!important;border-color:var(--green)!important;transition:box-shadow .3s, border-color .3s;position:relative;z-index:30;}
+/* the exact element Richie is pointing at */
+.ra-focus{border-radius:8px;outline:2px solid var(--green);outline-offset:2px;animation:ra-focus-pulse 1.25s ease-in-out infinite;}
+@keyframes ra-focus-pulse{0%,100%{box-shadow:0 0 0 0 var(--green-glow);}50%{box-shadow:0 0 0 6px var(--green-glow);}}
+@media(prefers-reduced-motion:reduce){.ra-focus{animation:none;}}
 .richie-fab{
   width:64px;height:70px;background:none;border:none;padding:0;cursor:pointer;position:relative;
   display:flex;align-items:flex-end;justify-content:center;
@@ -1409,6 +1413,9 @@ body.fx-slime .canvas-widget-card::after{content:'';position:absolute;left:-2%;r
 .brief-confirm{flex-shrink:0;background:var(--green);color:#08120c;border:none;border-radius:8px;font-family:var(--font);font-size:11px;font-weight:800;padding:6px 9px;cursor:pointer;white-space:nowrap;}
 .brief-confirm:hover{filter:brightness(1.08);}
 .brief-confirm-wide{align-self:flex-start;padding:8px 16px;font-size:12.5px;}
+.brief-mini{display:flex;flex-direction:column;gap:11px;padding:4px 2px;}
+.brief-mini-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.brief-mini-row>span{font-size:12.5px;font-weight:600;color:var(--text);flex:1;min-width:120px;}
 .brief-pay{display:flex;align-items:center;gap:2px;background:var(--surface3);border:1px solid var(--border);border-radius:7px;padding:0 7px;flex-shrink:0;}
 .brief-pay span{color:var(--muted);font-size:11px;}
 .brief-pay input{width:56px;height:26px;background:none;border:none;color:var(--text);font-size:12.5px;font-weight:600;text-align:right;outline:none;font-variant-numeric:tabular-nums;}

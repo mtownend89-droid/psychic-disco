@@ -6832,6 +6832,52 @@ function richieTakeTo(type, line){
     richieShow(line||'Here it is — take a look. 👇', {actions:[{label:'👍 Got it', on:richieGoHome}]});
   }, 400);
 }
+// ── Richie lands ON a specific spot ──
+// Fly the actor next to a target element (any DOM rect) and speak a bubble. Always actor-based
+// (works on desktop too) so Richie physically arrives where his suggestion applies.
+function richieLandAt(rect, msg, opts){
+  opts=opts||{};
+  const actor=gg('raActor'); if(!actor || !rect){ richieShow(msg, opts); return; }
+  try{ clearTimeout(_raHomeTimer); }catch(e){}
+  if(!_raChar){ try{ _raChar=spawnRichie(gg('raChar')); }catch(e){} }
+  const ff=gg('richieFab'); if(ff) ff.classList.add('open');
+  const fc=gg('fabChar'); if(fc) fc.style.opacity='0';
+  const home=_fabRect();
+  actor.style.left=(home.left+2)+'px'; actor.style.top=home.top+'px';
+  actor.classList.add('out'); actor.style.opacity='1'; actor.style.transform='scale(1)';
+  const vw=window.innerWidth, vh=window.innerHeight, AW=56;
+  let tx=rect.left-AW-4; if(tx<10) tx=Math.min(rect.right+6, vw-AW-10);   // sit left of the target, else right
+  let ty=Math.max(10, Math.min(vh-72, rect.top-8));
+  requestAnimationFrame(()=>{ actor.style.left=tx+'px'; actor.style.top=ty+'px'; });
+  _raBusy=true;
+  setTimeout(()=>{   // after the fly-in transition settles, point + speak (bubble positions off the actor)
+    if(_raChar){ _raChar.emotion(opts.emo||'happy'); _raChar.do('point'); }
+    _raBubble(msg||'Here — this is the spot. 👇');
+    _raActions = opts.actions || [{label:'👍 Got it', on:richieGoHome}]; _renderRaActs();
+    try{ richieSpeakType(gg('raMsg'), msg||'Here — this is the spot.', ()=>{ clearTimeout(_raHomeTimer); _raHomeTimer=setTimeout(richieGoHome, opts.linger||10000); }); }
+    catch(e){ clearTimeout(_raHomeTimer); _raHomeTimer=setTimeout(richieGoHome, opts.linger||10000); }
+  }, 580);
+}
+// Navigate to a widget, scroll to the exact area (optional focusSel within the card), highlight
+// it, then land Richie on it. opts: {widgetType, tab, focusSel, message, emo, actions, linger}
+function richieSpotlightAt(opts){
+  opts=opts||{}; const type=opts.widgetType;
+  const t=type?richieFindWidget(type):null;
+  if(t && opts.tab && type==='debt_hub'){ try{ _debtHub[t.uid]=opts.tab; }catch(e){} }   // land on the right tab
+  const land=()=>{
+    const card=t?document.querySelector(`[data-uid="${t.uid}"]`):null;
+    let target=card;
+    if(card && opts.focusSel){ const f=card.querySelector(opts.focusSel); if(f) target=f; }
+    if(!target){ richieShow(opts.message, opts); return; }
+    try{ target.scrollIntoView({behavior:'smooth', block:'center'}); }catch(e){}
+    if(card){ card.classList.add('ra-spot'); setTimeout(()=>{ try{card.classList.remove('ra-spot');}catch(e){} }, 8000); }
+    if(target!==card){ target.classList.add('ra-focus'); setTimeout(()=>{ try{target.classList.remove('ra-focus');}catch(e){} }, 8000); }
+    setTimeout(()=>{ let r=null; try{ r=target.getBoundingClientRect(); }catch(e){} if(r) richieLandAt(r, opts.message, opts); else richieShow(opts.message, opts); }, 430);
+  };
+  if(t && APP.activePage!==t.pageId){ _raSelfNav=true; try{ switchPage(t.pageId); }catch(e){} _raSelfNav=false; setTimeout(land, 430); }
+  else if(t){ setTimeout(land, 90); }
+  else { richieShow(opts.message, opts); }   // widget nowhere → just speak the suggestion
+}
 // ── ONE funnel for everything Richie says out of his house ──
 // Emerges if needed, types in lockstep with the voice, and only heads home
 // AFTER he has finished speaking (plus a short linger so the text stays up).
@@ -8002,6 +8048,44 @@ function briefTxnCat(i,cat){ const t=_briefTxns[i]; if(!t||!cat) return; const k
 function briefConfirm(i){ const t=_briefTxns[i]; if(!t) return; _confSet().add(_txnKey(t)); _confSave(); if(_briefChar)_briefChar.do('nod'); _briefRefreshBody(); }
 function briefConfirmAll(){ (_briefTxns||[]).forEach(t=>_confSet().add(_txnKey(t))); _confSave(); if(_briefChar)_briefChar.do('tada'); _briefRefreshBody(); }
 
+// ── High-interest debt step (pay a little extra toward the top-APR card, inline) ──
+function _topHiCard(){ try{ const g=engDebtGroups(); const all=[...g.revolving,...g.installment].filter(b=>Math.abs(b.bal||0)>0 && (b.cat==='CC'||(b.apr||0)>=8)); all.sort((a,b)=>(b.apr||0)-(a.apr||0)); return all[0]||null; }catch(e){ return null; } }
+function _briefHidebtStepBody(){
+  const b=_topHiCard();
+  if(!b) return `<div class="brief-allclear">✅ No high-interest debt right now — keep it up.</div>`;
+  const cur=Math.round((((_billOverrides()[billKey(b)]||{}).pay)) ?? (b.pay||0));
+  return `<div class="brief-mini">
+    <div class="brief-actdesc">Top target: <b>${esc(b.name)}</b>${b.apr?` · ${b.apr.toFixed(1)}% APR`:''} · paying ${fmtK(cur)}/mo</div>
+    <div class="brief-mini-row"><span>Add extra this month</span><div class="brief-pay"><span>$</span><input id="brHiExtra" type="number" min="0" step="10" value="50" onclick="event.stopPropagation()"></div><button class="brief-confirm" onclick="event.stopPropagation();briefPayExtra()">Apply ✓</button></div>
+    <button class="brief-goto brief-goto-sm" onclick="event.stopPropagation();briefGoto('fund_triage')">Plan it all in Extra Funds Triage →</button>
+  </div>`;
+}
+function briefPayExtra(){
+  const e=gg('brHiExtra'); const amt=Math.round(parseFloat((e&&e.value)||'')||0); if(!(amt>0)) return;
+  const b=_topHiCard(); if(!b) return; const key=billKey(b);
+  const cur=(((_billOverrides()[key]||{}).pay)) ?? (b.pay||0);
+  setBillPay(key, cur+amt); saveState(); try{ _memoInvalidate(); }catch(e){}
+  if(_briefChar)_briefChar.do('tada');
+  const body=gg('briefStepBody'); if(body) body.innerHTML=`<div class="brief-allclear">✅ Bumped ${esc(b.name)} to ${fmtK(cur+amt)}/mo (${fmtK(amt)} extra). That's a guaranteed return.</div>`;
+}
+// ── Emergency-fund step (add to a savings bucket, inline) ──
+function _emergencyBucket(){ try{ const bs=_savingsBuckets(); return bs.find(b=>!b.acctId && /emer|reserve|safety|rainy/i.test(b.name||'')) || bs.find(b=>!b.acctId) || null; }catch(e){ return null; } }
+function _briefEmergencyStepBody(){
+  const b=_emergencyBucket(); const ef=(typeof engEmergencyFund==='function')?engEmergencyFund():0;
+  return `<div class="brief-mini">
+    <div class="brief-actdesc">You're at ${fmtK(ef)} of a $1,000 starter buffer.</div>
+    ${b?`<div class="brief-mini-row"><span>Add to ${esc(b.name)}</span><div class="brief-pay"><span>$</span><input id="brEmAmt" type="number" min="0" step="10" value="50" onclick="event.stopPropagation()"></div><button class="brief-confirm" onclick="event.stopPropagation();briefAddEmergency()">Add ✓</button></div>`:`<div class="brief-actdesc" style="color:var(--muted)">Set up a savings bucket to track it.</div>`}
+    <button class="brief-goto brief-goto-sm" onclick="event.stopPropagation();briefGoto('savings_buckets')">Open Savings Buckets →</button>
+  </div>`;
+}
+function briefAddEmergency(){
+  const e=gg('brEmAmt'); const amt=Math.round(parseFloat((e&&e.value)||'')||0); if(!(amt>0)) return;
+  const b=_emergencyBucket(); if(!b) return;
+  b.balance=(+b.balance||0)+amt; saveState(); try{ _memoInvalidate(); }catch(e){}
+  if(_briefChar)_briefChar.do('tada');
+  const body=gg('briefStepBody'); if(body) body.innerHTML=`<div class="brief-allclear">✅ Added ${fmtK(amt)} to ${esc(b.name)}. Every bit builds the buffer.</div>`;
+}
+
 // ── Bills step (mark paid / edit amount inline) ──
 function _briefBillsStepBody(){
   const bds=_billsDueSoon(); _briefBills=bds;
@@ -8067,7 +8151,7 @@ function buildBriefSteps(){
   const rev=_reviewTxns();
   if(rev.length){ steps.push({ id:'txncat', icon:'🏷️', title:'Confirm your transactions', say:`First up — ${rev.length} new transaction${rev.length>1?'s':''} since you were last here. My auto-categories aren't always right, so give each a glance, fix anything off, and hit Confirm.` }); }
   _briefActionItems().forEach(it=>{
-    it.body=`<div class="brief-actbody"><div class="brief-actdesc">${it.sub||''}</div>${it.action?`<button class="brief-goto" onclick="event.stopPropagation();${it.action.go?`briefGoto('${it.action.go}'${it.action.tab?`,'${it.action.tab}'`:''})`:`briefOpen('${it.action.open}')`}">${esc(it.action.label)} →</button>`:''}</div>`;
+    it.body=`<div class="brief-actbody"><div class="brief-actdesc">${it.sub||''}</div>${it.action?`<button class="brief-goto" onclick="event.stopPropagation();${it.action.go?`briefGoto('${it.action.go}')`:`briefOpen('${it.action.open}')`}">${esc(it.action.label)} →</button>`:''}</div>`;
     steps.push(it);
   });
   return steps;
@@ -8089,6 +8173,8 @@ function _briefRefreshBody(){ const step=_briefSteps[_briefStep]; const body=gg(
   body.innerHTML = step.id==='txncat' ? _briefTxnStepBody()
     : step.id==='bills' ? _briefBillsStepBody()
     : step.id==='score' ? _briefScoreStepBody()
+    : step.id==='hidebt' ? _briefHidebtStepBody()
+    : step.id==='emergency' ? _briefEmergencyStepBody()
     : (step.body||''); }
 function _briefGoStep(i){
   _briefStep=Math.max(0, Math.min(i, _briefSteps.length-1));
@@ -8108,11 +8194,18 @@ function briefSkip(){ briefNext(); }
 function briefBypass(){ briefFinish(); }
 function briefFinish(){ const el=gg('briefModal'); if(el){ el.classList.remove('show'); setTimeout(()=>{ el.style.display='none'; }, 200); } try{ if(_briefChar)_briefChar.talk(false); }catch(e){} _markBriefingSeen(); try{ updateReviewBadge(); }catch(e){} }
 function _pageWithWidget(type){ for(const p of (APP.pages||[])){ if((p.widgets||[]).some(w=>w&&w.type===type)) return p.id; } return null; }
-function briefGoto(type, tab){
-  const id=_ensureWidgetOnPage(type);
-  if(tab && type==='debt_hub' && id){ const pg=(APP.pages||[]).find(p=>p.id===id); const dw=pg&&(pg.widgets||[]).find(x=>x.type==='debt_hub'); if(dw){ try{ _debtHub[dw.uid]=tab; }catch(e){} } }
+// Where Richie should land (and what he says) for each widget he sends you to.
+const RICHIE_SPOTS={
+  cashflow_planner:{ focusSel:'.cfp-lowflag', message:"Here's your low point 👇 — trim a bill or shift income so this line stays above zero." },
+  debt_hub:{ tab:'promo', message:"Your 0% promo lives here 👇 — pay it down before the rate jumps." },
+  fund_triage:{ focusSel:'.ft-extra-edit input', message:"Set your extra funds right here 👇 and I'll split them by priority for you." },
+  savings_buckets:{ message:"Grow your safety-net bucket here 👇 — a little each payday adds up fast." },
+  bills_list:{ focusSel:'.bill-row', message:"Here are your bills 👇 — mark them paid or tweak what you'll pay." },
+};
+function briefGoto(type){
+  const spot=RICHIE_SPOTS[type]||{};
   briefFinish();
-  if(id){ setTimeout(()=>{ try{ switchPage(id); }catch(e){} }, 200); }
+  setTimeout(()=>{ try{ _ensureWidgetOnPage(type); richieSpotlightAt(Object.assign({widgetType:type}, spot)); }catch(e){} }, 260);
 }
 function briefOpen(fn){ briefFinish(); setTimeout(()=>{ try{ if(typeof window[fn]==='function') window[fn](); }catch(e){} }, 240); }
 function maybeShowBriefing(){
