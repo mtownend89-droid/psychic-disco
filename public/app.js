@@ -7968,7 +7968,7 @@ function wbEnter(){
    handling first thing: confirm new transactions are categorized (inline), plus prioritized
    action items. "New since last visit" is tracked with richie_lastvisit; the cutoff advances
    when the briefing is closed. */
-let _briefChar=null, _briefTxns=[], _briefSteps=[], _briefStep=0, _confirmedTxns=null;
+let _briefChar=null, _briefTxns=[], _briefBills=[], _briefSteps=[], _briefStep=0, _confirmedTxns=null;
 function _briefCutoff(){ let v=0; try{ v=parseInt(LS.getItem('richie_lastvisit')||'0',10); }catch(e){} return (isFinite(v)&&v>0)?v:(Date.now()-7*86400000); }
 function _markBriefingSeen(){ try{ LS.setItem('richie_lastvisit', String(Date.now())); }catch(e){} }
 function _newTxns(){ const cut=new Date(_briefCutoff()); const ex=(typeof _excludedAcctIds==='function')?_excludedAcctIds():new Set();
@@ -8002,6 +8002,49 @@ function briefTxnCat(i,cat){ const t=_briefTxns[i]; if(!t||!cat) return; const k
 function briefConfirm(i){ const t=_briefTxns[i]; if(!t) return; _confSet().add(_txnKey(t)); _confSave(); if(_briefChar)_briefChar.do('nod'); _briefRefreshBody(); }
 function briefConfirmAll(){ (_briefTxns||[]).forEach(t=>_confSet().add(_txnKey(t))); _confSave(); if(_briefChar)_briefChar.do('tada'); _briefRefreshBody(); }
 
+// ── Bills step (mark paid / edit amount inline) ──
+function _briefBillsStepBody(){
+  const bds=_billsDueSoon(); _briefBills=bds;
+  if(!bds.length) return `<div class="brief-allclear">✅ Nothing due in the next 7 days — you're ahead of it.</div>`;
+  const rows=bds.map((b)=>{
+    const key=billKey(b).replace(/'/g,"\\'");
+    const due=b.inDays===0?'due today':'in '+b.inDays+'d';
+    return `<div class="brief-txn"><div class="brief-txn-main"><div class="brief-txn-nm">${esc(b.name)}</div><div class="brief-txn-meta">${due}${b.apr?' · '+b.apr.toFixed(1)+'%':''}</div></div><div class="brief-pay"><span>$</span><input type="number" min="0" step="10" value="${Math.round(b.pay||0)}" onclick="event.stopPropagation()" oninput="setBillPay('${key}',this.value)"></div><button class="brief-confirm" onclick="event.stopPropagation();briefPayBill('${key}')">Mark paid ✓</button></div>`;
+  }).join('');
+  return `<div class="brief-txns-hd"><span>${bds.length} due · ${fmtK(bds.reduce((s,b)=>s+(b.pay||0),0))} total</span></div><div class="brief-txns">${rows}</div><button class="brief-goto brief-goto-sm" onclick="event.stopPropagation();briefGoto('bills_list')">Open the full Bills widget →</button>`;
+}
+function briefPayBill(key){ const ov=_billOverrides(); ov[key]=ov[key]||{}; ov[key].paid=true; saveState(); try{ _memoInvalidate(); }catch(e){} if(_briefChar)_briefChar.do('nod'); _briefRefreshBody(); }
+
+// ── Credit-score step (log it inline) ──
+function _briefScoreStepBody(){
+  const today=new Date().toISOString().slice(0,10);
+  const last=(typeof _ccScores==='function')?_ccScores().slice().sort((a,b)=>a.d<b.d?1:-1)[0]:null;
+  return `<div class="brief-score">
+    <div class="brief-score-row"><label>Score</label><input id="brScoreVal" type="number" min="300" max="850" inputmode="numeric" placeholder="300–850" onclick="event.stopPropagation()"></div>
+    <div class="brief-score-row"><label>Date</label><input id="brScoreDate" type="date" value="${today}" onclick="event.stopPropagation()"></div>
+    <button class="brief-confirm brief-confirm-wide" onclick="event.stopPropagation();briefSaveScore()">Save score ✓</button>
+    ${last?`<div class="brief-actdesc">Last logged: <b>${last.v}</b> on ${esc(last.d)}</div>`:''}
+    <button class="brief-goto brief-goto-sm" onclick="event.stopPropagation();briefGoto('debt_hub','score')">Open score history →</button>
+  </div>`;
+}
+function briefSaveScore(){
+  const ve=gg('brScoreVal'), de=gg('brScoreDate');
+  const v=Math.round(parseFloat((ve&&ve.value)||'')||0); const d=((de&&de.value)||'').trim();
+  if(!(v>=300&&v<=850)){ try{ ve&&ve.focus(); }catch(e){} return; }
+  if(!d) return;
+  const list=_ccScores(); const i=list.findIndex(x=>x.d===d); if(i>=0) list[i]={d,v}; else list.push({d,v}); list.sort((a,b)=>a.d<b.d?-1:1);
+  saveState(); if(_briefChar)_briefChar.do('tada');
+  const body=gg('briefStepBody'); if(body) body.innerHTML=`<div class="brief-allclear">✅ Logged ${v}. I'll watch the trend for you — nice.</div>`;
+}
+// Guarantee a deep link lands on the right widget: add it to a page if it isn't anywhere yet,
+// and pre-select the debt-hub tab (promo / score) so you arrive exactly where you need to be.
+function _ensureWidgetOnPage(type){
+  let id=_pageWithWidget(type); if(id) return id;
+  const pg=(APP.pages||[]).find(p=>p.id===APP.activePage)||(APP.pages||[])[0]; if(!pg) return null;
+  try{ pg.widgets=pg.widgets||[]; pg.widgets.push(makeWidget(type)); saveState(); }catch(e){}
+  return pg.id;
+}
+
 // ── The prioritized action steps (each with a Richie line + optional deep link) ──
 function _briefActionItems(){
   const items=[];
@@ -8013,7 +8056,7 @@ function _briefActionItems(){
     items.push({ id:'shortfall', icon:'⚠️', title:'A shortfall is coming', say:`Careful — I'm projecting your balance dips to ${fmtK(p.low.bal)} on ${when}. Let's head it off.`, sub:`Move income earlier or trim a bill in the planner.`, action:{label:'Open planner', go:'cashflow_planner'} }); } }catch(e){}
   let promos=[]; try{ promos=(engPromos()||[]).filter(p=>p.bal>0.5 && p.days>=0 && p.days<=45); }catch(e){}
   if(promos.length){ const soon=promos.slice().sort((a,b)=>a.days-b.days)[0];
-    items.push({ id:'promo', icon:'⏰', title:'A 0% promo is ending', say:`Your 0% deal on ${esc(soon.name)} jumps to ${soon.apr?soon.apr.toFixed(1)+'%':'its rate'} in ${soon.days} day${soon.days!==1?'s':''}. Let's beat the clock.`, sub:`${promos.length} promo${promos.length>1?'s':''} within 45 days.`, action:{label:'See promos', go:'debt_hub'} }); }
+    items.push({ id:'promo', icon:'⏰', title:'A 0% promo is ending', say:`Your 0% deal on ${esc(soon.name)} jumps to ${soon.apr?soon.apr.toFixed(1)+'%':'its rate'} in ${soon.days} day${soon.days!==1?'s':''}. Let's beat the clock.`, sub:`${promos.length} promo${promos.length>1?'s':''} within 45 days.`, action:{label:'See promos', go:'debt_hub', tab:'promo'} }); }
   const ss=_scoreStale(); if(ss.stale){ items.push({ id:'score', icon:'📊', title:'Log your credit score', say: ss.days==null?`I don't have a credit score from you yet — it takes ten seconds and I'll track the trend.`:`Your last credit score was ${ss.days} days ago. Drop in this month's so I can watch the trend.`, sub:'Free in your card app or Credit Karma — no score impact.', action:{label:'Log score', open:'openScoreEditor'} }); }
   try{ const hi=engHighInterestDebt(); if(hi>0){ items.push({ id:'hidebt', icon:'🔥', title:'High-interest debt to attack', say:`You're carrying ${fmtK(hi)} in high-interest debt. Sending your extra funds here first is a guaranteed return — want to plan it?`, sub:'The Extra Funds Triage delegates your surplus by priority.', action:{label:'Open triage', go:'fund_triage'} }); } }catch(e){}
   try{ const ef=engEmergencyFund(); if(ef<1000){ items.push({ id:'emergency', icon:'🛟', title:'Build your safety net', say:`Your starter emergency fund is at ${fmtK(ef)} of $1,000. That buffer keeps a surprise off your cards — let's grow it.`, sub:'Fund it in Savings Buckets.', action:{label:'Open buckets', go:'savings_buckets'} }); } }catch(e){}
@@ -8024,7 +8067,7 @@ function buildBriefSteps(){
   const rev=_reviewTxns();
   if(rev.length){ steps.push({ id:'txncat', icon:'🏷️', title:'Confirm your transactions', say:`First up — ${rev.length} new transaction${rev.length>1?'s':''} since you were last here. My auto-categories aren't always right, so give each a glance, fix anything off, and hit Confirm.` }); }
   _briefActionItems().forEach(it=>{
-    it.body=`<div class="brief-actbody"><div class="brief-actdesc">${it.sub||''}</div>${it.action?`<button class="brief-goto" onclick="event.stopPropagation();${it.action.go?`briefGoto('${it.action.go}')`:`briefOpen('${it.action.open}')`}">${esc(it.action.label)} →</button>`:''}</div>`;
+    it.body=`<div class="brief-actbody"><div class="brief-actdesc">${it.sub||''}</div>${it.action?`<button class="brief-goto" onclick="event.stopPropagation();${it.action.go?`briefGoto('${it.action.go}'${it.action.tab?`,'${it.action.tab}'`:''})`:`briefOpen('${it.action.open}')`}">${esc(it.action.label)} →</button>`:''}</div>`;
     steps.push(it);
   });
   return steps;
@@ -8042,7 +8085,11 @@ function _briefEl(){ let el=gg('briefModal'); if(el) return el;
   document.body.appendChild(el);
   return el;
 }
-function _briefRefreshBody(){ const step=_briefSteps[_briefStep]; const body=gg('briefStepBody'); if(!step||!body) return; body.innerHTML = step.id==='txncat' ? _briefTxnStepBody() : (step.body||''); }
+function _briefRefreshBody(){ const step=_briefSteps[_briefStep]; const body=gg('briefStepBody'); if(!step||!body) return;
+  body.innerHTML = step.id==='txncat' ? _briefTxnStepBody()
+    : step.id==='bills' ? _briefBillsStepBody()
+    : step.id==='score' ? _briefScoreStepBody()
+    : (step.body||''); }
 function _briefGoStep(i){
   _briefStep=Math.max(0, Math.min(i, _briefSteps.length-1));
   const step=_briefSteps[_briefStep]; if(!step) return;
@@ -8061,7 +8108,12 @@ function briefSkip(){ briefNext(); }
 function briefBypass(){ briefFinish(); }
 function briefFinish(){ const el=gg('briefModal'); if(el){ el.classList.remove('show'); setTimeout(()=>{ el.style.display='none'; }, 200); } try{ if(_briefChar)_briefChar.talk(false); }catch(e){} _markBriefingSeen(); try{ updateReviewBadge(); }catch(e){} }
 function _pageWithWidget(type){ for(const p of (APP.pages||[])){ if((p.widgets||[]).some(w=>w&&w.type===type)) return p.id; } return null; }
-function briefGoto(type){ const id=_pageWithWidget(type); briefFinish(); if(id){ try{ switchPage(id); }catch(e){} } }
+function briefGoto(type, tab){
+  const id=_ensureWidgetOnPage(type);
+  if(tab && type==='debt_hub' && id){ const pg=(APP.pages||[]).find(p=>p.id===id); const dw=pg&&(pg.widgets||[]).find(x=>x.type==='debt_hub'); if(dw){ try{ _debtHub[dw.uid]=tab; }catch(e){} } }
+  briefFinish();
+  if(id){ setTimeout(()=>{ try{ switchPage(id); }catch(e){} }, 200); }
+}
 function briefOpen(fn){ briefFinish(); setTimeout(()=>{ try{ if(typeof window[fn]==='function') window[fn](); }catch(e){} }, 240); }
 function maybeShowBriefing(){
   if(!dataLoaded) return;                       // needs real data to be meaningful
