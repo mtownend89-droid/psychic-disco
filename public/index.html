@@ -52,10 +52,10 @@
     <h1 class="login-title">Welcome back</h1>
     <p class="login-sub" id="loginSub">Richie's been keeping an eye on things. Sign in to see where you stand.</p>
     <div class="login-fields">
-      <input type="text" id="loginUser" placeholder="Username" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
-      <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
-      <input type="password" id="loginPass2" placeholder="Confirm password" autocomplete="new-password" style="display:none" onkeydown="if(event.key==='Enter')doLogin()">
-      <input type="text" id="loginRecovery" placeholder="Recovery code (XXXX-XXXX-…)" autocomplete="off" style="display:none" onkeydown="if(event.key==='Enter')doLogin()">
+      <input type="text" id="loginUser" placeholder="Username" aria-label="Username" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+      <input type="password" id="loginPass" placeholder="Password" aria-label="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      <input type="password" id="loginPass2" placeholder="Confirm password" aria-label="Confirm password" autocomplete="new-password" style="display:none" onkeydown="if(event.key==='Enter')doLogin()">
+      <input type="text" id="loginRecovery" placeholder="Recovery code (XXXX-XXXX-…)" aria-label="Recovery code" autocomplete="off" style="display:none" onkeydown="if(event.key==='Enter')doLogin()">
       <div class="login-err" id="loginErr"></div>
       <button class="btn primary login-btn" id="loginBtn" onclick="doLogin()">Sign in</button>
       <div class="login-links">
@@ -266,7 +266,7 @@
     </div>
     <div class="rchat-body" id="rchatBody"></div>
     <div class="rchat-input-row">
-      <textarea id="rchatInput" class="rchat-input" rows="1" placeholder="Ask about budgeting, debt, investing, taxes…" onkeydown="rchatKey(event)" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+      <textarea id="rchatInput" class="rchat-input" rows="1" placeholder="Ask about budgeting, debt, investing, taxes…" aria-label="Ask Richie a question" onkeydown="rchatKey(event)" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
       <button class="rchat-send" id="rchatSend" onclick="rchatSend()" aria-label="Send">➤</button>
     </div>
   </div>
@@ -307,7 +307,7 @@
     <div class="page-mgr-body">
       <div class="wiz-field">
         <label>Page name</label>
-        <input type="text" id="pageNameInput" placeholder="e.g. My Budget" maxlength="28">
+        <input type="text" id="pageNameInput" placeholder="e.g. My Budget" aria-label="Page name" maxlength="28">
       </div>
       <div class="wiz-field">
         <label>Icon</label>
@@ -382,7 +382,7 @@
       <p style="font-size:13px;color:var(--text);line-height:1.6;margin-bottom:6px">You're about to permanently delete <b>all of your data</b> — pages, widgets, categories, goals, XP, and settings on every device — and restart Richie's intro from scratch. <b>This cannot be undone.</b></p>
       <label class="ae-toggle" style="margin:4px 0 8px"><input type="checkbox" id="resetBanks"><span>🔗 Also disconnect all bank connections <span style="color:var(--muted);font-weight:400">(you'd relink each bank; leave off to keep live data flowing after the reset)</span></span></label>
       <label class="mf-label">Type <b style="color:var(--red)">YES</b> to confirm</label>
-      <input class="mf-in" id="resetConfirmInput" autocomplete="off" autocapitalize="characters" placeholder="YES" oninput="fullResetCheck()" onkeydown="if(event.key==='Enter')doFullReset()">
+      <input class="mf-in" id="resetConfirmInput" autocomplete="off" autocapitalize="characters" placeholder="YES" aria-label="Type YES to confirm full reset" oninput="fullResetCheck()" onkeydown="if(event.key==='Enter')doFullReset()">
       <div class="mf-actions">
         <button class="btn" onclick="closeFullReset()">Cancel</button>
         <button class="btn danger-btn" id="resetConfirmBtn" disabled onclick="doFullReset()">Erase everything &amp; start over</button>

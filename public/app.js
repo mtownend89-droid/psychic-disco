@@ -295,6 +295,30 @@ function _memoFrame(key, fn){
   return _frameMemo[key];
 }
 function _memoInvalidate(){ _frameMemo=null; }
+/* ── Accessibility: give icon-only controls an accessible name for screen readers ──
+   Copies each icon-only button's title → aria-label and labels the common close buttons.
+   A debounced observer keeps it live as widgets/modals render. */
+let _a11yStarted=false, _a11yTimer=null;
+function _a11ySweep(root){
+  root=root||document; if(!root.querySelectorAll) return;
+  try{
+    root.querySelectorAll('button[title]:not([aria-label])').forEach(b=>{
+      const txt=(b.textContent||'').replace(/[\s\u{1F000}-\u{1FAFF}←-⯿ -⁯️×✕✓✎★☆＋＝…·🔊🔕]/gu,'').trim();
+      if(!txt){ const t=b.getAttribute('title'); if(t) b.setAttribute('aria-label', t); }   // icon-only → name it
+    });
+    root.querySelectorAll('.doc-x,.rp-close,.wdt-x,.ce-x,.rwiz-x,.cele-close,.brief-x,.hub-tab').forEach(b=>{
+      if(!b.getAttribute('aria-label')){ if(b.classList.contains('hub-tab')) b.setAttribute('aria-label', (b.textContent||'').trim()); else b.setAttribute('aria-label','Close'); }
+    });
+  }catch(e){}
+}
+function _a11yObserve(){
+  if(_a11yStarted) return; _a11yStarted=true;
+  try{
+    _a11ySweep(document);
+    const mo=new MutationObserver(()=>{ clearTimeout(_a11yTimer); _a11yTimer=setTimeout(()=>_a11ySweep(document), 300); });
+    mo.observe(document.body||document.documentElement, {childList:true, subtree:true});
+  }catch(e){}
+}
 function engAccounts(){ return _memoFrame('accounts', _engAccountsRaw); }
 function _engAccountsRaw(){
   const manual=(APP.manualAccounts||[]).map(a=>({...a, manual:true, excluded:_acctExcluded(a.name)}));
@@ -3024,6 +3048,7 @@ function setThemeAnim(on){ _setAppearance({fx:!!on}); applyThemeFx(_appearance()
 
 function renderShell(){
   applyAccent();
+  try{ _a11yObserve(); }catch(e){}   // start the accessibility name sweep once the shell exists
   gg('sbHousehold').textContent=APP.household;
   const lv=LEVELS.find(l=>l.n===APP.level)||LEVELS[0];
   gg('sbLevelLabel').textContent=lv.icon+' Level '+lv.n+' · '+lv.name;
