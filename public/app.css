@@ -21,6 +21,18 @@ html,body{height:100%;overflow:hidden;}
 html{font-size:14px;}
 body{font-family:var(--font);background-color:var(--bg);background-image:var(--bg-pattern,none);background-attachment:fixed;color:var(--text);-webkit-font-smoothing:antialiased;}
 
+/* ── Accessibility: visible keyboard focus ring (mouse clicks stay clean via :focus-visible) ── */
+:where(button,a,input,select,textarea,summary,label,[role="button"],[role="tab"],[role="switch"],[tabindex]):focus-visible{
+  outline:2px solid var(--green)!important; outline-offset:2px!important; border-radius:6px;
+}
+/* Respect users who ask for less motion — calm every transition/animation app-wide */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:0.001ms!important; animation-iteration-count:1!important;
+    transition-duration:0.001ms!important; scroll-behavior:auto!important;
+  }
+}
+
 /* ══════════════════════════════════════════════════════════════════════
    RICHIE ANIMATIONS
 ══════════════════════════════════════════════════════════════════════ */
