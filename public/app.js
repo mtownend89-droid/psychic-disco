@@ -1888,6 +1888,68 @@ function engCategoryMonthGrid(months){
   return {months:monthLabels, cats, max:max||1};
 }
 
+/* ═══ SPENDING TRENDS ═══
+   Same-period month-over-month: this month so far vs the same span last month
+   (through the same day-of-month), so a partial current month compares fairly.
+   Also projects the full month and paces the budgeted categories against the budget. */
+function engSpendTrends(){
+  const now=new Date();
+  const y=now.getFullYear(), mo=now.getMonth(), dom=now.getDate();
+  const curStart=new Date(y,mo,1);
+  const prevStart=new Date(y,mo-1,1);
+  const prevDays=new Date(y,mo,0).getDate();                 // days in the previous month
+  const prevCut=new Date(y,mo-1,Math.min(dom,prevDays),23,59,59,999);   // fair same-period cutoff
+  const daysInMonth=new Date(y,mo+1,0).getDate();
+  const elapsed=Math.min(1, dom/daysInMonth);
+  const budgetCats=(typeof _budgetCatSet==='function')?_budgetCatSet():new Set();
+  const cur={}, prevSame={}, prevFull={}; let curBudget=0;
+  const has=dataLoaded && allTxns && allTxns.length>0;
+  if(has){
+    allTxns.forEach(t=>{
+      if(t.amount<=0 || _txnExcludedFromSpend(t)) return;
+      const td=new Date(t.date); const c=getTxnCategory(t);
+      if(td>=curStart && td<=now){ cur[c]=(cur[c]||0)+t.amount; if(budgetCats.has(c)) curBudget+=t.amount; }
+      else if(td>=prevStart && td<curStart){ prevFull[c]=(prevFull[c]||0)+t.amount; if(td<=prevCut) prevSame[c]=(prevSame[c]||0)+t.amount; }
+    });
+  } else {   // sample: this-month-so-far vs same-span-last-month
+    Object.assign(cur,{'Groceries':488,'Dining out':386,'Auto':540,'Subscription':143,'Gas':96});
+    Object.assign(prevSame,{'Groceries':346,'Dining out':449,'Auto':540,'Subscription':121,'Gas':120});
+    Object.assign(prevFull,{'Groceries':420,'Dining out':560,'Auto':1018,'Subscription':110,'Gas':160});
+  }
+  const sum=o=>Object.values(o).reduce((s,v)=>s+v,0);
+  const curTotal=sum(cur), prevSameTotal=sum(prevSame), prevFullTotal=sum(prevFull);
+  const projected=elapsed>0?curTotal/elapsed:curTotal;
+  const labels=new Set([...Object.keys(cur),...Object.keys(prevSame)]);
+  const movers=[...labels].map(l=>({label:l,color:getCatColor(l),cur:Math.round(cur[l]||0),prev:Math.round(prevSame[l]||0),delta:Math.round((cur[l]||0)-(prevSame[l]||0))}))
+    .filter(m=>m.delta!==0).sort((a,b)=>Math.abs(b.delta)-Math.abs(a.delta));
+  let budget=null;
+  const bAmt=(typeof engBudgetLinkedBudget==='function'?engBudgetLinkedBudget():0)||(typeof engDiscretionaryBudget==='function'?engDiscretionaryBudget():0);
+  if(bAmt>0){ const projSpend=has?(elapsed>0?curBudget/elapsed:curBudget):Math.round(projected*0.7); budget={amount:Math.round(bAmt),projected:Math.round(projSpend),pace:Math.round(bAmt-projSpend)}; }
+  return {has,dom,daysInMonth,elapsed,curTotal:Math.round(curTotal),prevSameTotal:Math.round(prevSameTotal),prevFullTotal:Math.round(prevFullTotal),projected:Math.round(projected),vsLastPeriod:Math.round(curTotal-prevSameTotal),movers,budget};
+}
+function spendTrendsBody(w){
+  const s=engSpendTrends();
+  const up=s.vsLastPeriod>0;   // spending more than the same point last month
+  const vsCol=up?'var(--amber)':'var(--green)';
+  const vsTxt=`${up?'▲':'▼'} ${fmtK(Math.abs(s.vsLastPeriod))} vs same point last month`;
+  const proj=`Projected month: <b>${fmtK(s.projected)}</b>${s.prevFullTotal?` · last month ${fmtK(s.prevFullTotal)}`:''}`;
+  let pace='';
+  if(s.budget){ const under=s.budget.pace>=0; pace=`<div class="st-pace" style="color:${under?'var(--green)':'var(--red)'}">On pace: <b>${fmtK(Math.abs(s.budget.pace))} ${under?'UNDER':'OVER'}</b> budget this month</div>`; }
+  const movers=s.movers.slice(0,5);
+  const maxD=Math.max(1,...movers.map(m=>Math.abs(m.delta)));
+  const rows=movers.map(m=>{
+    const mu=m.delta>0; const c=mu?'var(--amber)':'var(--green)'; const wpct=Math.round(Math.abs(m.delta)/maxD*100);
+    return `<div class="st-row"><span class="st-dot" style="background:${m.color}"></span><span class="st-lbl">${esc(m.label)}</span><span class="st-barwrap"><span class="st-bar" style="width:${wpct}%;background:${c}"></span></span><b class="st-delta" style="color:${c}">${mu?'▲':'▼'} ${fmtK(Math.abs(m.delta))}</b></div>`;
+  }).join('') || '<div class="ws-hint">Not enough history yet to compare months.</div>';
+  return `<div class="st-wrap">
+    <div class="st-hero"><div class="st-hero-num">${fmtK(s.curTotal)}</div><div class="st-hero-sub">spent so far this month · day ${s.dom} of ${s.daysInMonth}</div>
+    <div class="st-vs" style="color:${vsCol}">${vsTxt}</div></div>
+    <div class="st-proj">${proj}</div>${pace}
+    <div class="st-movers-h">Biggest movers vs last month</div>
+    <div class="st-movers">${rows}</div>
+  </div>`;
+}
+
 /* ── Chart.js utilities (ported buildChartWidget / buildChartLegend) ── */
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 function buildChartLegend(containerId, items, opts){
@@ -3245,6 +3307,7 @@ const WIDGET_CATALOG=[
   {id:'recurring',name:'Subscriptions & Renewals',icon:'🔁',cat:'Cash Flow',span:2,minLevel:1,desc:'Auto-detected subscriptions & recurring bills — next renewal, price-hike alerts, flag any to cancel, monthly & yearly totals.'},
   {id:'sankey',name:'Money Flow (Sankey)',icon:'🔀',cat:'Cash Flow',span:2,minLevel:2,desc:'Income → category group → category, flowing left to right through your category tree.'},
   {id:'top_categories',name:'Top Categories',icon:'📊',cat:'Cash Flow',span:1,minLevel:1,desc:'Where your money goes most.'},
+  {id:'spending_trends',name:'Spending Trends',icon:'📈',cat:'Cash Flow',span:2,minLevel:1,desc:'This month vs last — biggest category movers, projected month-end total, and whether you\'re pacing over or under budget.'},
   {id:'category_heatmap',name:'Category Heatmap',icon:'🗓️',cat:'Cash Flow',span:2,minLevel:2,desc:'Spending by category across months — spot seasonal patterns at a glance.'},
   {id:'net_worth_chart',name:'Net Worth Trend',icon:'📈',cat:'Wealth',span:2,minLevel:2,desc:'Net worth over months.'},
   {id:'investments',name:'Investments',icon:'🏦',cat:'Wealth',span:2,minLevel:5,desc:'Your portfolio — positions pulled from statements, allocation, and one-tap research. (Mogul)'},
@@ -6178,6 +6241,7 @@ function renderWidgetBody(w){
     case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); const now=Date.now(), ps=new Date(now-2*days*86400000), pe=new Date(now-days*86400000); const prev=allTxns.filter(t=>{const d=new Date(t.date);return d>=ps&&d<pe&&_isIncomeTxn(t);}).reduce((s,t)=>s+Math.abs(t.amount),0); const dl=prev>0?Math.round((inc-prev)/prev*100):null; const up=dl!==null&&dl>=0; const trend=dl===null?'':`<div class="ds-trend-label" style="color:${up?'var(--green)':'var(--amber)'};margin-top:9px">${up?'▲':'▼'} ${Math.abs(dl)}% vs prior ${tfLabel(w.tf||'30d')}</div>`; const rec=engRecent(days).filter(_isIncomeTxn); const byC={}; rec.forEach(t=>{const c=getTxnCategory(t);byC[c]=(byC[c]||0)+Math.abs(t.amount);}); const top=Object.entries(byC).sort((a,b)=>b[1]-a[1])[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--pos)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${trend}${top?`<div class="wph-inline"><span>Top source: ${esc(top[0])}</span><b style="color:var(--pos)">${fmtK(top[1])}</b></div>`:''}</div>`; } const top=incomeSources.slice().sort((a,b)=>b.amt*(FREQ_TO_MONTHLY[b.freq]||1)-a.amt*(FREQ_TO_MONTHLY[a.freq]||1))[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--pos)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">${incomeSources.length} sources \u00b7 sample</div><div class="ds-trend-label" style="color:var(--green);margin-top:9px">▲ 6% vs prior 30d</div><div class="wph-inline"><span>Top source: ${top.name}</span><b style="color:var(--green)">${fmtK(Math.round(top.amt*(FREQ_TO_MONTHLY[top.freq]||1)))}/mo</b></div></div>`; }
     case 'debt_summary': return debtSummaryBody(w);
     case 'category_heatmap': return categoryHeatmapBody(w);
+    case 'spending_trends': return spendTrendsBody(w);
     case 'budget_doughnut': return budgetTiersBody(w);
     case 'top_categories': { const cfg=widgetConfig(w); const days=wDays(w);
       let cats = dataLoaded ? engCategoryBreakdownQ(days, cfg.query) : [{label:'Dining Out',value:612,color:'#f5a623'},{label:'Food & Groceries',value:498,color:'#3dda91'},{label:'Auto Payments',value:284,color:'#b09afa'},{label:'Subscriptions',value:142,color:'#22d3ee'},{label:'Travel',value:96,color:'#818cf8'},{label:'Medical',value:60,color:'#34d399'}];
@@ -6288,6 +6352,12 @@ function widgetDetailContent(type, days){
       const body=`<div class="wdt-total">${fmtK(tot)}<span>total · ${groups.length} groups, ${kids.length} categories</span></div>`+
         groups.map(g=>`<div class="wdt-section">${esc(g.label)} · ${fmtK(g.value)} (${Math.round(g.value/tot*100)}%)</div>${_detailRows(g.kids.sort((a,b)=>b.value-a.value),g.value)}`).join('');
       return { title:'Budget by category', sub:`${live?'Last '+dl:'Sample data'} · grouped by your category tree`, body };
+    }
+    case 'spending_trends': {
+      const s=engSpendTrends();
+      const rows=s.movers.map(m=>{ const up=m.delta>0; return `<div class="wdt-row"><span class="wdt-label">${esc(m.label)}<br><span style="font-size:10.5px;color:var(--muted)">this ${fmtK(m.cur)} · last ${fmtK(m.prev)}</span></span><b style="color:${up?'var(--amber)':'var(--green)'}">${up?'▲':'▼'} ${fmtK(Math.abs(m.delta))}</b></div>`; }).join('') || '<div class="ws-hint">Not enough category history to compare months yet.</div>';
+      const pace=s.budget?` · projected ${fmtK(s.budget.projected)} vs ${fmtK(s.budget.amount)} budget`:'';
+      return { title:'Spending trends', sub:`${fmtK(s.curTotal)} so far (day ${s.dom}/${s.daysInMonth}) · ${s.vsLastPeriod>0?'+':''}${fmtK(s.vsLastPeriod)} vs same point last month${pace}`, body:`<div class="wdt-total">${fmtK(s.projected)}<span>projected this month</span></div>${rows}` };
     }
     case 'top_categories': {
       const cats=live?engCategoryBreakdown(days):[{label:'Dining Out',value:612,color:'#f5a623'},{label:'Food & Groceries',value:498,color:'#3dda91'},{label:'Auto Payments',value:284,color:'#b09afa'},{label:'Subscriptions',value:142,color:'#22d3ee'}];
