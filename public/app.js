@@ -7915,7 +7915,7 @@ async function open2faSetup(){
 function render2faSetupBody(err){
   const grouped=(_2faSecret.match(/.{1,4}/g)||[]).join(' ');
   gg('manualBody').innerHTML=`
-    <div style="text-align:center"><img id="twofaQr" alt="Two-factor QR code" width="180" height="180" style="background:#fff;border-radius:10px;padding:6px"></div>
+    <div style="text-align:center"><img id="twofaQr" alt="Two-factor QR code" width="180" height="180" style="background:#fff;border-radius:10px;padding:6px;image-rendering:pixelated"></div>
     <div class="ws-hint" style="text-align:center;margin:8px 0 4px">Can't scan? Type this key into your app instead:</div>
     <div style="text-align:center;font-family:var(--font);font-size:14px;font-weight:700;letter-spacing:.06em;word-break:break-all;color:var(--text);margin-bottom:12px">${esc(grouped)}</div>
     <label class="mf-label">6-digit code from your app</label>
@@ -7923,8 +7923,8 @@ function render2faSetupBody(err){
     ${err?`<div class="login-err" style="margin-top:8px">${esc(err)}</div>`:''}
     <div class="mf-actions"><button class="btn" onclick="closeManual()">Cancel</button><button class="btn primary" onclick="do2faEnable()">Turn on 2FA</button></div>`;
   setTimeout(()=>{ const c=gg('twofaCode'); if(c) c.focus(); },80);
-  try{ _loadScript('https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js').then(()=>{
-    try{ if(window.QRCode && _2faOtpauth) QRCode.toDataURL(_2faOtpauth,{margin:1,width:180,errorCorrectionLevel:'M'},(e,url)=>{ const img=gg('twofaQr'); if(img&&url) img.src=url; }); }catch(e){}
+  try{ _loadScript('https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js').then(()=>{
+    try{ if(window.qrcode && _2faOtpauth){ const qr=qrcode(0,'M'); qr.addData(_2faOtpauth); qr.make(); const img=gg('twofaQr'); if(img) img.src=qr.createDataURL(4,10); } }catch(e){}
   }).catch(()=>{}); }catch(e){}
 }
 async function do2faEnable(){
