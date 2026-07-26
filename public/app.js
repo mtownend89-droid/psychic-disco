@@ -2931,13 +2931,13 @@ const THEME_PRESETS=[
   {id:'espresso',name:'Espresso',bg:'#211a13',sidebar:'#28201a',surface:'#312820',surface2:'#3d3228',surface3:'#4b3e30',text:'#f2e8dc',muted:'#b09d86',border:'rgba(201,162,103,0.10)',border2:'rgba(201,162,103,0.18)',accent:'#c9a267'},   // mature, warm & refined
   {id:'merlot',name:'Merlot',bg:'#241419',sidebar:'#2c1921',surface:'#361f28',surface2:'#442833',surface3:'#553341',text:'#f2e3e8',muted:'#b08b97',border:'rgba(200,90,120,0.10)',border2:'rgba(200,90,120,0.18)',accent:'#c04d6a'},   // mature, deep wine
   // ── Bright ──
-  {id:'daylight',name:'Daylight',light:true,bg:'#f4f6fb',sidebar:'#e9edf5',surface:'#ffffff',surface2:'#f0f3f9',surface3:'#e4e9f2',text:'#1a1d29',muted:'#697089',border:'rgba(0,0,0,0.08)',border2:'rgba(0,0,0,0.13)',accent:'#10b981'},
-  {id:'princess',name:'Princess',light:true,bg:'#fff4fa',sidebar:'#ffe9f4',surface:'#ffffff',surface2:'#fff0f7',surface3:'#ffe3f0',text:'#4a2036',muted:'#a06d88',border:'rgba(236,79,170,0.14)',border2:'rgba(236,79,170,0.24)',accent:'#ec4faa',pattern:_PAT.sparkle},   // pink & gold sparkle
-  {id:'bubblegum',name:'Bubblegum',light:true,bg:'#fdf0f8',sidebar:'#fbe4f1',surface:'#ffffff',surface2:'#fbeaf4',surface3:'#f7dcec',text:'#3a1a2e',muted:'#9a6a84',border:'rgba(244,63,142,0.13)',border2:'rgba(60,180,240,0.20)',accent:'#f43f8e'},   // teen bright pop
-  {id:'mint',name:'Mint',light:true,bg:'#f0faf4',sidebar:'#e4f4ea',surface:'#ffffff',surface2:'#eefaf2',surface3:'#e0f2e7',text:'#12352a',muted:'#5f8a76',border:'rgba(16,185,129,0.12)',border2:'rgba(16,185,129,0.20)',accent:'#10b981'},
-  {id:'sky',name:'Sky',light:true,bg:'#eff6ff',sidebar:'#e3eefc',surface:'#ffffff',surface2:'#eef5ff',surface3:'#e0ecfb',text:'#12233a',muted:'#5f7797',border:'rgba(59,130,246,0.12)',border2:'rgba(59,130,246,0.20)',accent:'#3b82f6'},
-  {id:'sunrise',name:'Sunrise',light:true,bg:'#fff5ee',sidebar:'#ffe9db',surface:'#ffffff',surface2:'#fff0e6',surface3:'#ffe1cf',text:'#3a2317',muted:'#9c7a63',border:'rgba(251,146,60,0.13)',border2:'rgba(251,146,60,0.22)',accent:'#fb7a3c'},
-  {id:'linen',name:'Linen',light:true,bg:'#f7f3ec',sidebar:'#efe9df',surface:'#fffdf9',surface2:'#f4efe6',surface3:'#eae3d6',text:'#332b20',muted:'#8a7c66',border:'rgba(140,110,70,0.12)',border2:'rgba(140,110,70,0.20)',accent:'#a9804f',pattern:_PAT.weave},   // mature, elegant
+  {id:'daylight',name:'Daylight',light:true,bg:'#f4f6fb',sidebar:'#e9edf5',surface:'#ffffff',surface2:'#f0f3f9',surface3:'#e4e9f2',text:'#1a1d29',muted:'#697089',border:'rgba(0,0,0,0.08)',border2:'rgba(0,0,0,0.13)',accent:'#0c855d'},
+  {id:'princess',name:'Princess',light:true,bg:'#fff4fa',sidebar:'#ffe9f4',surface:'#ffffff',surface2:'#fff0f7',surface3:'#ffe3f0',text:'#4a2036',muted:'#90627a',border:'rgba(236,79,170,0.14)',border2:'rgba(236,79,170,0.24)',accent:'#c6428f',pattern:_PAT.sparkle},   // pink & gold sparkle
+  {id:'bubblegum',name:'Bubblegum',light:true,bg:'#fdf0f8',sidebar:'#fbe4f1',surface:'#ffffff',surface2:'#fbeaf4',surface3:'#f7dcec',text:'#3a1a2e',muted:'#8e6279',border:'rgba(244,63,142,0.13)',border2:'rgba(60,180,240,0.20)',accent:'#d2367a'},   // teen bright pop
+  {id:'mint',name:'Mint',light:true,bg:'#f0faf4',sidebar:'#e4f4ea',surface:'#ffffff',surface2:'#eefaf2',surface3:'#e0f2e7',text:'#12352a',muted:'#547968',border:'rgba(16,185,129,0.12)',border2:'rgba(16,185,129,0.20)',accent:'#0c855d'},
+  {id:'sky',name:'Sky',light:true,bg:'#eff6ff',sidebar:'#e3eefc',surface:'#ffffff',surface2:'#eef5ff',surface3:'#e0ecfb',text:'#12233a',muted:'#5b7291',border:'rgba(59,130,246,0.12)',border2:'rgba(59,130,246,0.20)',accent:'#3472d8'},
+  {id:'sunrise',name:'Sunrise',light:true,bg:'#fff5ee',sidebar:'#ffe9db',surface:'#ffffff',surface2:'#fff0e6',surface3:'#ffe1cf',text:'#3a2317',muted:'#896b57',border:'rgba(251,146,60,0.13)',border2:'rgba(251,146,60,0.22)',accent:'#ba5a2c'},
+  {id:'linen',name:'Linen',light:true,bg:'#f7f3ec',sidebar:'#efe9df',surface:'#fffdf9',surface2:'#f4efe6',surface3:'#eae3d6',text:'#332b20',muted:'#796d5a',border:'rgba(140,110,70,0.12)',border2:'rgba(140,110,70,0.20)',accent:'#916e44',pattern:_PAT.weave},   // mature, elegant
   {id:'paper',name:'Paper',light:true,bg:'#faf9f6',sidebar:'#f0efeb',surface:'#ffffff',surface2:'#f4f3ef',surface3:'#e9e8e3',text:'#1a1a1a',muted:'#6b6b6b',border:'rgba(0,0,0,0.08)',border2:'rgba(0,0,0,0.14)',accent:'#111827'},   // mature, minimalist
 ];
 const THEME_BY_ID={}; THEME_PRESETS.forEach(t=>THEME_BY_ID[t.id]=t);
@@ -2969,8 +2969,11 @@ function applyAppearance(){
   const persona=RICHIE_PERSONAS[APP.persona];
   const accent=a.accent||(persona&&persona.accent)||preset.accent;   // custom > persona > preset
   set('--green', accent); set('--green-dim', _hexToRgba(accent,0.12)); set('--green-glow', _hexToRgba(accent,0.2)); set('--richie-green', accent); set('--accent', accent);
-  set('--pos', a.pos||'#2ecc8a'); set('--pos-dim', _hexToRgba(a.pos||'#2ecc8a',0.12));   // money-in stays its own color
-  set('--red', a.neg||'#f05c5c'); set('--red-dim', _hexToRgba(a.neg||'#f05c5c',0.1));
+  // money colors go darker on light themes so +/− amounts hit WCAG AA (4.5:1) on white surfaces
+  const posDef = preset.light ? '#1d8358' : '#2ecc8a';
+  const redDef = preset.light ? '#c54b4b' : '#f05c5c';
+  set('--pos', a.pos||posDef); set('--pos-dim', _hexToRgba(a.pos||posDef,0.12));   // money-in stays its own color
+  set('--red', a.neg||redDef); set('--red-dim', _hexToRgba(a.neg||redDef,0.1));
   const font=FONT_BY_ID[a.font||'dm']||FONT_OPTS[0]; set('--font', font.css);
   try{ applyThemeFx(preset.id); }catch(e){}   // themed ambient animations (opt-out, reduced-motion aware)
 }
