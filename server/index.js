@@ -533,16 +533,22 @@ app.post('/api/login', loginRateGate, (req, res) => {
   if ((!a0 || !a0.pwHash) && (!APP_USER || !APP_PASS)) {
     return res.status(500).json({ error: 'Server not configured — set a login, or set APP_USERNAME and APP_PASSWORD in Render.' });
   }
-  if (checkCredentials(u, p)) {
-    const token = makeToken();
-    setLoginCookie(res, token);
-    console.log('Login successful ✓');
-    recordLoginSuccess(req);
-    return res.json({ success: true, ok: true });   // no token in the body
+  const m = authMatch(u, p);
+  if (!m.ok) {
+    console.log('Login failed — credentials did not match');
+    recordLoginFail(req);
+    return res.status(401).json({ error: 'Incorrect username or password' });
   }
-  console.log('Login failed — credentials did not match');
-  recordLoginFail(req);
-  return res.status(401).json({ error: 'Incorrect username or password' });
+  if (m.twofa) {
+    const code = String((req.body || {}).code || '').trim();
+    if (!code) return res.status(401).json({ needs2fa: true, error: 'Enter your authenticator code to finish signing in.' });   // step 2 — not a failed attempt
+    if (!totpVerify(m.secret, code)) { recordLoginFail(req); return res.status(401).json({ needs2fa: true, error: "That code didn't match — check your authenticator and try again." }); }
+  }
+  const token = makeToken();
+  setLoginCookie(res, token);
+  console.log('Login successful ✓');
+  recordLoginSuccess(req);
+  return res.json({ success: true, ok: true });   // no token in the body
 });
 
 // Has a user-set login been created yet? (drives first-run "create login" screen)
@@ -576,8 +582,42 @@ app.post('/api/change_password', requireAuth, (req, res) => {
   if (!okCur) return res.status(403).json({ error: 'Current password is incorrect.' });
   const username = (a && a.username) || APP_USER || 'user';
   const recovery = genRecoveryCode();
-  saveAuth({ username, pwHash: hashSecret(nw), recoveryHash: hashSecret(recovery) });
+  saveAuth({ username, pwHash: hashSecret(nw), recoveryHash: hashSecret(recovery), twofaSecret: (a && a.twofaSecret) || undefined });   // keep 2FA on password change
   return res.json({ ok: true, recovery_code: recovery });
+});
+// ── TWO-FACTOR (TOTP) ──
+// Recovery-code reset (above) intentionally drops twofaSecret so a lost authenticator can't lock you out.
+app.get('/api/2fa/status', requireAuth, (req, res) => {
+  const a = loadAuth();
+  res.json({ enabled: !!(a && a.twofaSecret), userLogin: !!(a && a.pwHash) });
+});
+// Begin enrollment: generate a pending secret, return it + the otpauth URI to show as a QR.
+app.post('/api/2fa/setup', requireAuth, (req, res) => {
+  const a = loadAuth();
+  if (!(a && a.pwHash)) return res.status(400).json({ error: 'Set up a username/password login first (2FA protects that login).' });
+  const secret = gen2faSecret();
+  saveAuth(Object.assign({}, a, { twofaPending: secret }));
+  res.json({ secret, otpauth: otpauthURI(secret, a.username) });
+});
+// Confirm enrollment: verify a code against the pending secret, then activate it.
+app.post('/api/2fa/enable', requireAuth, (req, res) => {
+  const a = loadAuth();
+  if (!(a && a.twofaPending)) return res.status(400).json({ error: 'Start setup first.' });
+  const code = String((req.body || {}).code || '').trim();
+  if (!totpVerify(a.twofaPending, code)) return res.status(400).json({ error: "That code didn't match — check the time on your device and try again." });
+  const next = Object.assign({}, a, { twofaSecret: a.twofaPending }); delete next.twofaPending;
+  saveAuth(next);
+  res.json({ ok: true });
+});
+// Turn off 2FA (requires the current password to prevent a hijacked session from disabling it).
+app.post('/api/2fa/disable', requireAuth, (req, res) => {
+  const a = loadAuth();
+  const pw = String((req.body || {}).password || '');
+  const okPw = (a && a.pwHash && verifySecret(pw, a.pwHash)) || (APP_PASS && pw === APP_PASS);
+  if (!okPw) return res.status(403).json({ error: 'Password is incorrect.' });
+  const next = Object.assign({}, a); delete next.twofaSecret; delete next.twofaPending;
+  saveAuth(next);
+  res.json({ ok: true });
 });
 
 // Forgot password: reset with the recovery code shown when the password was set.
@@ -717,6 +757,58 @@ function checkCredentials(username, password) {
   if (a && a.pwHash && u === a.username && verifySecret(p, a.pwHash)) return true;
   if (APP_USER && APP_PASS && u === APP_USER && p === APP_PASS) return true;   // permanent master
   return false;
+}
+// Like checkCredentials, but reports WHICH credential matched so login can gate 2FA.
+// 2FA only ever applies to the user login — the env master stays a lockout-proof escape hatch.
+function authMatch(username, password) {
+  const u = String(username || '').trim();
+  const p = String(password || '');
+  const a = loadAuth();
+  if (a && a.pwHash && u === a.username && verifySecret(p, a.pwHash)) return { ok: true, isUser: true, twofa: !!a.twofaSecret, secret: a.twofaSecret };
+  if (APP_USER && APP_PASS && u === APP_USER && p === APP_PASS) return { ok: true, isUser: false, twofa: false };
+  return { ok: false };
+}
+
+// ── TOTP (RFC 6238) two-factor auth — built on Node crypto, no dependencies ──
+const TOTP_ISSUER = 'Matt & Dana Finance';
+function _b32encode(buf) {
+  const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'; let bits = 0, val = 0, out = '';
+  for (const b of buf) { val = (val << 8) | b; bits += 8; while (bits >= 5) { out += A[(val >>> (bits - 5)) & 31]; bits -= 5; } }
+  if (bits > 0) out += A[(val << (5 - bits)) & 31];
+  return out;
+}
+function _b32decode(str) {
+  const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const clean = String(str || '').toUpperCase().replace(/=+$/, '').replace(/[^A-Z2-7]/g, '');
+  let bits = 0, val = 0; const out = [];
+  for (const c of clean) { const idx = A.indexOf(c); if (idx < 0) continue; val = (val << 5) | idx; bits += 5; if (bits >= 8) { out.push((val >>> (bits - 8)) & 0xff); bits -= 8; } }
+  return Buffer.from(out);
+}
+function _totpAt(secretB32, counter) {
+  const key = _b32decode(secretB32);
+  const buf = Buffer.alloc(8);
+  let c = counter;
+  for (let i = 7; i >= 0; i--) { buf[i] = c & 0xff; c = Math.floor(c / 256); }   // 8-byte big-endian counter
+  const hmac = crypto.createHmac('sha1', key).update(buf).digest();
+  const off = hmac[hmac.length - 1] & 0x0f;
+  const bin = ((hmac[off] & 0x7f) << 24) | ((hmac[off + 1] & 0xff) << 16) | ((hmac[off + 2] & 0xff) << 8) | (hmac[off + 3] & 0xff);
+  return String(bin % 1000000).padStart(6, '0');
+}
+function totpVerify(secretB32, code) {
+  const c = String(code || '').replace(/\s+/g, '');
+  if (!/^\d{6}$/.test(c) || !secretB32) return false;
+  const counter = Math.floor(Date.now() / 1000 / 30);
+  for (let w = -1; w <= 1; w++) {   // accept the current step ±1 for clock skew
+    const expected = _totpAt(secretB32, counter + w);
+    try { if (crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(c))) return true; } catch (e) {}
+  }
+  return false;
+}
+function gen2faSecret() { return _b32encode(crypto.randomBytes(20)); }   // 160-bit
+function otpauthURI(secretB32, account) {
+  const label = encodeURIComponent(TOTP_ISSUER) + ':' + encodeURIComponent(account || 'account');
+  const q = 'secret=' + secretB32 + '&issuer=' + encodeURIComponent(TOTP_ISSUER) + '&algorithm=SHA1&digits=6&period=30';
+  return 'otpauth://totp/' + label + '?' + q;
 }
 function setLoginCookie(res, token) {
   res.cookie('sid', token, { httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge: 7 * 24 * 60 * 60 * 1000 });

@@ -56,6 +56,7 @@
       <input type="password" id="loginPass" placeholder="Password" aria-label="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
       <input type="password" id="loginPass2" placeholder="Confirm password" aria-label="Confirm password" autocomplete="new-password" style="display:none" onkeydown="if(event.key==='Enter')doLogin()">
       <input type="text" id="loginRecovery" placeholder="Recovery code (XXXX-XXXX-…)" aria-label="Recovery code" autocomplete="off" style="display:none" onkeydown="if(event.key==='Enter')doLogin()">
+      <input type="text" id="login2fa" placeholder="6-digit code" aria-label="Authenticator code" autocomplete="one-time-code" inputmode="numeric" maxlength="6" style="display:none;text-align:center;letter-spacing:.3em;font-size:18px" onkeydown="if(event.key==='Enter')doLogin()">
       <div class="login-err" id="loginErr"></div>
       <button class="btn primary login-btn" id="loginBtn" onclick="doLogin()">Sign in</button>
       <div class="login-links">
