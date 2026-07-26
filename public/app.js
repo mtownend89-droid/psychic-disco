@@ -1297,10 +1297,15 @@ let _billCal={};
 function _billCalDayLabel(k){ return _dkParse(k).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); }
 function _billCalList(days){
   return days.map(d=>{
-    const rows=d.events.slice().sort((a,b)=>a.amt-b.amt).map(e=>`<div class="bcal-li"><span class="bcal-li-dot ${e.amt>=0?'in':'out'}"></span><span class="bcal-li-nm">${esc(e.name)}</span><b style="color:${e.amt>=0?'var(--pos)':'var(--red)'}">${e.amt>=0?'+':'−'}${fmtK(e.amt)}</b></div>`).join('');
+    const rows=d.events.slice().sort((a,b)=>a.amt-b.amt).map(e=>{
+      const isBill=e.type==='bill';
+      const go=isBill?' bcal-li-go" onclick="event.stopPropagation();billCalGotoBills()" title="Open in Bills':'"';
+      return `<div class="bcal-li${go}"><span class="bcal-li-dot ${e.amt>=0?'in':'out'}"></span><span class="bcal-li-nm">${esc(e.name)}${isBill?' <span class="bcal-chev">›</span>':''}</span><b style="color:${e.amt>=0?'var(--pos)':'var(--red)'}">${e.amt>=0?'+':'−'}${fmtK(e.amt)}</b></div>`;
+    }).join('');
     return `<div class="bcal-li-day"><div class="bcal-li-date">${_billCalDayLabel(d.key)}</div>${rows}</div>`;
   }).join('');
 }
+function billCalGotoBills(){ try{ briefGoto('bills_list'); }catch(e){ try{ _ensureWidgetOnPage('bills_list'); }catch(_){} } }
 function billCalBody(w){
   const st=_billCal[w.uid]||(_billCal[w.uid]={off:0, sel:null});
   const c=engBillCalendar(st.off);
