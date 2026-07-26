@@ -1064,6 +1064,23 @@ body.fx-slime .canvas-widget-card::after{content:'';position:absolute;left:-2%;r
 .add-widget-fab:hover{background:rgba(46,204,138,0.16);border-style:solid;}
 .wph{padding:6px 2px;}
 .wph-stat{font-size:26px;font-weight:700;color:var(--text);}
+/* ── Financial health score ── */
+.hs-wrap{padding:2px;}
+.hs-head{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
+.hs-headtxt{min-width:0;}
+.hs-headlbl{font-size:14px;font-weight:800;color:var(--text);}
+.hs-headsub{font-size:11.5px;color:var(--muted);line-height:1.4;margin-top:2px;}
+.hs-rows{display:flex;flex-direction:column;gap:9px;}
+.hs-row{display:flex;align-items:center;gap:9px;}
+.hs-ico{font-size:16px;flex:0 0 auto;}
+.hs-main{flex:1 1 auto;min-width:0;}
+.hs-toprow{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;margin-bottom:3px;}
+.hs-lbl{color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hs-val{font-weight:700;flex:0 0 auto;}
+.hs-barwrap{height:7px;background:var(--surface3);border-radius:5px;overflow:hidden;}
+.hs-bar{height:100%;border-radius:5px;min-width:2px;transition:width .3s;}
+.hs-tip{display:flex;gap:8px;align-items:flex-start;margin-top:12px;padding:9px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-size:12px;color:var(--text);line-height:1.45;}
+.hs-tip span:first-child{flex:0 0 auto;}
 /* ── Spending Trends widget ── */
 .st-wrap{padding:2px 2px 4px;}
 .st-hero{margin-bottom:8px;}
