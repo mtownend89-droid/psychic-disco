@@ -2507,7 +2507,8 @@ function csvDoImport(){
   APP.imports.push({ id:importId, kind:'bank', label:importLabel, ts:Date.now(), txnImportId:importId, summary:`${added} transaction${added!==1?'s':''} · CSV` });
   saveState(); _rebuildTxns(); if(allTxns.length>0) dataLoaded=true;
   closeCsvModal();
-  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+  if(APP._awaitingBuild){ try{ richieBuildApp(); }catch(e){} }   // imported straight from the build gate → build the dashboard
+  else { const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
   if(typeof richieSay==='function') richieSay(`📥 Imported ${added} transaction${added!==1?'s':''} from ${nm}. Remove this batch anytime from Settings → connected sources.`);
   if(typeof sbRichie!=='undefined'&&sbRichie) sbRichie.do('tada');
 }
@@ -4005,6 +4006,7 @@ function buildGateHTML(){
     ${goals?`<div class="bgate-goals">${esc(goals)}</div>`:''}
     <button class="bgate-cta" onclick="openLinkHandler()">🔗 Connect my bank</button>
     <button class="bgate-alt" onclick="docUploadPick()">📄 Or upload a statement / bill</button>
+    <button class="bgate-alt" onclick="gg('csvFileInput').click()">📥 No bank? Import a transactions CSV</button>
     <button class="bgate-skip" onclick="richieBuildApp({sample:true})">Explore with sample data first</button>
     <div class="bgate-note">🔒 Bank-level encryption · read-only · disconnect anytime</div>
   </div></div>`;
