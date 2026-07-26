@@ -2596,7 +2596,15 @@ function healthScoreBody(w){
   const rows=h.comps.map(c=>{ const sc=_hsColor(c.score); return `<div class="hs-row"><span class="hs-ico">${c.icon}</span><div class="hs-main"><div class="hs-toprow"><span class="hs-lbl">${esc(c.label)}</span><span class="hs-val" style="color:${sc}">${esc(c.value)}</span></div><div class="hs-barwrap"><div class="hs-bar" style="width:${c.score}%;background:${sc}"></div></div></div></div>`; }).join('');
   const tip=h.weakest?`<div class="hs-tip"><span>💡</span><span>${esc(h.weakest.tip)}</span></div>`:`<div class="hs-tip"><span>🎉</span><span>Every pillar is in good shape — keep it up!</span></div>`;
   return `<div class="hs-wrap">
-    <div class="hs-head">${_hsRing(h.overall,col,h.grade)}<div class="hs-headtxt"><div class="hs-headlbl">Financial health${dataLoaded?'':' · sample'}</div><div class="hs-headsub">Across ${h.comps.length} pillar${h.comps.length!==1?'s':''} — savings, safety, and debt.</div></div></div>
+    <div class="hs-head">${_hsRing(h.overall,col,h.grade)}<div class="hs-headtxt"><div class="hs-headlbl">Financial health${dataLoaded?'':' · sample'}</div>${(function(){
+      const chg=(typeof hsChangeSince==='function')?hsChangeSince(7):null;
+      const nx=(typeof _hsToNext==='function')?_hsToNext(h.overall):null;
+      const parts=[];
+      if(chg && chg.abs!==0){ const up=chg.abs>0; parts.push(`<span style="color:${up?'var(--pos)':'var(--red)'};font-weight:700">${up?'▲':'▼'} ${Math.abs(chg.abs)} pt${Math.abs(chg.abs)!==1?'s':''} this week</span>`); }
+      if(nx){ parts.push(`<span style="color:var(--muted)">${nx.pts} to a ${esc(nx.grade)}</span>`); }
+      const line=parts.length?parts.join(' · '):`Across ${h.comps.length} pillar${h.comps.length!==1?'s':''} — savings, safety, and debt.`;
+      return `<div class="hs-headsub">${line}</div>`;
+    })()}</div></div>
     <div class="hs-rows">${rows}</div>
     ${tip}
   </div>`;
@@ -3260,7 +3268,7 @@ window.addEventListener('visibilitychange', ()=>{ if(document.visibilityState===
 let _persistTimer=null;
 function _persistSoon(){ clearTimeout(_persistTimer); _persistTimer=setTimeout(()=>{ try{ saveState(); }catch(e){} }, 400); }
 /* ── Cross-device state sync: push edits to the server, pull newer edits from other devices ── */
-const SYNC_KEYS=['mdf_categories','mdf_cat_overrides','mdf_cat_rules','mdf_txn_notes','mdf_txn_tags','mdf_acct_cats','mdf_nw_history','mdf_fire','mdf_gami','richie_setup','richie_proactive','richie_audio','richie_voice'];
+const SYNC_KEYS=['mdf_categories','mdf_cat_overrides','mdf_cat_rules','mdf_txn_notes','mdf_txn_tags','mdf_acct_cats','mdf_nw_history','mdf_health_history','mdf_health_grade','mdf_fire','mdf_gami','richie_setup','richie_proactive','richie_audio','richie_voice'];
 function syncCollect(){ try{ _saveActiveLayout(); }catch(e){}   /* fold live pages into layouts before EVERY push (immediate/flush/heartbeat), else a push can ship stale layouts */
   const stores={}; SYNC_KEYS.forEach(k=>{ const v=LS.getItem(k); if(v!=null) stores[k]=v; }); return { app:APP, stores, _ts:Date.now() }; }
 function _widgetCount(pages){ return (pages||[]).reduce((s,p)=>s+((p&&p.widgets||[]).length),0); }
@@ -6563,7 +6571,7 @@ function gamiCheckin(){
   s.lastSeen=t; gamiSave();
 }
 function gamiEvaluate(opts){
-  opts=opts||{}; try{ nwHistRecord(); }catch(e){}
+  opts=opts||{}; try{ nwHistRecord(); }catch(e){} try{ hsHistRecord(); }catch(e){}
   const s=gamiLoad(); const firstRun=!s.seeded; const m=gamiMetrics(); const newly=[];
   ACHIEVEMENTS.forEach(a=>{
     if(s.unlocked[a.id]) return;
@@ -6651,6 +6659,39 @@ function nwHistMonthly(n){
   const keys=Object.keys(byMonth).sort();
   const out=keys.map(k=>{ const [y,m]=k.split('-'); const lbl=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][(+m)-1]; return {label:lbl, key:k, v:byMonth[k]}; });
   return n?out.slice(-n):out;
+}
+/* ── Health-score history (real trend + grade-up celebrations) ── */
+function hsHistLoad(){ try{ const a=JSON.parse(LS.getItem('mdf_health_history')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function _hsLetterRank(g){ const r={F:0,D:1,C:2,B:3,A:4}[String(g||'F').charAt(0)]; return r==null?0:r; }
+const HS_BANDS=[[60,'D'],[67,'D+'],[70,'C−'],[73,'C'],[77,'C+'],[80,'B−'],[83,'B'],[87,'B+'],[90,'A−'],[93,'A']];
+function _hsToNext(score){ for(let i=0;i<HS_BANDS.length;i++){ if(HS_BANDS[i][0]>score) return {pts:HS_BANDS[i][0]-score, grade:HS_BANDS[i][1]}; } return null; }
+function hsHistRecord(){
+  try{
+    if(!dataLoaded || typeof engHealthScore!=='function') return;
+    const r=engHealthScore(); if(!r||!r.hasData) return;
+    const d=new Date(); const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    let h=hsHistLoad();
+    if(h.length && h[h.length-1].d===key){ h[h.length-1].v=r.overall; h[h.length-1].g=r.grade; }
+    else h.push({d:key, v:r.overall, g:r.grade});
+    if(h.length>420) h=h.slice(h.length-420);
+    LS.setItem('mdf_health_history', JSON.stringify(h));
+    const ack=LS.getItem('mdf_health_grade')||'';
+    if(!ack){ LS.setItem('mdf_health_grade', r.grade); }
+    else if(_hsLetterRank(r.grade)>_hsLetterRank(ack)){ LS.setItem('mdf_health_grade', r.grade);
+      try{ gamiCelebrate({icon:'🩺', title:'Health grade up!', name:`You reached ${r.grade}`, desc:`Your financial-health grade climbed to ${r.grade} (${r.overall}/100) — real progress across the pillars.`, share:`My financial-health grade just hit ${r.grade} on Richie! 🩺`}); }catch(e){}
+    }
+    else if(_hsLetterRank(r.grade)<_hsLetterRank(ack)){ LS.setItem('mdf_health_grade', r.grade); }   // dropped — reset baseline so a re-climb re-celebrates
+  }catch(e){}
+}
+// Health-score change over the last `days` (points). Returns {abs, fromKey} or null.
+function hsChangeSince(days){
+  const h=hsHistLoad(); if(h.length<2) return null;
+  const now=h[h.length-1].v; const cutoff=Date.now()-days*86400000;
+  let base=null;
+  for(let i=h.length-1;i>=0;i--){ if(new Date(h[i].d+'T12:00:00').getTime()<=cutoff){ base=h[i]; break; } }
+  if(!base) base=h[0];
+  if(base.d===h[h.length-1].d) return null;
+  return {abs:now-base.v, fromKey:base.d};
 }
 function nwUpStreak(){
   const mo=nwHistMonthly(); if(mo.length<2) return 0;
