@@ -43,6 +43,19 @@
     <div class="doc-body" id="holdBody"></div>
   </div>
 </div>
+<!-- ═══ GLOBAL TRANSACTION SEARCH ═══ -->
+<div id="txnSearchModal" class="txs-modal" style="display:none" onclick="if(event.target===this)closeTxnSearch()">
+  <div class="txs-card">
+    <div class="txs-head">
+      <span class="txs-mag" aria-hidden="true">🔍</span>
+      <input id="txsInput" class="txs-input" type="text" placeholder="Search all transactions — merchant, category, amount (&gt;50), note…" autocomplete="off" aria-label="Search transactions" oninput="txnSearchInput(this.value)" onkeydown="if(event.key==='Escape')closeTxnSearch()">
+      <button class="txs-x" onclick="closeTxnSearch()" aria-label="Close search">✕</button>
+    </div>
+    <div class="txs-chips" id="txsChips"></div>
+    <div class="txs-summary" id="txsSummary"></div>
+    <div class="txs-list" id="txsList"></div>
+  </div>
+</div>
 
 <!-- ═══ LOGIN SCREEN ═══ -->
 <div id="loginScreen" style="display:none">
@@ -229,6 +242,7 @@
         <span class="topbar-title" id="tbTitle">Dashboard</span>
       </div>
       <div class="topbar-right">
+        <button class="tb-search" id="tbSearch" onclick="openTxnSearch()" title="Search transactions (Ctrl/⌘+K)" aria-label="Search transactions">🔍</button>
         <button class="tb-bell" id="tbBell" onclick="toggleNotifPanel(event)" title="Notifications" aria-label="Notifications">🔔<span class="tb-bell-badge" id="tbBellBadge" style="display:none">0</span></button>
         <button class="tb-review" id="tbReview" onclick="openBriefing()" title="Review your money to-do with Richie">📋<span class="tb-review-lbl">Review</span><span class="tb-review-badge" id="tbReviewBadge" style="display:none">0</span></button>
         <span class="env-badge env-sandbox" id="envBadge">Sandbox</span>

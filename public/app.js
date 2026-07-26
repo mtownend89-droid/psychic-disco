@@ -202,6 +202,91 @@ function getTxnCategory(t){
 }
 function getTxnNote(t){ return _txnNotes[_txnKey(t)]||''; }
 
+/* ═══ GLOBAL TRANSACTION SEARCH ═══
+   A topbar-launched overlay that searches across every transaction (merchant,
+   category, note, account, amount) with quick structured filters. */
+let _txnSearch={q:'', chips:{month:false,big:false,income:false,spend:false,uncat:false}};
+const TXS_CHIPS=[{id:'month',label:'This month'},{id:'big',label:'≥ $50'},{id:'income',label:'Income'},{id:'spend',label:'Spending'},{id:'uncat',label:'Uncategorized'}];
+function openTxnSearch(){
+  const m=gg('txnSearchModal'); if(!m) return;
+  m.style.display='flex';
+  const chipsEl=gg('txsChips'); if(chipsEl) chipsEl.innerHTML=TXS_CHIPS.map(c=>`<button class="txs-chip${_txnSearch.chips[c.id]?' on':''}" onclick="txnSearchChip('${c.id}')">${esc(c.label)}</button>`).join('');
+  txnSearchRender();
+  setTimeout(()=>{ const i=gg('txsInput'); if(i){ i.value=_txnSearch.q; i.focus(); } },60);
+}
+function closeTxnSearch(){ const m=gg('txnSearchModal'); if(m) m.style.display='none'; }
+function txnSearchInput(v){ _txnSearch.q=v; txnSearchRender(); }
+function txnSearchChip(id){
+  _txnSearch.chips[id]=!_txnSearch.chips[id];
+  const b=gg('txsChips'); if(b) Array.prototype.forEach.call(b.children,(el,i)=>{ el.classList.toggle('on', !!_txnSearch.chips[TXS_CHIPS[i].id]); });
+  txnSearchRender();
+}
+function _txnAcctName(t){ const a=(allAccts||[]).find(x=>x.account_id===t.account_id); return a?(a.name||a.official_name||a.institution||''):''; }
+// Parse an amount operator out of the query (">50", "<=20", "50-100", "=12.5"). Returns a predicate or null.
+function _parseAmtQuery(q){
+  let m=q.match(/^([<>]=?|=)\s*\$?(\d+(?:\.\d+)?)$/);
+  if(m){ const op=m[1], n=parseFloat(m[2]); return v=>{ v=Math.abs(v); switch(op){case '>':return v>n;case '>=':return v>=n;case '<':return v<n;case '<=':return v<=n;default:return Math.abs(v-n)<0.005;} }; }
+  m=q.match(/^\$?(\d+(?:\.\d+)?)\s*-\s*\$?(\d+(?:\.\d+)?)$/);
+  if(m){ const a=parseFloat(m[1]), b=parseFloat(m[2]), lo=Math.min(a,b), hi=Math.max(a,b); return v=>{ v=Math.abs(v); return v>=lo&&v<=hi; }; }
+  return null;
+}
+function _txnSearchData(){
+  let list = (dataLoaded && allTxns.length) ? allTxns.slice() : [
+    {date:'2026-07-20',name:'Starbucks',amount:6.45,transaction_id:'txs1'},
+    {date:'2026-07-18',name:'Whole Foods',amount:83.20,transaction_id:'txs2'},
+    {date:'2026-07-15',name:'Paycheck — Employer',amount:-2400,transaction_id:'txs3'},
+    {date:'2026-07-12',name:'Shell Gas',amount:47.10,transaction_id:'txs4'},
+    {date:'2026-06-28',name:'Netflix',amount:15.49,transaction_id:'txs5'},
+  ];
+  const raw=(_txnSearch.q||'').trim(), q=raw.toLowerCase();
+  const amtPred=raw?_parseAmtQuery(raw):null;
+  const ch=_txnSearch.chips;
+  const now=new Date(), curStart=new Date(now.getFullYear(),now.getMonth(),1);
+  list=list.filter(t=>{
+    if(ch.month && new Date(t.date)<curStart) return false;
+    if(ch.big && Math.abs(t.amount)<50) return false;
+    if(ch.income && !_isIncomeTxn(t)) return false;
+    if(ch.spend && !(t.amount>0 && !_txnExcludedFromSpend(t))) return false;
+    if(ch.uncat && getTxnCategory(t)!=='Other') return false;
+    if(q){
+      if(amtPred){ if(!amtPred(t.amount)) return false; }
+      else { const hay=[(t.merchant_name||t.name||''),getTxnCategory(t),getTxnNote(t),_txnAcctName(t),Math.abs(t.amount).toFixed(2)].join(' ').toLowerCase(); if(!hay.includes(q)) return false; }
+    }
+    return true;
+  });
+  list.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  return list;
+}
+function txnSearchRender(){
+  const list=_txnSearchData();
+  const sumEl=gg('txsSummary');
+  const inTot=list.filter(t=>t.amount<0).reduce((s,t)=>s+Math.abs(t.amount),0);
+  const outTot=list.filter(t=>t.amount>0).reduce((s,t)=>s+t.amount,0);
+  if(sumEl) sumEl.innerHTML = list.length ? `<span>${list.length} result${list.length!==1?'s':''}</span><span class="txs-in">+${fmtK(inTot)}</span><span class="txs-out">−${fmtK(outTot)}</span>` : '';
+  const el=gg('txsList'); if(!el) return;
+  const active=(_txnSearch.q||Object.values(_txnSearch.chips).some(Boolean));
+  if(!list.length){ el.innerHTML=`<div class="txs-empty">${active?'No transactions match.':'Type to search across every transaction — or tap a filter above.'}</div>`; return; }
+  const capped=list.slice(0,400);
+  el.innerHTML=capped.map(t=>{
+    const pos=t.amount>0, col=pos?'var(--red)':'var(--pos)', amt=(pos?'−':'+')+fmt2(Math.abs(t.amount));
+    const cat=getTxnCategory(t), note=getTxnNote(t), acct=_txnAcctName(t);
+    const name=t.merchant_name||t.name||'', dt=new Date(t.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    return `<div class="txs-row">
+      <span class="txs-dot" style="background:${getCatColor(cat)}"></span>
+      <div class="txs-main"><div class="txs-name">${esc(name)}</div><div class="txs-meta">${esc(dt)} · ${esc(cat)}${acct?' · '+esc(acct):''}${note?' · 📝 '+esc(note):''}</div></div>
+      <b class="txs-amt" style="color:${col}">${amt}</b>
+    </div>`;
+  }).join('') + (list.length>400?`<div class="txs-empty">Showing the 400 most recent of ${list.length} matches — refine your search.</div>`:'');
+}
+// Ctrl/⌘+K toggles search (ignored on the login screen and while typing in another field).
+try{ document.addEventListener('keydown',function(e){
+  if(!((e.metaKey||e.ctrlKey)&&(e.key==='k'||e.key==='K'))) return;
+  const login=gg('loginScreen'); if(login && login.style.display!=='none' && login.offsetParent!==null) return;
+  const m=gg('txnSearchModal'); if(!m) return;
+  e.preventDefault();
+  if(m.style.display==='flex') closeTxnSearch(); else openTxnSearch();
+}); }catch(e){}
+
 /* ── Live data layer (Plaid-backed via server API) ── */
 let allAccts=[], allTxns=[], _plaidTxns=[], dataLoaded=false, serverAvailable=true;
 // Once a real dashboard (any widgets) has been seen this session, the client must NEVER push
