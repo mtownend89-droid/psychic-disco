@@ -209,6 +209,7 @@ let _txnSearch={q:'', chips:{month:false,big:false,income:false,spend:false,unca
 const TXS_CHIPS=[{id:'month',label:'This month'},{id:'big',label:'≥ $50'},{id:'income',label:'Income'},{id:'spend',label:'Spending'},{id:'uncat',label:'Uncategorized'}];
 function openTxnSearch(){
   const m=gg('txnSearchModal'); if(!m) return;
+  try{ discoverXp('search',10,'global search'); }catch(e){}
   m.style.display='flex';
   const chipsEl=gg('txsChips'); if(chipsEl) chipsEl.innerHTML=TXS_CHIPS.map(c=>`<button class="txs-chip${_txnSearch.chips[c.id]?' on':''}" onclick="txnSearchChip('${c.id}')">${esc(c.label)}</button>`).join('');
   txnSearchRender();
@@ -1325,7 +1326,7 @@ function billCalBody(w){
   else { list=c.monthEvents.length?_billCalList(c.monthEvents):'<div class="ws-hint">No bills or income scheduled this month.</div>'; listHdr='This month'; }
   return `<div class="bcal-wrap">${head}${dowRow}<div class="bcal-grid">${grid}</div>${summary}<div class="bcal-listhdr">${listHdr}</div><div class="bcal-list">${list}</div></div>`;
 }
-function billCalShift(uid,delta){ const st=_billCal[uid]||(_billCal[uid]={off:0,sel:null}); st.off=Math.max(0,Math.min(11,st.off+delta)); st.sel=null; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+function billCalShift(uid,delta){ try{ discoverXp('bill_calendar',10,'the bill calendar'); }catch(e){} const st=_billCal[uid]||(_billCal[uid]={off:0,sel:null}); st.off=Math.max(0,Math.min(11,st.off+delta)); st.sel=null; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function billCalDay(uid,key){ const st=_billCal[uid]||(_billCal[uid]={off:0,sel:null}); st.sel=st.sel===key?null:key; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 
 /* ── Unified bills/liabilities layer ──
@@ -2427,6 +2428,7 @@ function _guessCol(H, re){ for(let i=0;i<H.length;i++){ if(re.test(H[i]||'')) re
 function csvFileChosen(inp){
   const f=inp.files&&inp.files[0]; inp.value=''; if(!f) return;
   if(f.size>8*1024*1024){ alert('That CSV is large (max ~8MB). Try splitting it into smaller files.'); return; }
+  try{ discoverXp('csv_import',15,'CSV import'); }catch(e){}
   const rd=new FileReader();
   rd.onload=()=>{ try{ _csvInit(String(rd.result||''), f.name||'transactions.csv'); }catch(e){ alert('Could not parse that file — is it a CSV?'); } };
   rd.onerror=()=>alert('Could not read that file.');
@@ -4609,7 +4611,7 @@ function engBudgetTemplate(tplId){
   return {tpl,income,fixedBills,envelopes,envTotal,leftover:income-fixedBills-envTotal,groups};
 }
 let _budTpl={uid:null, tpl:'50-30-20'};
-function openBudgetTemplates(uid){ _budTpl.uid=uid||null; if(!BUDGET_TEMPLATES.find(t=>t.id===_budTpl.tpl)) _budTpl.tpl='50-30-20'; const m=gg('budgetTplModal'); if(!m) return; m.style.display='flex'; renderBudgetTemplates(); }
+function openBudgetTemplates(uid){ try{ discoverXp('budget_templates',10,'budget templates'); }catch(e){} _budTpl.uid=uid||null; if(!BUDGET_TEMPLATES.find(t=>t.id===_budTpl.tpl)) _budTpl.tpl='50-30-20'; const m=gg('budgetTplModal'); if(!m) return; m.style.display='flex'; renderBudgetTemplates(); }
 function closeBudgetTemplates(){ const m=gg('budgetTplModal'); if(m) m.style.display='none'; }
 function btPick(id){ _budTpl.tpl=id; renderBudgetTemplates(); }
 function renderBudgetTemplates(){
@@ -7555,6 +7557,12 @@ function awardXp(amount,reason){
   saveState();
   gg('sbXp').textContent=APP.xp+' XP';
   if(reason) richieSay(reason+' (+'+amount+' XP)');
+}
+// Award XP the first time a feature is used (once ever, tracked in the synced gami store).
+function discoverXp(key, xp, label){
+  try{ const s=gamiLoad(); s.discovered=s.discovered||{}; if(s.discovered[key]) return; s.discovered[key]=Date.now(); gamiSave();
+    awardXp(xp||10, `✨ First time using ${label}`);
+  }catch(e){}
 }
 function levelUp(){
   const lv=LEVELS.find(l=>l.n===APP.level);
