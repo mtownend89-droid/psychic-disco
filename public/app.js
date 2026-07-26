@@ -8398,9 +8398,70 @@ function openBriefing(){
 }
 // Topbar Review badge — count of things worth handling (0 hides it).
 function updateReviewBadge(){
-  const b=gg('tbReviewBadge'); if(!b) return;
-  let n=0; try{ if(dataLoaded) n=buildBriefSteps().length; }catch(e){}
-  if(n>0){ b.textContent=n; b.style.display='inline-flex'; } else { b.style.display='none'; }
+  const b=gg('tbReviewBadge');
+  if(b){ let n=0; try{ if(dataLoaded) n=buildBriefSteps().length; }catch(e){} if(n>0){ b.textContent=n; b.style.display='inline-flex'; } else { b.style.display='none'; } }
+  try{ updateNotifBadge(); }catch(e){}   // the bell refreshes on the same beats as the Review badge
+}
+
+/* ═══════════════ IN-APP NOTIFICATIONS (topbar bell) ═══════════════
+   A glanceable, read/unread list of the time-sensitive alerts Richie computes — the same
+   signals the briefing uses, plus reconnect. Read state persists (APP.notifsRead) so a seen
+   alert stops nagging; a re-raised one (new price, later date) gets a fresh key and re-appears. */
+let _notifCache=[];
+function _notifRead(){ APP.notifsRead=APP.notifsRead||{}; return APP.notifsRead; }
+function buildNotifications(){
+  if(!dataLoaded) return [];
+  const N=[];
+  try{ _relinkErrors().forEach(e=>N.push({key:'relink:'+e.itemId, icon:'🔌', crit:true, title:`${e.institution||'A bank'} needs reconnecting`, sub:'Sign in again to keep your data live.', go:'__reconnect__', itemId:e.itemId})); }catch(e){}
+  try{ const rev=_reviewTxns(); if(rev.length) N.push({key:'txncat', icon:'🏷️', title:`${rev.length} new transaction${rev.length>1?'s':''} to review`, sub:'Confirm the categories are right.', go:'__briefing__'}); }catch(e){}
+  try{ const bds=_billsDueSoon(); if(bds.length){ const nm=bds.map(b=>b.name).sort().join('|'); N.push({key:'bills:'+nm, icon:'📋', title:`${bds.length} bill${bds.length>1?'s':''} due this week`, sub:bds.slice(0,3).map(b=>esc(b.name)).join(', '), go:'bills_list'}); } }catch(e){}
+  try{ const p=engCashFlowProjection(30); if(p.low.bal<0){ const d=_projDate(p.low.day); const when=p.low.day===0?'today':d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); N.push({key:'shortfall:'+d.toISOString().slice(0,10), icon:'⚠️', crit:true, title:`Low balance coming ${when}`, sub:`Projected to dip to ${fmtK(p.low.bal)}.`, go:'cashflow_planner'}); } }catch(e){}
+  try{ (engPromos()||[]).filter(p=>p.bal>0.5&&p.days>=0&&p.days<=45).forEach(p=>N.push({key:'promo:'+(p.name||''), icon:'⏰', title:`0% promo ending: ${esc(p.name)}`, sub:`Rate jumps to ${p.apr?p.apr.toFixed(1)+'%':'its APR'} in ${p.days} day${p.days!==1?'s':''}.`, go:'debt_hub', tab:'promo'})); }catch(e){}
+  try{ engRecurring().filter(r=>r.priceUp).forEach(r=>N.push({key:'hike:'+r.merchKey+':'+Math.round(r.recent), icon:'🔁', title:`${esc(r.merchant)} raised its price`, sub:`${fmtK(r.prior)} → ${fmtK(r.recent)}.`, go:'recurring'})); }catch(e){}
+  try{ const ss=_scoreStale(); if(ss.stale){ N.push({key:'score:'+new Date().toISOString().slice(0,7), icon:'📊', title:'Log your credit score', sub: ss.days==null?'None on file yet — takes 10 seconds.':`Last logged ${ss.days} days ago.`, open:'openScoreEditor'}); } }catch(e){}
+  const read=_notifRead();
+  N.forEach(n=>{ n.unread=!read[n.key]; });
+  N.sort((a,b)=>(b.crit?1:0)-(a.crit?1:0) || (b.unread?1:0)-(a.unread?1:0));   // critical first, then unread
+  return N;
+}
+function updateNotifBadge(){
+  const b=gg('tbBellBadge'); if(!b) return;
+  let n=0; try{ n=buildNotifications().filter(x=>x.unread).length; }catch(e){}
+  if(n>0){ b.textContent=n>9?'9+':n; b.style.display='inline-flex'; } else { b.style.display='none'; }
+}
+function _notifEl(){ let el=gg('notifPanel'); if(el) return el;
+  el=document.createElement('div'); el.id='notifPanel'; el.className='notif-panel';
+  el.innerHTML=`<div class="notif-hd"><span>Notifications</span><button class="notif-allread" id="notifAllRead" onclick="notifMarkAllRead()">Mark all read</button></div><div class="notif-list" id="notifList"></div>`;
+  document.body.appendChild(el);
+  return el;
+}
+let _notifOpen=false, _notifOutside=null;
+function toggleNotifPanel(ev){ if(ev) ev.stopPropagation(); if(_notifOpen) closeNotifPanel(); else openNotifPanel(); }
+function openNotifPanel(){
+  const el=_notifEl(); renderNotifPanel();
+  const bell=gg('tbBell'); const r=bell?bell.getBoundingClientRect():{bottom:54,right:window.innerWidth-16};
+  el.style.top=(r.bottom+8)+'px'; el.style.right=Math.max(8,(window.innerWidth-r.right))+'px';
+  el.classList.add('show'); _notifOpen=true;
+  _notifOutside=(e)=>{ if(!el.contains(e.target) && e.target.id!=='tbBell' && !(e.target.closest&&e.target.closest('#tbBell'))) closeNotifPanel(); };
+  setTimeout(()=>document.addEventListener('click', _notifOutside), 0);
+}
+function closeNotifPanel(){ const el=gg('notifPanel'); if(el) el.classList.remove('show'); _notifOpen=false; if(_notifOutside){ document.removeEventListener('click', _notifOutside); _notifOutside=null; } }
+function renderNotifPanel(){
+  const list=gg('notifList'); if(!list) return;
+  const N=buildNotifications(); _notifCache=N;
+  const ar=gg('notifAllRead'); if(ar) ar.style.display=N.some(n=>n.unread)?'inline-block':'none';
+  if(!N.length){ list.innerHTML=`<div class="notif-empty">✅ You're all caught up — no alerts right now.</div>`; return; }
+  list.innerHTML=N.map((n,i)=>`<button class="notif-row${n.unread?' unread':''}" onclick="notifAct(${i})"><span class="notif-ic">${n.icon}</span><span class="notif-body"><span class="notif-title">${esc(n.title)}</span><span class="notif-sub">${n.sub}</span></span>${n.unread?'<span class="notif-dot" aria-label="unread"></span>':''}</button>`).join('');
+}
+function notifMarkRead(key){ if(!key) return; _notifRead()[key]=true; saveState(); }
+function notifMarkAllRead(){ const r=_notifRead(); buildNotifications().forEach(n=>{ r[n.key]=true; }); saveState(); renderNotifPanel(); updateNotifBadge(); }
+function notifAct(i){
+  const n=_notifCache[i]; if(!n) return;
+  notifMarkRead(n.key); closeNotifPanel(); updateNotifBadge();
+  if(n.go==='__reconnect__'){ setTimeout(()=>{ try{ openLinkHandler(n.itemId); }catch(e){} }, 160); return; }
+  if(n.go==='__briefing__'){ setTimeout(()=>{ try{ openBriefing(); }catch(e){} }, 160); return; }
+  if(n.open){ setTimeout(()=>{ try{ if(typeof window[n.open]==='function') window[n.open](); }catch(e){} }, 200); return; }
+  if(n.go){ try{ briefGoto(n.go); }catch(e){} }
 }
 function _doSignOut(greet){
   // Revoke the session cookie server-side (sent automatically), then return to login.
