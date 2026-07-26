@@ -1881,27 +1881,27 @@ function _goals(){
    and how Richie should teach the path. */
 const GOAL_PLANS={
   emergency:{ page:{name:'Emergency Fund',icon:'🛟',color:'#38bdf8'},
-    widgets:['goals','savings_buckets','cash_summary','zero_budget','cashflow_planner','bills_list'],
+    widgets:['goals','health_score','safe_spend','savings_buckets','bill_calendar','zero_budget'],
     coach:"An emergency fund is your financial seatbelt. I've set up Savings Buckets so you can grow it as its own sinking fund, a Cash on Hand tracker, your Zero-Based Budget to carve out savings, and the Cash Flow Planner to see what you can set aside each payday. Automate a transfer the day you get paid — pay your future self first.",
     teach:["Set aside a fixed amount every payday — before you spend.","Keep it in a separate savings account so it's out of sight.","Start with $1,000, then build to 3 months of expenses."] },
   debt:{ page:{name:'Debt Freedom',icon:'🚀',color:'#f05c5c'},
-    widgets:['goals','debt_summary','credit_util','promo_tracker','debt_payoff','bills_list','cashflow_planner'],
+    widgets:['goals','health_score','debt_hub','safe_spend','bill_calendar','cashflow_planner'],
     coach:"Let's get you debt-free. I've laid out your Total Debt, your Credit Utilization gauge, a 0%-Promo Tracker so no intro rate sneaks up on you, the Debt Payoff Planner (try avalanche — it kills the highest interest first), your Bills, and the Cash Flow Planner to find extra dollars. Every extra payment is a guaranteed return equal to your interest rate.",
     teach:["Always pay more than the minimum — even $25 extra compounds.","Attack the highest-APR balance first (avalanche method).","Pay off 0% promos before they expire — the rate jump is brutal.","Keep utilization under 30% (under 10% is ideal) to protect your score."] },
   savings:{ page:{name:'Savings Builder',icon:'💰',color:'#2ecc8a'},
-    widgets:['goals','savings_buckets','budget_actual','zero_budget','pl_panel','top_categories'],
+    widgets:['goals','health_score','savings_buckets','spending_hub','safe_spend','zero_budget'],
     coach:"Building savings is about widening the gap between what you earn and what you spend. I've set up Savings Buckets to fund your goals, Budget vs Actual to see where you're drifting, your Zero-Based Budget, a Profit & Loss panel, and Top Categories to spot what to trim. Find one expense to cut and redirect it into a bucket.",
     teach:["Automate savings so it happens without willpower.","Review your top spending category monthly and trim 10%.","Treat savings like a non-negotiable bill."] },
   networth:{ page:{name:'Wealth Builder',icon:'💎',color:'#5b8def'},
-    widgets:['goals','net_worth_summary','net_worth_chart','debt_summary','pl_panel'],
+    widgets:['goals','health_score','net_worth_chart','debt_hub','spending_hub'],
     coach:"Net worth is the real scoreboard — assets minus debts. I've set up your Net Worth snapshot and trend chart so you can watch it climb, plus debt and P&L so you see both levers. Grow assets, shrink debts, and let time + compounding do the heavy lifting.",
     teach:["Net worth = what you own minus what you owe. Grow the gap.","Invest consistently — time in the market beats timing it.","Track the trend monthly; direction matters more than any single number."] },
   savingsrate:{ page:{name:'Savings Rate',icon:'📊',color:'#a78bfa'},
-    widgets:['goals','pl_panel','budget_actual','zero_budget','top_categories','cashflow_chart'],
+    widgets:['goals','health_score','spending_hub','zero_budget','safe_spend','pl_panel'],
     coach:"Your savings rate is the single best predictor of financial freedom. I've set up your Profit & Loss, Budget vs Actual to catch overspending, the budget to plan it, and Top Categories to find the leaks. Push the rate up a few points at a time — every percent buys you future freedom.",
     teach:["Savings rate = (income − spending) ÷ income. Aim to raise it steadily.","Increasing income helps, but cutting waste is faster to control.","A 20% rate is solid; 30%+ is wealth-building territory."] },
   custom:{ page:{name:'My Goal',icon:'🎯',color:'#2ecc8a'},
-    widgets:['goals','cash_summary','zero_budget','pl_panel'],
+    widgets:['goals','health_score','safe_spend','spending_hub','bill_calendar'],
     coach:"Custom goal locked in. I've given you the core tracking tools — your Goals tracker, cash position, budget, and P&L. Update your progress as you go and I'll keep cheering you on.",
     teach:["Break a big goal into monthly milestones.","Track progress regularly so you stay motivated.","Celebrate small wins along the way."] },
 };
@@ -3077,6 +3077,10 @@ let _uidSeq=0;
 // Old widget types that were folded into the tabbed hubs — remap so they never render as "? Widget".
 const WIDGET_MIGRATE={debt_summary:'debt_hub',debt_payoff:'debt_hub',credit_util:'debt_hub',promo_tracker:'debt_hub',fire_progress:'fire_hub',retirement_proj:'fire_hub',fire_calc:'fire_hub',safe_to_spend:'cash_summary',budget_actual:'zero_budget'};
 function makeWidget(type){ type=WIDGET_MIGRATE[type]||type; return {uid:'w'+Date.now()+'_'+(_uidSeq++),type:type,span:(WIDGET_BY_ID[type]&&WIDGET_BY_ID[type].span)||1}; }
+// Build widgets from a type list, silently dropping any type not registered in the current
+// catalog — so a starter set can name widgets that live behind an as-yet-unmerged feature
+// without producing a blank tile until that feature lands.
+function _regWidgets(list){ return (list||[]).filter(t=>{ const rt=WIDGET_MIGRATE[t]||t; return WIDGET_BY_ID[rt]; }).map(makeWidget); }
 // Heal existing/seeded pages: remap folded widget types to hubs, drop unknown/removed types, and
 // collapse duplicate hubs (e.g. a page that had 4 separate debt widgets becomes one Debt hub).
 function migratePages(pages){
@@ -3150,7 +3154,7 @@ function palColor(palette, i, n, fallback){
 }
 function seedPages(bundleKey){
   const bp=BUNDLE_PAGES[bundleKey]||BUNDLE_PAGES.overview;
-  return bp.map((p,i)=>({ id:'p'+Date.now()+'_'+i, name:p[0], icon:p[1], color:p[2], widgets:(p[3]||[]).map(makeWidget) }));
+  return bp.map((p,i)=>({ id:'p'+Date.now()+'_'+i, name:p[0], icon:p[1], color:p[2], widgets:_regWidgets(p[3]||[]) }));
 }
 /* Build the whole app around chosen goals: a Goals home page + one focused
    page per goal, each carrying the widgets that help achieve it. */
@@ -3159,7 +3163,7 @@ function seedPagesFromGoals(chosenGoals){
   const ts=Date.now();
   // 1) Goals home page — the command center
   pages.push({ id:'p'+ts+'_home', name:'My Goals', icon:'🎯', color:'#2ecc8a',
-    widgets:['goals','net_worth_summary','cash_summary'].map(makeWidget) });
+    widgets:_regWidgets(['goals','health_score','safe_spend','net_worth_chart']) });
   // 2) one focused page per goal (dedup by metric so 2 debt goals share one page)
   const seenMetric={};
   chosenGoals.forEach((g,gi)=>{
@@ -3168,7 +3172,7 @@ function seedPagesFromGoals(chosenGoals){
     seenMetric[g.metric]=true;
     pages.push({ id:'p'+ts+'_g'+gi, name:plan.page.name, icon:plan.page.icon, color:plan.page.color,
       goalMetric:g.metric,   // tag the page so Richie can coach it
-      widgets:plan.widgets.map(makeWidget) });
+      widgets:_regWidgets(plan.widgets) });
   });
   return pages;
 }
