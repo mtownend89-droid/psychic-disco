@@ -43,6 +43,19 @@
     <div class="doc-body" id="holdBody"></div>
   </div>
 </div>
+<div id="reportModal" class="doc-modal" style="display:none" onclick="if(event.target===this)closeReport()">
+  <div class="doc-card report-card">
+    <div class="doc-head">
+      <span>📄 Monthly report</span>
+      <span class="report-head-actions report-noprint">
+        <button class="btn" onclick="reportExportCSV()">Export CSV</button>
+        <button class="btn" onclick="reportPrint()">Export PDF</button>
+        <button class="doc-x" onclick="closeReport()" aria-label="Close">✕</button>
+      </span>
+    </div>
+    <div class="doc-body" id="reportBody"></div>
+  </div>
+</div>
 
 <!-- ═══ LOGIN SCREEN ═══ -->
 <div id="loginScreen" style="display:none">

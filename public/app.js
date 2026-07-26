@@ -1560,6 +1560,96 @@ async function exportToExcel(){
   if(typeof sbRichie!=='undefined'&&sbRichie) sbRichie.do('tada');
 }
 
+/* ═══ MONTHLY REPORT ═══
+   An on-screen summary for a single calendar month (income, spend by category,
+   income sources, top merchants, net-worth snapshot) with CSV + print-to-PDF export. */
+function engMonthlyReport(offset){
+  offset=offset||0;
+  const base=new Date(), y=base.getFullYear(), m=base.getMonth()+offset;
+  const start=new Date(y,m,1), end=new Date(y,m+1,1);
+  const label=start.toLocaleString('en-US',{month:'long',year:'numeric'});
+  const isCurrent=offset===0;
+  const spendByCat={}, incomeBySource={}, merch={};
+  let income=0, spend=0, txnCount=0;
+  const has=dataLoaded && allTxns && allTxns.length>0;
+  if(has){
+    allTxns.forEach(t=>{
+      const td=new Date(t.date); if(td<start||td>=end) return;
+      txnCount++;
+      if(_isIncomeTxn(t)){ const v=Math.abs(t.amount); income+=v; const src=getTxnCategory(t); incomeBySource[src]=(incomeBySource[src]||0)+v; }
+      else if(t.amount>0 && !_txnExcludedFromSpend(t)){ spend+=t.amount; const c=getTxnCategory(t); spendByCat[c]=(spendByCat[c]||0)+t.amount; const nm=t.merchant_name||t.name||'—'; merch[nm]=(merch[nm]||0)+t.amount; }
+    });
+  } else {
+    Object.assign(spendByCat,{'Groceries':512,'Dining out':286,'Auto':452,'Utilities':320,'Subscription':142,'Shopping':210});
+    Object.assign(incomeBySource,{'Paycheck':5400,'Interest':40});
+    Object.assign(merch,{'Whole Foods':512,'Amazon':210,'Shell':180,'Netflix':16});
+    income=5440; spend=1922; txnCount=42;
+  }
+  const cats=Object.entries(spendByCat).map(([l,v])=>({label:l,value:Math.round(v),color:getCatColor(l)})).sort((a,b)=>b.value-a.value);
+  const incomes=Object.entries(incomeBySource).map(([l,v])=>({label:l,value:Math.round(v)})).sort((a,b)=>b.value-a.value);
+  const merchants=Object.entries(merch).map(([l,v])=>({label:l,value:Math.round(v)})).sort((a,b)=>b.value-a.value).slice(0,8);
+  const net=Math.round(income-spend), savingsRate=income>0?Math.round((income-spend)/income*100):0;
+  const nw=Math.round(engNetBalance()+engNWAssets()-engNWLiab());
+  return {offset,label,isCurrent,has,income:Math.round(income),spend:Math.round(spend),net,savingsRate,txnCount,cats,incomes,merchants,netWorth:nw};
+}
+let _reportOffset=0;
+function openReport(){ _reportOffset=0; const m=gg('reportModal'); if(!m) return; m.style.display='flex'; renderReport(); }
+function closeReport(){ const m=gg('reportModal'); if(m) m.style.display='none'; }
+function reportShift(d){ const n=_reportOffset+d; if(n>0) return; _reportOffset=n; renderReport(); }
+function renderReport(){
+  const el=gg('reportBody'); if(!el) return;
+  const r=engMonthlyReport(_reportOffset);
+  const partial=r.isCurrent?' <span class="rep-partial">(month in progress)</span>':'';
+  const maxCat=Math.max(1,...r.cats.map(c=>c.value));
+  const catRows=r.cats.length?r.cats.map(c=>`<div class="rep-row"><span class="rep-dot" style="background:${c.color}"></span><span class="rep-lbl">${esc(c.label)}</span><span class="rep-barwrap"><span class="rep-bar" style="width:${Math.round(c.value/maxCat*100)}%;background:${c.color}"></span></span><span class="rep-pct">${r.spend>0?Math.round(c.value/r.spend*100):0}%</span><b class="rep-amt">${fmtK(c.value)}</b></div>`).join(''):'<div class="ws-hint">No spending recorded this month.</div>';
+  const incRows=r.incomes.length?r.incomes.map(s=>`<div class="rep-line"><span>${esc(s.label)}</span><b style="color:var(--green)">${fmtK(s.value)}</b></div>`).join(''):'<div class="ws-hint">No income recorded this month.</div>';
+  const merchRows=r.merchants.length?r.merchants.map(s=>`<div class="rep-line"><span>${esc(s.label)}</span><b>${fmtK(s.value)}</b></div>`).join(''):'';
+  el.innerHTML=`
+    <div class="rep-nav report-noprint">
+      <button class="rep-navbtn" onclick="reportShift(-1)" aria-label="Previous month">‹</button>
+      <div class="rep-month">${esc(r.label)}${partial}</div>
+      <button class="rep-navbtn" onclick="reportShift(1)" aria-label="Next month"${r.offset>=0?' disabled':''}>›</button>
+    </div>
+    <div class="rep-print" id="repPrint">
+      <div class="rep-printhead"><div class="rep-brand">Matt &amp; Dana Finance</div><div class="rep-subtitle">${esc(r.label)} · financial report</div></div>
+      <div class="rep-sum">
+        <div class="rep-sum-card"><div class="rep-sum-lbl">Income</div><div class="rep-sum-num" style="color:var(--green)">${fmtK(r.income)}</div></div>
+        <div class="rep-sum-card"><div class="rep-sum-lbl">Spending</div><div class="rep-sum-num" style="color:var(--red)">${fmtK(r.spend)}</div></div>
+        <div class="rep-sum-card"><div class="rep-sum-lbl">Net</div><div class="rep-sum-num" style="color:${r.net>=0?'var(--green)':'var(--red)'}">${r.net<0?'−':''}${fmtK(Math.abs(r.net))}</div></div>
+        <div class="rep-sum-card"><div class="rep-sum-lbl">Savings rate</div><div class="rep-sum-num">${r.savingsRate}%</div></div>
+      </div>
+      <div class="rep-sec">Spending by category</div>${catRows}
+      <div class="rep-sec">Income by source</div>${incRows}
+      ${merchRows?`<div class="rep-sec">Top merchants</div>${merchRows}`:''}
+      <div class="rep-sec">Net worth <span style="font-weight:400;color:var(--muted)">· as of today</span></div>
+      <div class="rep-line"><span>Total net worth</span><b>${r.netWorth<0?'−':''}${fmtK(Math.abs(r.netWorth))}</b></div>
+      <div class="rep-foot">${r.txnCount} transaction${r.txnCount!==1?'s':''} · generated ${new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}${r.has?'':' · sample data'}</div>
+    </div>`;
+}
+function _downloadText(filename, text, mime){
+  try{ const blob=new Blob([text],{type:mime||'text/plain'}); const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click();
+    setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); },100);
+  }catch(e){ alert('Download failed — '+e.message); }
+}
+function _csvCell(v){ v=v==null?'':String(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+function reportExportCSV(){
+  const r=engMonthlyReport(_reportOffset);
+  const rows=[];
+  rows.push(['Matt & Dana Finance — '+r.label+' report']);
+  rows.push([]);
+  rows.push(['Summary']); rows.push(['Income',r.income]); rows.push(['Spending',r.spend]); rows.push(['Net',r.net]); rows.push(['Savings rate',r.savingsRate+'%']); rows.push(['Net worth (today)',r.netWorth]);
+  rows.push([]); rows.push(['Spending by category','Amount','% of spend']);
+  r.cats.forEach(c=>rows.push([c.label,c.value,(r.spend>0?Math.round(c.value/r.spend*100):0)+'%']));
+  rows.push([]); rows.push(['Income by source','Amount']);
+  r.incomes.forEach(s=>rows.push([s.label,s.value]));
+  if(r.merchants.length){ rows.push([]); rows.push(['Top merchants','Amount']); r.merchants.forEach(s=>rows.push([s.label,s.value])); }
+  const csv=rows.map(row=>row.map(_csvCell).join(',')).join('\r\n');
+  _downloadText(`Richie_Report_${r.label.replace(/\s+/g,'_')}.csv`, csv, 'text/csv;charset=utf-8');
+  if(typeof richieSay==='function') richieSay('📄 Report exported as CSV — it\'s in your downloads.');
+}
+function reportPrint(){ window.print(); }
+
 /* ═══ 0%-PROMO EXPIRATION TRACKING ═══
    Finds bills with a promo end date and computes days remaining + the APR you'd
    start paying once it expires. This is the "rate jump" early-warning system. */
@@ -6644,6 +6734,15 @@ function renderSettings(){
       </div>
 
       <div class="set-section">📊 Data & tools</div>
+      <div class="set-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
+          <div>
+            <div class="set-card-label" style="margin:0">📄 Monthly report</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">A clean one-month summary — income, spending by category, income sources, top merchants, and a net-worth snapshot. Export as CSV or save to PDF.</div>
+          </div>
+          <button class="btn primary" onclick="openReport()">View report</button>
+        </div>
+      </div>
       <div class="set-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
           <div>
