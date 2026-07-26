@@ -3083,7 +3083,7 @@ const BUNDLE_PAGES={
 };
 let _uidSeq=0;
 // Old widget types that were folded into the tabbed hubs — remap so they never render as "? Widget".
-const WIDGET_MIGRATE={debt_summary:'debt_hub',debt_payoff:'debt_hub',credit_util:'debt_hub',promo_tracker:'debt_hub',fire_progress:'fire_hub',retirement_proj:'fire_hub',fire_calc:'fire_hub',safe_to_spend:'cash_summary',budget_actual:'zero_budget',fire_drill:'fire_hub',debt_planner:'debt_hub'};
+const WIDGET_MIGRATE={debt_summary:'debt_hub',debt_payoff:'debt_hub',credit_util:'debt_hub',promo_tracker:'debt_hub',fire_progress:'fire_hub',retirement_proj:'fire_hub',fire_calc:'fire_hub',safe_to_spend:'cash_summary',budget_actual:'zero_budget',fire_drill:'fire_hub',debt_planner:'debt_hub',cashflow_chart:'cashflow_planner'};
 function makeWidget(type){ type=WIDGET_MIGRATE[type]||type; return {uid:'w'+Date.now()+'_'+(_uidSeq++),type:type,span:(WIDGET_BY_ID[type]&&WIDGET_BY_ID[type].span)||1}; }
 // Build widgets from a type list, silently dropping any type not registered in the current
 // catalog — so a starter set can name widgets that live behind an as-yet-unmerged feature
@@ -3702,9 +3702,10 @@ const WIDGET_CATALOG=[
   {id:'bill_calendar',name:'Bill Calendar',icon:'🗓️',cat:'Budget',span:2,minLevel:1,desc:'A month view of upcoming bills & income by due date — spot heavy weeks, tap a day for detail.'},
   {id:'zero_budget',name:'Zero-Based Budget',icon:'🧮',cat:'Budget',span:2,minLevel:2,desc:'Give every dollar a job — with live actual-vs-budgeted spending per envelope.'},
   {id:'savings_buckets',name:'Savings Buckets',icon:'🪣',cat:'Overview',span:2,minLevel:1,desc:'Sinking funds — Reserve, Home, Family, Medical — each with its own goal and progress.'},
-  {id:'cashflow_chart',name:'Cash Flow',icon:'🌊',cat:'Cash Flow',span:2,minLevel:1,desc:'Your projected running balance — the same forward line as the Cash Flow Planner.'},
+  // Cash Flow (read-only chart) folded into the Cash Flow Planner — same projection line, plus
+  // editing. Kept out of the catalog; existing widgets migrate via WIDGET_MIGRATE above.
   {id:'pl_panel',name:'Profit & Loss',icon:'💹',cat:'Cash Flow',span:2,minLevel:1,desc:'Income, spending, net & savings rate by day/week/month.'},
-  {id:'cashflow_planner',name:'Cash Flow Planner',icon:'📅',cat:'Cash Flow',span:2,minLevel:1,desc:'Project your running balance forward — edit bills, see your low point before it hits.'},
+  {id:'cashflow_planner',name:'Cash Flow',icon:'📅',cat:'Cash Flow',span:2,minLevel:1,desc:'Your projected running balance — see your low point before it hits, and edit bills to fix it.'},
   {id:'fund_triage',name:'Extra Funds Triage',icon:'💸',cat:'Cash Flow',span:2,minLevel:1,desc:'Delegate your monthly surplus by priority — high-interest debt, then savings, then investing.'},
   {id:'goals',name:'Financial Goals',icon:'🎯',cat:'Overview',span:2,minLevel:1,desc:'Set goals, track progress automatically, and let Richie coach you to the finish.'},
   {id:'health_score',name:'Financial Health Score',icon:'🩺',cat:'Overview',span:2,minLevel:1,desc:'A single 0–100 score across savings rate, emergency fund, debt-to-income, credit use & high-interest debt — with Richie\'s top fix.'},
