@@ -2289,6 +2289,14 @@ canvas.chart-interactive{cursor:crosshair;}
 .jrn-sec{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:4px;display:flex;justify-content:space-between;align-items:center;}
 .jrn-sec-ct{color:var(--green);font-weight:700;}
 .jrn-quests{display:flex;flex-direction:column;gap:5px;margin:6px 0 2px;}
+.jrn-chal{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin:6px 0 2px;}
+.jrn-chal-top{display:flex;align-items:baseline;gap:8px;}
+.jrn-chal-lbl{font-size:11px;color:var(--muted);font-weight:600;}
+.jrn-chal-top b{font-size:17px;font-weight:800;}
+.jrn-chal-vs{margin-left:auto;font-size:11px;color:var(--muted);}
+.jrn-chal-bar{height:8px;border-radius:5px;background:var(--surface3);overflow:hidden;margin:7px 0 6px;}
+.jrn-chal-fill{height:100%;border-radius:5px;min-width:2px;transition:width .3s;}
+.jrn-chal-msg{font-size:11.5px;color:var(--text);line-height:1.4;}
 .jrn-quest{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);font-size:12.5px;}
 .jrn-quest.done{opacity:.62;}
 .jrn-quest.done .jrn-q-lbl{text-decoration:line-through;}

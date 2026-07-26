@@ -6743,6 +6743,32 @@ function gamiInit(){
 }
 function _gProgLabel(p){ if(p.unit==='$') return fmtK(p.cur)+' / '+fmtK(p.target); if(p.unit==='%') return Math.round(p.cur)+'% / '+p.target+'%'; if(p.unit==='d') return p.cur+' / '+p.target+'d'; return p.cur+' / '+p.target; }
 function _gRelDate(ts){ const d=Math.floor((Date.now()-ts)/86400000); if(d<=0) return 'today'; if(d===1) return 'yesterday'; if(d<7) return d+'d ago'; return new Date(ts).toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+// Household weekly challenge — this rolling 7-day spend vs the 7 before. State syncs across the
+// household, so it's a shared "beat last week" game for everyone on the account (not per-member
+// attribution, which the data model doesn't track).
+function _householdChallenge(){
+  try{
+    if(!dataLoaded) return '';
+    const now=Date.now();
+    const wk=(a,b)=>(allTxns||[]).filter(t=>{ const d=new Date(t.date).getTime(); return d>=now-b*86400000 && d<now-a*86400000 && t.amount>0 && !_txnExcludedFromSpend(t); }).reduce((s,t)=>s+t.amount,0);
+    const thisWk=Math.round(wk(0,7)), lastWk=Math.round(wk(7,14));
+    if(lastWk<=0 && thisWk<=0) return '';
+    const members=((APP.profiles)||[]).length;
+    const who=members>1?'Your household':'You';
+    const under=thisWk<=lastWk, diff=Math.abs(lastWk-thisWk);
+    const pct=lastWk>0?Math.min(100,Math.round(thisWk/lastWk*100)):100;
+    const col=under?'var(--pos)':'var(--amber)';
+    const msg = lastWk<=0 ? `First week tracked — ${fmtK(thisWk)} spent. Next week you'll have a number to beat.`
+      : under ? `${who} spent ${fmtK(thisWk)} — ${fmtK(diff)} under last week's ${fmtK(lastWk)}. 🏆 Keep it up!`
+      : `${who} spent ${fmtK(thisWk)} — ${fmtK(diff)} over last week's ${fmtK(lastWk)}. Rein it in to win the week.`;
+    return `<div class="jrn-sec">Beat last week${members>1?' · household':''}</div>
+      <div class="jrn-chal">
+        <div class="jrn-chal-top"><span class="jrn-chal-lbl">This week</span><b style="color:${col}">${fmtK(thisWk)}</b><span class="jrn-chal-vs">vs ${fmtK(lastWk)} last week</span></div>
+        <div class="jrn-chal-bar"><div class="jrn-chal-fill" style="width:${pct}%;background:${col}"></div></div>
+        <div class="jrn-chal-msg">${msg}</div>
+      </div>`;
+  }catch(e){ return ''; }
+}
 function journeyBody(w){
   try{ gamiCheckin(); gamiEvaluate(); }catch(e){}
   const s=gamiLoad(); const m=gamiMetrics();
@@ -6780,6 +6806,7 @@ function journeyBody(w){
         + `<div class="jrn-sec">Weekly quests <span class="jrn-sec-ct">${wDone}/${weekly.length}</span></div><div class="jrn-quests">${weekly.map(row).join('')}</div>`;
     }catch(e){ return ''; } })()}
     ${(function(){ try{ const h=nwHistMonthly(6); if(h&&h.length>=2){ const vals=h.map(x=>x.v); const diff=vals[vals.length-1]-vals[0]; const up=diff>=0; return `<div class="jrn-sec">Net worth trend <span class="jrn-trend-lbl ${up?'up':'down'}">${up?'▲':'▼'} ${fmtK(Math.abs(diff))} · ${h.length}mo</span></div><div class="jrn-trend">${_sparkline(vals, up?'#2ecc8a':'#e85d75', 260, 42)}</div>`; } }catch(e){} return ''; })()}
+    ${_householdChallenge()}
     <div class="jrn-sec">Next milestones</div>
     ${milestones}
     <div class="jrn-sec">Recent wins</div>
