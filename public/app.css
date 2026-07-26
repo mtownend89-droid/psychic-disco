@@ -1389,6 +1389,20 @@ body.fx-slime .canvas-widget-card::after{content:'';position:absolute;left:-2%;r
 .cfp-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:4px 0 9px;}
 .cfp-events{display:flex;flex-direction:column;gap:5px;max-height:280px;overflow-y:auto;}
 /* Topbar Review button (re-opens the Money To-Do wizard) */
+/* Category rules manager (Settings) */
+.rule-list{display:flex;flex-direction:column;margin-bottom:12px;}
+.rule-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);}
+.rule-row:last-child{border-bottom:none;}
+.rule-nm{flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--text);display:flex;flex-direction:column;gap:1px;overflow:hidden;text-overflow:ellipsis;}
+.rule-count{font-size:10.5px;color:var(--muted);font-weight:500;}
+.rule-arrow{color:var(--muted);font-size:13px;flex-shrink:0;}
+.rule-row .txn-cat-sel{flex-shrink:0;max-width:150px;}
+.rule-del{background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:0 4px;flex-shrink:0;}
+.rule-del:hover{color:var(--red);}
+.rule-add{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:4px;}
+.rule-add .mf-in{flex:1;min-width:140px;width:auto;height:36px;}
+.rule-add .txn-cat-sel{flex-shrink:0;}
+.rule-addbtn{flex-shrink:0;height:36px;padding:0 16px;}
 /* Persistent "reconnect a bank" bar under the topbar */
 .reconnect-banner{display:flex;align-items:center;gap:10px;padding:9px 16px;background:var(--amber-dim,rgba(240,165,64,.15));border-bottom:1px solid var(--amber);color:var(--text);font-size:12.5px;line-height:1.4;flex-shrink:0;}
 .reconnect-ic{font-size:16px;flex-shrink:0;}
