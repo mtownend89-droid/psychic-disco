@@ -3083,7 +3083,7 @@ const BUNDLE_PAGES={
 };
 let _uidSeq=0;
 // Old widget types that were folded into the tabbed hubs — remap so they never render as "? Widget".
-const WIDGET_MIGRATE={debt_summary:'debt_hub',debt_payoff:'debt_hub',credit_util:'debt_hub',promo_tracker:'debt_hub',fire_progress:'fire_hub',retirement_proj:'fire_hub',fire_calc:'fire_hub',safe_to_spend:'cash_summary',budget_actual:'zero_budget'};
+const WIDGET_MIGRATE={debt_summary:'debt_hub',debt_payoff:'debt_hub',credit_util:'debt_hub',promo_tracker:'debt_hub',fire_progress:'fire_hub',retirement_proj:'fire_hub',fire_calc:'fire_hub',safe_to_spend:'cash_summary',budget_actual:'zero_budget',fire_drill:'fire_hub',debt_planner:'debt_hub'};
 function makeWidget(type){ type=WIDGET_MIGRATE[type]||type; return {uid:'w'+Date.now()+'_'+(_uidSeq++),type:type,span:(WIDGET_BY_ID[type]&&WIDGET_BY_ID[type].span)||1}; }
 // Build widgets from a type list, silently dropping any type not registered in the current
 // catalog — so a starter set can name widgets that live behind an as-yet-unmerged feature
@@ -3719,8 +3719,8 @@ const WIDGET_CATALOG=[
   {id:'investments',name:'Investments',icon:'💼',cat:'Wealth',span:2,minLevel:5,desc:'Your portfolio — positions pulled from statements, allocation, and one-tap research. (Mogul)'},
   {id:'fire_hub',name:'Wealth & FIRE',icon:'🔥',cat:'Wealth',span:2,minLevel:3,desc:'Financial-independence progress, long-term projection, and an interactive calculator — in tabs.'},
   {id:'debt_hub',name:'Debt',icon:'💳',cat:'Debt',span:2,minLevel:1,desc:'Everything you owe in one place — balances, payoff timeline, credit utilization, credit-score monitor, and 0% promos, in tabs.'},
-  {id:'fire_drill',name:'Fire Drill Simulator',icon:'🧯',cat:'Playground',span:2,minLevel:2,desc:'Stress-test your finances against job loss, disasters & more.'},
-  {id:'debt_planner',name:'Debt Payoff Lab',icon:'🏔️',cat:'Playground',span:2,minLevel:2,desc:'Interactive avalanche vs. snowball with extra-payment slider.'},
+  // Fire Drill (stress test) and Debt Payoff Lab now live as tabs inside Wealth & FIRE and Debt
+  // respectively — see FIRE_TABS / DEBT_TABS. Kept out of the catalog; existing widgets migrate below.
 ];
 const WIDGET_BY_ID=Object.fromEntries(WIDGET_CATALOG.map(w=>[w.id,w]));
 function widgetUnlocked(w){ return APP.proMode || w.minLevel<=APP.level; }
@@ -4287,7 +4287,7 @@ function retirementProjBody(w){
   return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Projected growth</div><div style="height:140px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
 }
 // One "Wealth" widget with tabs — replaces FIRE Progress / Retirement Projection / FIRE Calculator.
-const FIRE_TABS=[{id:'fi',label:'FI Progress',fn:'fireProgressBody'},{id:'proj',label:'Projection',fn:'retirementProjBody',chart:'retirement_proj'},{id:'calc',label:'Calculator',fn:'fireWidgetBody',chart:'fire_calc'}];
+const FIRE_TABS=[{id:'fi',label:'FI Progress',fn:'fireProgressBody'},{id:'proj',label:'Projection',fn:'retirementProjBody',chart:'retirement_proj'},{id:'calc',label:'Calculator',fn:'fireWidgetBody',chart:'fire_calc'},{id:'stress',label:'Stress test',fn:'fdWidgetBody',mount:'fire_drill'}];
 let _fireHub={};
 function fireHubBody(w){
   const cur=_fireHub[w.uid]||'fi';
@@ -4305,6 +4305,7 @@ function fireHubMount(w){
   // draw the tab's chart if it has one (canvas is cv_<uid>, shared with fireRefresh/buildWidgetChart)
   if(t.chart==='fire_calc'){ try{ fireRefresh(); }catch(e){} }
   else if(t.chart==='retirement_proj'){ try{ buildWidgetChart({...w, type:'retirement_proj'}, 'cv_'+w.uid); }catch(e){} }
+  else if(t.mount==='fire_drill'){ try{ fdSetScenario(_fd.scenario||'job'); }catch(e){} }
 }
 
 function fireWidgetBody(w){
@@ -5189,7 +5190,7 @@ function debtPayoffBody(w){
   </div>`;
 }
 // One "Debt" widget with tabs — replaces the separate Total Debt / Payoff / Credit / Promo cards.
-const DEBT_TABS=[{id:'owed',label:'Owed',fn:'debtSummaryBody'},{id:'payoff',label:'Payoff',fn:'debtPayoffBody'},{id:'credit',label:'Credit',fn:'creditUtilBody'},{id:'score',label:'Score',fn:'creditScoreBody'},{id:'promo',label:'0% Promo',fn:'promoTrackerBody'}];
+const DEBT_TABS=[{id:'owed',label:'Owed',fn:'debtSummaryBody'},{id:'payoff',label:'Payoff',fn:'debtPayoffBody'},{id:'lab',label:'Lab',fn:'dpWidgetBody',mount:'debt_planner'},{id:'credit',label:'Credit',fn:'creditUtilBody'},{id:'score',label:'Score',fn:'creditScoreBody'},{id:'promo',label:'0% Promo',fn:'promoTrackerBody'}];
 let _debtHub={};
 function debtHubBody(w){
   const cur=_debtHub[w.uid]||'owed';
@@ -5206,6 +5207,7 @@ function debtHubMount(w){
   // sync tab button states
   const btns=wrap.parentElement.querySelectorAll('.hub-tab');
   DEBT_TABS.forEach((x,i)=>{ if(btns[i]) btns[i].classList.toggle('on', x.id===cur); });
+  if(t.mount==='debt_planner'){ try{ dpRecalc(); dpRenderOrder(); }catch(e){} }
 }
 
 /* ═══ CREDIT SCORE MONITOR (Debt hub tab) ═══
