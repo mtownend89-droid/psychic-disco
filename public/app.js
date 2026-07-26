@@ -575,7 +575,7 @@ function applyBillOverrides(list){
 function toggleBillPaid(key){
   const ov=_billOverrides(); ov[key]=ov[key]||{}; ov[key].paid=!ov[key].paid; saveState();
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
-  if(ov[key].paid){ const nm=(key.split('|')[0]||'that').trim(); try{ richieCelebrate(`Boom — ${nm} marked paid! ✅ One less thing on the list.`); }catch(e){} }
+  if(ov[key].paid){ try{ gamiMarkEngaged('billpaid'); }catch(e){} const nm=(key.split('|')[0]||'that').trim(); try{ richieCelebrate(`Boom — ${nm} marked paid! ✅ One less thing on the list.`); }catch(e){} }
 }
 function setBillPay(key,val){
   const ov=_billOverrides(); ov[key]=ov[key]||{}; const n=parseFloat(val); if(!isNaN(n)&&n>=0) ov[key].pay=n; saveState();
@@ -1881,27 +1881,27 @@ function _goals(){
    and how Richie should teach the path. */
 const GOAL_PLANS={
   emergency:{ page:{name:'Emergency Fund',icon:'🛟',color:'#38bdf8'},
-    widgets:['goals','savings_buckets','cash_summary','zero_budget','cashflow_planner','bills_list'],
+    widgets:['goals','health_score','safe_spend','savings_buckets','bill_calendar','zero_budget'],
     coach:"An emergency fund is your financial seatbelt. I've set up Savings Buckets so you can grow it as its own sinking fund, a Cash on Hand tracker, your Zero-Based Budget to carve out savings, and the Cash Flow Planner to see what you can set aside each payday. Automate a transfer the day you get paid — pay your future self first.",
     teach:["Set aside a fixed amount every payday — before you spend.","Keep it in a separate savings account so it's out of sight.","Start with $1,000, then build to 3 months of expenses."] },
   debt:{ page:{name:'Debt Freedom',icon:'🚀',color:'#f05c5c'},
-    widgets:['goals','debt_summary','credit_util','promo_tracker','debt_payoff','bills_list','cashflow_planner'],
+    widgets:['goals','health_score','debt_hub','safe_spend','bill_calendar','cashflow_planner'],
     coach:"Let's get you debt-free. I've laid out your Total Debt, your Credit Utilization gauge, a 0%-Promo Tracker so no intro rate sneaks up on you, the Debt Payoff Planner (try avalanche — it kills the highest interest first), your Bills, and the Cash Flow Planner to find extra dollars. Every extra payment is a guaranteed return equal to your interest rate.",
     teach:["Always pay more than the minimum — even $25 extra compounds.","Attack the highest-APR balance first (avalanche method).","Pay off 0% promos before they expire — the rate jump is brutal.","Keep utilization under 30% (under 10% is ideal) to protect your score."] },
   savings:{ page:{name:'Savings Builder',icon:'💰',color:'#2ecc8a'},
-    widgets:['goals','savings_buckets','budget_actual','zero_budget','pl_panel','top_categories'],
+    widgets:['goals','health_score','savings_buckets','spending_hub','safe_spend','zero_budget'],
     coach:"Building savings is about widening the gap between what you earn and what you spend. I've set up Savings Buckets to fund your goals, Budget vs Actual to see where you're drifting, your Zero-Based Budget, a Profit & Loss panel, and Top Categories to spot what to trim. Find one expense to cut and redirect it into a bucket.",
     teach:["Automate savings so it happens without willpower.","Review your top spending category monthly and trim 10%.","Treat savings like a non-negotiable bill."] },
   networth:{ page:{name:'Wealth Builder',icon:'💎',color:'#5b8def'},
-    widgets:['goals','net_worth_summary','net_worth_chart','debt_summary','pl_panel'],
+    widgets:['goals','health_score','net_worth_chart','debt_hub','spending_hub'],
     coach:"Net worth is the real scoreboard — assets minus debts. I've set up your Net Worth snapshot and trend chart so you can watch it climb, plus debt and P&L so you see both levers. Grow assets, shrink debts, and let time + compounding do the heavy lifting.",
     teach:["Net worth = what you own minus what you owe. Grow the gap.","Invest consistently — time in the market beats timing it.","Track the trend monthly; direction matters more than any single number."] },
   savingsrate:{ page:{name:'Savings Rate',icon:'📊',color:'#a78bfa'},
-    widgets:['goals','pl_panel','budget_actual','zero_budget','top_categories','cashflow_chart'],
+    widgets:['goals','health_score','spending_hub','zero_budget','safe_spend','pl_panel'],
     coach:"Your savings rate is the single best predictor of financial freedom. I've set up your Profit & Loss, Budget vs Actual to catch overspending, the budget to plan it, and Top Categories to find the leaks. Push the rate up a few points at a time — every percent buys you future freedom.",
     teach:["Savings rate = (income − spending) ÷ income. Aim to raise it steadily.","Increasing income helps, but cutting waste is faster to control.","A 20% rate is solid; 30%+ is wealth-building territory."] },
   custom:{ page:{name:'My Goal',icon:'🎯',color:'#2ecc8a'},
-    widgets:['goals','cash_summary','zero_budget','pl_panel'],
+    widgets:['goals','health_score','safe_spend','spending_hub','bill_calendar'],
     coach:"Custom goal locked in. I've given you the core tracking tools — your Goals tracker, cash position, budget, and P&L. Update your progress as you go and I'll keep cheering you on.",
     teach:["Break a big goal into monthly milestones.","Track progress regularly so you stay motivated.","Celebrate small wins along the way."] },
 };
@@ -2609,7 +2609,15 @@ function healthScoreBody(w){
   const rows=h.comps.map(c=>{ const sc=_hsColor(c.score); const fix=HS_FIX[c.key]; const go=fix?` hs-row-go" onclick="event.stopPropagation();healthGoto('${fix}')" title="Fix this — take me there` : '"'; return `<div class="hs-row${go}"><span class="hs-ico">${c.icon}</span><div class="hs-main"><div class="hs-toprow"><span class="hs-lbl">${esc(c.label)}${fix?' <span class="hs-chev">›</span>':''}</span><span class="hs-val" style="color:${sc}">${esc(c.value)}</span></div><div class="hs-barwrap"><div class="hs-bar" style="width:${c.score}%;background:${sc}"></div></div></div></div>`; }).join('');
   const tip=h.weakest?`<div class="hs-tip"><span>💡</span><span>${esc(h.weakest.tip)}</span></div>`:`<div class="hs-tip"><span>🎉</span><span>Every pillar is in good shape — keep it up!</span></div>`;
   return `<div class="hs-wrap">
-    <div class="hs-head">${_hsRing(h.overall,col,h.grade)}<div class="hs-headtxt"><div class="hs-headlbl">Financial health${dataLoaded?'':' · sample'}</div><div class="hs-headsub">Across ${h.comps.length} pillar${h.comps.length!==1?'s':''} — savings, safety, and debt.</div></div></div>
+    <div class="hs-head">${_hsRing(h.overall,col,h.grade)}<div class="hs-headtxt"><div class="hs-headlbl">Financial health${dataLoaded?'':' · sample'}</div>${(function(){
+      const chg=(typeof hsChangeSince==='function')?hsChangeSince(7):null;
+      const nx=(typeof _hsToNext==='function')?_hsToNext(h.overall):null;
+      const parts=[];
+      if(chg && chg.abs!==0){ const up=chg.abs>0; parts.push(`<span style="color:${up?'var(--pos)':'var(--red)'};font-weight:700">${up?'▲':'▼'} ${Math.abs(chg.abs)} pt${Math.abs(chg.abs)!==1?'s':''} this week</span>`); }
+      if(nx){ parts.push(`<span style="color:var(--muted)">${nx.pts} to a ${esc(nx.grade)}</span>`); }
+      const line=parts.length?parts.join(' · '):`Across ${h.comps.length} pillar${h.comps.length!==1?'s':''} — savings, safety, and debt.`;
+      return `<div class="hs-headsub">${line}</div>`;
+    })()}</div></div>
     <div class="hs-rows">${rows}</div>
     ${tip}
   </div>`;
@@ -3075,8 +3083,12 @@ const BUNDLE_PAGES={
 };
 let _uidSeq=0;
 // Old widget types that were folded into the tabbed hubs — remap so they never render as "? Widget".
-const WIDGET_MIGRATE={debt_summary:'debt_hub',debt_payoff:'debt_hub',credit_util:'debt_hub',promo_tracker:'debt_hub',fire_progress:'fire_hub',retirement_proj:'fire_hub',fire_calc:'fire_hub',safe_to_spend:'cash_summary',budget_actual:'zero_budget'};
+const WIDGET_MIGRATE={debt_summary:'debt_hub',debt_payoff:'debt_hub',credit_util:'debt_hub',promo_tracker:'debt_hub',fire_progress:'fire_hub',retirement_proj:'fire_hub',fire_calc:'fire_hub',safe_to_spend:'cash_summary',budget_actual:'zero_budget',fire_drill:'fire_hub',debt_planner:'debt_hub'};
 function makeWidget(type){ type=WIDGET_MIGRATE[type]||type; return {uid:'w'+Date.now()+'_'+(_uidSeq++),type:type,span:(WIDGET_BY_ID[type]&&WIDGET_BY_ID[type].span)||1}; }
+// Build widgets from a type list, silently dropping any type not registered in the current
+// catalog — so a starter set can name widgets that live behind an as-yet-unmerged feature
+// without producing a blank tile until that feature lands.
+function _regWidgets(list){ return (list||[]).filter(t=>{ const rt=WIDGET_MIGRATE[t]||t; return WIDGET_BY_ID[rt]; }).map(makeWidget); }
 // Heal existing/seeded pages: remap folded widget types to hubs, drop unknown/removed types, and
 // collapse duplicate hubs (e.g. a page that had 4 separate debt widgets becomes one Debt hub).
 function migratePages(pages){
@@ -3150,7 +3162,7 @@ function palColor(palette, i, n, fallback){
 }
 function seedPages(bundleKey){
   const bp=BUNDLE_PAGES[bundleKey]||BUNDLE_PAGES.overview;
-  return bp.map((p,i)=>({ id:'p'+Date.now()+'_'+i, name:p[0], icon:p[1], color:p[2], widgets:(p[3]||[]).map(makeWidget) }));
+  return bp.map((p,i)=>({ id:'p'+Date.now()+'_'+i, name:p[0], icon:p[1], color:p[2], widgets:_regWidgets(p[3]||[]) }));
 }
 /* Build the whole app around chosen goals: a Goals home page + one focused
    page per goal, each carrying the widgets that help achieve it. */
@@ -3159,7 +3171,7 @@ function seedPagesFromGoals(chosenGoals){
   const ts=Date.now();
   // 1) Goals home page — the command center
   pages.push({ id:'p'+ts+'_home', name:'My Goals', icon:'🎯', color:'#2ecc8a',
-    widgets:['goals','net_worth_summary','cash_summary'].map(makeWidget) });
+    widgets:_regWidgets(['goals','health_score','safe_spend','net_worth_chart']) });
   // 2) one focused page per goal (dedup by metric so 2 debt goals share one page)
   const seenMetric={};
   chosenGoals.forEach((g,gi)=>{
@@ -3168,7 +3180,7 @@ function seedPagesFromGoals(chosenGoals){
     seenMetric[g.metric]=true;
     pages.push({ id:'p'+ts+'_g'+gi, name:plan.page.name, icon:plan.page.icon, color:plan.page.color,
       goalMetric:g.metric,   // tag the page so Richie can coach it
-      widgets:plan.widgets.map(makeWidget) });
+      widgets:_regWidgets(plan.widgets) });
   });
   return pages;
 }
@@ -3273,7 +3285,7 @@ window.addEventListener('visibilitychange', ()=>{ if(document.visibilityState===
 let _persistTimer=null;
 function _persistSoon(){ clearTimeout(_persistTimer); _persistTimer=setTimeout(()=>{ try{ saveState(); }catch(e){} }, 400); }
 /* ── Cross-device state sync: push edits to the server, pull newer edits from other devices ── */
-const SYNC_KEYS=['mdf_categories','mdf_cat_overrides','mdf_cat_rules','mdf_txn_notes','mdf_txn_tags','mdf_acct_cats','mdf_nw_history','mdf_fire','mdf_gami','richie_setup','richie_proactive','richie_audio','richie_voice'];
+const SYNC_KEYS=['mdf_categories','mdf_cat_overrides','mdf_cat_rules','mdf_txn_notes','mdf_txn_tags','mdf_acct_cats','mdf_nw_history','mdf_health_history','mdf_health_grade','mdf_fire','mdf_gami','richie_setup','richie_proactive','richie_audio','richie_voice'];
 function syncCollect(){ try{ _saveActiveLayout(); }catch(e){}   /* fold live pages into layouts before EVERY push (immediate/flush/heartbeat), else a push can ship stale layouts */
   const stores={}; SYNC_KEYS.forEach(k=>{ const v=LS.getItem(k); if(v!=null) stores[k]=v; }); return { app:APP, stores, _ts:Date.now() }; }
 function _widgetCount(pages){ return (pages||[]).reduce((s,p)=>s+((p&&p.widgets||[]).length),0); }
@@ -3700,6 +3712,7 @@ const WIDGET_CATALOG=[
   {id:'all_transactions',name:'All Transactions',icon:'🧾',cat:'Cash Flow',span:2,minLevel:1,desc:'Every transaction — search, categorize, and tag (paycheck, transfer, business…).'},
   {id:'recurring',name:'Subscriptions & Renewals',icon:'🔁',cat:'Cash Flow',span:2,minLevel:1,desc:'Auto-detected subscriptions & recurring bills — next renewal, price-hike alerts, flag any to cancel, monthly & yearly totals.'},
   {id:'sankey',name:'Money Flow (Sankey)',icon:'🔀',cat:'Cash Flow',span:2,minLevel:2,desc:'Income → category group → category, flowing left to right through your category tree.'},
+  {id:'spending_hub',name:'Spending',icon:'🛍️',cat:'Cash Flow',span:2,minLevel:1,desc:'All your spending in one place — this month vs budget, the trend, top categories, and seasonal patterns, in tabs.'},
   {id:'top_categories',name:'Top Categories',icon:'📊',cat:'Cash Flow',span:1,minLevel:1,desc:'Where your money goes most.'},
   {id:'spending_trends',name:'Spending Trends',icon:'🆚',cat:'Cash Flow',span:2,minLevel:1,desc:'This month vs last — biggest category movers, projected month-end total, and whether you\'re pacing over or under budget.'},
   {id:'category_heatmap',name:'Category Heatmap',icon:'🌡️',cat:'Cash Flow',span:2,minLevel:2,desc:'Spending by category across months — spot seasonal patterns at a glance.'},
@@ -3707,8 +3720,8 @@ const WIDGET_CATALOG=[
   {id:'investments',name:'Investments',icon:'💼',cat:'Wealth',span:2,minLevel:5,desc:'Your portfolio — positions pulled from statements, allocation, and one-tap research. (Mogul)'},
   {id:'fire_hub',name:'Wealth & FIRE',icon:'🔥',cat:'Wealth',span:2,minLevel:3,desc:'Financial-independence progress, long-term projection, and an interactive calculator — in tabs.'},
   {id:'debt_hub',name:'Debt',icon:'💳',cat:'Debt',span:2,minLevel:1,desc:'Everything you owe in one place — balances, payoff timeline, credit utilization, credit-score monitor, and 0% promos, in tabs.'},
-  {id:'fire_drill',name:'Fire Drill Simulator',icon:'🧯',cat:'Playground',span:2,minLevel:2,desc:'Stress-test your finances against job loss, disasters & more.'},
-  {id:'debt_planner',name:'Debt Payoff Lab',icon:'🏔️',cat:'Playground',span:2,minLevel:2,desc:'Interactive avalanche vs. snowball with extra-payment slider.'},
+  // Fire Drill (stress test) and Debt Payoff Lab now live as tabs inside Wealth & FIRE and Debt
+  // respectively — see FIRE_TABS / DEBT_TABS. Kept out of the catalog; existing widgets migrate below.
 ];
 const WIDGET_BY_ID=Object.fromEntries(WIDGET_CATALOG.map(w=>[w.id,w]));
 function widgetUnlocked(w){ return APP.proMode || w.minLevel<=APP.level; }
@@ -4115,6 +4128,7 @@ function mountWidgetCharts(pg){
       if(w.type==='all_transactions'){ txnFeedMount(w); }
       if(w.type==='debt_hub'){ debtHubMount(w); }
       if(w.type==='fire_hub'){ fireHubMount(w); }
+      if(w.type==='spending_hub'){ spendHubMount(w); }
     }catch(e){ /* ignore */ }
   });
   if(typeof Chart==='undefined') return;
@@ -4275,7 +4289,7 @@ function retirementProjBody(w){
   return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Projected growth</div><div style="height:140px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
 }
 // One "Wealth" widget with tabs — replaces FIRE Progress / Retirement Projection / FIRE Calculator.
-const FIRE_TABS=[{id:'fi',label:'FI Progress',fn:'fireProgressBody'},{id:'proj',label:'Projection',fn:'retirementProjBody',chart:'retirement_proj'},{id:'calc',label:'Calculator',fn:'fireWidgetBody',chart:'fire_calc'}];
+const FIRE_TABS=[{id:'fi',label:'FI Progress',fn:'fireProgressBody'},{id:'proj',label:'Projection',fn:'retirementProjBody',chart:'retirement_proj'},{id:'calc',label:'Calculator',fn:'fireWidgetBody',chart:'fire_calc'},{id:'stress',label:'Stress test',fn:'fdWidgetBody',mount:'fire_drill'}];
 let _fireHub={};
 function fireHubBody(w){
   const cur=_fireHub[w.uid]||'fi';
@@ -4293,6 +4307,7 @@ function fireHubMount(w){
   // draw the tab's chart if it has one (canvas is cv_<uid>, shared with fireRefresh/buildWidgetChart)
   if(t.chart==='fire_calc'){ try{ fireRefresh(); }catch(e){} }
   else if(t.chart==='retirement_proj'){ try{ buildWidgetChart({...w, type:'retirement_proj'}, 'cv_'+w.uid); }catch(e){} }
+  else if(t.mount==='fire_drill'){ try{ fdSetScenario(_fd.scenario||'job'); }catch(e){} }
 }
 
 function fireWidgetBody(w){
@@ -4619,6 +4634,7 @@ function renderBudgetTemplates(){
 function applyBudgetTemplate(){
   const r=engBudgetTemplate(_budTpl.tpl);
   if(!r.envelopes.length){ alert('Add your income first so Richie can size the budget.'); return; }
+  try{ gamiMarkEngaged('template'); }catch(e){}
   APP.zeroBuckets=r.envelopes.map(e=>({catId:e.catId, name:e.name, amt:e.amt}));
   saveState();
   closeBudgetTemplates();
@@ -5176,7 +5192,7 @@ function debtPayoffBody(w){
   </div>`;
 }
 // One "Debt" widget with tabs — replaces the separate Total Debt / Payoff / Credit / Promo cards.
-const DEBT_TABS=[{id:'owed',label:'Owed',fn:'debtSummaryBody'},{id:'payoff',label:'Payoff',fn:'debtPayoffBody'},{id:'credit',label:'Credit',fn:'creditUtilBody'},{id:'score',label:'Score',fn:'creditScoreBody'},{id:'promo',label:'0% Promo',fn:'promoTrackerBody'}];
+const DEBT_TABS=[{id:'owed',label:'Owed',fn:'debtSummaryBody'},{id:'payoff',label:'Payoff',fn:'debtPayoffBody'},{id:'lab',label:'Lab',fn:'dpWidgetBody',mount:'debt_planner'},{id:'credit',label:'Credit',fn:'creditUtilBody'},{id:'score',label:'Score',fn:'creditScoreBody'},{id:'promo',label:'0% Promo',fn:'promoTrackerBody'}];
 let _debtHub={};
 function debtHubBody(w){
   const cur=_debtHub[w.uid]||'owed';
@@ -5193,6 +5209,7 @@ function debtHubMount(w){
   // sync tab button states
   const btns=wrap.parentElement.querySelectorAll('.hub-tab');
   DEBT_TABS.forEach((x,i)=>{ if(btns[i]) btns[i].classList.toggle('on', x.id===cur); });
+  if(t.mount==='debt_planner'){ try{ dpRecalc(); dpRenderOrder(); }catch(e){} }
 }
 
 /* ═══ CREDIT SCORE MONITOR (Debt hub tab) ═══
@@ -5257,6 +5274,7 @@ function scoreEditorRender(){
 function saveScoreEntry(){
   const v=Math.round(_num('csVal')); const d=(gg('csDate').value||'').trim();
   if(!(v>=300&&v<=850)){ gg('csVal').focus(); return; }
+  try{ gamiMarkEngaged('score'); }catch(e){}
   if(!d) return;
   const list=_ccScores();
   const i=list.findIndex(x=>x.d===d);
@@ -5421,6 +5439,7 @@ function bkAcctChange(){
 }
 function saveBucket(){
   const name=(gg('bkName').value||'').trim(); if(!name){ gg('bkName').focus(); return; }
+  try{ gamiMarkEngaged('bucket'); }catch(e){}
   const acctId=gg('bkAcct')?gg('bkAcct').value:'';
   const item={name, icon:window._bkIcon||'🪣', acctId:acctId||'', balance: acctId?0:_num('bkBal'), target:_num('bkTgt'), monthly:_num('bkMo'), note:acctId?'linked':''};
   const list=_savingsBuckets();
@@ -5463,6 +5482,32 @@ function budgetTiersBody(w){
       <div class="bd2-legend">${legend(cats2)}</div>
     </div>
   </div>${dataLoaded?'':'<div class="ws-hint" style="margin-top:8px;text-align:center">sample data — connect a bank for live spending</div>'}`;
+}
+
+/* ═══ SPENDING HUB — one widget, four lenses ═══
+   Consolidates the spending views into tabs (this month vs budget · trend · top
+   categories · seasonal). Each tab reuses its existing widget body verbatim; all four
+   are pure-innerHTML (no chart canvas), so no per-tab mount is needed. */
+const SPEND_TABS=[
+  {id:'now',    label:'Now',        type:'spending_month'},
+  {id:'trend',  label:'Trend',      type:'spending_trends'},
+  {id:'cats',   label:'Categories', type:'top_categories'},
+  {id:'season', label:'Seasonal',   type:'category_heatmap'},
+];
+let _spendHub={};
+function spendingHubBody(w){
+  const cur=_spendHub[w.uid]||'now';
+  const tabs=SPEND_TABS.map(t=>`<button class="hub-tab${cur===t.id?' on':''}" onclick="event.stopPropagation();spendHubTab('${w.uid}','${t.id}')">${esc(t.label)}</button>`).join('');
+  return `<div class="hub-wrap"><div class="hub-tabs">${tabs}</div><div class="hub-body" id="shub_${w.uid}"></div></div>`;
+}
+function spendHubTab(uid,tab){ _spendHub[uid]=tab; const w=_findWidget(uid); if(w) spendHubMount(w); }
+function spendHubMount(w){
+  const cur=_spendHub[w.uid]||'now';
+  const wrap=gg('shub_'+w.uid); if(!wrap) return;
+  const t=SPEND_TABS.find(x=>x.id===cur)||SPEND_TABS[0];
+  try{ wrap.innerHTML=renderWidgetBody({...w, type:t.type}); }catch(e){ wrap.innerHTML='<div class="acct-empty">—</div>'; }
+  const btns=wrap.parentElement.querySelectorAll('.hub-tab');
+  SPEND_TABS.forEach((x,i)=>{ if(btns[i]) btns[i].classList.toggle('on', x.id===cur); });
 }
 
 /* ═══ CURRENT (DISCRETIONARY) SPENDING WIDGET ═══ */
@@ -6289,7 +6334,7 @@ function txnFeedRender(w){
 function txnFeedSearch(uid,val){ (_txnFeed[uid]=_txnFeed[uid]||{q:'',filter:'all'}).q=val; const w=_findWidget(uid); if(w) txnFeedRender(w); }
 function txnFeedFilter(uid,f){ (_txnFeed[uid]=_txnFeed[uid]||{q:'',filter:'all'}).filter=f; const w=_findWidget(uid); if(w) txnFeedMount(w); }
 function txnFeedTf(uid,key){ (_txnFeed[uid]=_txnFeed[uid]||{q:'',filter:'all'}).tf=key; const w=_findWidget(uid); if(w) txnFeedMount(w); }
-function txnFeedSetCat(uid,idx,cat){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; if(cat)_catOverrides[k]=cat; else delete _catOverrides[k]; try{LS.setItem('mdf_cat_overrides',JSON.stringify(_catOverrides));}catch(e){} const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+function txnFeedSetCat(uid,idx,cat){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; if(cat)_catOverrides[k]=cat; else delete _catOverrides[k]; try{LS.setItem('mdf_cat_overrides',JSON.stringify(_catOverrides));}catch(e){} try{ gamiMarkEngaged('categorize'); }catch(e){} const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function txnFeedSetNote(uid,idx,note){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; if(note&&note.trim())_txnNotes[k]=note.trim(); else delete _txnNotes[k]; try{LS.setItem('mdf_txn_notes',JSON.stringify(_txnNotes));}catch(e){} }
 function txnFeedSetTag(uid,idx,tag){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; setTxnTag(k,tag); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function txnFeedRule(uid,idx){ const t=(_txnFeedRows[uid]||[])[idx]; if(!t)return; const mk=_merchKey(t); if(!mk)return; if(_catRules[mk]){ setCatRule(mk,''); } else { setCatRule(mk, getTxnCategory(t)); } const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
@@ -6562,12 +6607,39 @@ const ACHIEVEMENTS=[
   {id:'goals5',   tier:'grand', icon:'👑', name:'Goal Machine',   desc:'Complete 5 goals.',                      xp:160, cond:m=>m.completedGoals>=5, prog:m=>({cur:m.completedGoals,target:5,unit:''})},
 ];
 const ACH_BY_ID=Object.fromEntries(ACHIEVEMENTS.map(a=>[a.id,a]));
+// Records daily activity only. The STREAK no longer advances just for opening the app —
+// it advances on a real action (see gamiMarkEngaged), which is what makes it meaningful.
 function gamiCheckin(){
-  const s=gamiLoad(); const today=new Date(); today.setHours(0,0,0,0); const t=today.getTime();
-  if(s.lastSeen===t) return;
-  if(s.lastSeen!=null){ const diff=Math.round((t-s.lastSeen)/86400000); if(diff===1) s.streak=(s.streak||0)+1; else if(diff>1) s.streak=1; else s.streak=s.streak||1; }
-  else s.streak=1;
-  s.lastSeen=t; gamiSave();
+  const s=gamiLoad(); const today=new Date(); today.setHours(0,0,0,0);
+  s.lastSeen=today.getTime(); gamiSave();
+}
+function _streakDay(ts){ ts=ts||Date.now(); return Math.floor((ts - new Date(ts).getTimezoneOffset()*60000)/86400000); }   // local day number
+const STREAK_MILESTONES=[3,7,14,30,60,100,180,365];
+function streakNextMilestone(n){ for(const mi of STREAK_MILESTONES){ if(mi>n) return mi; } return null; }
+function _refreshJourney(){ try{ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg && (pg.widgets||[]).some(w=>w.type==='journey')) renderCanvas(pg); }catch(e){} }
+// Advance the daily streak when the user takes a real action. One missed day is forgiven by a
+// weekly-regenerating grace day; a bigger gap resets. No-op if today is already counted.
+function gamiMarkEngaged(reason){
+  const s=gamiLoad(); const today=_streakDay();
+  if(s.lastAction==null && s.lastSeen!=null){ s.lastAction=_streakDay(s.lastSeen); if(!s.streak) s.streak=1; }   // carry existing streaks over on first run
+  if(s.lastAction===today) return s.streak||0;
+  if(s.freeze==null) s.freeze=1;
+  const prev=s.lastAction;
+  if(prev==null) s.streak=1;
+  else { const gap=today-prev;
+    if(gap<=1) s.streak=(s.streak||0)+1;
+    else if(gap===2 && s.freeze>0){ s.freeze=0; s.freezeUsedDay=today; s.streak=(s.streak||0)+1; }   // one missed day forgiven
+    else s.streak=1;
+  }
+  s.lastAction=today; s.bestStreak=Math.max(s.bestStreak||0, s.streak||0);
+  if(s.freeze<1 && s.freezeUsedDay!=null && (today-s.freezeUsedDay)>=7) s.freeze=1;   // grace regenerates weekly
+  gamiSave();
+  if(STREAK_MILESTONES.includes(s.streak)){
+    try{ gamiCelebrate({icon:'🔥', title:'Streak milestone!', name:`${s.streak}-day streak`, desc:`You've shown up ${s.streak} days running — that consistency is exactly how the money habit sticks.`, share:`I'm on a ${s.streak}-day money streak with Richie! 🔥`}); }catch(e){}
+  }
+  try{ gamiEvaluate(); }catch(e){}   // may unlock streak badges
+  try{ _refreshJourney(); }catch(e){}
+  return s.streak;
 }
 /* ═══ DAILY / WEEKLY QUESTS ═══
    A repeatable XP loop on top of the one-time achievements. Each quest checks derivable
@@ -6598,7 +6670,7 @@ function questEvaluate(){
   return q;
 }
 function gamiEvaluate(opts){
-  opts=opts||{}; try{ nwHistRecord(); }catch(e){} try{ questEvaluate(); }catch(e){}
+  opts=opts||{}; try{ nwHistRecord(); }catch(e){} try{ hsHistRecord(); }catch(e){} try{ questEvaluate(); }catch(e){}
   const s=gamiLoad(); const firstRun=!s.seeded; const m=gamiMetrics(); const newly=[];
   ACHIEVEMENTS.forEach(a=>{
     if(s.unlocked[a.id]) return;
@@ -6651,10 +6723,18 @@ function journeyBody(w){
   return `<div class="jrn">
     <div class="jrn-head">
       <div class="jrn-lvl"><span class="jrn-lvl-ic">${lv.icon}</span><div><div class="jrn-lvl-nm">Level ${lv.n} · ${esc(lv.name)}</div><div class="jrn-lvl-sub">${APP.proMode?'Pro Mode — maxed out':(nextLv?(lp.toNext.toLocaleString()+' XP to '+esc(nextLv.name)):'Top level reached')}</div></div></div>
-      <div class="jrn-streak" title="Daily check-in streak">🔥 <b>${s.streak||0}</b><span>day${(s.streak||0)===1?'':'s'}</span></div>
+      ${(function(){
+        const st=s.streak||0, today=_streakDay(), doneToday=(s.lastAction!=null && s.lastAction===today);
+        const nm=streakNextMilestone(st), freezeOn=(s.freeze==null?1:s.freeze)>0;
+        const sub=doneToday ? (nm?`${nm-st} to your ${nm}-day badge`:'every day counts') : 'do one thing today to keep it';
+        return `<div class="jrn-streak ${doneToday?'lit':'dim'}" title="${doneToday?'Checked in today ✓':'Take one action today to keep your streak alive'}">
+          <span class="jrn-flame">${st>0?'🔥':'🕯️'}</span>
+          <div class="jrn-streak-txt"><div class="jrn-streak-n"><b>${st}</b> day${st===1?'':'s'}${freezeOn?' <span class="jrn-freeze" title="Grace day — one miss is forgiven">❄️</span>':''}</div><div class="jrn-streak-sub">${sub}</div></div>
+        </div>`;
+      })()}
     </div>
     <div class="jrn-xp"><i style="width:${APP.proMode?100:lp.pct}%"></i></div>
-    <div class="jrn-stats"><span><b>${APP.xp}</b> XP</span><span><b>${unlockedCount}/${totalCount}</b> badges</span><span><b>${m.completedGoals}</b> goals done</span></div>
+    <div class="jrn-stats"><span><b>${APP.xp}</b> XP</span><span><b>${unlockedCount}/${totalCount}</b> badges</span><span><b>${m.completedGoals}</b> goals done</span><span><b>${s.bestStreak||s.streak||0}</b> best 🔥</span></div>
     ${(function(){ try{
       const q=_questState();
       const row=def=>{ const done=(def.scope==='daily'?q.d:q.w).done[def.id]; return `<div class="jrn-quest${done?' done':''}"><span class="jrn-q-ic">${done?'✅':def.icon}</span><span class="jrn-q-lbl">${esc(def.label)}</span><span class="jrn-q-xp">+${def.xp} XP</span></div>`; };
@@ -6694,6 +6774,39 @@ function nwHistMonthly(n){
   const keys=Object.keys(byMonth).sort();
   const out=keys.map(k=>{ const [y,m]=k.split('-'); const lbl=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][(+m)-1]; return {label:lbl, key:k, v:byMonth[k]}; });
   return n?out.slice(-n):out;
+}
+/* ── Health-score history (real trend + grade-up celebrations) ── */
+function hsHistLoad(){ try{ const a=JSON.parse(LS.getItem('mdf_health_history')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function _hsLetterRank(g){ const r={F:0,D:1,C:2,B:3,A:4}[String(g||'F').charAt(0)]; return r==null?0:r; }
+const HS_BANDS=[[60,'D'],[67,'D+'],[70,'C−'],[73,'C'],[77,'C+'],[80,'B−'],[83,'B'],[87,'B+'],[90,'A−'],[93,'A']];
+function _hsToNext(score){ for(let i=0;i<HS_BANDS.length;i++){ if(HS_BANDS[i][0]>score) return {pts:HS_BANDS[i][0]-score, grade:HS_BANDS[i][1]}; } return null; }
+function hsHistRecord(){
+  try{
+    if(!dataLoaded || typeof engHealthScore!=='function') return;
+    const r=engHealthScore(); if(!r||!r.hasData) return;
+    const d=new Date(); const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    let h=hsHistLoad();
+    if(h.length && h[h.length-1].d===key){ h[h.length-1].v=r.overall; h[h.length-1].g=r.grade; }
+    else h.push({d:key, v:r.overall, g:r.grade});
+    if(h.length>420) h=h.slice(h.length-420);
+    LS.setItem('mdf_health_history', JSON.stringify(h));
+    const ack=LS.getItem('mdf_health_grade')||'';
+    if(!ack){ LS.setItem('mdf_health_grade', r.grade); }
+    else if(_hsLetterRank(r.grade)>_hsLetterRank(ack)){ LS.setItem('mdf_health_grade', r.grade);
+      try{ gamiCelebrate({icon:'🩺', title:'Health grade up!', name:`You reached ${r.grade}`, desc:`Your financial-health grade climbed to ${r.grade} (${r.overall}/100) — real progress across the pillars.`, share:`My financial-health grade just hit ${r.grade} on Richie! 🩺`}); }catch(e){}
+    }
+    else if(_hsLetterRank(r.grade)<_hsLetterRank(ack)){ LS.setItem('mdf_health_grade', r.grade); }   // dropped — reset baseline so a re-climb re-celebrates
+  }catch(e){}
+}
+// Health-score change over the last `days` (points). Returns {abs, fromKey} or null.
+function hsChangeSince(days){
+  const h=hsHistLoad(); if(h.length<2) return null;
+  const now=h[h.length-1].v; const cutoff=Date.now()-days*86400000;
+  let base=null;
+  for(let i=h.length-1;i>=0;i--){ if(new Date(h[i].d+'T12:00:00').getTime()<=cutoff){ base=h[i]; break; } }
+  if(!base) base=h[0];
+  if(base.d===h[h.length-1].d) return null;
+  return {abs:now-base.v, fromKey:base.d};
 }
 function nwUpStreak(){
   const mo=nwHistMonthly(); if(mo.length<2) return 0;
@@ -6769,6 +6882,7 @@ function renderWidgetBody(w){
     case 'net_worth_summary': { const a=engNWAssets(), l=engNWLiab(); const nw=dataLoaded?(engNetBalance()+a-l):(a-l); const nwGoalG=(APP.goals||[]).filter(x=>x.metric==='networth'&&x.target>0).sort((x,y)=>y.target-x.target)[0]; const goalNW=nwGoalG?nwGoalG.target:(nw>0?Math.max(100000,Math.ceil((nw+1)/100000)*100000):100000); const gPct=goalNW>0?Math.max(0,Math.min(100,Math.round(nw/goalNW*100))):0; return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(nw)}">${fmtK(nw)}</div><div class="wph-sub">net worth · ${gPct}% to goal</div><div class="ds-budget"><div class="ds-budget-top"><span style="color:${moneyCol(nw)};font-weight:700">Now ${fmtK(nw)}</span><span style="color:var(--muted)">Goal ${fmtK(goalNW)}</span></div><div class="ds-bar" style="background:var(--surface3)"><div class="ds-bar-fill" style="width:${gPct}%;background:var(--pos)"></div></div></div><button class="nw-manage" onclick="event.stopPropagation();openNetWorthEditor()">🏠 Add home, car & other assets</button></div>`; }
     case 'cash_summary': return cashSummaryBody(w);
     case 'health_score': return healthScoreBody(w);
+    case 'spending_hub': return spendingHubBody(w);
     case 'spending_month': return discretionarySpendBody(w);
     case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); const now=Date.now(), ps=new Date(now-2*days*86400000), pe=new Date(now-days*86400000); const prev=allTxns.filter(t=>{const d=new Date(t.date);return d>=ps&&d<pe&&_isIncomeTxn(t);}).reduce((s,t)=>s+Math.abs(t.amount),0); const dl=prev>0?Math.round((inc-prev)/prev*100):null; const up=dl!==null&&dl>=0; const trend=dl===null?'':`<div class="ds-trend-label" style="color:${up?'var(--green)':'var(--amber)'};margin-top:9px">${up?'▲':'▼'} ${Math.abs(dl)}% vs prior ${tfLabel(w.tf||'30d')}</div>`; const rec=engRecent(days).filter(_isIncomeTxn); const byC={}; rec.forEach(t=>{const c=getTxnCategory(t);byC[c]=(byC[c]||0)+Math.abs(t.amount);}); const top=Object.entries(byC).sort((a,b)=>b[1]-a[1])[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--pos)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${trend}${top?`<div class="wph-inline"><span>Top source: ${esc(top[0])}</span><b style="color:var(--pos)">${fmtK(top[1])}</b></div>`:''}</div>`; } const top=incomeSources.slice().sort((a,b)=>b.amt*(FREQ_TO_MONTHLY[b.freq]||1)-a.amt*(FREQ_TO_MONTHLY[a.freq]||1))[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--pos)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">${incomeSources.length} sources \u00b7 sample</div><div class="ds-trend-label" style="color:var(--green);margin-top:9px">▲ 6% vs prior 30d</div><div class="wph-inline"><span>Top source: ${top.name}</span><b style="color:var(--green)">${fmtK(Math.round(top.amt*(FREQ_TO_MONTHLY[top.freq]||1)))}/mo</b></div></div>`; }
     case 'debt_summary': return debtSummaryBody(w);
@@ -7732,14 +7846,43 @@ function richieOffTrackSignal(pg){
   try{ const inc=engMonthlyIncome(), sp=engSpend30(); if(inc>0 && sp>inc*1.05){ return {msg:`Spending's running ahead of income this month. Want a quick look at where it's going?`, widget:'top_categories', cta:'Show me'}; } }catch(e){}
   return null;
 }
+// A once-a-week recap: this week's spend vs last, the health grade, safe-to-spend, and the
+// one move that helps most (which is also the health-score coaching line). Returns a signal or null.
+function richieWeeklyRecap(){
+  try{
+    if(!dataLoaded) return null;
+    let last=0; try{ last=parseInt(LS.getItem('richie_recap_ts')||'0',10)||0; }catch(e){}
+    if(Date.now()-last < 7*86400000) return null;
+    const now=Date.now();
+    const wk=(a,b)=>(allTxns||[]).filter(t=>{ const d=new Date(t.date).getTime(); return d>=now-b*86400000 && d<now-a*86400000 && t.amount>0 && !_txnExcludedFromSpend(t); }).reduce((s,t)=>s+t.amount,0);
+    const thisWk=Math.round(wk(0,7)), lastWk=Math.round(wk(7,14));
+    let h=null; try{ h=engHealthScore(); }catch(e){}
+    let pool=null; try{ pool=Math.round(engSafeToSpend().pool); }catch(e){}
+    if(thisWk<=0 && !(h&&h.hasData)) return null;   // nothing meaningful to recap yet
+    const dlt=lastWk>0?Math.round((thisWk-lastWk)/lastWk*100):null;
+    const trend=dlt==null?'':(thisWk>=lastWk?` (▲ ${Math.abs(dlt)}% vs last week)`:` (▼ ${Math.abs(dlt)}% vs last week)`);
+    const bits=[`Quick week recap — you spent ${fmtK(thisWk)}${trend}.`];
+    if(h&&h.hasData) bits.push(`Health score's a ${h.grade} (${h.overall}/100).`);
+    if(pool!=null) bits.push(`Safe to spend right now: ${fmtK(pool)}.`);
+    if(h&&h.weakest){ bits.push(h.weakest.tip); return { msg:bits.join(' '), widget:'health_score', cta:'Show me' }; }
+    bits.push(`Nice and steady — keep it rolling.`);
+    return { msg:bits.join(' '), widget:'spending_trends', cta:'Show me' };
+  }catch(e){ return null; }
+}
 function richieMaybeProactive(pg){
   if(!_raProactiveOn || _raBusy || _richieBlocked() || !pg || pg.id==='__settings__') return;
   const now=Date.now();
   if(now<_raSnoozeUntil || now-_raLastPop<1500) return;     // debounce duplicate renders only
   _raLastPop=now;
-  const off=(now-_raOffTrackAt>480000) ? richieOffTrackSignal(pg) : null;   // surface off-track at most ~every 8 min
+  const recap=richieWeeklyRecap();                          // weekly recap wins when it's due
+  const off=(!recap && now-_raOffTrackAt>480000) ? richieOffTrackSignal(pg) : null;   // else off-track at most ~every 8 min
   setTimeout(()=>{ if(_raBusy||document.hidden||APP.activePage!==pg.id) return;
-    if(off){ _raOffTrackAt=Date.now(); richieShow(off.msg, {emo:'curious', actions:[
+    if(recap){ try{ LS.setItem('richie_recap_ts', String(Date.now())); }catch(e){}
+      richieShow(recap.msg, {emo:'happy', actions:[
+        {label:recap.cta||'Show me', cls:'ra-go', on:()=>richieSpotlightAt(Object.assign({widgetType:recap.widget}, RICHIE_SPOTS[recap.widget]||{}))},
+        {label:'Thanks', on:richieDismiss}
+      ]}); }
+    else if(off){ _raOffTrackAt=Date.now(); richieShow(off.msg, {emo:'curious', actions:[
         {label:off.cta||'Show me', cls:'ra-go', on:()=>richieSpotlightAt(Object.assign({widgetType:off.widget}, RICHIE_SPOTS[off.widget]||{}))},   // decide first, THEN Richie flies to the spot
         {label:'Not now', on:richieDismiss}
       ]}); }
@@ -8932,8 +9075,8 @@ function _briefTxnStepBody(){
   return `<div class="brief-txns-hd"><span>${list.length} to review — fix any wrong category, then Confirm</span><button class="brief-confirm-all" onclick="event.stopPropagation();briefConfirmAll()">Confirm all ✓</button></div><div class="brief-txns">${rows}</div>`;
 }
 function briefTxnCat(i,cat){ const t=_briefTxns[i]; if(!t||!cat) return; const k=_txnKey(t); _catOverrides[k]=cat; try{ LS.setItem('mdf_cat_overrides',JSON.stringify(_catOverrides)); }catch(e){} }   // change now; stays until Confirmed
-function briefConfirm(i){ const t=_briefTxns[i]; if(!t) return; _confSet().add(_txnKey(t)); _confSave(); if(_briefChar)_briefChar.do('nod'); _briefRefreshBody(); }
-function briefConfirmAll(){ (_briefTxns||[]).forEach(t=>_confSet().add(_txnKey(t))); _confSave(); if(_briefChar)_briefChar.do('tada'); _briefRefreshBody(); }
+function briefConfirm(i){ const t=_briefTxns[i]; if(!t) return; _confSet().add(_txnKey(t)); _confSave(); try{ gamiMarkEngaged('confirm'); }catch(e){} if(_briefChar)_briefChar.do('nod'); _briefRefreshBody(); }
+function briefConfirmAll(){ (_briefTxns||[]).forEach(t=>_confSet().add(_txnKey(t))); _confSave(); try{ gamiMarkEngaged('confirm'); }catch(e){} if(_briefChar)_briefChar.do('tada'); _briefRefreshBody(); }
 
 // ── High-interest debt step (pay a little extra toward the top-APR card, inline) ──
 function _topHiCard(){ try{ const g=engDebtGroups(); const all=[...g.revolving,...g.installment].filter(b=>Math.abs(b.bal||0)>0 && (b.cat==='CC'||(b.apr||0)>=8)); all.sort((a,b)=>(b.apr||0)-(a.apr||0)); return all[0]||null; }catch(e){ return null; } }
