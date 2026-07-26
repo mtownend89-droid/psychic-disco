@@ -3712,6 +3712,7 @@ const WIDGET_CATALOG=[
   {id:'all_transactions',name:'All Transactions',icon:'🧾',cat:'Cash Flow',span:2,minLevel:1,desc:'Every transaction — search, categorize, and tag (paycheck, transfer, business…).'},
   {id:'recurring',name:'Subscriptions & Renewals',icon:'🔁',cat:'Cash Flow',span:2,minLevel:1,desc:'Auto-detected subscriptions & recurring bills — next renewal, price-hike alerts, flag any to cancel, monthly & yearly totals.'},
   {id:'sankey',name:'Money Flow (Sankey)',icon:'🔀',cat:'Cash Flow',span:2,minLevel:2,desc:'Income → category group → category, flowing left to right through your category tree.'},
+  {id:'spending_hub',name:'Spending',icon:'🛍️',cat:'Cash Flow',span:2,minLevel:1,desc:'All your spending in one place — this month vs budget, the trend, top categories, and seasonal patterns, in tabs.'},
   {id:'top_categories',name:'Top Categories',icon:'📊',cat:'Cash Flow',span:1,minLevel:1,desc:'Where your money goes most.'},
   {id:'spending_trends',name:'Spending Trends',icon:'🆚',cat:'Cash Flow',span:2,minLevel:1,desc:'This month vs last — biggest category movers, projected month-end total, and whether you\'re pacing over or under budget.'},
   {id:'category_heatmap',name:'Category Heatmap',icon:'🌡️',cat:'Cash Flow',span:2,minLevel:2,desc:'Spending by category across months — spot seasonal patterns at a glance.'},
@@ -4127,6 +4128,7 @@ function mountWidgetCharts(pg){
       if(w.type==='all_transactions'){ txnFeedMount(w); }
       if(w.type==='debt_hub'){ debtHubMount(w); }
       if(w.type==='fire_hub'){ fireHubMount(w); }
+      if(w.type==='spending_hub'){ spendHubMount(w); }
     }catch(e){ /* ignore */ }
   });
   if(typeof Chart==='undefined') return;
@@ -5482,6 +5484,32 @@ function budgetTiersBody(w){
   </div>${dataLoaded?'':'<div class="ws-hint" style="margin-top:8px;text-align:center">sample data — connect a bank for live spending</div>'}`;
 }
 
+/* ═══ SPENDING HUB — one widget, four lenses ═══
+   Consolidates the spending views into tabs (this month vs budget · trend · top
+   categories · seasonal). Each tab reuses its existing widget body verbatim; all four
+   are pure-innerHTML (no chart canvas), so no per-tab mount is needed. */
+const SPEND_TABS=[
+  {id:'now',    label:'Now',        type:'spending_month'},
+  {id:'trend',  label:'Trend',      type:'spending_trends'},
+  {id:'cats',   label:'Categories', type:'top_categories'},
+  {id:'season', label:'Seasonal',   type:'category_heatmap'},
+];
+let _spendHub={};
+function spendingHubBody(w){
+  const cur=_spendHub[w.uid]||'now';
+  const tabs=SPEND_TABS.map(t=>`<button class="hub-tab${cur===t.id?' on':''}" onclick="event.stopPropagation();spendHubTab('${w.uid}','${t.id}')">${esc(t.label)}</button>`).join('');
+  return `<div class="hub-wrap"><div class="hub-tabs">${tabs}</div><div class="hub-body" id="shub_${w.uid}"></div></div>`;
+}
+function spendHubTab(uid,tab){ _spendHub[uid]=tab; const w=_findWidget(uid); if(w) spendHubMount(w); }
+function spendHubMount(w){
+  const cur=_spendHub[w.uid]||'now';
+  const wrap=gg('shub_'+w.uid); if(!wrap) return;
+  const t=SPEND_TABS.find(x=>x.id===cur)||SPEND_TABS[0];
+  try{ wrap.innerHTML=renderWidgetBody({...w, type:t.type}); }catch(e){ wrap.innerHTML='<div class="acct-empty">—</div>'; }
+  const btns=wrap.parentElement.querySelectorAll('.hub-tab');
+  SPEND_TABS.forEach((x,i)=>{ if(btns[i]) btns[i].classList.toggle('on', x.id===cur); });
+}
+
 /* ═══ CURRENT (DISCRETIONARY) SPENDING WIDGET ═══ */
 function discretionarySpendBody(w){
   const days=wDays(w);
@@ -6818,6 +6846,7 @@ function renderWidgetBody(w){
     case 'net_worth_summary': { const a=engNWAssets(), l=engNWLiab(); const nw=dataLoaded?(engNetBalance()+a-l):(a-l); const nwGoalG=(APP.goals||[]).filter(x=>x.metric==='networth'&&x.target>0).sort((x,y)=>y.target-x.target)[0]; const goalNW=nwGoalG?nwGoalG.target:(nw>0?Math.max(100000,Math.ceil((nw+1)/100000)*100000):100000); const gPct=goalNW>0?Math.max(0,Math.min(100,Math.round(nw/goalNW*100))):0; return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(nw)}">${fmtK(nw)}</div><div class="wph-sub">net worth · ${gPct}% to goal</div><div class="ds-budget"><div class="ds-budget-top"><span style="color:${moneyCol(nw)};font-weight:700">Now ${fmtK(nw)}</span><span style="color:var(--muted)">Goal ${fmtK(goalNW)}</span></div><div class="ds-bar" style="background:var(--surface3)"><div class="ds-bar-fill" style="width:${gPct}%;background:var(--pos)"></div></div></div><button class="nw-manage" onclick="event.stopPropagation();openNetWorthEditor()">🏠 Add home, car & other assets</button></div>`; }
     case 'cash_summary': return cashSummaryBody(w);
     case 'health_score': return healthScoreBody(w);
+    case 'spending_hub': return spendingHubBody(w);
     case 'spending_month': return discretionarySpendBody(w);
     case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); const now=Date.now(), ps=new Date(now-2*days*86400000), pe=new Date(now-days*86400000); const prev=allTxns.filter(t=>{const d=new Date(t.date);return d>=ps&&d<pe&&_isIncomeTxn(t);}).reduce((s,t)=>s+Math.abs(t.amount),0); const dl=prev>0?Math.round((inc-prev)/prev*100):null; const up=dl!==null&&dl>=0; const trend=dl===null?'':`<div class="ds-trend-label" style="color:${up?'var(--green)':'var(--amber)'};margin-top:9px">${up?'▲':'▼'} ${Math.abs(dl)}% vs prior ${tfLabel(w.tf||'30d')}</div>`; const rec=engRecent(days).filter(_isIncomeTxn); const byC={}; rec.forEach(t=>{const c=getTxnCategory(t);byC[c]=(byC[c]||0)+Math.abs(t.amount);}); const top=Object.entries(byC).sort((a,b)=>b[1]-a[1])[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--pos)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${trend}${top?`<div class="wph-inline"><span>Top source: ${esc(top[0])}</span><b style="color:var(--pos)">${fmtK(top[1])}</b></div>`:''}</div>`; } const top=incomeSources.slice().sort((a,b)=>b.amt*(FREQ_TO_MONTHLY[b.freq]||1)-a.amt*(FREQ_TO_MONTHLY[a.freq]||1))[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--pos)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">${incomeSources.length} sources \u00b7 sample</div><div class="ds-trend-label" style="color:var(--green);margin-top:9px">▲ 6% vs prior 30d</div><div class="wph-inline"><span>Top source: ${top.name}</span><b style="color:var(--green)">${fmtK(Math.round(top.amt*(FREQ_TO_MONTHLY[top.freq]||1)))}/mo</b></div></div>`; }
     case 'debt_summary': return debtSummaryBody(w);
