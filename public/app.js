@@ -2430,6 +2430,59 @@ function engHighInterestDebt(threshold){
   return [...g.revolving, ...g.installment].filter(b=> b.cat==='CC' || (b.apr||0)>=threshold)
     .reduce((s,b)=>s+Math.abs(b.bal||0),0);
 }
+
+/* ═══ FINANCIAL HEALTH SCORE ═══
+   A composite 0–100 score from five weighted pillars: savings rate, emergency-fund
+   months, debt-to-income, credit utilization, and high-interest debt. Pillars that
+   don't apply (no income, no credit lines) drop out and their weight is redistributed. */
+function _hsGrade(s){ if(s>=93)return'A'; if(s>=90)return'A−'; if(s>=87)return'B+'; if(s>=83)return'B'; if(s>=80)return'B−'; if(s>=77)return'C+'; if(s>=73)return'C'; if(s>=70)return'C−'; if(s>=67)return'D+'; if(s>=60)return'D'; return'F'; }
+function engHealthScore(){
+  const clamp=v=>Math.max(0,Math.min(100,Math.round(v)));
+  const income=engMonthlyIncome();
+  const spend=dataLoaded?engSpend30():engMonthlyBills();
+  const monthlyExpenses=Math.max(engMonthlyBills(), dataLoaded?engSpend30():0, 1);
+  const comps=[];
+  // 1) Savings rate — 20%+ is full marks
+  if(income>0){ const rate=(income-spend)/income*100; comps.push({key:'savings_rate',label:'Savings rate',icon:'📊',weight:25,score:clamp(rate/20*100),value:Math.round(rate)+'%',
+    tip: rate>=20?'Great rate — keep it steady.':`You're saving ${Math.round(rate)}% — trim one top category to reach 20%.`}); }
+  // 2) Emergency fund — 6 months of expenses is full marks
+  { const ef=engEmergencyFund(); const months=monthlyExpenses>0?ef/monthlyExpenses:0; comps.push({key:'emergency',label:'Emergency fund',icon:'🛟',weight:25,score:clamp(months/6*100),value:months.toFixed(1)+' mo',
+    tip: months>=3?(months>=6?'Fully funded — nicely done.':`${months.toFixed(1)} months saved — aim for 6 for full cover.`):`Only ${months.toFixed(1)} months of expenses saved — build toward 3+.`}); }
+  // 3) Debt-to-income — 0% is full marks, 43%+ is zero
+  if(income>0){ const dti=engDTI().ratio*100; comps.push({key:'dti',label:'Debt-to-income',icon:'⚖️',weight:20,score:clamp((1-dti/43)*100),value:Math.round(dti)+'%',
+    tip: dti<=36?'Healthy debt load.':`${Math.round(dti)}% of income goes to debt payments — under 36% is the goal.`}); }
+  // 4) Credit utilization — only if there are credit lines; under 10% is full marks
+  { const cu=engCreditUtil(); if(cu.limit>0){ comps.push({key:'util',label:'Credit utilization',icon:'💳',weight:15,score:clamp((1-(cu.pct-10)/40)*100),value:Math.round(cu.pct)+'%',
+    tip: cu.pct<=30?(cu.pct<=10?'Excellent utilization.':'Good — keep it under 30%.'):`Using ${Math.round(cu.pct)}% of your limit — paying under 30% helps your score.`}); } }
+  // 5) High-interest debt — none is full marks; scaled against annual income
+  { const hid=engHighInterestDebt(8); let score, value=hid>0?fmtK(hid):'$0';
+    if(hid<=0) score=100; else if(income>0){ score=clamp((1-(hid/(income*12))/0.5)*100); } else score=40;
+    comps.push({key:'hi_debt',label:'High-interest debt',icon:'🔥',weight:15,score,value,
+      tip: hid<=0?'No high-interest debt — that\'s the sweet spot.':`${fmtK(hid)} in high-interest debt — knocking this down lifts your score fastest.`}); }
+  // weighted average over applicable pillars
+  const totW=comps.reduce((s,c)=>s+c.weight,0)||1;
+  const overall=Math.round(comps.reduce((s,c)=>s+c.score*c.weight,0)/totW);
+  comps.forEach(c=>{ c.status=c.score>=75?'good':c.score>=50?'ok':'poor'; });
+  const weakest=comps.filter(c=>c.score<75).sort((a,b)=>a.score-b.score)[0]||null;
+  return {overall, grade:_hsGrade(overall), comps, weakest, hasData:comps.length>0};
+}
+function _hsColor(s){ return s>=80?'var(--pos)':s>=60?'var(--amber)':'var(--red)'; }
+function _hsRing(score,color,grade){
+  const r=42, c=2*Math.PI*r, off=c*(1-score/100);
+  return `<svg viewBox="0 0 100 100" width="100" height="100" style="flex:0 0 auto"><circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--surface3)" stroke-width="9"/><circle cx="50" cy="50" r="${r}" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 50 50)"/><text x="50" y="48" text-anchor="middle" font-size="27" font-weight="800" fill="var(--text)">${score}</text><text x="50" y="65" text-anchor="middle" font-size="12" font-weight="700" fill="${color}">${grade}</text></svg>`;
+}
+function healthScoreBody(w){
+  const h=engHealthScore();
+  if(!h.hasData) return `<div class="wph"><div class="ws-hint">Add your income, bills, and accounts and Richie will score your financial health across five pillars.</div></div>`;
+  const col=_hsColor(h.overall);
+  const rows=h.comps.map(c=>{ const sc=_hsColor(c.score); return `<div class="hs-row"><span class="hs-ico">${c.icon}</span><div class="hs-main"><div class="hs-toprow"><span class="hs-lbl">${esc(c.label)}</span><span class="hs-val" style="color:${sc}">${esc(c.value)}</span></div><div class="hs-barwrap"><div class="hs-bar" style="width:${c.score}%;background:${sc}"></div></div></div></div>`; }).join('');
+  const tip=h.weakest?`<div class="hs-tip"><span>💡</span><span>${esc(h.weakest.tip)}</span></div>`:`<div class="hs-tip"><span>🎉</span><span>Every pillar is in good shape — keep it up!</span></div>`;
+  return `<div class="hs-wrap">
+    <div class="hs-head">${_hsRing(h.overall,col,h.grade)}<div class="hs-headtxt"><div class="hs-headlbl">Financial health${dataLoaded?'':' · sample'}</div><div class="hs-headsub">Across ${h.comps.length} pillar${h.comps.length!==1?'s':''} — savings, safety, and debt.</div></div></div>
+    <div class="hs-rows">${rows}</div>
+    ${tip}
+  </div>`;
+}
 function _ft(){ APP.fundTriage=APP.fundTriage||{extra:null, alloc:{}}; if(!APP.fundTriage.alloc) APP.fundTriage.alloc={}; return APP.fundTriage; }
 function engFundTriage(){
   const income=Math.round(engMonthlyIncome());
@@ -3510,6 +3563,7 @@ const WIDGET_CATALOG=[
   {id:'cashflow_planner',name:'Cash Flow Planner',icon:'📅',cat:'Cash Flow',span:2,minLevel:1,desc:'Project your running balance forward — edit bills, see your low point before it hits.'},
   {id:'fund_triage',name:'Extra Funds Triage',icon:'💸',cat:'Cash Flow',span:2,minLevel:1,desc:'Delegate your monthly surplus by priority — high-interest debt, then savings, then investing.'},
   {id:'goals',name:'Financial Goals',icon:'🎯',cat:'Overview',span:2,minLevel:1,desc:'Set goals, track progress automatically, and let Richie coach you to the finish.'},
+  {id:'health_score',name:'Financial Health Score',icon:'🩺',cat:'Overview',span:2,minLevel:1,desc:'A single 0–100 score across savings rate, emergency fund, debt-to-income, credit use & high-interest debt — with Richie\'s top fix.'},
   {id:'accounts_list',name:'All Accounts',icon:'🏦',cat:'Overview',span:2,minLevel:1,desc:'Every account with balances — tap to see transactions.'},
   {id:'all_transactions',name:'All Transactions',icon:'🧾',cat:'Cash Flow',span:2,minLevel:1,desc:'Every transaction — search, categorize, and tag (paycheck, transfer, business…).'},
   {id:'recurring',name:'Subscriptions & Renewals',icon:'🔁',cat:'Cash Flow',span:2,minLevel:1,desc:'Auto-detected subscriptions & recurring bills — next renewal, price-hike alerts, flag any to cancel, monthly & yearly totals.'},
@@ -6553,6 +6607,7 @@ function renderWidgetBody(w){
     case 'journey': return journeyBody(w);
     case 'net_worth_summary': { const a=engNWAssets(), l=engNWLiab(); const nw=dataLoaded?(engNetBalance()+a-l):(a-l); const nwGoalG=(APP.goals||[]).filter(x=>x.metric==='networth'&&x.target>0).sort((x,y)=>y.target-x.target)[0]; const goalNW=nwGoalG?nwGoalG.target:(nw>0?Math.max(100000,Math.ceil((nw+1)/100000)*100000):100000); const gPct=goalNW>0?Math.max(0,Math.min(100,Math.round(nw/goalNW*100))):0; return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(nw)}">${fmtK(nw)}</div><div class="wph-sub">net worth · ${gPct}% to goal</div><div class="ds-budget"><div class="ds-budget-top"><span style="color:${moneyCol(nw)};font-weight:700">Now ${fmtK(nw)}</span><span style="color:var(--muted)">Goal ${fmtK(goalNW)}</span></div><div class="ds-bar" style="background:var(--surface3)"><div class="ds-bar-fill" style="width:${gPct}%;background:var(--pos)"></div></div></div><button class="nw-manage" onclick="event.stopPropagation();openNetWorthEditor()">🏠 Add home, car & other assets</button></div>`; }
     case 'cash_summary': return cashSummaryBody(w);
+    case 'health_score': return healthScoreBody(w);
     case 'spending_month': return discretionarySpendBody(w);
     case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); const now=Date.now(), ps=new Date(now-2*days*86400000), pe=new Date(now-days*86400000); const prev=allTxns.filter(t=>{const d=new Date(t.date);return d>=ps&&d<pe&&_isIncomeTxn(t);}).reduce((s,t)=>s+Math.abs(t.amount),0); const dl=prev>0?Math.round((inc-prev)/prev*100):null; const up=dl!==null&&dl>=0; const trend=dl===null?'':`<div class="ds-trend-label" style="color:${up?'var(--green)':'var(--amber)'};margin-top:9px">${up?'▲':'▼'} ${Math.abs(dl)}% vs prior ${tfLabel(w.tf||'30d')}</div>`; const rec=engRecent(days).filter(_isIncomeTxn); const byC={}; rec.forEach(t=>{const c=getTxnCategory(t);byC[c]=(byC[c]||0)+Math.abs(t.amount);}); const top=Object.entries(byC).sort((a,b)=>b[1]-a[1])[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--pos)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${trend}${top?`<div class="wph-inline"><span>Top source: ${esc(top[0])}</span><b style="color:var(--pos)">${fmtK(top[1])}</b></div>`:''}</div>`; } const top=incomeSources.slice().sort((a,b)=>b.amt*(FREQ_TO_MONTHLY[b.freq]||1)-a.amt*(FREQ_TO_MONTHLY[a.freq]||1))[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--pos)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">${incomeSources.length} sources \u00b7 sample</div><div class="ds-trend-label" style="color:var(--green);margin-top:9px">▲ 6% vs prior 30d</div><div class="wph-inline"><span>Top source: ${top.name}</span><b style="color:var(--green)">${fmtK(Math.round(top.amt*(FREQ_TO_MONTHLY[top.freq]||1)))}/mo</b></div></div>`; }
     case 'debt_summary': return debtSummaryBody(w);
@@ -6636,7 +6691,7 @@ let dragUid=null;
 /* ── Widget detail drill-down ──
    Widgets that support an expanded view declare it here. Opening shows a modal
    with richer Plaid / bills / income breakdowns (amounts + %, sortable lists). */
-const WIDGET_HAS_DETAIL=['net_worth_summary','cash_summary','spending_month','income_month','debt_summary','top_categories','budget_doughnut','cashflow_chart','sankey','net_worth_chart','debt_payoff','fire_progress'];
+const WIDGET_HAS_DETAIL=['net_worth_summary','cash_summary','spending_month','income_month','debt_summary','top_categories','budget_doughnut','cashflow_chart','sankey','net_worth_chart','debt_payoff','fire_progress','health_score'];
 function widgetHasDetail(type){ return WIDGET_HAS_DETAIL.includes(type); }
 function _detailRows(items, total){
   // items: [{label, value, color?, note?}] → rows with amount + %
@@ -6713,6 +6768,11 @@ function widgetDetailContent(type, days){
       const dep=live?allAccts.filter(a=>a.type==='depository').map(a=>({label:(a.name||'Account'),value:(a.balances&&(a.balances.available??a.balances.current))||0,note:a.institution})):[{label:'Checking',value:5200,note:'sample'},{label:'Savings',value:3040,note:'sample'}];
       const tot=dep.reduce((s,a)=>s+a.value,0);
       return { title:'Cash accounts', sub:`${fmtK(tot)} across ${dep.length} account${dep.length!==1?'s':''}`, body:`<div class="wdt-total">${fmtK(tot)}<span>available cash</span></div>${_detailRows(dep,tot)}` };
+    }
+    case 'health_score': {
+      const h=engHealthScore();
+      const rows=h.comps.map(c=>{ const sc=_hsColor(c.score); return `<div class="wdt-row"><span class="wdt-label">${c.icon} ${esc(c.label)}<br><span style="font-size:10.5px;color:var(--muted)">${esc(c.tip)}</span></span><span style="display:flex;gap:10px;align-items:center"><span style="color:var(--muted);font-size:11px">${esc(c.value)}</span><b style="color:${sc}">${c.score}</b></span></div>`; }).join('');
+      return { title:'Financial health score', sub:`${h.overall}/100 · grade ${h.grade} · ${h.comps.length} pillar${h.comps.length!==1?'s':''} weighted`, body:`<div class="wdt-total" style="color:${_hsColor(h.overall)}">${h.overall}<span>grade ${h.grade}</span></div>${rows}` };
     }
     case 'promo_tracker': return promoTrackerBody(w);
     case 'credit_util': return creditUtilBody(w);
