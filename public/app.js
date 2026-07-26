@@ -2508,8 +2508,16 @@ function csvDoImport(){
   saveState(); _rebuildTxns(); if(allTxns.length>0) dataLoaded=true;
   closeCsvModal();
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
-  if(typeof richieSay==='function') richieSay(`📥 Imported ${added} transaction${added!==1?'s':''} from ${nm}. Remove this batch anytime from Settings → connected sources.`);
   if(typeof sbRichie!=='undefined'&&sbRichie) sbRichie.do('tada');
+  try{ updateReviewBadge(); }catch(e){}
+  // Offer to review the imported categories (some auto-guesses may be off); fall back to a plain note.
+  const reviewable=(typeof _reviewTxns==='function')?_reviewTxns().length:0;
+  if(reviewable && typeof richieShow==='function'){
+    setTimeout(()=>{ try{ richieShow(`📥 Imported ${added} transaction${added!==1?'s':''} from ${nm}. A few categories may need a look — want to review them together?`, {emo:'happy', actions:[
+      {label:'Review categories', cls:'ra-go', on:openBriefing},
+      {label:'Later', on:(typeof richieDismiss==='function'?richieDismiss:function(){})}
+    ]}); }catch(e){} }, 700);
+  } else if(typeof richieSay==='function') richieSay(`📥 Imported ${added} transaction${added!==1?'s':''} from ${nm}. Remove this batch anytime from Settings → connected sources.`);
 }
 function closeCsvModal(){ const m=gg('csvModal'); if(m) m.style.display='none'; _csv=null; }
 
@@ -9048,7 +9056,9 @@ let _briefChar=null, _briefTxns=[], _briefBills=[], _briefSteps=[], _briefStep=0
 function _briefCutoff(){ let v=0; try{ v=parseInt(LS.getItem('richie_lastvisit')||'0',10); }catch(e){} return (isFinite(v)&&v>0)?v:(Date.now()-7*86400000); }
 function _markBriefingSeen(){ try{ LS.setItem('richie_lastvisit', String(Date.now())); }catch(e){} }
 function _newTxns(){ const cut=new Date(_briefCutoff()); const ex=(typeof _excludedAcctIds==='function')?_excludedAcctIds():new Set();
-  return (allTxns||[]).filter(t=> t && !ex.has(t.account_id) && new Date((t.date||'')+'T12:00:00')>=cut)
+  // Freshly-imported transactions (last 3 days) are reviewable even when their CSV dates are old.
+  const recentImports=new Set((APP.imports||[]).filter(im=>im&&im.txnImportId&&(Date.now()-(im.ts||0))<3*86400000).map(im=>im.txnImportId));
+  return (allTxns||[]).filter(t=> t && !ex.has(t.account_id) && (new Date((t.date||'')+'T12:00:00')>=cut || (t._importId && recentImports.has(t._importId))))
     .sort((a,b)=> new Date(b.date)-new Date(a.date)); }
 // Transactions the user hasn't explicitly confirmed yet (auto-categories may be wrong, so we
 // ask them to review each — even ones that already have a category). Persisted in mdf_txn_confirmed.
