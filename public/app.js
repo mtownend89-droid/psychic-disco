@@ -1596,6 +1596,20 @@ let _reportOffset=0;
 function openReport(){ _reportOffset=0; const m=gg('reportModal'); if(!m) return; m.style.display='flex'; renderReport(); }
 function closeReport(){ const m=gg('reportModal'); if(m) m.style.display='none'; }
 function reportShift(d){ const n=_reportOffset+d; if(n>0) return; _reportOffset=n; renderReport(); }
+// Richie's plain-English take on the month — two sentences derived from the report figures (no AI).
+function _reportNarrative(r){
+  const bits=[];
+  if(r.net>=0) bits.push(`In ${r.label} you brought in ${fmtK(r.income)} and spent ${fmtK(r.spend)}, keeping ${fmtK(r.net)} — about a ${r.savingsRate}% savings rate.`);
+  else bits.push(`In ${r.label} you spent ${fmtK(r.spend)} against ${fmtK(r.income)} of income, running ${fmtK(Math.abs(r.net))} short for the month.`);
+  const top=r.cats&&r.cats[0];
+  if(top){ const pct=r.spend>0?Math.round(top.value/r.spend*100):0;
+    const tail = r.net<0 ? ' — easing it a little would flip the month back to positive.'
+      : r.savingsRate>=20 ? ' — a strong month, keep it going!'
+      : ' — the first place to look if you want to save a bit more.';
+    bits.push(`${esc(top.label)} was your biggest category at ${fmtK(top.value)} (${pct}% of spending)${tail}`);
+  }
+  return bits.join(' ');
+}
 function renderReport(){
   const el=gg('reportBody'); if(!el) return;
   const r=engMonthlyReport(_reportOffset);
@@ -1612,6 +1626,7 @@ function renderReport(){
     </div>
     <div class="rep-print" id="repPrint">
       <div class="rep-printhead"><div class="rep-brand">Matt &amp; Dana Finance</div><div class="rep-subtitle">${esc(r.label)} · financial report</div></div>
+      <div class="rep-narrative"><span class="rep-narr-ic">💬</span><span>${_reportNarrative(r)}</span></div>
       <div class="rep-sum">
         <div class="rep-sum-card"><div class="rep-sum-lbl">Income</div><div class="rep-sum-num" style="color:var(--green)">${fmtK(r.income)}</div></div>
         <div class="rep-sum-card"><div class="rep-sum-lbl">Spending</div><div class="rep-sum-num" style="color:var(--red)">${fmtK(r.spend)}</div></div>
