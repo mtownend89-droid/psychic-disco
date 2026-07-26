@@ -7679,6 +7679,10 @@ let _raProactiveOn=true; try{ const v=LS.getItem('richie_proactive'); if(v!==nul
 let _raLastPop=0, _raSnoozeUntil=0, _raOffTrackAt=0;
 function setRichieProactive(on){ _raProactiveOn=!!on; try{ LS.setItem('richie_proactive', on?'1':'0'); }catch(e){} const b=gg('setProactiveBtn'); if(b)b.textContent=_raProactiveOn?'🔔 Pop-in tips: on':'🔕 Pop-in tips: off'; const t=gg('proactiveToggle'); if(t)t.classList.toggle('on',_raProactiveOn); if(_raProactiveOn && typeof richieSay==='function') richieSay("I'll pop in with a tip now and then. Tap me anytime too!"); else if(!_raProactiveOn){ try{ richieGoHome(); }catch(e){} } }
 function richieOffTrackSignal(pg){
+  // Anomaly first — a category running well above its usual pace is the most useful thing to flag.
+  try{ const st=engSpendTrends(); const a=(st.movers||[]).filter(m=>m.delta>60 && m.prev>0 && m.cur>=m.prev*1.8).sort((x,y)=>y.delta-x.delta)[0];
+    if(a){ const x=a.cur/a.prev; const desc=x>=2?`${x>=10?Math.round(x):x.toFixed(1)}× your usual`:`${Math.round((x-1)*100)}% over your usual`;
+      return {msg:`Heads up — ${esc(a.label)} is running ${desc} this month (${fmtK(a.cur)} vs ${fmtK(a.prev)} by now last month). Want to see what's driving it?`, widget:'spending_trends', cta:'Show me'}; } }catch(e){}
   try{ const pace=engPaceAlert(); if(pace){ return {msg:`You're moving fast on ${esc(pace.name)} — ${fmtK(pace.spent)} spent of a ${fmtK(pace.budget)} budget, with ${pace.daysLeft} day${pace.daysLeft!==1?'s':''} left this month. Want to ease off or adjust it?`, widget:'budget_actual', cta:'Show me'}; } }catch(e){}
   try{ const bills=(engUpcomingBills()||[]).filter(b=>!b.paid);
     if(bills.length>=3){ const tot=bills.reduce((s,b)=>s+(b.pay||b.amount||0),0); return {msg:`Heads up — you've got ${bills.length} bills coming up, about ${typeof fmtK==='function'?fmtK(tot):'$'+Math.round(tot)}. Want to run through them?`, widget:'bills_list', cta:'Show me'}; } }catch(e){}
