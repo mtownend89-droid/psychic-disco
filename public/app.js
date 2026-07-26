@@ -364,15 +364,68 @@ function _a11ySweep(root){
     root.querySelectorAll('.doc-x,.rp-close,.wdt-x,.ce-x,.rwiz-x,.cele-close,.brief-x,.hub-tab').forEach(b=>{
       if(!b.getAttribute('aria-label')){ if(b.classList.contains('hub-tab')) b.setAttribute('aria-label', (b.textContent||'').trim()); else b.setAttribute('aria-label','Close'); }
     });
+    // Div/span elements that act as buttons (chips, option cards) — make them keyboard-reachable.
+    // Native <button> chips already handle this; this only touches the non-native clickables.
+    root.querySelectorAll(_A11Y_CLICKABLE).forEach(el=>{
+      if(el.hasAttribute('tabindex')) return;
+      if(!el.getAttribute('onclick') && !el.onclick) return;   // only genuinely clickable ones
+      el.setAttribute('tabindex','0');
+      if(!el.getAttribute('role')) el.setAttribute('role','button');
+    });
   }catch(e){}
 }
+const _A11Y_CLICKABLE='.acct-chip,.pf-row,.ww-card,.ws-opt,.ww-size-opt,.fd-scen,.persona-opt,.icon-opt,.color-opt,.ri-choice,.profile-avatar-pick,.page-nav-btn';
 function _a11yObserve(){
   if(_a11yStarted) return; _a11yStarted=true;
   try{
     _a11ySweep(document);
     const mo=new MutationObserver(()=>{ clearTimeout(_a11yTimer); _a11yTimer=setTimeout(()=>_a11ySweep(document), 300); });
     mo.observe(document.body||document.documentElement, {childList:true, subtree:true});
+    _initKbdA11y();
   }catch(e){}
+}
+// Modal overlays and how to dismiss each — used for Escape-to-close + focus trapping.
+const _A11Y_MODALS=[
+  ['manualModal',()=>closeManual()],['docModal',()=>closeDocModal()],['researchModal',()=>closeResearch()],
+  ['holdModal',()=>closeHold()],['widgetStudio',()=>closeStudio()],['catEditorModal',()=>closeCatEditor()],
+  ['widgetDetailModal',()=>closeWidgetDetail()],['fullResetModal',()=>closeFullReset()],
+  ['pageEditorModal',()=>closePageEditor()],['richieChat',()=>closeRichieChat()],['richieWiz',()=>rwizClose()]
+];
+function _topVisibleModal(){
+  let best=null, bestZ=-1;
+  for(const [id,close] of _A11Y_MODALS){
+    const el=document.getElementById(id); if(!el) continue;
+    let cs; try{ cs=getComputedStyle(el); }catch(e){ continue; }
+    if(cs.display==='none' || cs.visibility==='hidden' || !el.getClientRects().length) continue;
+    const z=parseInt(cs.zIndex,10)||0;
+    if(z>=bestZ){ bestZ=z; best={el,close}; }   // ties resolve to later-listed (assumed on top)
+  }
+  return best;
+}
+function _focusTrap(modal, e){
+  const sel='a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+  const nodes=Array.prototype.slice.call(modal.querySelectorAll(sel)).filter(n=>n.offsetParent!==null || getComputedStyle(n).position==='fixed');
+  if(!nodes.length) return;
+  const first=nodes[0], last=nodes[nodes.length-1], a=document.activeElement;
+  if(e.shiftKey){ if(a===first || !modal.contains(a)){ e.preventDefault(); last.focus(); } }
+  else { if(a===last || !modal.contains(a)){ e.preventDefault(); first.focus(); } }
+}
+function _initKbdA11y(){
+  if(window._kbdA11yOn) return; window._kbdA11yOn=true;
+  document.addEventListener('keydown', function(e){
+    // Enter/Space activates a non-native element we made role="button"
+    if(e.key==='Enter' || e.key===' ' || e.key==='Spacebar'){
+      const t=e.target;
+      if(t && t.getAttribute && t.getAttribute('role')==='button'){
+        const tag=(t.tagName||'').toLowerCase();
+        if(tag!=='button'&&tag!=='a'&&tag!=='input'&&tag!=='textarea'&&tag!=='select'){ e.preventDefault(); if(typeof t.click==='function') t.click(); return; }
+      }
+    }
+    if(e.key!=='Escape' && e.key!=='Tab') return;
+    const m=_topVisibleModal(); if(!m) return;
+    if(e.key==='Escape'){ e.preventDefault(); try{ m.close(); }catch(err){ m.el.style.display='none'; } }
+    else if(e.key==='Tab'){ _focusTrap(m.el, e); }
+  });
 }
 // Manual "reduce motion" preference (in addition to the OS-level prefers-reduced-motion).
 let _reduceMotion=false; try{ _reduceMotion=LS.getItem('mdf_reduce_motion')==='1'; }catch(e){}
