@@ -6641,8 +6641,36 @@ function gamiMarkEngaged(reason){
   try{ _refreshJourney(); }catch(e){}
   return s.streak;
 }
+/* ═══ DAILY / WEEKLY QUESTS ═══
+   A repeatable XP loop on top of the one-time achievements. Each quest checks derivable
+   state; completing it credits XP once per period (day or ISO week). Evaluated from
+   gamiEvaluate, so it re-checks on every data refresh and after any tracked action. */
+const QUESTS=[
+  {id:'review',   scope:'daily',  icon:'🏷️', label:'Clear your review queue',       xp:15, check:()=>{ try{ return dataLoaded && _reviewTxns().length===0; }catch(e){ return false; } }},
+  {id:'onpace',   scope:'daily',  icon:'🎯', label:'Keep spending on pace',          xp:10, check:()=>{ try{ const s=engSpendTrends(); return !s.budget || s.budget.pace>=0; }catch(e){ return false; } }},
+  {id:'balanced', scope:'daily',  icon:'🧮', label:'Give every dollar a job',         xp:10, check:()=>{ try{ const inc=engMonthlyIncome(); if(inc<=0) return false; const env=_zbBuckets().reduce((s,b)=>s+(b.amt||0),0); return Math.abs(inc-(env+engMonthlyBills()))<1; }catch(e){ return false; } }},
+  {id:'util',     scope:'weekly', icon:'💳', label:'Credit utilization under 30%',    xp:30, check:()=>{ try{ const c=engCreditUtil(); return !(c.limit>0) || c.pct<30; }catch(e){ return false; } }},
+  {id:'streak5',  scope:'weekly', icon:'🔥', label:'Reach a 5-day streak',            xp:40, check:()=>{ try{ return (gamiLoad().streak||0)>=5; }catch(e){ return false; } }},
+];
+function _questDayKey(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function _questWeekKey(){ const d=new Date(); const oneJan=new Date(d.getFullYear(),0,1); const wk=Math.ceil((((d-oneJan)/86400000)+oneJan.getDay()+1)/7); return d.getFullYear()+'-W'+String(wk).padStart(2,'0'); }
+function _questState(){ const s=gamiLoad(); if(!s.quests) s.quests={}; const dk=_questDayKey(), wk=_questWeekKey();
+  if(!s.quests.d || s.quests.d.k!==dk) s.quests.d={k:dk, done:{}};
+  if(!s.quests.w || s.quests.w.k!==wk) s.quests.w={k:wk, done:{}};
+  return s.quests; }
+function questEvaluate(){
+  const q=_questState(); let awarded=0;
+  QUESTS.forEach(def=>{ const bucket=def.scope==='daily'?q.d:q.w; if(bucket.done[def.id]) return;
+    let ok=false; try{ ok=!!def.check(); }catch(e){}
+    if(ok){ bucket.done[def.id]=true; awarded+=def.xp; }
+  });
+  gamiSave();
+  if(awarded>0){ try{ awardXp(awarded,'quest'); }catch(e){}
+    try{ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg && (pg.widgets||[]).some(w=>w.type==='journey')) renderCanvas(pg); }catch(e){} }
+  return q;
+}
 function gamiEvaluate(opts){
-  opts=opts||{}; try{ nwHistRecord(); }catch(e){} try{ hsHistRecord(); }catch(e){}
+  opts=opts||{}; try{ nwHistRecord(); }catch(e){} try{ hsHistRecord(); }catch(e){} try{ questEvaluate(); }catch(e){}
   const s=gamiLoad(); const firstRun=!s.seeded; const m=gamiMetrics(); const newly=[];
   ACHIEVEMENTS.forEach(a=>{
     if(s.unlocked[a.id]) return;
@@ -6707,6 +6735,14 @@ function journeyBody(w){
     </div>
     <div class="jrn-xp"><i style="width:${APP.proMode?100:lp.pct}%"></i></div>
     <div class="jrn-stats"><span><b>${APP.xp}</b> XP</span><span><b>${unlockedCount}/${totalCount}</b> badges</span><span><b>${m.completedGoals}</b> goals done</span><span><b>${s.bestStreak||s.streak||0}</b> best 🔥</span></div>
+    ${(function(){ try{
+      const q=_questState();
+      const row=def=>{ const done=(def.scope==='daily'?q.d:q.w).done[def.id]; return `<div class="jrn-quest${done?' done':''}"><span class="jrn-q-ic">${done?'✅':def.icon}</span><span class="jrn-q-lbl">${esc(def.label)}</span><span class="jrn-q-xp">+${def.xp} XP</span></div>`; };
+      const daily=QUESTS.filter(x=>x.scope==='daily'), weekly=QUESTS.filter(x=>x.scope==='weekly');
+      const dDone=daily.filter(x=>q.d.done[x.id]).length, wDone=weekly.filter(x=>q.w.done[x.id]).length;
+      return `<div class="jrn-sec">Daily quests <span class="jrn-sec-ct">${dDone}/${daily.length}</span></div><div class="jrn-quests">${daily.map(row).join('')}</div>`
+        + `<div class="jrn-sec">Weekly quests <span class="jrn-sec-ct">${wDone}/${weekly.length}</span></div><div class="jrn-quests">${weekly.map(row).join('')}</div>`;
+    }catch(e){ return ''; } })()}
     ${(function(){ try{ const h=nwHistMonthly(6); if(h&&h.length>=2){ const vals=h.map(x=>x.v); const diff=vals[vals.length-1]-vals[0]; const up=diff>=0; return `<div class="jrn-sec">Net worth trend <span class="jrn-trend-lbl ${up?'up':'down'}">${up?'▲':'▼'} ${fmtK(Math.abs(diff))} · ${h.length}mo</span></div><div class="jrn-trend">${_sparkline(vals, up?'#2ecc8a':'#e85d75', 260, 42)}</div>`; } }catch(e){} return ''; })()}
     <div class="jrn-sec">Next milestones</div>
     ${milestones}

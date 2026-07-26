@@ -2283,6 +2283,13 @@ canvas.chart-interactive{cursor:crosshair;}
 .jrn-stats b{color:var(--text);font-size:13px;}
 .jrn-sec{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:4px;display:flex;justify-content:space-between;align-items:center;}
 .jrn-sec-ct{color:var(--green);font-weight:700;}
+.jrn-quests{display:flex;flex-direction:column;gap:5px;margin:6px 0 2px;}
+.jrn-quest{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);font-size:12.5px;}
+.jrn-quest.done{opacity:.62;}
+.jrn-quest.done .jrn-q-lbl{text-decoration:line-through;}
+.jrn-q-ic{font-size:14px;flex:0 0 auto;}
+.jrn-q-lbl{flex:1 1 auto;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.jrn-q-xp{flex:0 0 auto;font-size:11px;font-weight:700;color:var(--green);}
 .jrn-ms{background:var(--surface3);border:1px solid var(--border);border-radius:10px;padding:9px 11px;}
 .jrn-ms-top{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;font-weight:600;color:var(--text);}
 .jrn-ms-top b{color:var(--green);font-weight:700;font-size:12px;white-space:nowrap;}
