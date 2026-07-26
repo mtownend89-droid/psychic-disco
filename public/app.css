@@ -1268,6 +1268,16 @@ body.fx-slime .canvas-widget-card::after{content:'';position:absolute;left:-2%;r
 .rec-billbtn{flex-shrink:0;background:var(--green-dim);border:1px solid var(--green);color:var(--green);border-radius:8px;padding:6px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);white-space:nowrap;}
 .rec-billbtn:hover{background:var(--surface3);}
 .rec-inbills{flex-shrink:0;font-size:12px;font-weight:700;color:var(--muted);padding:6px 11px;white-space:nowrap;}
+/* Subscriptions hub extras: renewal chip, price-hike badge, cancel toggle */
+.rec-renew{font-size:11px;color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums;}
+.rec-renew.soon{color:var(--amber);font-weight:600;}
+.rec-priceup{display:inline-block;font-size:10px;font-weight:800;color:var(--amber);background:var(--amber-dim,rgba(240,165,64,.15));border-radius:6px;padding:1px 6px;margin-left:4px;vertical-align:middle;font-variant-numeric:tabular-nums;}
+.rec-cancel-badge{display:inline-block;font-size:10px;font-weight:800;color:var(--red);background:var(--red-dim);border-radius:6px;padding:1px 6px;margin-left:4px;vertical-align:middle;text-transform:uppercase;letter-spacing:.03em;}
+.rec-cancelbtn{flex-shrink:0;background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);white-space:nowrap;}
+.rec-cancelbtn:hover{border-color:var(--red);color:var(--red);}
+.rec-cancelbtn.on{border-color:var(--green);color:var(--green);}
+.rec-row2.rec-flagged{opacity:.72;}
+.rec-row2.rec-flagged .rec-nm{text-decoration:line-through;text-decoration-color:var(--muted);}
 .pf-wrap{display:flex;flex-direction:column;}
 .pf-total{margin-bottom:8px;}
 .pf-accts{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;}

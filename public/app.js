@@ -1285,37 +1285,65 @@ function engRecurring(){
     else if(g>=350&&g<=385){cad='yearly';per=365;}
     if(!cad) return;
     const last=txns[txns.length-1];
-    out.push({merchant:(last.merchant_name||last.name||k), amount:med, cadence:cad, count:txns.length, lastDate:last.date, monthly:med*(30.44/per), category:getTxnCategory(last), key:_txnKey(last), merchKey:k});
+    // price-hike detection: most recent charge vs the median of the earlier ones
+    const recent=last.amount;
+    const priorArr=txns.slice(0,-1).map(t=>t.amount).sort((a,b)=>a-b);
+    const prior=priorArr.length?priorArr[Math.floor(priorArr.length/2)]:med;
+    const priceUp = recent>prior*1.05 && recent>prior+0.5;
+    const nextTs=new Date(last.date+'T12:00:00').getTime()+per*86400000;   // projected next renewal
+    out.push({merchant:(last.merchant_name||last.name||k), amount:med, cadence:cad, count:txns.length, lastDate:last.date,
+      monthly:med*(30.44/per), perDays:per, nextTs, recent, prior, priceUp,
+      category:getTxnCategory(last), key:_txnKey(last), merchKey:k});
   });
   return out.sort((a,b)=>b.monthly-a.monthly);
 }
+function _cancelSubs(){ APP.cancelSubs=APP.cancelSubs||{}; return APP.cancelSubs; }
 let _recRows=[];
 function recurringBody(w){
   const rec=engRecurring(); _recRows=rec;
   if(!rec.length) return `<div class="wph"><div class="wph-sub">No recurring charges detected yet.</div><div class="ws-hint" style="margin-top:6px">Once you've got a couple months of transactions, Richie spots subscriptions and recurring bills automatically.</div></div>`;
+  const cancel=_cancelSubs();
   const monthlyTot=rec.reduce((s,r)=>s+r.monthly,0);
+  const flagged=rec.filter(r=>cancel[r.merchKey]);
+  const savings=flagged.reduce((s,r)=>s+r.monthly,0);
+  const hikes=rec.filter(r=>r.priceUp).length;
   const cats=getUserCategories().filter(c=>!c.group).map(c=>c.label);
   const billNames=new Set((APP.manualBills||[]).map(b=>(b.name||'').toLowerCase()));
-  const rows=rec.slice(0,25).map((r,i)=>{
+  const today=new Date(); today.setHours(0,0,0,0);
+  // renewals soonest-first within each price tier keeps urgent ones visible; keep monthly-desc default
+  const rows=rec.slice(0,30).map((r,i)=>{
+    const isCancel=!!cancel[r.merchKey];
     const catList=cats.includes(r.category)?cats:[r.category].concat(cats);
     const opts=catList.map(c=>`<option value="${esc(c)}"${c===r.category?' selected':''}>${esc(c)}</option>`).join('');
     const inBills=billNames.has((r.merchant||'').toLowerCase());
     const billBtn=inBills
       ? `<span class="rec-inbills" title="Already in your Bills">✓ Bill</span>`
       : `<button class="rec-billbtn" onclick="event.stopPropagation();recurringToBill(${i})" title="Add to Upcoming Bills">＋ Bill</button>`;
-    return `<div class="rec-row2">
+    const dLeft=r.nextTs?Math.round((r.nextTs-today.getTime())/86400000):null;
+    const renewLbl = dLeft==null?'' : (()=>{ const d=new Date(r.nextTs).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      return dLeft<0?`📅 renews around ${d}` : dLeft===0?`📅 renews today` : `📅 renews ${d} · in ${dLeft}d`; })();
+    const priceBadge = r.priceUp?`<span class="rec-priceup" title="Price increase detected">▲ ${fmtK(r.prior)}→${fmtK(r.recent)}</span>`:'';
+    const cancelBadge = isCancel?`<span class="rec-cancel-badge">cancelling</span>`:'';
+    return `<div class="rec-row2${isCancel?' rec-flagged':''}">
       <div class="rec-r2-top">
-        <div class="rec-nm">${esc(r.merchant)}</div>
+        <div class="rec-nm">${esc(r.merchant)} ${priceBadge}${cancelBadge}</div>
         <div class="rec-side"><div class="rec-amt">${fmtK(r.amount)}</div><div class="rec-mo">${r.cadence} · ${fmtK(r.monthly)}/mo</div></div>
       </div>
+      ${renewLbl?`<div class="rec-renew${dLeft!=null&&dLeft>=0&&dLeft<=7?' soon':''}">${renewLbl}</div>`:''}
       <div class="rec-r2-ctrls">
-        <select class="txn-cat-sel rec-catsel" onclick="event.stopPropagation()" onchange="recurringSetCat(${i},this.value)" title="Set category (applies to this merchant)">${opts}</select>
+        <select class="txn-cat-sel rec-catsel" onclick="event.stopPropagation()" onchange="recurringSetCat(${i},this.value)" title="Set category (applies to this merchant)" aria-label="Category for ${esc(r.merchant)}">${opts}</select>
         ${billBtn}
+        <button class="rec-cancelbtn${isCancel?' on':''}" onclick="event.stopPropagation();subToggleCancel(${i})" title="${isCancel?'Keep this subscription':'Flag to cancel'}" aria-label="${isCancel?'Keep':'Flag to cancel'} ${esc(r.merchant)}">${isCancel?'↺ Keep':'⊘ Cancel'}</button>
       </div>
     </div>`;
   }).join('');
-  return `<div class="rec-wrap"><div class="rec-total"><b>${fmtK(monthlyTot)}</b> est. recurring / month · ${rec.length} found</div><div class="ws-hint" style="margin:2px 0 9px">Subscriptions <b>and</b> bills — utilities, insurance, phone, landscaping. Categorize each (sets a rule for that merchant) or add it to your Bills.</div>${rows}</div>`;
+  const savingsChip = savings>0?` · <span style="color:var(--pos)">save ${fmtK(savings)}/mo by cancelling ${flagged.length}</span>`:'';
+  const hikeChip = hikes>0?` · <span style="color:var(--amber)">▲ ${hikes} price rise${hikes>1?'s':''}</span>`:'';
+  return `<div class="rec-wrap">
+    <div class="rec-total"><b>${fmtK(monthlyTot)}</b>/mo · <b>${fmtK(monthlyTot*12)}</b>/yr across ${rec.length}${hikeChip}${savingsChip}</div>
+    <div class="ws-hint" style="margin:2px 0 9px">Subscriptions <b>and</b> recurring bills. Flag ones to <b>⊘ Cancel</b>, watch the ▲ price rises, and see when each renews.</div>${rows}</div>`;
 }
+function subToggleCancel(i){ const r=_recRows[i]; if(!r||!r.merchKey) return; const c=_cancelSubs(); if(c[r.merchKey]) delete c[r.merchKey]; else c[r.merchKey]=true; saveState(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); if(sbRichie)sbRichie.do('nod'); }
 function recurringSetCat(i,cat){ const r=_recRows[i]; if(!r||!r.merchKey)return; setCatRule(r.merchKey,cat); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function recurringToBill(i){
   const r=_recRows[i]; if(!r)return;
@@ -3209,7 +3237,7 @@ const WIDGET_CATALOG=[
   {id:'goals',name:'Financial Goals',icon:'🎯',cat:'Overview',span:2,minLevel:1,desc:'Set goals, track progress automatically, and let Richie coach you to the finish.'},
   {id:'accounts_list',name:'All Accounts',icon:'🏦',cat:'Overview',span:2,minLevel:1,desc:'Every account with balances — tap to see transactions.'},
   {id:'all_transactions',name:'All Transactions',icon:'🧾',cat:'Cash Flow',span:2,minLevel:1,desc:'Every transaction — search, categorize, and tag (paycheck, transfer, business…).'},
-  {id:'recurring',name:'Recurring & Subscriptions',icon:'🔁',cat:'Cash Flow',span:2,minLevel:1,desc:'Auto-detected subscriptions and recurring charges, with a monthly total.'},
+  {id:'recurring',name:'Subscriptions & Renewals',icon:'🔁',cat:'Cash Flow',span:2,minLevel:1,desc:'Auto-detected subscriptions & recurring bills — next renewal, price-hike alerts, flag any to cancel, monthly & yearly totals.'},
   {id:'sankey',name:'Money Flow (Sankey)',icon:'🔀',cat:'Cash Flow',span:2,minLevel:2,desc:'Income → category group → category, flowing left to right through your category tree.'},
   {id:'top_categories',name:'Top Categories',icon:'📊',cat:'Cash Flow',span:1,minLevel:1,desc:'Where your money goes most.'},
   {id:'category_heatmap',name:'Category Heatmap',icon:'🗓️',cat:'Cash Flow',span:2,minLevel:2,desc:'Spending by category across months — spot seasonal patterns at a glance.'},
@@ -8243,6 +8271,10 @@ function _briefActionItems(){
   const ss=_scoreStale(); if(ss.stale){ items.push({ id:'score', icon:'📊', title:'Log your credit score', say: ss.days==null?`I don't have a credit score from you yet — it takes ten seconds and I'll track the trend.`:`Your last credit score was ${ss.days} days ago. Drop in this month's so I can watch the trend.`, sub:'Free in your card app or Credit Karma — no score impact.', action:{label:'Log score', open:'openScoreEditor'} }); }
   try{ const hi=engHighInterestDebt(); if(hi>0){ items.push({ id:'hidebt', icon:'🔥', title:'High-interest debt to attack', say:`You're carrying ${fmtK(hi)} in high-interest debt. Sending your extra funds here first is a guaranteed return — want to plan it?`, sub:'The Extra Funds Triage delegates your surplus by priority.', action:{label:'Open triage', go:'fund_triage'} }); } }catch(e){}
   try{ const ef=engEmergencyFund(); if(ef<1000){ items.push({ id:'emergency', icon:'🛟', title:'Build your safety net', say:`Your starter emergency fund is at ${fmtK(ef)} of $1,000. That buffer keeps a surprise off your cards — let's grow it.`, sub:'Fund it in Savings Buckets.', action:{label:'Open buckets', go:'savings_buckets'} }); } }catch(e){}
+  try{ const rec=engRecurring(); const hikes=rec.filter(r=>r.priceUp); const cancel=_cancelSubs(); const flagged=rec.filter(r=>cancel[r.merchKey]);
+    if(hikes.length){ items.push({ id:'subhike', icon:'🔁', title:'A subscription price went up', say:`${hikes.length===1?esc(hikes[0].merchant)+' raised its price':hikes.length+' subscriptions raised their prices'} — worth a look before the next charge?`, sub:hikes.slice(0,3).map(r=>esc(r.merchant)+' · '+fmtK(r.prior)+'→'+fmtK(r.recent)).join('<br>'), action:{label:'Review subscriptions', go:'recurring'} }); }
+    else if(flagged.length){ items.push({ id:'subcancel', icon:'⊘', title:'Subscriptions to cancel', say:`You flagged ${flagged.length} subscription${flagged.length>1?'s':''} to cancel — done it yet? That's ${fmtK(flagged.reduce((s,r)=>s+r.monthly,0))}/mo back in your pocket.`, sub:flagged.slice(0,4).map(r=>esc(r.merchant)).join(', '), action:{label:'Review subscriptions', go:'recurring'} }); }
+  }catch(e){}
   return items;
 }
 function buildBriefSteps(){
@@ -8310,6 +8342,7 @@ const RICHIE_SPOTS={
   debt_hub:{ tab:'promo', message:"Your 0% promo lives here 👇 — pay it down before the rate jumps." },
   fund_triage:{ focusSel:'.ft-extra-edit input', message:"Set your extra funds right here 👇 and I'll split them by priority for you." },
   savings_buckets:{ message:"Grow your safety-net bucket here 👇 — a little each payday adds up fast." },
+  recurring:{ focusSel:'.rec-cancelbtn', message:"Here are your subscriptions 👇 — flag any to ⊘ Cancel and watch the ▲ price rises." },
   bills_list:{ focusSel:'.bill-row', message:"Here are your bills 👇 — mark them paid or tweak what you'll pay." },
   top_categories:{ message:"Here's where your money's going 👇 — pick a category to trim this month." },
 };
