@@ -209,6 +209,7 @@ let _txnSearch={q:'', chips:{month:false,big:false,income:false,spend:false,unca
 const TXS_CHIPS=[{id:'month',label:'This month'},{id:'big',label:'≥ $50'},{id:'income',label:'Income'},{id:'spend',label:'Spending'},{id:'uncat',label:'Uncategorized'}];
 function openTxnSearch(){
   const m=gg('txnSearchModal'); if(!m) return;
+  try{ discoverXp('search',10,'global search'); }catch(e){}
   m.style.display='flex';
   const chipsEl=gg('txsChips'); if(chipsEl) chipsEl.innerHTML=TXS_CHIPS.map(c=>`<button class="txs-chip${_txnSearch.chips[c.id]?' on':''}" onclick="txnSearchChip('${c.id}')">${esc(c.label)}</button>`).join('');
   txnSearchRender();
@@ -1325,7 +1326,7 @@ function billCalBody(w){
   else { list=c.monthEvents.length?_billCalList(c.monthEvents):'<div class="ws-hint">No bills or income scheduled this month.</div>'; listHdr='This month'; }
   return `<div class="bcal-wrap">${head}${dowRow}<div class="bcal-grid">${grid}</div>${summary}<div class="bcal-listhdr">${listHdr}</div><div class="bcal-list">${list}</div></div>`;
 }
-function billCalShift(uid,delta){ const st=_billCal[uid]||(_billCal[uid]={off:0,sel:null}); st.off=Math.max(0,Math.min(11,st.off+delta)); st.sel=null; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+function billCalShift(uid,delta){ try{ discoverXp('bill_calendar',10,'the bill calendar'); }catch(e){} const st=_billCal[uid]||(_billCal[uid]={off:0,sel:null}); st.off=Math.max(0,Math.min(11,st.off+delta)); st.sel=null; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function billCalDay(uid,key){ const st=_billCal[uid]||(_billCal[uid]={off:0,sel:null}); st.sel=st.sel===key?null:key; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 
 /* ── Unified bills/liabilities layer ──
@@ -1987,6 +1988,18 @@ function checkGoalCompletion(){
       awardXp(50);
       if(sbRichie)sbRichie.do('tada');
       try{ gamiGoalCompleted(g); }catch(e){}
+    } else {
+      // Milestone cheers on the way up — fire once for the highest newly-crossed of 25/50/75%.
+      g._ms=g._ms||{};
+      const crossed=[25,50,75].filter(mk=>p.pct>=mk);
+      const top=crossed[crossed.length-1];
+      if(top && !g._ms[top]){
+        crossed.forEach(mk=>{ g._ms[mk]=true; });   // mark all up to the top as seen (no backfill pops)
+        any=true;
+        try{ awardXp(10); }catch(e){}
+        if(sbRichie)sbRichie.do('nod');
+        try{ richieCelebrate(`${top}% of the way to your "${g.name||'goal'}" goal — ${top>=75?'so close, keep pushing! 🔥':top>=50?'halfway there! 🎯':'strong start! 💪'}`); }catch(e){}
+      }
     }
   });
   if(any) saveState();
@@ -2427,6 +2440,7 @@ function _guessCol(H, re){ for(let i=0;i<H.length;i++){ if(re.test(H[i]||'')) re
 function csvFileChosen(inp){
   const f=inp.files&&inp.files[0]; inp.value=''; if(!f) return;
   if(f.size>8*1024*1024){ alert('That CSV is large (max ~8MB). Try splitting it into smaller files.'); return; }
+  try{ discoverXp('csv_import',15,'CSV import'); }catch(e){}
   const rd=new FileReader();
   rd.onload=()=>{ try{ _csvInit(String(rd.result||''), f.name||'transactions.csv'); }catch(e){ alert('Could not parse that file — is it a CSV?'); } };
   rd.onerror=()=>alert('Could not read that file.');
@@ -2507,9 +2521,20 @@ function csvDoImport(){
   APP.imports.push({ id:importId, kind:'bank', label:importLabel, ts:Date.now(), txnImportId:importId, summary:`${added} transaction${added!==1?'s':''} · CSV` });
   saveState(); _rebuildTxns(); if(allTxns.length>0) dataLoaded=true;
   closeCsvModal();
-  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+  if(APP._awaitingBuild){ try{ richieBuildApp(); }catch(e){} }   // imported straight from the build gate → build the dashboard
+  else { const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
   if(typeof richieSay==='function') richieSay(`📥 Imported ${added} transaction${added!==1?'s':''} from ${nm}. Remove this batch anytime from Settings → connected sources.`);
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
   if(typeof sbRichie!=='undefined'&&sbRichie) sbRichie.do('tada');
+  try{ updateReviewBadge(); }catch(e){}
+  // Offer to review the imported categories (some auto-guesses may be off); fall back to a plain note.
+  const reviewable=(typeof _reviewTxns==='function')?_reviewTxns().length:0;
+  if(reviewable && typeof richieShow==='function'){
+    setTimeout(()=>{ try{ richieShow(`📥 Imported ${added} transaction${added!==1?'s':''} from ${nm}. A few categories may need a look — want to review them together?`, {emo:'happy', actions:[
+      {label:'Review categories', cls:'ra-go', on:openBriefing},
+      {label:'Later', on:(typeof richieDismiss==='function'?richieDismiss:function(){})}
+    ]}); }catch(e){} }, 700);
+  } else if(typeof richieSay==='function') richieSay(`📥 Imported ${added} transaction${added!==1?'s':''} from ${nm}. Remove this batch anytime from Settings → connected sources.`);
 }
 function closeCsvModal(){ const m=gg('csvModal'); if(m) m.style.display='none'; _csv=null; }
 
@@ -3083,7 +3108,7 @@ const BUNDLE_PAGES={
 };
 let _uidSeq=0;
 // Old widget types that were folded into the tabbed hubs — remap so they never render as "? Widget".
-const WIDGET_MIGRATE={debt_summary:'debt_hub',debt_payoff:'debt_hub',credit_util:'debt_hub',promo_tracker:'debt_hub',fire_progress:'fire_hub',retirement_proj:'fire_hub',fire_calc:'fire_hub',safe_to_spend:'cash_summary',budget_actual:'zero_budget',fire_drill:'fire_hub',debt_planner:'debt_hub'};
+const WIDGET_MIGRATE={debt_summary:'debt_hub',debt_payoff:'debt_hub',credit_util:'debt_hub',promo_tracker:'debt_hub',fire_progress:'fire_hub',retirement_proj:'fire_hub',fire_calc:'fire_hub',safe_to_spend:'cash_summary',budget_actual:'zero_budget',fire_drill:'fire_hub',debt_planner:'debt_hub',cashflow_chart:'cashflow_planner'};
 function makeWidget(type){ type=WIDGET_MIGRATE[type]||type; return {uid:'w'+Date.now()+'_'+(_uidSeq++),type:type,span:(WIDGET_BY_ID[type]&&WIDGET_BY_ID[type].span)||1}; }
 // Build widgets from a type list, silently dropping any type not registered in the current
 // catalog — so a starter set can name widgets that live behind an as-yet-unmerged feature
@@ -3702,10 +3727,13 @@ const WIDGET_CATALOG=[
   {id:'bill_calendar',name:'Bill Calendar',icon:'🗓️',cat:'Budget',span:2,minLevel:1,desc:'A month view of upcoming bills & income by due date — spot heavy weeks, tap a day for detail.'},
   {id:'zero_budget',name:'Every-Dollar Budget',icon:'🧮',cat:'Budget',span:2,minLevel:2,desc:'Give every dollar a job — with live actual-vs-budgeted spending per envelope (zero-based budgeting).'},
   {id:'savings_buckets',name:'Savings Buckets',icon:'🪣',cat:'Overview',span:2,minLevel:1,desc:'Sinking funds — Reserve, Home, Family, Medical — each with its own goal and progress.'},
-  {id:'cashflow_chart',name:'Cash Flow',icon:'🌊',cat:'Cash Flow',span:2,minLevel:1,desc:'Your projected running balance — the same forward line as the Cash Flow Planner.'},
+  // Cash Flow (read-only chart) folded into the Cash Flow Planner — same projection line, plus
+  // editing. Kept out of the catalog; existing widgets migrate via WIDGET_MIGRATE above.
   {id:'pl_panel',name:'Profit & Loss',icon:'💹',cat:'Cash Flow',span:2,minLevel:1,desc:'Income, spending, net & savings rate by day/week/month.'},
   {id:'cashflow_planner',name:'Cash Flow Planner',icon:'📅',cat:'Cash Flow',span:2,minLevel:1,desc:'Project your running balance forward — edit bills, see your low point before it hits.'},
   {id:'fund_triage',name:'Where Extra Money Goes',icon:'💸',cat:'Cash Flow',span:2,minLevel:1,desc:'Delegate your monthly surplus by priority — high-interest debt, then savings, then investing.'},
+  {id:'cashflow_planner',name:'Cash Flow',icon:'📅',cat:'Cash Flow',span:2,minLevel:1,desc:'Your projected running balance — see your low point before it hits, and edit bills to fix it.'},
+  {id:'fund_triage',name:'Extra Funds Triage',icon:'💸',cat:'Cash Flow',span:2,minLevel:1,desc:'Delegate your monthly surplus by priority — high-interest debt, then savings, then investing.'},
   {id:'goals',name:'Financial Goals',icon:'🎯',cat:'Overview',span:2,minLevel:1,desc:'Set goals, track progress automatically, and let Richie coach you to the finish.'},
   {id:'health_score',name:'Financial Health Score',icon:'🩺',cat:'Overview',span:2,minLevel:1,desc:'A single 0–100 score across savings rate, emergency fund, debt-to-income, credit use & high-interest debt — with Richie\'s top fix.'},
   {id:'accounts_list',name:'All Accounts',icon:'🏦',cat:'Overview',span:2,minLevel:1,desc:'Every account with balances — tap to see transactions.'},
@@ -3756,12 +3784,14 @@ function wwCategoryStep(){
   const cats={};
   WIDGET_CATALOG.forEach(w=>{ (cats[w.cat]=cats[w.cat]||[]).push(w); });
   const icons={'Overview':'📊','Budget':'🎯','Cash Flow':'🌊','Wealth':'📈','Debt':'🚨','Playground':'🎮'};
+  const intents={'Overview':'See where you stand','Budget':'Plan your spending','Cash Flow':'Look ahead & find extra','Wealth':'Grow your net worth','Debt':'Pay down what you owe','Playground':'Stress-test scenarios'};
   return Object.keys(cats).map(cat=>{
     const items=cats[cat]; const unlocked=items.filter(w=>widgetUnlocked(w)).length;
+    const intent=intents[cat]?`${intents[cat]} · `:'';
     return `<div class="ww-card" onclick="wwPickCat('${cat.replace(/'/g,"\\'")}')">
       <div class="ww-card-icon">${icons[cat]||'🧩'}</div>
       <div style="flex:1;min-width:0"><div class="ww-card-name">${cat}</div>
-      <div class="ww-card-desc">${items.length} widget${items.length!==1?'s':''}${unlocked<items.length?` · ${unlocked} unlocked`:''}</div></div>
+      <div class="ww-card-desc">${intent}${items.length} widget${items.length!==1?'s':''}${unlocked<items.length?` · ${unlocked} unlocked`:''}</div></div>
       <div class="ww-card-arrow">→</div></div>`;
   }).join('');
 }
@@ -4005,6 +4035,7 @@ function buildGateHTML(){
     ${goals?`<div class="bgate-goals">${esc(goals)}</div>`:''}
     <button class="bgate-cta" onclick="openLinkHandler()">🔗 Connect my bank</button>
     <button class="bgate-alt" onclick="docUploadPick()">📄 Or upload a statement / bill</button>
+    <button class="bgate-alt" onclick="gg('csvFileInput').click()">📥 No bank? Import a transactions CSV</button>
     <button class="bgate-skip" onclick="richieBuildApp({sample:true})">Explore with sample data first</button>
     <div class="bgate-note">🔒 Bank-level encryption · read-only · disconnect anytime</div>
   </div></div>`;
@@ -4606,7 +4637,7 @@ function engBudgetTemplate(tplId){
   return {tpl,income,fixedBills,envelopes,envTotal,leftover:income-fixedBills-envTotal,groups};
 }
 let _budTpl={uid:null, tpl:'50-30-20'};
-function openBudgetTemplates(uid){ _budTpl.uid=uid||null; if(!BUDGET_TEMPLATES.find(t=>t.id===_budTpl.tpl)) _budTpl.tpl='50-30-20'; const m=gg('budgetTplModal'); if(!m) return; m.style.display='flex'; renderBudgetTemplates(); }
+function openBudgetTemplates(uid){ try{ discoverXp('budget_templates',10,'budget templates'); }catch(e){} _budTpl.uid=uid||null; if(!BUDGET_TEMPLATES.find(t=>t.id===_budTpl.tpl)) _budTpl.tpl='50-30-20'; const m=gg('budgetTplModal'); if(!m) return; m.style.display='flex'; renderBudgetTemplates(); }
 function closeBudgetTemplates(){ const m=gg('budgetTplModal'); if(m) m.style.display='none'; }
 function btPick(id){ _budTpl.tpl=id; renderBudgetTemplates(); }
 function renderBudgetTemplates(){
@@ -7553,6 +7584,12 @@ function awardXp(amount,reason){
   gg('sbXp').textContent=APP.xp+' XP';
   if(reason) richieSay(reason+' (+'+amount+' XP)');
 }
+// Award XP the first time a feature is used (once ever, tracked in the synced gami store).
+function discoverXp(key, xp, label){
+  try{ const s=gamiLoad(); s.discovered=s.discovered||{}; if(s.discovered[key]) return; s.discovered[key]=Date.now(); gamiSave();
+    awardXp(xp||10, `✨ First time using ${label}`);
+  }catch(e){}
+}
 function levelUp(){
   const lv=LEVELS.find(l=>l.n===APP.level);
   if(sbRichie)sbRichie.do('tada');
@@ -9048,7 +9085,9 @@ let _briefChar=null, _briefTxns=[], _briefBills=[], _briefSteps=[], _briefStep=0
 function _briefCutoff(){ let v=0; try{ v=parseInt(LS.getItem('richie_lastvisit')||'0',10); }catch(e){} return (isFinite(v)&&v>0)?v:(Date.now()-7*86400000); }
 function _markBriefingSeen(){ try{ LS.setItem('richie_lastvisit', String(Date.now())); }catch(e){} }
 function _newTxns(){ const cut=new Date(_briefCutoff()); const ex=(typeof _excludedAcctIds==='function')?_excludedAcctIds():new Set();
-  return (allTxns||[]).filter(t=> t && !ex.has(t.account_id) && new Date((t.date||'')+'T12:00:00')>=cut)
+  // Freshly-imported transactions (last 3 days) are reviewable even when their CSV dates are old.
+  const recentImports=new Set((APP.imports||[]).filter(im=>im&&im.txnImportId&&(Date.now()-(im.ts||0))<3*86400000).map(im=>im.txnImportId));
+  return (allTxns||[]).filter(t=> t && !ex.has(t.account_id) && (new Date((t.date||'')+'T12:00:00')>=cut || (t._importId && recentImports.has(t._importId))))
     .sort((a,b)=> new Date(b.date)-new Date(a.date)); }
 // Transactions the user hasn't explicitly confirmed yet (auto-categories may be wrong, so we
 // ask them to review each — even ones that already have a category). Persisted in mdf_txn_confirmed.
