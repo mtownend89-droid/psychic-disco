@@ -1259,6 +1259,75 @@ function engCashFlowProjection(days, cats){
   return {start, end:bal, series, events, low, totalIn, totalOut, totalSaved, net:bal-start, byDay, days};
 }
 
+/* ═══ BILL CALENDAR ═══
+   A month grid of upcoming bills & income by due date, built from the same dated,
+   business-day-shifted cash-flow events. Projection only runs forward from today, so
+   past days in the current month read as empty (those bills already came due). */
+function _dk(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function _dkParse(k){ const p=k.split('-').map(Number); return new Date(p[0],p[1]-1,p[2]); }
+function _calAmt(n){ n=Math.abs(n); return n>=1000?(n/1000).toFixed(n>=10000?0:1)+'k':String(Math.round(n)); }
+function engBillCalendar(monthOffset){
+  monthOffset=monthOffset||0;
+  const today=new Date(); today.setHours(0,0,0,0);
+  const first=new Date(today.getFullYear(), today.getMonth()+monthOffset, 1);
+  const last=new Date(first.getFullYear(), first.getMonth()+1, 0);
+  const label=first.toLocaleString('en-US',{month:'long',year:'numeric'});
+  const horizon=Math.max(1, Math.round((last-today)/86400000)+2);
+  let events=[]; try{ events=(engCashFlowProjection(horizon).events)||[]; }catch(e){}
+  const byDate={};
+  events.forEach(e=>{ const k=_dk(_projDate(e.day)); (byDate[k]=byDate[k]||[]).push({name:e.name, amt:e.amt, type:e.type}); });
+  const gridStart=new Date(first); gridStart.setDate(first.getDate()-first.getDay());   // Sunday on/before the 1st
+  const weeks=[]; let cur=new Date(gridStart); let monthIn=0, monthOut=0;
+  for(let wk=0; wk<6; wk++){
+    const week=[];
+    for(let col=0; col<7; col++){
+      const k=_dk(cur), evs=byDate[k]||[], inMonth=cur.getMonth()===first.getMonth();
+      const net=evs.reduce((s,e)=>s+e.amt,0);
+      if(inMonth) evs.forEach(e=>{ if(e.amt>=0) monthIn+=e.amt; else monthOut+=-e.amt; });
+      week.push({key:k, dom:cur.getDate(), inMonth, isToday:k===_dk(today), events:evs, net});
+      cur=new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()+1);
+    }
+    weeks.push(week);
+    if(cur>last && cur.getMonth()!==first.getMonth() && weeks.length>=5) break;   // don't draw an all-trailing 6th week
+  }
+  const monthEvents=Object.keys(byDate).filter(k=>{ const d=_dkParse(k); return d.getMonth()===first.getMonth()&&d.getFullYear()===first.getFullYear(); }).sort().map(k=>({key:k, events:byDate[k]}));
+  return {monthOffset, label, weeks, monthIn:Math.round(monthIn), monthOut:Math.round(monthOut), monthNet:Math.round(monthIn-monthOut), monthEvents};
+}
+let _billCal={};
+function _billCalDayLabel(k){ return _dkParse(k).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); }
+function _billCalList(days){
+  return days.map(d=>{
+    const rows=d.events.slice().sort((a,b)=>a.amt-b.amt).map(e=>`<div class="bcal-li"><span class="bcal-li-dot ${e.amt>=0?'in':'out'}"></span><span class="bcal-li-nm">${esc(e.name)}</span><b style="color:${e.amt>=0?'var(--pos)':'var(--red)'}">${e.amt>=0?'+':'−'}${fmtK(e.amt)}</b></div>`).join('');
+    return `<div class="bcal-li-day"><div class="bcal-li-date">${_billCalDayLabel(d.key)}</div>${rows}</div>`;
+  }).join('');
+}
+function billCalBody(w){
+  const st=_billCal[w.uid]||(_billCal[w.uid]={off:0, sel:null});
+  const c=engBillCalendar(st.off);
+  const dow=['S','M','T','W','T','F','S'];
+  const head=`<div class="bcal-top">
+    <button class="bcal-nav" onclick="event.stopPropagation();billCalShift('${w.uid}',-1)"${st.off<=0?' disabled':''} aria-label="Previous month">‹</button>
+    <div class="bcal-month">${esc(c.label)}${dataLoaded?'':' · sample'}</div>
+    <button class="bcal-nav" onclick="event.stopPropagation();billCalShift('${w.uid}',1)"${st.off>=11?' disabled':''} aria-label="Next month">›</button>
+  </div>`;
+  const dowRow=`<div class="bcal-dow">${dow.map(d=>`<span>${d}</span>`).join('')}</div>`;
+  const grid=c.weeks.map(week=>`<div class="bcal-week">${week.map(cell=>{
+    const hasIn=cell.events.some(e=>e.amt>=0), hasOut=cell.events.some(e=>e.amt<0);
+    const dots=(hasIn?'<span class="bcal-dot in"></span>':'')+(hasOut?'<span class="bcal-dot out"></span>':'');
+    const netTxt=cell.events.length?`<span class="bcal-net" style="color:${cell.net>=0?'var(--pos)':'var(--red)'}">${cell.net>=0?'+':'−'}${_calAmt(cell.net)}</span>`:'';
+    const cls=['bcal-cell']; if(!cell.inMonth)cls.push('out'); if(cell.isToday)cls.push('today'); if(cell.events.length)cls.push('has'); if(st.sel===cell.key)cls.push('sel');
+    const click=cell.events.length?`onclick="event.stopPropagation();billCalDay('${w.uid}','${cell.key}')"`:'';
+    return `<div class="${cls.join(' ')}" ${click}><span class="bcal-dom">${cell.dom}</span><span class="bcal-marks">${dots}</span>${netTxt}</div>`;
+  }).join('')}</div>`).join('');
+  const summary=`<div class="bcal-summary"><span>In <b style="color:var(--pos)">${fmtK(c.monthIn)}</b></span><span>Out <b style="color:var(--red)">${fmtK(c.monthOut)}</b></span><span>Net <b style="color:${c.monthNet>=0?'var(--pos)':'var(--red)'}">${c.monthNet<0?'−':''}${fmtK(c.monthNet)}</b></span></div>`;
+  let list, listHdr;
+  if(st.sel){ const day=c.monthEvents.find(e=>e.key===st.sel); list=day?_billCalList([day]):'<div class="ws-hint">Nothing scheduled that day.</div>'; listHdr=`${_billCalDayLabel(st.sel)} · <a onclick="event.stopPropagation();billCalDay('${w.uid}','${st.sel}')" style="cursor:pointer;color:var(--muted)">show whole month</a>`; }
+  else { list=c.monthEvents.length?_billCalList(c.monthEvents):'<div class="ws-hint">No bills or income scheduled this month.</div>'; listHdr='This month'; }
+  return `<div class="bcal-wrap">${head}${dowRow}<div class="bcal-grid">${grid}</div>${summary}<div class="bcal-listhdr">${listHdr}</div><div class="bcal-list">${list}</div></div>`;
+}
+function billCalShift(uid,delta){ const st=_billCal[uid]||(_billCal[uid]={off:0,sel:null}); st.off=Math.max(0,Math.min(11,st.off+delta)); st.sel=null; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+function billCalDay(uid,key){ const st=_billCal[uid]||(_billCal[uid]={off:0,sel:null}); st.sel=st.sel===key?null:key; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+
 /* ── Unified bills/liabilities layer ──
    When Plaid liabilities are loaded, derive bills from real card/mortgage data;
    otherwise fall back to the manually-entered bills[] array. Same shape either way:
@@ -3433,6 +3502,7 @@ const WIDGET_CATALOG=[
   {id:'income_month',name:"This Month's Income",icon:'💰',cat:'Overview',span:1,minLevel:1,desc:'Money in this month.'},
   {id:'budget_doughnut',name:'Budget by Category',icon:'🎯',cat:'Budget',span:2,minLevel:1,desc:'Two donuts side by side — spending by group and by category (stacked on mobile).'},
   {id:'bills_list',name:'Upcoming Bills',icon:'📋',cat:'Budget',span:1,minLevel:1,desc:"What's due and when."},
+  {id:'bill_calendar',name:'Bill Calendar',icon:'🗓️',cat:'Budget',span:2,minLevel:1,desc:'A month view of upcoming bills & income by due date — spot heavy weeks, tap a day for detail.'},
   {id:'zero_budget',name:'Zero-Based Budget',icon:'🧮',cat:'Budget',span:2,minLevel:2,desc:'Give every dollar a job — with live actual-vs-budgeted spending per envelope.'},
   {id:'savings_buckets',name:'Savings Buckets',icon:'🪣',cat:'Overview',span:2,minLevel:1,desc:'Sinking funds — Reserve, Home, Family, Medical — each with its own goal and progress.'},
   {id:'cashflow_chart',name:'Cash Flow',icon:'🌊',cat:'Cash Flow',span:2,minLevel:1,desc:'Your projected running balance — the same forward line as the Cash Flow Planner.'},
@@ -6525,6 +6595,7 @@ function renderWidgetBody(w){
       return `<div class="wph wph-${cfg.density}">${cats.map((c,i)=>`<div class="wph-row"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col(c,i)};margin-right:7px"></span>${esc(c.label)}</span><b>${itemVal(c)}</b></div>`).join('')}</div>`;
     }
     case 'bills_list': { return billsWidgetBody(w); }
+    case 'bill_calendar': return billCalBody(w);
     case 'cashflow_chart': return cashflowChartBody(w);
     case 'pl_panel': return plWidgetBody(w);
     case 'cashflow_planner': return cfpWidgetBody(w);

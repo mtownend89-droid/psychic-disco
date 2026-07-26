@@ -1681,6 +1681,40 @@ body.fx-slime .canvas-widget-card::after{content:'';position:absolute;left:-2%;r
 .bill-info{flex:1;min-width:0;}
 .bill-nm{font-size:13.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .bill-sub{font-size:11px;color:var(--muted);}
+/* ── Bill calendar ── */
+.bcal-wrap{padding:2px;}
+.bcal-top{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:8px;}
+.bcal-nav{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;width:30px;height:30px;font-size:16px;line-height:1;cursor:pointer;}
+.bcal-nav:hover:not(:disabled){border-color:var(--green);}
+.bcal-nav:disabled{opacity:.35;cursor:default;}
+.bcal-month{font-size:14px;font-weight:800;color:var(--text);min-width:150px;text-align:center;}
+.bcal-dow{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;}
+.bcal-dow span{text-align:center;font-size:10px;font-weight:700;color:var(--muted);}
+.bcal-grid{display:flex;flex-direction:column;gap:4px;}
+.bcal-week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.bcal-cell{position:relative;min-height:46px;border:1px solid var(--border);border-radius:8px;padding:3px 4px;display:flex;flex-direction:column;align-items:flex-start;background:var(--surface);overflow:hidden;}
+.bcal-cell.out{opacity:.38;}
+.bcal-cell.today{border-color:var(--green);box-shadow:inset 0 0 0 1px var(--green);}
+.bcal-cell.has{cursor:pointer;}
+.bcal-cell.has:hover{border-color:var(--green);}
+.bcal-cell.sel{background:color-mix(in srgb,var(--green) 14%,var(--surface));border-color:var(--green);}
+.bcal-dom{font-size:11px;font-weight:600;color:var(--text);}
+.bcal-marks{display:flex;gap:2px;margin-top:1px;min-height:6px;}
+.bcal-dot{width:5px;height:5px;border-radius:50%;display:inline-block;}
+.bcal-dot.in{background:var(--pos);}
+.bcal-dot.out{background:var(--red);}
+.bcal-net{position:absolute;bottom:3px;left:4px;right:4px;font-size:9.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bcal-summary{display:flex;justify-content:space-around;gap:8px;margin:10px 0 4px;font-size:12px;color:var(--muted);}
+.bcal-summary b{color:var(--text);}
+.bcal-listhdr{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:8px 0 6px;}
+.bcal-list{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;}
+.bcal-li-day{border-left:2px solid var(--border);padding-left:9px;}
+.bcal-li-date{font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:3px;}
+.bcal-li{display:flex;align-items:center;gap:7px;font-size:12.5px;padding:2px 0;}
+.bcal-li-dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;}
+.bcal-li-dot.in{background:var(--pos);}
+.bcal-li-dot.out{background:var(--red);}
+.bcal-li-nm{flex:1 1 auto;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .bill-pay{display:flex;align-items:center;gap:2px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0 8px;}
 .bill-pay span{color:var(--muted);font-size:12px;}
 .bill-pay input{width:62px;height:30px;background:none;border:none;color:var(--green);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;text-align:right;}
