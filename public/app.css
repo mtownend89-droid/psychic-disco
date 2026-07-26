@@ -1755,6 +1755,9 @@ body.fx-slime .canvas-widget-card::after{content:'';position:absolute;left:-2%;r
 .bcal-li-dot.in{background:var(--pos);}
 .bcal-li-dot.out{background:var(--red);}
 .bcal-li-nm{flex:1 1 auto;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bcal-li-go{cursor:pointer;border-radius:7px;margin:0 -6px;padding:2px 6px;transition:background .12s;}
+.bcal-li-go:hover{background:var(--surface2);}
+.bcal-chev{color:var(--muted);font-weight:700;opacity:.7;}
 .bill-pay{display:flex;align-items:center;gap:2px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0 8px;}
 .bill-pay span{color:var(--muted);font-size:12px;}
 .bill-pay input{width:62px;height:30px;background:none;border:none;color:var(--green);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;outline:none;text-align:right;}
