@@ -6416,6 +6416,23 @@ function nwUpStreak(){
   for(let i=mo.length-1;i>0;i--){ if(mo[i].v>mo[i-1].v) streak++; else break; }
   return streak;
 }
+// Net-worth change over the last `days` (from the daily snapshot log). Returns {abs, pct, fromKey} or null.
+function nwChangeSince(days){
+  const h=nwHistLoad(); if(h.length<2) return null;
+  const now=h[h.length-1].v;
+  const cutoff=Date.now()-days*86400000;
+  let base=null;
+  for(let i=h.length-1;i>=0;i--){ if(new Date(h[i].d+'T12:00:00').getTime()<=cutoff){ base=h[i]; break; } }
+  if(!base) base=h[0];              // not enough history yet — compare to the earliest snapshot
+  if(base.d===h[h.length-1].d) return null;
+  const prev=base.v;
+  return {abs:now-prev, pct: prev!==0?((now-prev)/Math.abs(prev)*100):0, fromKey:base.d};
+}
+// Monthly snapshots with month-over-month deltas, for the history detail view.
+function nwHistWithDeltas(n){
+  const mo=nwHistMonthly(n);
+  return mo.map((m,i)=>({...m, delta: i>0 ? m.v-mo[i-1].v : null}));
+}
 /* ── Goal completion → wins + celebration (custom or preset goals) ── */
 function gamiGoalCompleted(g){
   const s=gamiLoad(); const wid='goal_'+(g.id||g.name);
@@ -6518,7 +6535,15 @@ function renderWidgetBody(w){
     case 'recurring': return recurringBody(w);
     case 'investments': return portfolioBody(w);
     case 'sankey': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Income → group → category${dataLoaded?' · last '+tfLabel(w.tf||'30d'):' · sample'}</div><div style="position:relative"><canvas id="cv_${w.uid}"></canvas></div></div>`;
-    case 'net_worth_chart': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Net worth trend${dataLoaded?'':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
+    case 'net_worth_chart': {
+      const nw=Math.round(_nwNow());
+      const chg=(typeof nwChangeSince==='function')?nwChangeSince(30):null;
+      const tracked=(typeof nwHistMonthly==='function')?nwHistMonthly().length:0;
+      let head;
+      if(chg){ const up=chg.abs>=0; const pctStr=Math.abs(chg.pct)>=0.1?` (${up?'+':'−'}${Math.abs(chg.pct).toFixed(1)}%)`:''; head=`<div style="font-size:12.5px;font-weight:700;color:${up?'var(--pos)':'var(--red)'};margin-top:2px">${up?'▲':'▼'} ${fmtK(Math.abs(chg.abs))}${pctStr}<span style="color:var(--muted);font-weight:500"> · last 30 days</span></div>`; }
+      else head=`<div class="wph-sub" style="margin-top:2px">Trend builds as you check in${tracked?` · ${tracked} month${tracked!==1?'s':''} tracked`:''}.</div>`;
+      return `<div class="wph"><div class="wph-stat" style="font-size:23px">${nw<0?'−':''}${fmtK(Math.abs(nw))}</div>${head}<div style="height:128px;margin-top:8px"><canvas id="cv_${w.uid}"></canvas></div>${dataLoaded?'':'<div class="ws-hint" style="margin-top:4px">Sample trend — connect a bank to track for real.</div>'}</div>`;
+    }
     case 'fire_progress': return fireProgressBody(w);
     case 'fire_hub': return fireHubBody(w);
     case 'retirement_proj': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Projected growth</div><div style="height:140px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
@@ -6601,10 +6626,17 @@ function widgetDetailContent(type, days){
       return { title:'Income sources', sub:`${fmtK(tot)}/mo from ${items.length} sources`, body:`<div class="wdt-total" style="color:var(--green)">${fmtK(tot)}<span>per month</span></div>${_detailRows(items,tot)}` };
     }
     case 'net_worth_summary': case 'net_worth_chart': {
+      // Real monthly history with month-over-month deltas (empty until a couple of check-ins accrue).
+      const histSection=(()=>{ try{
+        const h=(typeof nwHistWithDeltas==='function')?nwHistWithDeltas(12):[];
+        if(!h.length) return '';
+        const rows=h.slice().reverse().map(m=>{ const d=m.delta; const dTxt=d==null?'<span style="color:var(--muted)">—</span>':`<span style="color:${d>=0?'var(--pos)':'var(--red)'}">${d>=0?'▲':'▼'} ${fmtK(Math.abs(d))}</span>`; const [y,mo]=m.key.split('-'); const yr=(''+y).slice(2); return `<div class="wdt-row"><span class="wdt-label">${esc(m.label)} '${yr}</span><span style="display:flex;gap:12px;align-items:center">${dTxt}<b>${m.v<0?'−':''}${fmtK(Math.abs(m.v))}</b></span></div>`; }).join('');
+        return `<div class="wdt-section">Monthly history · ${h.length} month${h.length!==1?'s':''} tracked</div>${rows}`;
+      }catch(e){ return ''; } })();
       if(live){ const ea=engAccounts().filter(a=>!a.manual&&!a.excluded); const acctA=ea.filter(a=>(a.bal||0)>=0&&a.type!=='credit'&&a.type!=='loan').map(a=>({label:a.name,value:a.bal||0,note:(a.institution||'bank')+(a.mask?' ···'+a.mask:'')})); const acctD=ea.filter(a=>(a.bal||0)<0||a.type==='credit'||a.type==='loan').map(a=>({label:a.name||'Debt',value:Math.abs(a.bal||0),note:(a.institution||'bank')+(a.mask?' ···'+a.mask:'')})); const manA=nwAssets.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat||'manual'})).concat(_nwManA()); const manL=nwLiab.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat||'manual'})).concat(_nwManL()); const assets=acctA.concat(manA); const debts=acctD.concat(manL); const aTot=assets.reduce((s,a)=>s+a.value,0); const dTot=debts.reduce((s,d)=>s+d.value,0); const net=engNetBalance()+engNWAssets()-engNWLiab();
-        return { title:'Net worth breakdown', sub:`${fmtK(net)} net · ${fmtK(aTot)} assets − ${fmtK(dTot)} debts`, body:`<div class="wdt-total">${fmtK(net)}<span>net worth</span></div><div class="wdt-section">Assets</div>${_detailRows(assets,aTot)}<div class="wdt-section">Debts</div>${_detailRows(debts,dTot)}` }; }
+        return { title:'Net worth breakdown', sub:`${fmtK(net)} net · ${fmtK(aTot)} assets − ${fmtK(dTot)} debts`, body:`<div class="wdt-total">${fmtK(net)}<span>net worth</span></div>${histSection}<div class="wdt-section">Assets</div>${_detailRows(assets,aTot)}<div class="wdt-section">Debts</div>${_detailRows(debts,dTot)}` }; }
       const a=nwAssets.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat})).concat(_nwManA()); const l=nwLiab.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat})).concat(_nwManL()); const aT=engNWAssets(),lT=engNWLiab();
-      return { title:'Net worth breakdown', sub:`${fmtK(aT-lT)} net`, body:`<div class="wdt-total">${fmtK(aT-lT)}<span>net worth</span></div><div class="wdt-section">Assets</div>${_detailRows(a,aT)}<div class="wdt-section">Liabilities</div>${_detailRows(l,lT)}` };
+      return { title:'Net worth breakdown', sub:`${fmtK(aT-lT)} net`, body:`<div class="wdt-total">${fmtK(aT-lT)}<span>net worth</span></div>${histSection}<div class="wdt-section">Assets</div>${_detailRows(a,aT)}<div class="wdt-section">Liabilities</div>${_detailRows(l,lT)}` };
     }
     case 'cash_summary': {
       const dep=live?allAccts.filter(a=>a.type==='depository').map(a=>({label:(a.name||'Account'),value:(a.balances&&(a.balances.available??a.balances.current))||0,note:a.institution})):[{label:'Checking',value:5200,note:'sample'},{label:'Savings',value:3040,note:'sample'}];
