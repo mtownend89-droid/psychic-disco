@@ -4212,6 +4212,7 @@ function zbWidgetBody(w){
     <div class="zb-bar"><div class="zb-bar-fill" style="width:${Math.min(100,Math.round(assigned/Math.max(income,1)*100))}%;background:${left<0?'var(--red)':'var(--pos)'}"></div></div>
     ${sc.coveredPay>0?`<div class="ws-hint" style="margin:0 0 8px">💳 ${fmtK(sc.coveredPay)} of card payments is covered by envelopes and excluded from fixed bills${sc.extraPaydown>0?` · ${fmtK(sc.extraPaydown)} extra paydown stays in fixed`:''}.</div>`:''}
     ${balanceRow}
+    <div class="zb-tpl-cta"><button onclick="event.stopPropagation();openBudgetTemplates('${w.uid}')">✨ Start from a template</button></div>
     <div class="zb-section-label">Category envelopes <span class="ws-hint" style="margin:0">budget vs actual · ${fmtK(spentTotal)} spent of ${fmtK(envTotal)}</span></div>
     <div class="zb-buckets">
       ${buckets.map((b,i)=>{
@@ -4278,6 +4279,96 @@ function zbAddBucket(uid){
   const name=prompt('Envelope name (e.g. Hobbies, Pet, Gifts):'); if(!name) return;
   _zbBuckets().push({name:name.trim(), amt:0}); saveState();
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+}
+
+/* ═══ BUDGET TEMPLATES ═══
+   One-tap starting budgets. Percentage templates split income across needs/wants/savings
+   (fixed bills already cover part of "needs", so they're netted out); zero-based assigns
+   everything. Within a group, amounts are split by recent spending, else evenly. */
+const BUDGET_TEMPLATES=[
+  {id:'50-30-20', name:'50 / 30 / 20',   icon:'⚖️', needs:.50, wants:.30, savings:.20, blurb:'The classic balance — needs, wants, and savings.'},
+  {id:'70-20-10', name:'70 / 20 / 10',   icon:'🌱', needs:.70, wants:.20, savings:.10, blurb:'Easing in — more room for essentials, a starter savings habit.'},
+  {id:'60-20-20', name:'60 / 20 / 20',   icon:'🏠', needs:.60, wants:.20, savings:.20, blurb:'Higher fixed costs, steady 20% savings.'},
+  {id:'50-20-30', name:'Aggressive save',icon:'🚀', needs:.50, wants:.20, savings:.30, blurb:'Turbo mode — 30% straight to savings & investing.'},
+  {id:'zero',     name:'Zero-based',      icon:'🎯', zero:true,                          blurb:'Assign every dollar — seeded from your recent spending.'},
+];
+function _tplRole(cat){
+  const s=((cat.label||'')+' '+(cat.id||'')).toLowerCase();
+  if(/sav|emergency|invest|retire|401|ira|wealth/.test(s)) return 'savings';
+  if(/grocer|gas|fuel|auto|transport|transit|\bcar\b|utilit|insur|health|medical|rent|hous|mortgage|phone|internet|child|kid|educat|tuition|debt|loan|tax|pharmac/.test(s)) return 'needs';
+  return 'wants';
+}
+function engBudgetTemplate(tplId){
+  const tpl=BUDGET_TEMPLATES.find(t=>t.id===tplId)||BUDGET_TEMPLATES[0];
+  const income=Math.round(engMonthlyIncome());
+  const fixedBills=Math.round(engMonthlyBills());
+  const cats=_zbBudgetableCats();
+  const byId={}; cats.forEach(c=>byId[c.id]=c);
+  const weights={};   // recent 3-mo avg spend per category, for splitting within a group
+  try{ const g=engCategoryMonthGrid(3); g.cats.forEach(c=>{ const m=cats.find(x=>x.label===c.label); if(m) weights[m.id]=(weights[m.id]||0)+c.avg; }); }catch(e){}
+  const byRole={needs:[],wants:[],savings:[]}; cats.forEach(c=>byRole[_tplRole(c)].push(c));
+  const env={};
+  const distribute=(list,pool)=>{
+    if(pool<=0||!list.length) return;
+    const tw=list.reduce((s,c)=>s+(weights[c.id]||0),0);
+    if(tw>0) list.forEach(c=>{ env[c.id]=(env[c.id]||0)+Math.round(pool*(weights[c.id]||0)/tw); });
+    else { const each=Math.round(pool/list.length); list.forEach(c=>{ env[c.id]=(env[c.id]||0)+each; }); }
+  };
+  const savList=byRole.savings.length?byRole.savings:cats.filter(c=>/sav|invest/i.test(c.label));
+  let groups=null;
+  if(tpl.zero){
+    const pool=Math.max(0, income-fixedBills);
+    distribute(cats.filter(c=>_tplRole(c)!=='savings'), Math.round(pool*0.85));
+    distribute(savList, Math.round(pool*0.15));
+  } else {
+    const savings=Math.round(income*tpl.savings);
+    const wants=Math.round(income*tpl.wants);
+    const needsTarget=Math.round(income*tpl.needs);
+    const needsEnv=Math.max(0, needsTarget-fixedBills);   // fixed bills already cover part of needs
+    distribute(byRole.needs, needsEnv);
+    distribute(byRole.wants, wants);
+    distribute(savList, savings);
+    groups={needsTarget,needsEnv,wants,savings};
+  }
+  const envelopes=Object.entries(env).filter(([id,amt])=>amt>0).map(([id,amt])=>({catId:id, name:(byId[id]?byId[id].label:id), amt})).sort((a,b)=>b.amt-a.amt);
+  const envTotal=envelopes.reduce((s,e)=>s+e.amt,0);
+  return {tpl,income,fixedBills,envelopes,envTotal,leftover:income-fixedBills-envTotal,groups};
+}
+let _budTpl={uid:null, tpl:'50-30-20'};
+function openBudgetTemplates(uid){ _budTpl.uid=uid||null; if(!BUDGET_TEMPLATES.find(t=>t.id===_budTpl.tpl)) _budTpl.tpl='50-30-20'; const m=gg('budgetTplModal'); if(!m) return; m.style.display='flex'; renderBudgetTemplates(); }
+function closeBudgetTemplates(){ const m=gg('budgetTplModal'); if(m) m.style.display='none'; }
+function btPick(id){ _budTpl.tpl=id; renderBudgetTemplates(); }
+function renderBudgetTemplates(){
+  const el=gg('budgetTplBody'); if(!el) return;
+  const r=engBudgetTemplate(_budTpl.tpl);
+  const cards=BUDGET_TEMPLATES.map(t=>`<button class="bt-card${t.id===_budTpl.tpl?' on':''}" onclick="btPick('${t.id}')"><span class="bt-ico">${t.icon}</span><span class="bt-nm">${esc(t.name)}</span><span class="bt-blurb">${esc(t.blurb)}</span></button>`).join('');
+  const maxE=Math.max(1,...r.envelopes.map(e=>e.amt));
+  const envRows=r.envelopes.length?r.envelopes.map(e=>`<div class="bt-row"><span class="bt-dot" style="background:${getCatColor(e.name)}"></span><span class="bt-lbl">${esc(e.name)}</span><span class="bt-barwrap"><span class="bt-bar" style="width:${Math.round(e.amt/maxE*100)}%;background:${getCatColor(e.name)}"></span></span><b class="bt-amt">${fmtK(e.amt)}</b></div>`).join(''):'<div class="ws-hint">Add your income first — templates size envelopes from your monthly income.</div>';
+  const balCol=Math.abs(r.leftover)<1?'var(--green)':r.leftover>0?'var(--amber)':'var(--red)';
+  const balTxt=Math.abs(r.leftover)<1?'✓ every dollar assigned':r.leftover>0?fmtK(r.leftover)+' left':fmtK(-r.leftover)+' over';
+  const curCount=(APP.zeroBuckets||[]).length;
+  el.innerHTML=`
+    <div class="bt-cards">${cards}</div>
+    <div class="bt-summary">
+      <div><span>Monthly income</span><b>${fmtK(r.income)}</b></div>
+      <div><span>Fixed bills</span><b style="color:var(--red)">${fmtK(r.fixedBills)}</b></div>
+      <div><span>Into envelopes</span><b>${fmtK(r.envTotal)}</b></div>
+      <div><span>Balance</span><b style="color:${balCol}">${balTxt}</b></div>
+    </div>
+    <div class="bt-sec">Proposed envelopes</div>
+    <div class="bt-list">${envRows}</div>
+    <div class="ws-hint" style="margin-top:10px">${curCount?`This replaces your current ${curCount} envelope${curCount!==1?'s':''}. `:''}Every amount stays editable afterward.</div>
+    <div class="mf-actions"><button class="btn" onclick="closeBudgetTemplates()">Cancel</button><button class="btn primary" onclick="applyBudgetTemplate()"${r.envelopes.length?'':' disabled'}>Apply template</button></div>`;
+}
+function applyBudgetTemplate(){
+  const r=engBudgetTemplate(_budTpl.tpl);
+  if(!r.envelopes.length){ alert('Add your income first so Richie can size the budget.'); return; }
+  APP.zeroBuckets=r.envelopes.map(e=>({catId:e.catId, name:e.name, amt:e.amt}));
+  saveState();
+  closeBudgetTemplates();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+  if(typeof richieSay==='function') richieSay(`✨ Applied the ${r.tpl.name} budget — I sized your envelopes from your income and recent spending. Tweak any of them anytime.`);
+  if(typeof sbRichie!=='undefined'&&sbRichie) sbRichie.do('tada');
 }
 
 /* ═══ BILLS WIDGET (all bills, timeframe selector) ═══ */

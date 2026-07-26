@@ -43,6 +43,12 @@
     <div class="doc-body" id="holdBody"></div>
   </div>
 </div>
+<div id="budgetTplModal" class="doc-modal" style="display:none" onclick="if(event.target===this)closeBudgetTemplates()">
+  <div class="doc-card">
+    <div class="doc-head"><span>✨ Budget templates</span><button class="doc-x" onclick="closeBudgetTemplates()" aria-label="Close">✕</button></div>
+    <div class="doc-body" id="budgetTplBody"></div>
+  </div>
+</div>
 <!-- ═══ GLOBAL TRANSACTION SEARCH ═══ -->
 <div id="txnSearchModal" class="txs-modal" style="display:none" onclick="if(event.target===this)closeTxnSearch()">
   <div class="txs-card">
