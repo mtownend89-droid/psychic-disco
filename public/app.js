@@ -7888,12 +7888,14 @@ let _2faSecret='', _2faOtpauth='';
 async function render2faStatus(){
   const act=gg('twofaAction'), desc=gg('twofaDesc'); if(!act) return;
   act.innerHTML='<button class="btn" disabled>…</button>';
-  let enabled=false, userLogin=true;
-  try{ const r=await fetch('/api/2fa/status'); if(r.ok){ const d=await r.json(); enabled=!!d.enabled; userLogin=!!d.userLogin; } }catch(e){}
+  let enabled=false, userLogin=true, backupRemaining=0;
+  try{ const r=await fetch('/api/2fa/status'); if(r.ok){ const d=await r.json(); enabled=!!d.enabled; userLogin=!!d.userLogin; backupRemaining=d.backupRemaining||0; } }catch(e){}
   if(!userLogin){ if(desc) desc.textContent='Create a username/password login first — 2FA protects that login.'; act.innerHTML=''; return; }
   if(enabled){
-    if(desc) desc.innerHTML='✅ <b style="color:var(--green)">On</b> — you enter a code from your authenticator app each time you sign in.';
-    act.innerHTML='<button class="btn danger-btn" onclick="open2faDisable()">Turn off</button>';
+    const low=backupRemaining<=2;
+    const bk=`<span style="color:${low?'var(--amber)':'var(--muted)'}">${backupRemaining} backup code${backupRemaining===1?'':'s'} left${low?' — generate more':''}.</span>`;
+    if(desc) desc.innerHTML='✅ <b style="color:var(--green)">On</b> — you enter a code from your authenticator app each time you sign in. '+bk;
+    act.innerHTML='<button class="btn" onclick="open2faBackup()">Backup codes</button> <button class="btn danger-btn" onclick="open2faDisable()">Turn off</button>';
   } else {
     if(desc) desc.textContent='Require a 6-digit code from an authenticator app (Google Authenticator, Authy, 1Password) each time you sign in.';
     act.innerHTML='<button class="btn primary" onclick="open2faSetup()">Enable 2FA</button>';
@@ -7934,8 +7936,44 @@ async function do2faEnable(){
     const r=await fetch('/api/2fa/enable',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
     const d=await r.json().catch(()=>({}));
     if(!r.ok){ render2faSetupBody(d.error||"That code didn't match — check your device's clock and try again."); return; }
-    closeManual(); render2faStatus(); if(sbRichie)sbRichie.do('tada'); try{ richieSay('Two-factor is on — your account just got a lot harder to break into. 🛡️'); }catch(e){}
+    if(sbRichie)sbRichie.do('tada'); try{ richieSay('Two-factor is on — save your backup codes somewhere safe and you\'re set. 🛡️'); }catch(e){}
+    _showBackupCodes(d.backupCodes, false);
   }catch(e){ render2faSetupBody('Could not reach the server.'); }
+}
+// One-time display of backup codes (shown on enable + regenerate; the server never reveals them again).
+function _showBackupCodes(codes, regen){
+  codes=Array.isArray(codes)?codes:[];
+  const grid=codes.map(c=>`<div style="font-family:var(--mono,ui-monospace,monospace);font-size:15px;font-weight:700;letter-spacing:.08em;padding:9px 6px;text-align:center;background:var(--card2,rgba(127,127,127,.12));border:1px solid var(--line,rgba(127,127,127,.25));border-radius:8px;color:var(--text)">${esc(c)}</div>`).join('');
+  gg('manualTitle').textContent=regen?'New backup codes':'Save your backup codes';
+  gg('manualSub').textContent="Each code works once if you can't reach your authenticator. They won't be shown again.";
+  gg('manualBody').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">${grid||'<div class="ws-hint">No codes returned.</div>'}</div>
+    <div class="ws-hint">${regen?'Your previous backup codes no longer work. ':''}Store these somewhere only you can reach — a password manager or a written note.</div>
+    <div class="mf-actions"><button class="btn" onclick="_copyBackupCodes(this)">Copy all</button><button class="btn primary" onclick="closeManual();render2faStatus()">I've saved them</button></div>`;
+  window._lastBackupCodes=codes.join('\n');
+}
+function _copyBackupCodes(btn){ try{ navigator.clipboard.writeText(window._lastBackupCodes||''); if(btn){ const t=btn.textContent; btn.textContent='Copied ✓'; setTimeout(()=>{ btn.textContent=t; },1400); } }catch(e){} }
+// Regenerate backup codes (password-gated); shows the fresh set once.
+function open2faBackup(){
+  gg('manualModal').style.display='flex';
+  gg('manualTitle').textContent='Backup codes';
+  gg('manualSub').textContent='Generate a fresh set of one-time codes. This replaces any codes you have now.';
+  gg('manualBody').innerHTML=`
+    <div class="ws-hint" style="margin-bottom:10px">Confirm your password, then we'll show a new set of backup codes to save. Your previous codes stop working.</div>
+    <label class="mf-label">Password</label>
+    <input class="mf-in" id="bkcPw" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')do2faBackupRegen()">
+    <div class="login-err" id="bkcErr" style="margin-top:8px"></div>
+    <div class="mf-actions"><button class="btn" onclick="closeManual()">Cancel</button><button class="btn primary" onclick="do2faBackupRegen()">Generate new codes</button></div>`;
+  setTimeout(()=>{ const el=gg('bkcPw'); if(el) el.focus(); },80);
+}
+async function do2faBackupRegen(){
+  const pw=gg('bkcPw').value; const err=gg('bkcErr'); if(err) err.textContent='';
+  try{
+    const r=await fetch('/api/2fa/backup/regenerate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok){ if(err) err.textContent=d.error||'Password incorrect.'; return; }
+    _showBackupCodes(d.backupCodes, true);
+  }catch(e){ if(err) err.textContent='Could not reach the server.'; }
 }
 function open2faDisable(){
   gg('manualModal').style.display='flex';
@@ -8054,7 +8092,7 @@ function _show2fa(on){
   ['loginUser','loginPass','loginForgotLink'].forEach(id=>{ const el=gg(id); if(el) el.style.display=on?'none':''; });
   const f=gg('login2fa'); if(f) f.style.display=on?'block':'none';
   const back=gg('loginBackLink'); if(back && on) back.style.display='inline';
-  const sub=gg('loginSub'); if(sub) sub.textContent=on?'Two-factor is on — enter the 6-digit code from your authenticator app.':"Richie's been keeping an eye on things. Sign in to see where you stand.";
+  const sub=gg('loginSub'); if(sub) sub.textContent=on?'Two-factor is on — enter the 6-digit code from your authenticator app, or one of your backup codes.':"Richie's been keeping an eye on things. Sign in to see where you stand.";
 }
 async function doLogin(){
   if(_loginMode==='create') return doCreateLogin();
@@ -8062,7 +8100,7 @@ async function doLogin(){
   const err=gg('loginErr'), btn=gg('loginBtn');
   err.textContent='';
   let u, p, code='';
-  if(_await2fa && _pending2fa){ u=_pending2fa.u; p=_pending2fa.p; code=(gg('login2fa').value||'').trim(); if(!code){ err.textContent='Enter the 6-digit code from your authenticator.'; return; } }
+  if(_await2fa && _pending2fa){ u=_pending2fa.u; p=_pending2fa.p; code=(gg('login2fa').value||'').trim(); if(!code){ err.textContent='Enter the code from your authenticator, or a backup code.'; return; } }
   else { u=gg('loginUser').value.trim(); p=gg('loginPass').value; if(!u||!p){ err.textContent='Enter your username and password.'; return; } }
   btn.disabled=true; btn.textContent=_await2fa?'Verifying…':'Signing in…';
   let loginRichie=window._loginRichie;

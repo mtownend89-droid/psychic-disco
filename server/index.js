@@ -542,7 +542,7 @@ app.post('/api/login', loginRateGate, (req, res) => {
   if (m.twofa) {
     const code = String((req.body || {}).code || '').trim();
     if (!code) return res.status(401).json({ needs2fa: true, error: 'Enter your authenticator code to finish signing in.' });   // step 2 — not a failed attempt
-    if (!totpVerify(m.secret, code)) { recordLoginFail(req); return res.status(401).json({ needs2fa: true, error: "That code didn't match — check your authenticator and try again." }); }
+    if (!totpVerify(m.secret, code) && !consumeBackupCode(code)) { recordLoginFail(req); return res.status(401).json({ needs2fa: true, error: "That code didn't match — check your authenticator (or use a backup code) and try again." }); }
   }
   const token = makeToken();
   setLoginCookie(res, token);
@@ -582,14 +582,14 @@ app.post('/api/change_password', requireAuth, (req, res) => {
   if (!okCur) return res.status(403).json({ error: 'Current password is incorrect.' });
   const username = (a && a.username) || APP_USER || 'user';
   const recovery = genRecoveryCode();
-  saveAuth({ username, pwHash: hashSecret(nw), recoveryHash: hashSecret(recovery), twofaSecret: (a && a.twofaSecret) || undefined });   // keep 2FA on password change
+  saveAuth({ username, pwHash: hashSecret(nw), recoveryHash: hashSecret(recovery), twofaSecret: (a && a.twofaSecret) || undefined, twofaBackup: (a && a.twofaBackup) || undefined });   // keep 2FA + backup codes on password change
   return res.json({ ok: true, recovery_code: recovery });
 });
 // ── TWO-FACTOR (TOTP) ──
 // Recovery-code reset (above) intentionally drops twofaSecret so a lost authenticator can't lock you out.
 app.get('/api/2fa/status', requireAuth, (req, res) => {
   const a = loadAuth();
-  res.json({ enabled: !!(a && a.twofaSecret), userLogin: !!(a && a.pwHash) });
+  res.json({ enabled: !!(a && a.twofaSecret), userLogin: !!(a && a.pwHash), backupRemaining: (a && Array.isArray(a.twofaBackup)) ? a.twofaBackup.length : 0 });
 });
 // Begin enrollment: generate a pending secret, return it + the otpauth URI to show as a QR.
 app.post('/api/2fa/setup', requireAuth, (req, res) => {
@@ -605,9 +605,10 @@ app.post('/api/2fa/enable', requireAuth, (req, res) => {
   if (!(a && a.twofaPending)) return res.status(400).json({ error: 'Start setup first.' });
   const code = String((req.body || {}).code || '').trim();
   if (!totpVerify(a.twofaPending, code)) return res.status(400).json({ error: "That code didn't match — check the time on your device and try again." });
-  const next = Object.assign({}, a, { twofaSecret: a.twofaPending }); delete next.twofaPending;
+  const codes = genBackupCodes(10);
+  const next = Object.assign({}, a, { twofaSecret: a.twofaPending, twofaBackup: hashBackupCodes(codes) }); delete next.twofaPending;
   saveAuth(next);
-  res.json({ ok: true });
+  res.json({ ok: true, backupCodes: codes });
 });
 // Turn off 2FA (requires the current password to prevent a hijacked session from disabling it).
 app.post('/api/2fa/disable', requireAuth, (req, res) => {
@@ -615,9 +616,20 @@ app.post('/api/2fa/disable', requireAuth, (req, res) => {
   const pw = String((req.body || {}).password || '');
   const okPw = (a && a.pwHash && verifySecret(pw, a.pwHash)) || (APP_PASS && pw === APP_PASS);
   if (!okPw) return res.status(403).json({ error: 'Password is incorrect.' });
-  const next = Object.assign({}, a); delete next.twofaSecret; delete next.twofaPending;
+  const next = Object.assign({}, a); delete next.twofaSecret; delete next.twofaPending; delete next.twofaBackup;
   saveAuth(next);
   res.json({ ok: true });
+});
+// Regenerate backup codes (invalidates any old ones). Requires the current password.
+app.post('/api/2fa/backup/regenerate', requireAuth, (req, res) => {
+  const a = loadAuth();
+  if (!(a && a.twofaSecret)) return res.status(400).json({ error: 'Enable 2FA first.' });
+  const pw = String((req.body || {}).password || '');
+  const okPw = (a.pwHash && verifySecret(pw, a.pwHash)) || (APP_PASS && pw === APP_PASS);
+  if (!okPw) return res.status(403).json({ error: 'Password is incorrect.' });
+  const codes = genBackupCodes(10);
+  saveAuth(Object.assign({}, a, { twofaBackup: hashBackupCodes(codes) }));
+  res.json({ ok: true, backupCodes: codes });
 });
 
 // Forgot password: reset with the recovery code shown when the password was set.
@@ -731,6 +743,29 @@ function verifySecret(secret, stored) {
 }
 function genRecoveryCode() {
   return crypto.randomBytes(10).toString('hex').toUpperCase().match(/.{1,4}/g).join('-'); // XXXX-XXXX-XXXX-XXXX-XXXX
+}
+// One-time 2FA backup codes — used in place of an authenticator code when the device is lost.
+function genBackupCodes(n) {
+  const out = [];
+  for (let i = 0; i < (n || 10); i++) { const raw = crypto.randomBytes(4).toString('hex'); out.push(raw.slice(0, 4) + '-' + raw.slice(4)); } // xxxx-xxxx
+  return out;
+}
+function _normBackup(code) { return String(code || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+function hashBackupCodes(codes) { return codes.map(c => hashSecret(_normBackup(c))); }
+// Verify a backup code against the stored hashes; on match, consume it (single-use) and persist. Returns true if consumed.
+function consumeBackupCode(code) {
+  const norm = _normBackup(code);
+  if (!/^[a-z0-9]{8}$/.test(norm)) return false;
+  const a = loadAuth();
+  const list = (a && Array.isArray(a.twofaBackup)) ? a.twofaBackup : [];
+  for (let i = 0; i < list.length; i++) {
+    if (verifySecret(norm, list[i])) {
+      const next = Object.assign({}, a); next.twofaBackup = list.slice(0, i).concat(list.slice(i + 1));
+      saveAuth(next);
+      return true;
+    }
+  }
+  return false;
 }
 function loadAuth() {
   try {
