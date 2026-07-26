@@ -1631,6 +1631,8 @@ body.fx-slime .canvas-widget-card::after{content:'';position:absolute;left:-2%;r
 .ft-ic{font-size:20px;flex-shrink:0;width:26px;text-align:center;}
 .ft-meta{flex:1;min-width:0;}
 .ft-nm{font-size:13px;font-weight:700;color:var(--text);}
+.ft-go{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:5px;color:var(--muted);font-weight:800;cursor:pointer;transition:background .12s,color .12s;}
+.ft-go:hover{background:var(--surface2);color:var(--green);}
 .ft-desc{font-size:11px;color:var(--muted);margin-top:1px;}
 .ft-bar{height:7px;border-radius:4px;background:var(--surface3);overflow:hidden;margin-top:9px;}
 .ft-bar-fill{height:100%;border-radius:4px;transition:width .2s;}
