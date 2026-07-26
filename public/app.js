@@ -2134,6 +2134,8 @@ function engSpendTrends(){
   if(bAmt>0){ const projSpend=has?(elapsed>0?curBudget/elapsed:curBudget):Math.round(projected*0.7); budget={amount:Math.round(bAmt),projected:Math.round(projSpend),pace:Math.round(bAmt-projSpend)}; }
   return {has,dom,daysInMonth,elapsed,curTotal:Math.round(curTotal),prevSameTotal:Math.round(prevSameTotal),prevFullTotal:Math.round(prevFullTotal),projected:Math.round(projected),vsLastPeriod:Math.round(curTotal-prevSameTotal),movers,budget};
 }
+// Tap a category mover → open global search filtered to that category's transactions.
+function trendSearchCat(cat){ if(typeof openTxnSearch!=='function') return; try{ _txnSearch.q=cat; if(_txnSearch.chips) Object.keys(_txnSearch.chips).forEach(k=>_txnSearch.chips[k]=false); }catch(e){} openTxnSearch(); }
 function spendTrendsBody(w){
   const s=engSpendTrends();
   const up=s.vsLastPeriod>0;   // spending more than the same point last month
@@ -2146,7 +2148,8 @@ function spendTrendsBody(w){
   const maxD=Math.max(1,...movers.map(m=>Math.abs(m.delta)));
   const rows=movers.map(m=>{
     const mu=m.delta>0; const c=mu?'var(--amber)':'var(--green)'; const wpct=Math.round(Math.abs(m.delta)/maxD*100);
-    return `<div class="st-row"><span class="st-dot" style="background:${m.color}"></span><span class="st-lbl">${esc(m.label)}</span><span class="st-barwrap"><span class="st-bar" style="width:${wpct}%;background:${c}"></span></span><b class="st-delta" style="color:${c}">${mu?'▲':'▼'} ${fmtK(Math.abs(m.delta))}</b></div>`;
+    const q=String(m.label).replace(/'/g,"\\'");
+    return `<div class="st-row st-row-go" onclick="event.stopPropagation();trendSearchCat('${q}')" title="See the transactions behind this"><span class="st-dot" style="background:${m.color}"></span><span class="st-lbl">${esc(m.label)} <span class="st-chev">›</span></span><span class="st-barwrap"><span class="st-bar" style="width:${wpct}%;background:${c}"></span></span><b class="st-delta" style="color:${c}">${mu?'▲':'▼'} ${fmtK(Math.abs(m.delta))}</b></div>`;
   }).join('') || '<div class="ws-hint">Not enough history yet to compare months.</div>';
   return `<div class="st-wrap">
     <div class="st-hero"><div class="st-hero-num">${fmtK(s.curTotal)}</div><div class="st-hero-sub">spent so far this month · day ${s.dom} of ${s.daysInMonth}</div>
@@ -2589,11 +2592,14 @@ function _hsRing(score,color,grade){
   const r=42, c=2*Math.PI*r, off=c*(1-score/100);
   return `<svg viewBox="0 0 100 100" width="100" height="100" style="flex:0 0 auto"><circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--surface3)" stroke-width="9"/><circle cx="50" cy="50" r="${r}" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 50 50)"/><text x="50" y="48" text-anchor="middle" font-size="27" font-weight="800" fill="var(--text)">${score}</text><text x="50" y="65" text-anchor="middle" font-size="12" font-weight="700" fill="${color}">${grade}</text></svg>`;
 }
+// Each health pillar links to the widget that fixes it — one tap sends Richie there.
+const HS_FIX={ savings_rate:'spending_trends', emergency:'savings_buckets', dti:'debt_hub', util:'debt_hub', hi_debt:'debt_hub' };
+function healthGoto(type){ if(!type) return; try{ _ensureWidgetOnPage(type); }catch(e){} try{ richieSpotlightAt(Object.assign({widgetType:type}, RICHIE_SPOTS[type]||{})); }catch(e){} }
 function healthScoreBody(w){
   const h=engHealthScore();
   if(!h.hasData) return `<div class="wph"><div class="ws-hint">Add your income, bills, and accounts and Richie will score your financial health across five pillars.</div></div>`;
   const col=_hsColor(h.overall);
-  const rows=h.comps.map(c=>{ const sc=_hsColor(c.score); return `<div class="hs-row"><span class="hs-ico">${c.icon}</span><div class="hs-main"><div class="hs-toprow"><span class="hs-lbl">${esc(c.label)}</span><span class="hs-val" style="color:${sc}">${esc(c.value)}</span></div><div class="hs-barwrap"><div class="hs-bar" style="width:${c.score}%;background:${sc}"></div></div></div></div>`; }).join('');
+  const rows=h.comps.map(c=>{ const sc=_hsColor(c.score); const fix=HS_FIX[c.key]; const go=fix?` hs-row-go" onclick="event.stopPropagation();healthGoto('${fix}')" title="Fix this — take me there` : '"'; return `<div class="hs-row${go}"><span class="hs-ico">${c.icon}</span><div class="hs-main"><div class="hs-toprow"><span class="hs-lbl">${esc(c.label)}${fix?' <span class="hs-chev">›</span>':''}</span><span class="hs-val" style="color:${sc}">${esc(c.value)}</span></div><div class="hs-barwrap"><div class="hs-bar" style="width:${c.score}%;background:${sc}"></div></div></div></div>`; }).join('');
   const tip=h.weakest?`<div class="hs-tip"><span>💡</span><span>${esc(h.weakest.tip)}</span></div>`:`<div class="hs-tip"><span>🎉</span><span>Every pillar is in good shape — keep it up!</span></div>`;
   return `<div class="hs-wrap">
     <div class="hs-head">${_hsRing(h.overall,col,h.grade)}<div class="hs-headtxt"><div class="hs-headlbl">Financial health${dataLoaded?'':' · sample'}</div><div class="hs-headsub">Across ${h.comps.length} pillar${h.comps.length!==1?'s':''} — savings, safety, and debt.</div></div></div>
@@ -3666,18 +3672,18 @@ function maybeCoachPage(pg){
    (Plaid data, charts, calculations) get wired in Phase 3.
    minLevel gates a widget behind a knowledge level (Pro Mode unlocks all). */
 const WIDGET_CATALOG=[
-  {id:'net_worth_summary',name:'Net Worth',icon:'📈',cat:'Overview',span:1,minLevel:1,desc:'Total assets minus liabilities.'},
+  {id:'net_worth_summary',name:'Net Worth',icon:'💎',cat:'Overview',span:1,minLevel:1,desc:'Total assets minus liabilities.'},
   {id:'journey',name:'Your Journey',icon:'🏆',cat:'Overview',span:2,minLevel:1,desc:'Your level, streak, badges, and milestone progress — real-money goals, gamified.'},
   {id:'cash_summary',name:'Cash on Hand',icon:'💵',cat:'Overview',span:1,minLevel:1,desc:'Liquid balances + how much is safe to spend today after upcoming bills & goals.'},
   {id:'spending_month',name:"Current Spending",icon:'🛒',cat:'Overview',span:1,minLevel:1,desc:'Discretionary spending vs budget — your quick "how are we doing" marker (bills & savings excluded).'},
   {id:'income_month',name:"This Month's Income",icon:'💰',cat:'Overview',span:1,minLevel:1,desc:'Money in this month.'},
-  {id:'budget_doughnut',name:'Budget by Category',icon:'🎯',cat:'Budget',span:2,minLevel:1,desc:'Two donuts side by side — spending by group and by category (stacked on mobile).'},
+  {id:'budget_doughnut',name:'Budget by Category',icon:'🍩',cat:'Budget',span:2,minLevel:1,desc:'Two donuts side by side — spending by group and by category (stacked on mobile).'},
   {id:'bills_list',name:'Upcoming Bills',icon:'📋',cat:'Budget',span:1,minLevel:1,desc:"What's due and when."},
   {id:'bill_calendar',name:'Bill Calendar',icon:'🗓️',cat:'Budget',span:2,minLevel:1,desc:'A month view of upcoming bills & income by due date — spot heavy weeks, tap a day for detail.'},
   {id:'zero_budget',name:'Zero-Based Budget',icon:'🧮',cat:'Budget',span:2,minLevel:2,desc:'Give every dollar a job — with live actual-vs-budgeted spending per envelope.'},
   {id:'savings_buckets',name:'Savings Buckets',icon:'🪣',cat:'Overview',span:2,minLevel:1,desc:'Sinking funds — Reserve, Home, Family, Medical — each with its own goal and progress.'},
   {id:'cashflow_chart',name:'Cash Flow',icon:'🌊',cat:'Cash Flow',span:2,minLevel:1,desc:'Your projected running balance — the same forward line as the Cash Flow Planner.'},
-  {id:'pl_panel',name:'Profit & Loss',icon:'📊',cat:'Cash Flow',span:2,minLevel:1,desc:'Income, spending, net & savings rate by day/week/month.'},
+  {id:'pl_panel',name:'Profit & Loss',icon:'💹',cat:'Cash Flow',span:2,minLevel:1,desc:'Income, spending, net & savings rate by day/week/month.'},
   {id:'cashflow_planner',name:'Cash Flow Planner',icon:'📅',cat:'Cash Flow',span:2,minLevel:1,desc:'Project your running balance forward — edit bills, see your low point before it hits.'},
   {id:'fund_triage',name:'Extra Funds Triage',icon:'💸',cat:'Cash Flow',span:2,minLevel:1,desc:'Delegate your monthly surplus by priority — high-interest debt, then savings, then investing.'},
   {id:'goals',name:'Financial Goals',icon:'🎯',cat:'Overview',span:2,minLevel:1,desc:'Set goals, track progress automatically, and let Richie coach you to the finish.'},
@@ -3687,10 +3693,10 @@ const WIDGET_CATALOG=[
   {id:'recurring',name:'Subscriptions & Renewals',icon:'🔁',cat:'Cash Flow',span:2,minLevel:1,desc:'Auto-detected subscriptions & recurring bills — next renewal, price-hike alerts, flag any to cancel, monthly & yearly totals.'},
   {id:'sankey',name:'Money Flow (Sankey)',icon:'🔀',cat:'Cash Flow',span:2,minLevel:2,desc:'Income → category group → category, flowing left to right through your category tree.'},
   {id:'top_categories',name:'Top Categories',icon:'📊',cat:'Cash Flow',span:1,minLevel:1,desc:'Where your money goes most.'},
-  {id:'spending_trends',name:'Spending Trends',icon:'📈',cat:'Cash Flow',span:2,minLevel:1,desc:'This month vs last — biggest category movers, projected month-end total, and whether you\'re pacing over or under budget.'},
-  {id:'category_heatmap',name:'Category Heatmap',icon:'🗓️',cat:'Cash Flow',span:2,minLevel:2,desc:'Spending by category across months — spot seasonal patterns at a glance.'},
+  {id:'spending_trends',name:'Spending Trends',icon:'🆚',cat:'Cash Flow',span:2,minLevel:1,desc:'This month vs last — biggest category movers, projected month-end total, and whether you\'re pacing over or under budget.'},
+  {id:'category_heatmap',name:'Category Heatmap',icon:'🌡️',cat:'Cash Flow',span:2,minLevel:2,desc:'Spending by category across months — spot seasonal patterns at a glance.'},
   {id:'net_worth_chart',name:'Net Worth Trend',icon:'📈',cat:'Wealth',span:2,minLevel:2,desc:'Net worth over months.'},
-  {id:'investments',name:'Investments',icon:'🏦',cat:'Wealth',span:2,minLevel:5,desc:'Your portfolio — positions pulled from statements, allocation, and one-tap research. (Mogul)'},
+  {id:'investments',name:'Investments',icon:'💼',cat:'Wealth',span:2,minLevel:5,desc:'Your portfolio — positions pulled from statements, allocation, and one-tap research. (Mogul)'},
   {id:'fire_hub',name:'Wealth & FIRE',icon:'🔥',cat:'Wealth',span:2,minLevel:3,desc:'Financial-independence progress, long-term projection, and an interactive calculator — in tabs.'},
   {id:'debt_hub',name:'Debt',icon:'💳',cat:'Debt',span:2,minLevel:1,desc:'Everything you owe in one place — balances, payoff timeline, credit utilization, credit-score monitor, and 0% promos, in tabs.'},
   {id:'fire_drill',name:'Fire Drill Simulator',icon:'🧯',cat:'Playground',span:2,minLevel:2,desc:'Stress-test your finances against job loss, disasters & more.'},
@@ -9058,6 +9064,10 @@ const RICHIE_SPOTS={
   recurring:{ focusSel:'.rec-cancelbtn', message:"Here are your subscriptions 👇 — flag any to ⊘ Cancel and watch the ▲ price rises." },
   bills_list:{ focusSel:'.bill-row', message:"Here are your bills 👇 — mark them paid or tweak what you'll pay." },
   top_categories:{ message:"Here's where your money's going 👇 — pick a category to trim this month." },
+  health_score:{ focusSel:'.hs-tip', message:"Here's your money check-up 👇 — this one move lifts your score the most." },
+  spending_trends:{ focusSel:'.st-row', message:"Here's what changed vs last month 👇 — tap a mover to see the transactions behind it." },
+  bill_calendar:{ focusSel:'.bcal-summary', message:"Here's your month at a glance 👇 — watch the heavy weeks so nothing catches you out." },
+  net_worth_chart:{ focusSel:'.wph-stat', message:"Here's your net worth trend 👇 — every check-in adds a real data point." },
 };
 function briefGoto(type){
   const spot=RICHIE_SPOTS[type]||{};
