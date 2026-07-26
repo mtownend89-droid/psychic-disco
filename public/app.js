@@ -5954,11 +5954,11 @@ function cfpRefresh(uid){ const pg=APP.pages.find(p=>p.id===APP.activePage); if(
 function fundTriageBody(w){
   const t=engFundTriage();
   const barPct=v=>t.pool>0?Math.min(100,Math.round(v/t.pool*100)):0;
-  const row=(icon,name,desc,val,key,color)=>`
+  const row=(icon,name,desc,val,key,color,goto)=>`
     <div class="ft-row">
       <div class="ft-row-top">
         <span class="ft-ic">${icon}</span>
-        <div class="ft-meta"><div class="ft-nm">${name}</div><div class="ft-desc">${desc}</div></div>
+        <div class="ft-meta"><div class="ft-nm">${name}${goto?` <span class="ft-go" onclick="event.stopPropagation();briefGoto('${goto}')" title="Open this widget">›</span>`:''}</div><div class="ft-desc">${desc}</div></div>
         <div class="ft-edit"><span>$</span><input type="number" min="0" step="10" value="${val}" onclick="event.stopPropagation()" oninput="ftSetAlloc('${key}',this.value)" onblur="ftCommit('${w.uid}')" aria-label="${esc(name)} allocation"></div>
       </div>
       <div class="ft-bar"><div class="ft-bar-fill" style="width:${barPct(val)}%;background:${color}"></div></div>
@@ -5989,9 +5989,9 @@ function fundTriageBody(w){
     <div class="ft-extra-edit"><span>Extra to delegate</span><div class="ft-edit"><span>$</span><input type="number" min="0" step="10" value="${t.pool}" onclick="event.stopPropagation()" oninput="ftSetExtra(this.value)" onblur="ftCommit('${w.uid}')" aria-label="Extra funds to delegate"></div><button class="ft-auto" onclick="event.stopPropagation();ftReset('${w.uid}')" title="Reset to computed surplus & priority split">↺ Auto</button></div>
     ${balanceRow}
     <div class="zb-section-label">Priority order <span class="ws-hint" style="margin:0">high-interest debt → savings → investing</span></div>
-    ${row('🔥','1 · Kill high-interest debt', debtDesc, t.debt, 'debt', 'var(--red)')}
-    ${row('🪣','2 · Fund savings buckets', savDesc, t.savings, 'savings', 'var(--blue)')}
-    ${row('📈','3 · Invest the rest', invDesc, t.invest, 'invest', 'var(--green)')}
+    ${row('🔥','1 · Kill high-interest debt', debtDesc, t.debt, 'debt', 'var(--red)', 'debt_hub')}
+    ${row('🪣','2 · Fund savings buckets', savDesc, t.savings, 'savings', 'var(--blue)', 'savings_buckets')}
+    ${row('📈','3 · Invest the rest', invDesc, t.invest, 'invest', 'var(--green)', 'investments')}
     ${note}
   </div>`;
 }
