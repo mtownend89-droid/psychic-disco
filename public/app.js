@@ -202,6 +202,92 @@ function getTxnCategory(t){
 }
 function getTxnNote(t){ return _txnNotes[_txnKey(t)]||''; }
 
+/* ═══ GLOBAL TRANSACTION SEARCH ═══
+   A topbar-launched overlay that searches across every transaction (merchant,
+   category, note, account, amount) with quick structured filters. */
+let _txnSearch={q:'', chips:{month:false,big:false,income:false,spend:false,uncat:false}};
+const TXS_CHIPS=[{id:'month',label:'This month'},{id:'big',label:'≥ $50'},{id:'income',label:'Income'},{id:'spend',label:'Spending'},{id:'uncat',label:'Uncategorized'}];
+function openTxnSearch(){
+  const m=gg('txnSearchModal'); if(!m) return;
+  try{ discoverXp('search',10,'global search'); }catch(e){}
+  m.style.display='flex';
+  const chipsEl=gg('txsChips'); if(chipsEl) chipsEl.innerHTML=TXS_CHIPS.map(c=>`<button class="txs-chip${_txnSearch.chips[c.id]?' on':''}" onclick="txnSearchChip('${c.id}')">${esc(c.label)}</button>`).join('');
+  txnSearchRender();
+  setTimeout(()=>{ const i=gg('txsInput'); if(i){ i.value=_txnSearch.q; i.focus(); } },60);
+}
+function closeTxnSearch(){ const m=gg('txnSearchModal'); if(m) m.style.display='none'; }
+function txnSearchInput(v){ _txnSearch.q=v; txnSearchRender(); }
+function txnSearchChip(id){
+  _txnSearch.chips[id]=!_txnSearch.chips[id];
+  const b=gg('txsChips'); if(b) Array.prototype.forEach.call(b.children,(el,i)=>{ el.classList.toggle('on', !!_txnSearch.chips[TXS_CHIPS[i].id]); });
+  txnSearchRender();
+}
+function _txnAcctName(t){ const a=(allAccts||[]).find(x=>x.account_id===t.account_id); return a?(a.name||a.official_name||a.institution||''):''; }
+// Parse an amount operator out of the query (">50", "<=20", "50-100", "=12.5"). Returns a predicate or null.
+function _parseAmtQuery(q){
+  let m=q.match(/^([<>]=?|=)\s*\$?(\d+(?:\.\d+)?)$/);
+  if(m){ const op=m[1], n=parseFloat(m[2]); return v=>{ v=Math.abs(v); switch(op){case '>':return v>n;case '>=':return v>=n;case '<':return v<n;case '<=':return v<=n;default:return Math.abs(v-n)<0.005;} }; }
+  m=q.match(/^\$?(\d+(?:\.\d+)?)\s*-\s*\$?(\d+(?:\.\d+)?)$/);
+  if(m){ const a=parseFloat(m[1]), b=parseFloat(m[2]), lo=Math.min(a,b), hi=Math.max(a,b); return v=>{ v=Math.abs(v); return v>=lo&&v<=hi; }; }
+  return null;
+}
+function _txnSearchData(){
+  let list = (dataLoaded && allTxns.length) ? allTxns.slice() : [
+    {date:'2026-07-20',name:'Starbucks',amount:6.45,transaction_id:'txs1'},
+    {date:'2026-07-18',name:'Whole Foods',amount:83.20,transaction_id:'txs2'},
+    {date:'2026-07-15',name:'Paycheck — Employer',amount:-2400,transaction_id:'txs3'},
+    {date:'2026-07-12',name:'Shell Gas',amount:47.10,transaction_id:'txs4'},
+    {date:'2026-06-28',name:'Netflix',amount:15.49,transaction_id:'txs5'},
+  ];
+  const raw=(_txnSearch.q||'').trim(), q=raw.toLowerCase();
+  const amtPred=raw?_parseAmtQuery(raw):null;
+  const ch=_txnSearch.chips;
+  const now=new Date(), curStart=new Date(now.getFullYear(),now.getMonth(),1);
+  list=list.filter(t=>{
+    if(ch.month && new Date(t.date)<curStart) return false;
+    if(ch.big && Math.abs(t.amount)<50) return false;
+    if(ch.income && !_isIncomeTxn(t)) return false;
+    if(ch.spend && !(t.amount>0 && !_txnExcludedFromSpend(t))) return false;
+    if(ch.uncat && getTxnCategory(t)!=='Other') return false;
+    if(q){
+      if(amtPred){ if(!amtPred(t.amount)) return false; }
+      else { const hay=[(t.merchant_name||t.name||''),getTxnCategory(t),getTxnNote(t),_txnAcctName(t),Math.abs(t.amount).toFixed(2)].join(' ').toLowerCase(); if(!hay.includes(q)) return false; }
+    }
+    return true;
+  });
+  list.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  return list;
+}
+function txnSearchRender(){
+  const list=_txnSearchData();
+  const sumEl=gg('txsSummary');
+  const inTot=list.filter(t=>t.amount<0).reduce((s,t)=>s+Math.abs(t.amount),0);
+  const outTot=list.filter(t=>t.amount>0).reduce((s,t)=>s+t.amount,0);
+  if(sumEl) sumEl.innerHTML = list.length ? `<span>${list.length} result${list.length!==1?'s':''}</span><span class="txs-in">+${fmtK(inTot)}</span><span class="txs-out">−${fmtK(outTot)}</span>` : '';
+  const el=gg('txsList'); if(!el) return;
+  const active=(_txnSearch.q||Object.values(_txnSearch.chips).some(Boolean));
+  if(!list.length){ el.innerHTML=`<div class="txs-empty">${active?'No transactions match.':'Type to search across every transaction — or tap a filter above.'}</div>`; return; }
+  const capped=list.slice(0,400);
+  el.innerHTML=capped.map(t=>{
+    const pos=t.amount>0, col=pos?'var(--red)':'var(--pos)', amt=(pos?'−':'+')+fmt2(Math.abs(t.amount));
+    const cat=getTxnCategory(t), note=getTxnNote(t), acct=_txnAcctName(t);
+    const name=t.merchant_name||t.name||'', dt=new Date(t.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    return `<div class="txs-row">
+      <span class="txs-dot" style="background:${getCatColor(cat)}"></span>
+      <div class="txs-main"><div class="txs-name">${esc(name)}</div><div class="txs-meta">${esc(dt)} · ${esc(cat)}${acct?' · '+esc(acct):''}${note?' · 📝 '+esc(note):''}</div></div>
+      <b class="txs-amt" style="color:${col}">${amt}</b>
+    </div>`;
+  }).join('') + (list.length>400?`<div class="txs-empty">Showing the 400 most recent of ${list.length} matches — refine your search.</div>`:'');
+}
+// Ctrl/⌘+K toggles search (ignored on the login screen and while typing in another field).
+try{ document.addEventListener('keydown',function(e){
+  if(!((e.metaKey||e.ctrlKey)&&(e.key==='k'||e.key==='K'))) return;
+  const login=gg('loginScreen'); if(login && login.style.display!=='none' && login.offsetParent!==null) return;
+  const m=gg('txnSearchModal'); if(!m) return;
+  e.preventDefault();
+  if(m.style.display==='flex') closeTxnSearch(); else openTxnSearch();
+}); }catch(e){}
+
 /* ── Live data layer (Plaid-backed via server API) ── */
 let allAccts=[], allTxns=[], _plaidTxns=[], dataLoaded=false, serverAvailable=true;
 // Once a real dashboard (any widgets) has been seen this session, the client must NEVER push
@@ -490,7 +576,7 @@ function applyBillOverrides(list){
 function toggleBillPaid(key){
   const ov=_billOverrides(); ov[key]=ov[key]||{}; ov[key].paid=!ov[key].paid; saveState();
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
-  if(ov[key].paid){ const nm=(key.split('|')[0]||'that').trim(); try{ richieCelebrate(`Boom — ${nm} marked paid! ✅ One less thing on the list.`); }catch(e){} }
+  if(ov[key].paid){ try{ gamiMarkEngaged('billpaid'); }catch(e){} const nm=(key.split('|')[0]||'that').trim(); try{ richieCelebrate(`Boom — ${nm} marked paid! ✅ One less thing on the list.`); }catch(e){} }
 }
 function setBillPay(key,val){
   const ov=_billOverrides(); ov[key]=ov[key]||{}; const n=parseFloat(val); if(!isNaN(n)&&n>=0) ov[key].pay=n; saveState();
@@ -1174,6 +1260,80 @@ function engCashFlowProjection(days, cats){
   return {start, end:bal, series, events, low, totalIn, totalOut, totalSaved, net:bal-start, byDay, days};
 }
 
+/* ═══ BILL CALENDAR ═══
+   A month grid of upcoming bills & income by due date, built from the same dated,
+   business-day-shifted cash-flow events. Projection only runs forward from today, so
+   past days in the current month read as empty (those bills already came due). */
+function _dk(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function _dkParse(k){ const p=k.split('-').map(Number); return new Date(p[0],p[1]-1,p[2]); }
+function _calAmt(n){ n=Math.abs(n); return n>=1000?(n/1000).toFixed(n>=10000?0:1)+'k':String(Math.round(n)); }
+function engBillCalendar(monthOffset){
+  monthOffset=monthOffset||0;
+  const today=new Date(); today.setHours(0,0,0,0);
+  const first=new Date(today.getFullYear(), today.getMonth()+monthOffset, 1);
+  const last=new Date(first.getFullYear(), first.getMonth()+1, 0);
+  const label=first.toLocaleString('en-US',{month:'long',year:'numeric'});
+  const horizon=Math.max(1, Math.round((last-today)/86400000)+2);
+  let events=[]; try{ events=(engCashFlowProjection(horizon).events)||[]; }catch(e){}
+  const byDate={};
+  events.forEach(e=>{ const k=_dk(_projDate(e.day)); (byDate[k]=byDate[k]||[]).push({name:e.name, amt:e.amt, type:e.type}); });
+  const gridStart=new Date(first); gridStart.setDate(first.getDate()-first.getDay());   // Sunday on/before the 1st
+  const weeks=[]; let cur=new Date(gridStart); let monthIn=0, monthOut=0;
+  for(let wk=0; wk<6; wk++){
+    const week=[];
+    for(let col=0; col<7; col++){
+      const k=_dk(cur), evs=byDate[k]||[], inMonth=cur.getMonth()===first.getMonth();
+      const net=evs.reduce((s,e)=>s+e.amt,0);
+      if(inMonth) evs.forEach(e=>{ if(e.amt>=0) monthIn+=e.amt; else monthOut+=-e.amt; });
+      week.push({key:k, dom:cur.getDate(), inMonth, isToday:k===_dk(today), events:evs, net});
+      cur=new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()+1);
+    }
+    weeks.push(week);
+    if(cur>last && cur.getMonth()!==first.getMonth() && weeks.length>=5) break;   // don't draw an all-trailing 6th week
+  }
+  const monthEvents=Object.keys(byDate).filter(k=>{ const d=_dkParse(k); return d.getMonth()===first.getMonth()&&d.getFullYear()===first.getFullYear(); }).sort().map(k=>({key:k, events:byDate[k]}));
+  return {monthOffset, label, weeks, monthIn:Math.round(monthIn), monthOut:Math.round(monthOut), monthNet:Math.round(monthIn-monthOut), monthEvents};
+}
+let _billCal={};
+function _billCalDayLabel(k){ return _dkParse(k).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); }
+function _billCalList(days){
+  return days.map(d=>{
+    const rows=d.events.slice().sort((a,b)=>a.amt-b.amt).map(e=>{
+      const isBill=e.type==='bill';
+      const go=isBill?' bcal-li-go" onclick="event.stopPropagation();billCalGotoBills()" title="Open in Bills':'"';
+      return `<div class="bcal-li${go}"><span class="bcal-li-dot ${e.amt>=0?'in':'out'}"></span><span class="bcal-li-nm">${esc(e.name)}${isBill?' <span class="bcal-chev">›</span>':''}</span><b style="color:${e.amt>=0?'var(--pos)':'var(--red)'}">${e.amt>=0?'+':'−'}${fmtK(e.amt)}</b></div>`;
+    }).join('');
+    return `<div class="bcal-li-day"><div class="bcal-li-date">${_billCalDayLabel(d.key)}</div>${rows}</div>`;
+  }).join('');
+}
+function billCalGotoBills(){ try{ briefGoto('bills_list'); }catch(e){ try{ _ensureWidgetOnPage('bills_list'); }catch(_){} } }
+function billCalBody(w){
+  const st=_billCal[w.uid]||(_billCal[w.uid]={off:0, sel:null});
+  const c=engBillCalendar(st.off);
+  const dow=['S','M','T','W','T','F','S'];
+  const head=`<div class="bcal-top">
+    <button class="bcal-nav" onclick="event.stopPropagation();billCalShift('${w.uid}',-1)"${st.off<=0?' disabled':''} aria-label="Previous month">‹</button>
+    <div class="bcal-month">${esc(c.label)}${dataLoaded?'':' · sample'}</div>
+    <button class="bcal-nav" onclick="event.stopPropagation();billCalShift('${w.uid}',1)"${st.off>=11?' disabled':''} aria-label="Next month">›</button>
+  </div>`;
+  const dowRow=`<div class="bcal-dow">${dow.map(d=>`<span>${d}</span>`).join('')}</div>`;
+  const grid=c.weeks.map(week=>`<div class="bcal-week">${week.map(cell=>{
+    const hasIn=cell.events.some(e=>e.amt>=0), hasOut=cell.events.some(e=>e.amt<0);
+    const dots=(hasIn?'<span class="bcal-dot in"></span>':'')+(hasOut?'<span class="bcal-dot out"></span>':'');
+    const netTxt=cell.events.length?`<span class="bcal-net" style="color:${cell.net>=0?'var(--pos)':'var(--red)'}">${cell.net>=0?'+':'−'}${_calAmt(cell.net)}</span>`:'';
+    const cls=['bcal-cell']; if(!cell.inMonth)cls.push('out'); if(cell.isToday)cls.push('today'); if(cell.events.length)cls.push('has'); if(st.sel===cell.key)cls.push('sel');
+    const click=cell.events.length?`onclick="event.stopPropagation();billCalDay('${w.uid}','${cell.key}')"`:'';
+    return `<div class="${cls.join(' ')}" ${click}><span class="bcal-dom">${cell.dom}</span><span class="bcal-marks">${dots}</span>${netTxt}</div>`;
+  }).join('')}</div>`).join('');
+  const summary=`<div class="bcal-summary"><span>In <b style="color:var(--pos)">${fmtK(c.monthIn)}</b></span><span>Out <b style="color:var(--red)">${fmtK(c.monthOut)}</b></span><span>Net <b style="color:${c.monthNet>=0?'var(--pos)':'var(--red)'}">${c.monthNet<0?'−':''}${fmtK(c.monthNet)}</b></span></div>`;
+  let list, listHdr;
+  if(st.sel){ const day=c.monthEvents.find(e=>e.key===st.sel); list=day?_billCalList([day]):'<div class="ws-hint">Nothing scheduled that day.</div>'; listHdr=`${_billCalDayLabel(st.sel)} · <a onclick="event.stopPropagation();billCalDay('${w.uid}','${st.sel}')" style="cursor:pointer;color:var(--muted)">show whole month</a>`; }
+  else { list=c.monthEvents.length?_billCalList(c.monthEvents):'<div class="ws-hint">No bills or income scheduled this month.</div>'; listHdr='This month'; }
+  return `<div class="bcal-wrap">${head}${dowRow}<div class="bcal-grid">${grid}</div>${summary}<div class="bcal-listhdr">${listHdr}</div><div class="bcal-list">${list}</div></div>`;
+}
+function billCalShift(uid,delta){ try{ discoverXp('bill_calendar',10,'the bill calendar'); }catch(e){} const st=_billCal[uid]||(_billCal[uid]={off:0,sel:null}); st.off=Math.max(0,Math.min(11,st.off+delta)); st.sel=null; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+function billCalDay(uid,key){ const st=_billCal[uid]||(_billCal[uid]={off:0,sel:null}); st.sel=st.sel===key?null:key; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+
 /* ── Unified bills/liabilities layer ──
    When Plaid liabilities are loaded, derive bills from real card/mortgage data;
    otherwise fall back to the manually-entered bills[] array. Same shape either way:
@@ -1414,15 +1574,22 @@ function recurringToBill(i){
 }
 function safeToSpendBody(w){
   const s=engSafeToSpend();
-  const perDay=Math.max(0,s.perDay);
-  return `<div class="wph"><div class="wph-sub">Safe to spend today</div>
-    <div class="wph-stat" style="color:${perDay>0?'var(--pos)':'var(--red)'}">${fmtK(perDay)}</div>
-    <div class="wph-sub">${fmtK(s.pool)} free ${s.nextIncomeDay!=null?`until pay in ${s.horizon}d`:`over ${s.horizon} days`}</div>
+  const perDay=Math.max(0,Math.round(s.perDay));
+  const col=s.pool>0?'var(--pos)':'var(--red)';
+  const sub = s.nextIncomeDay!=null
+    ? `safe to spend · ≈ ${fmtK(perDay)}/day until payday (${s.horizon}d)`
+    : `safe to spend over the next ${s.horizon} days`;
+  return `<div class="wph">
+    <div class="wph-stat" style="color:${col}">${fmtK(s.pool)}</div>
+    <div class="wph-sub">${sub}</div>
     <div class="sts-break">
       <div><span>Cash on hand</span><b>${fmtK(s.cash)}</b></div>
-      <div><span>− Bills before pay</span><b style="color:var(--red)">${fmtK(s.billsDue)}</b></div>
-      ${s.goalPortion>0.5?`<div><span>− Goal savings</span><b style="color:var(--amber)">${fmtK(s.goalPortion)}</b></div>`:''}
-    </div></div>`;
+      <div><span>− Bills before payday</span><b style="color:var(--red)">${fmtK(s.billsDue)}</b></div>
+      ${s.goalPortion>0.5?`<div><span>− Goal set-aside</span><b style="color:var(--amber)">${fmtK(s.goalPortion)}</b></div>`:''}
+      <div><span>− Safety buffer</span><b style="color:var(--muted)">${fmtK(s.buffer)}</b></div>
+    </div>
+    ${s.pool<=0?`<div class="ws-hint" style="margin-top:8px;color:var(--amber)">Tight until payday — bills &amp; set-asides cover your cash. Ease a goal contribution or move a bill.</div>`:''}
+  </div>`;
 }
 function engBillsDebt(){ return engBills().reduce((s,b)=>s+Math.abs(b.bal||0),0); }
 
@@ -1825,27 +1992,27 @@ function _goals(){
    and how Richie should teach the path. */
 const GOAL_PLANS={
   emergency:{ page:{name:'Emergency Fund',icon:'🛟',color:'#38bdf8'},
-    widgets:['goals','savings_buckets','cash_summary','zero_budget','cashflow_planner','bills_list'],
+    widgets:['goals','health_score','safe_spend','savings_buckets','bill_calendar','zero_budget'],
     coach:"An emergency fund is your financial seatbelt. I've set up Savings Buckets so you can grow it as its own sinking fund, a Cash on Hand tracker, your Zero-Based Budget to carve out savings, and the Cash Flow Planner to see what you can set aside each payday. Automate a transfer the day you get paid — pay your future self first.",
     teach:["Set aside a fixed amount every payday — before you spend.","Keep it in a separate savings account so it's out of sight.","Start with $1,000, then build to 3 months of expenses."] },
   debt:{ page:{name:'Debt Freedom',icon:'🚀',color:'#f05c5c'},
-    widgets:['goals','debt_summary','credit_util','promo_tracker','debt_payoff','bills_list','cashflow_planner'],
+    widgets:['goals','health_score','debt_hub','safe_spend','bill_calendar','cashflow_planner'],
     coach:"Let's get you debt-free. I've laid out your Total Debt, your Credit Utilization gauge, a 0%-Promo Tracker so no intro rate sneaks up on you, the Debt Payoff Planner (try avalanche — it kills the highest interest first), your Bills, and the Cash Flow Planner to find extra dollars. Every extra payment is a guaranteed return equal to your interest rate.",
     teach:["Always pay more than the minimum — even $25 extra compounds.","Attack the highest-APR balance first (avalanche method).","Pay off 0% promos before they expire — the rate jump is brutal.","Keep utilization under 30% (under 10% is ideal) to protect your score."] },
   savings:{ page:{name:'Savings Builder',icon:'💰',color:'#2ecc8a'},
-    widgets:['goals','savings_buckets','budget_actual','zero_budget','pl_panel','top_categories'],
+    widgets:['goals','health_score','savings_buckets','spending_hub','safe_spend','zero_budget'],
     coach:"Building savings is about widening the gap between what you earn and what you spend. I've set up Savings Buckets to fund your goals, Budget vs Actual to see where you're drifting, your Zero-Based Budget, a Profit & Loss panel, and Top Categories to spot what to trim. Find one expense to cut and redirect it into a bucket.",
     teach:["Automate savings so it happens without willpower.","Review your top spending category monthly and trim 10%.","Treat savings like a non-negotiable bill."] },
   networth:{ page:{name:'Wealth Builder',icon:'💎',color:'#5b8def'},
-    widgets:['goals','net_worth_summary','net_worth_chart','debt_summary','pl_panel'],
+    widgets:['goals','health_score','net_worth_chart','debt_hub','spending_hub'],
     coach:"Net worth is the real scoreboard — assets minus debts. I've set up your Net Worth snapshot and trend chart so you can watch it climb, plus debt and P&L so you see both levers. Grow assets, shrink debts, and let time + compounding do the heavy lifting.",
     teach:["Net worth = what you own minus what you owe. Grow the gap.","Invest consistently — time in the market beats timing it.","Track the trend monthly; direction matters more than any single number."] },
   savingsrate:{ page:{name:'Savings Rate',icon:'📊',color:'#a78bfa'},
-    widgets:['goals','pl_panel','budget_actual','zero_budget','top_categories','cashflow_chart'],
+    widgets:['goals','health_score','spending_hub','zero_budget','safe_spend','pl_panel'],
     coach:"Your savings rate is the single best predictor of financial freedom. I've set up your Profit & Loss, Budget vs Actual to catch overspending, the budget to plan it, and Top Categories to find the leaks. Push the rate up a few points at a time — every percent buys you future freedom.",
     teach:["Savings rate = (income − spending) ÷ income. Aim to raise it steadily.","Increasing income helps, but cutting waste is faster to control.","A 20% rate is solid; 30%+ is wealth-building territory."] },
   custom:{ page:{name:'My Goal',icon:'🎯',color:'#2ecc8a'},
-    widgets:['goals','cash_summary','zero_budget','pl_panel'],
+    widgets:['goals','health_score','safe_spend','spending_hub','bill_calendar'],
     coach:"Custom goal locked in. I've given you the core tracking tools — your Goals tracker, cash position, budget, and P&L. Update your progress as you go and I'll keep cheering you on.",
     teach:["Break a big goal into monthly milestones.","Track progress regularly so you stay motivated.","Celebrate small wins along the way."] },
 };
@@ -1931,6 +2098,18 @@ function checkGoalCompletion(){
       awardXp(50);
       if(sbRichie)sbRichie.do('tada');
       try{ gamiGoalCompleted(g); }catch(e){}
+    } else {
+      // Milestone cheers on the way up — fire once for the highest newly-crossed of 25/50/75%.
+      g._ms=g._ms||{};
+      const crossed=[25,50,75].filter(mk=>p.pct>=mk);
+      const top=crossed[crossed.length-1];
+      if(top && !g._ms[top]){
+        crossed.forEach(mk=>{ g._ms[mk]=true; });   // mark all up to the top as seen (no backfill pops)
+        any=true;
+        try{ awardXp(10); }catch(e){}
+        if(sbRichie)sbRichie.do('nod');
+        try{ richieCelebrate(`${top}% of the way to your "${g.name||'goal'}" goal — ${top>=75?'so close, keep pushing! 🔥':top>=50?'halfway there! 🎯':'strong start! 💪'}`); }catch(e){}
+      }
     }
   });
   if(any) saveState();
@@ -2085,6 +2264,8 @@ function engSpendTrends(){
   if(bAmt>0){ const projSpend=has?(elapsed>0?curBudget/elapsed:curBudget):Math.round(projected*0.7); budget={amount:Math.round(bAmt),projected:Math.round(projSpend),pace:Math.round(bAmt-projSpend)}; }
   return {has,dom,daysInMonth,elapsed,curTotal:Math.round(curTotal),prevSameTotal:Math.round(prevSameTotal),prevFullTotal:Math.round(prevFullTotal),projected:Math.round(projected),vsLastPeriod:Math.round(curTotal-prevSameTotal),movers,budget};
 }
+// Tap a category mover → open global search filtered to that category's transactions.
+function trendSearchCat(cat){ if(typeof openTxnSearch!=='function') return; try{ _txnSearch.q=cat; if(_txnSearch.chips) Object.keys(_txnSearch.chips).forEach(k=>_txnSearch.chips[k]=false); }catch(e){} openTxnSearch(); }
 function spendTrendsBody(w){
   const s=engSpendTrends();
   const up=s.vsLastPeriod>0;   // spending more than the same point last month
@@ -2097,7 +2278,8 @@ function spendTrendsBody(w){
   const maxD=Math.max(1,...movers.map(m=>Math.abs(m.delta)));
   const rows=movers.map(m=>{
     const mu=m.delta>0; const c=mu?'var(--amber)':'var(--green)'; const wpct=Math.round(Math.abs(m.delta)/maxD*100);
-    return `<div class="st-row"><span class="st-dot" style="background:${m.color}"></span><span class="st-lbl">${esc(m.label)}</span><span class="st-barwrap"><span class="st-bar" style="width:${wpct}%;background:${c}"></span></span><b class="st-delta" style="color:${c}">${mu?'▲':'▼'} ${fmtK(Math.abs(m.delta))}</b></div>`;
+    const q=String(m.label).replace(/'/g,"\\'");
+    return `<div class="st-row st-row-go" onclick="event.stopPropagation();trendSearchCat('${q}')" title="See the transactions behind this"><span class="st-dot" style="background:${m.color}"></span><span class="st-lbl">${esc(m.label)} <span class="st-chev">›</span></span><span class="st-barwrap"><span class="st-bar" style="width:${wpct}%;background:${c}"></span></span><b class="st-delta" style="color:${c}">${mu?'▲':'▼'} ${fmtK(Math.abs(m.delta))}</b></div>`;
   }).join('') || '<div class="ws-hint">Not enough history yet to compare months.</div>';
   return `<div class="st-wrap">
     <div class="st-hero"><div class="st-hero-num">${fmtK(s.curTotal)}</div><div class="st-hero-sub">spent so far this month · day ${s.dom} of ${s.daysInMonth}</div>
@@ -2336,6 +2518,136 @@ function docAddSelected(){
   APP.imports.push({ id:impId, kind:'bank', label:importLabel, ts:Date.now(), txnImportId:importId, billName, summary:`${added} transaction${added!==1?'s':''}${billName?' + bill':''}` });
   finish((added?`Added ${added} transaction${added!==1?'s':''}${addBill?' and a bill':''} from your ${((type||'statement').replace('_',' '))}. \ud83d\udcc4`:`Saved the details from your ${((type||'statement').replace('_',' '))}.`)+promoMsg);
 }
+/* ═══ CSV TRANSACTION IMPORT ═══
+   A fully client-side importer (no server/OpenAI): parse a bank/card CSV, map columns,
+   dedupe against existing transactions, and push into APP.importedTxns as a removable
+   batch — for accounts Plaid can't reach or manual tracking. */
+let _csv=null;
+function _parseCSV(text){
+  const rows=[]; let row=[], field='', inQ=false;
+  text=String(text||'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  for(let i=0;i<text.length;i++){ const ch=text[i];
+    if(inQ){ if(ch==='"'){ if(text[i+1]==='"'){ field+='"'; i++; } else inQ=false; } else field+=ch; }
+    else if(ch==='"') inQ=true;
+    else if(ch===','){ row.push(field); field=''; }
+    else if(ch==='\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+    else field+=ch;
+  }
+  if(field!==''||row.length){ row.push(field); rows.push(row); }
+  return rows.filter(r=>r.some(c=>String(c).trim()!==''));
+}
+function _csvMoney(s){ s=String(s==null?'':s).trim(); if(!s) return null; let neg=false;
+  if(/^\(.*\)$/.test(s)){ neg=true; s=s.slice(1,-1); }
+  s=s.replace(/[$,\s]/g,''); if(s.charAt(0)==='-'){ neg=true; s=s.slice(1); } else if(s.charAt(0)==='+'){ s=s.slice(1); }
+  const n=parseFloat(s); if(isNaN(n)) return null; return neg?-n:n;
+}
+function _csvDate(s){ s=String(s==null?'':s).trim(); if(!s) return null;
+  let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if(m) return `${m[1]}-${String(+m[2]).padStart(2,'0')}-${String(+m[3]).padStart(2,'0')}`;
+  m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/); if(m){ let mm=+m[1],dd=+m[2],yy=+m[3]; if(yy<100)yy+=2000; if(mm>12&&dd<=12){ const t=mm; mm=dd; dd=t; } return `${yy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`; }
+  const d=new Date(s); if(!isNaN(d)) return d.toISOString().slice(0,10); return null;
+}
+function _guessCol(H, re){ for(let i=0;i<H.length;i++){ if(re.test(H[i]||'')) return i; } return -1; }
+function csvFileChosen(inp){
+  const f=inp.files&&inp.files[0]; inp.value=''; if(!f) return;
+  if(f.size>8*1024*1024){ alert('That CSV is large (max ~8MB). Try splitting it into smaller files.'); return; }
+  try{ discoverXp('csv_import',15,'CSV import'); }catch(e){}
+  const rd=new FileReader();
+  rd.onload=()=>{ try{ _csvInit(String(rd.result||''), f.name||'transactions.csv'); }catch(e){ alert('Could not parse that file — is it a CSV?'); } };
+  rd.onerror=()=>alert('Could not read that file.');
+  rd.readAsText(f);
+}
+function _csvInit(text, name){
+  const rows=_parseCSV(text);
+  if(rows.length<2){ alert('That file has a header but no data rows.'); return; }
+  const headers=rows[0].map(h=>String(h||'').trim());
+  const H=headers.map(h=>h.toLowerCase());
+  const map={ date:_guessCol(H,/date|posted/), amount:_guessCol(H,/amount|amt|value/), desc:_guessCol(H,/desc|payee|memo|merchant|detail|narrat|name/), cat:_guessCol(H,/category|^type$/) };
+  if(map.date<0) map.date=0;
+  if(map.amount<0) map.amount=Math.min(headers.length-1,1);
+  if(map.desc<0) map.desc=Math.min(headers.length-1,2);
+  // sign guess: if amounts under this mapping skew negative, negative=out is right (the default)
+  _csv={ name, headers, rows, hasHeader:true, map, sign:'negOut' };
+  gg('csvModal').style.display='flex';
+  csvRenderMap();
+}
+function csvSetMap(field,val){ if(!_csv) return; _csv.map[field]=parseInt(val,10); csvRenderMap(); }
+function csvSetSign(v){ if(!_csv) return; _csv.sign=v; csvRenderMap(); }
+function csvSetHeader(on){ if(!_csv) return; _csv.hasHeader=on; csvRenderMap(); }
+function _csvBuildTxns(){
+  if(!_csv) return [];
+  const {rows,map,sign,hasHeader}=_csv;
+  const body=rows.slice(hasHeader?1:0);
+  const out=[];
+  body.forEach(r=>{
+    const date=_csvDate(r[map.date]); let amt=_csvMoney(r[map.amount]); if(date==null||amt==null) return;
+    if(sign==='negOut') amt=-amt;   // file negative = money out → flip so "out" is positive (Plaid convention)
+    const description=(map.desc!=null&&map.desc>=0?String(r[map.desc]||'').trim():'')||'Imported';
+    const cat=(map.cat!=null&&map.cat>=0)?String(r[map.cat]||'').trim():'';
+    out.push({date, amount:amt, description, cat});
+  });
+  out.forEach(t=>{ t._dup=_docDupCheck(t); });
+  return out;
+}
+function csvRenderMap(){
+  const el=gg('csvBody'); if(!el||!_csv) return;
+  const cols=_csv.headers.map((h,i)=>({i, label:_csv.hasHeader?((h||'').trim()||('Column '+(i+1))):('Column '+(i+1))}));
+  const sel=(field)=>{ const cur=_csv.map[field]; const none=field==='cat'?`<option value="-1"${cur<0?' selected':''}>— none —</option>`:''; return `<select class="csv-sel" onchange="csvSetMap('${field}',this.value)">${none}${cols.map(c=>`<option value="${c.i}"${c.i===cur?' selected':''}>${esc(c.label)}</option>`).join('')}</select>`; };
+  const txns=_csvBuildTxns();
+  const toImport=txns.filter(t=>!t._dup);
+  const dups=txns.length-toImport.length;
+  const preview=txns.slice(0,6).map(t=>{ const pos=t.amount>0; return `<div class="csv-prow${t._dup?' dup':''}"><span class="csv-pdate">${esc(t.date)}</span><span class="csv-pdesc">${esc(t.description)}</span><span class="csv-pamt" style="color:${pos?'var(--red)':'var(--pos)'}">${pos?'-':'+'}${fmtK(t.amount)}</span>${t._dup?'<span class="csv-dupbadge">dup</span>':''}</div>`; }).join('')||'<div class="ws-hint">No valid rows with the current mapping — check the Date and Amount columns.</div>';
+  const canImport=toImport.length>0;
+  el.innerHTML=`
+    <div class="ws-hint" style="margin:0 0 10px">${esc(_csv.name)} · ${_csv.rows.length-(_csv.hasHeader?1:0)} data row${(_csv.rows.length-(_csv.hasHeader?1:0))!==1?'s':''}</div>
+    <div class="csv-maps">
+      <label class="csv-m"><span>Date *</span>${sel('date')}</label>
+      <label class="csv-m"><span>Amount *</span>${sel('amount')}</label>
+      <label class="csv-m"><span>Description *</span>${sel('desc')}</label>
+      <label class="csv-m"><span>Category</span>${sel('cat')}</label>
+    </div>
+    <div class="csv-opts">
+      <label class="csv-chk"><input type="checkbox" ${_csv.hasHeader?'checked':''} onchange="csvSetHeader(this.checked)"> First row is a header</label>
+      <div class="csv-sign"><span>In this file, a</span>
+        <label><input type="radio" name="csvsign" ${_csv.sign==='negOut'?'checked':''} onchange="csvSetSign('negOut')"> negative</label>
+        <label><input type="radio" name="csvsign" ${_csv.sign==='posOut'?'checked':''} onchange="csvSetSign('posOut')"> positive</label>
+        <span>amount = money out</span>
+      </div>
+    </div>
+    <div class="csv-sec">Preview${txns.length>6?` · first 6 of ${txns.length}`:''}</div>
+    <div class="csv-preview">${preview}</div>
+    <div class="csv-summary"><b>${toImport.length}</b> to import${dups?` · <span style="color:var(--muted)">${dups} duplicate${dups!==1?'s':''} skipped</span>`:''}</div>
+    <div class="mf-actions"><button class="btn" onclick="closeCsvModal()">Cancel</button><button class="btn primary" onclick="csvDoImport()"${canImport?'':' disabled'}>Import${toImport.length?' '+toImport.length:''}</button></div>`;
+}
+function csvDoImport(){
+  if(!_csv) return;
+  const nm=_csv.name;
+  const txns=_csvBuildTxns().filter(t=>!t._dup);
+  if(!txns.length) return;
+  APP.importedTxns=APP.importedTxns||[]; APP.imports=APP.imports||[];
+  const importId='csv'+Date.now()+Math.floor(Math.random()*999);
+  const importLabel=String(nm||'CSV import').replace(/\.(csv|txt)$/i,'')+' · '+new Date().toLocaleDateString();
+  let added=0;
+  txns.forEach(t=>{ APP.importedTxns.push({ transaction_id:'imp_'+Date.now()+'_'+(added++), account_id:'imported', date:t.date, name:t.description||'Imported', merchant_name:t.description||'', amount:+t.amount, personal_finance_category:{primary:t.cat||''}, category:t.cat?[t.cat]:undefined, institution:'CSV import', _imported:true, _importId:importId, _importLabel:importLabel }); });
+  APP.imports.push({ id:importId, kind:'bank', label:importLabel, ts:Date.now(), txnImportId:importId, summary:`${added} transaction${added!==1?'s':''} · CSV` });
+  saveState(); _rebuildTxns(); if(allTxns.length>0) dataLoaded=true;
+  closeCsvModal();
+  if(APP._awaitingBuild){ try{ richieBuildApp(); }catch(e){} }   // imported straight from the build gate → build the dashboard
+  else { const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+  if(typeof richieSay==='function') richieSay(`📥 Imported ${added} transaction${added!==1?'s':''} from ${nm}. Remove this batch anytime from Settings → connected sources.`);
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+  if(typeof sbRichie!=='undefined'&&sbRichie) sbRichie.do('tada');
+  try{ updateReviewBadge(); }catch(e){}
+  // Offer to review the imported categories (some auto-guesses may be off); fall back to a plain note.
+  const reviewable=(typeof _reviewTxns==='function')?_reviewTxns().length:0;
+  if(reviewable && typeof richieShow==='function'){
+    setTimeout(()=>{ try{ richieShow(`📥 Imported ${added} transaction${added!==1?'s':''} from ${nm}. A few categories may need a look — want to review them together?`, {emo:'happy', actions:[
+      {label:'Review categories', cls:'ra-go', on:openBriefing},
+      {label:'Later', on:(typeof richieDismiss==='function'?richieDismiss:function(){})}
+    ]}); }catch(e){} }, 700);
+  } else if(typeof richieSay==='function') richieSay(`📥 Imported ${added} transaction${added!==1?'s':''} from ${nm}. Remove this batch anytime from Settings → connected sources.`);
+}
+function closeCsvModal(){ const m=gg('csvModal'); if(m) m.style.display='none'; _csv=null; }
+
 /* ═══ INVESTMENTS / PORTFOLIO (Mogul) — positions from statements + research,
    plus investment accounts & assets linked in from Net Worth ═══ */
 function engHoldings(){ return (APP.holdings||[]).slice(); }
@@ -2380,6 +2692,70 @@ function engHighInterestDebt(threshold){
   const g=(typeof engDebtGroups==='function')?engDebtGroups():{revolving:[],installment:[]};
   return [...g.revolving, ...g.installment].filter(b=> b.cat==='CC' || (b.apr||0)>=threshold)
     .reduce((s,b)=>s+Math.abs(b.bal||0),0);
+}
+
+/* ═══ FINANCIAL HEALTH SCORE ═══
+   A composite 0–100 score from five weighted pillars: savings rate, emergency-fund
+   months, debt-to-income, credit utilization, and high-interest debt. Pillars that
+   don't apply (no income, no credit lines) drop out and their weight is redistributed. */
+function _hsGrade(s){ if(s>=93)return'A'; if(s>=90)return'A−'; if(s>=87)return'B+'; if(s>=83)return'B'; if(s>=80)return'B−'; if(s>=77)return'C+'; if(s>=73)return'C'; if(s>=70)return'C−'; if(s>=67)return'D+'; if(s>=60)return'D'; return'F'; }
+function engHealthScore(){
+  const clamp=v=>Math.max(0,Math.min(100,Math.round(v)));
+  const income=engMonthlyIncome();
+  const spend=dataLoaded?engSpend30():engMonthlyBills();
+  const monthlyExpenses=Math.max(engMonthlyBills(), dataLoaded?engSpend30():0, 1);
+  const comps=[];
+  // 1) Savings rate — 20%+ is full marks
+  if(income>0){ const rate=(income-spend)/income*100; comps.push({key:'savings_rate',label:'Savings rate',icon:'📊',weight:25,score:clamp(rate/20*100),value:Math.round(rate)+'%',
+    tip: rate>=20?'Great rate — keep it steady.':`You're saving ${Math.round(rate)}% — trim one top category to reach 20%.`}); }
+  // 2) Emergency fund — 6 months of expenses is full marks
+  { const ef=engEmergencyFund(); const months=monthlyExpenses>0?ef/monthlyExpenses:0; comps.push({key:'emergency',label:'Emergency fund',icon:'🛟',weight:25,score:clamp(months/6*100),value:months.toFixed(1)+' mo',
+    tip: months>=3?(months>=6?'Fully funded — nicely done.':`${months.toFixed(1)} months saved — aim for 6 for full cover.`):`Only ${months.toFixed(1)} months of expenses saved — build toward 3+.`}); }
+  // 3) Debt-to-income — 0% is full marks, 43%+ is zero
+  if(income>0){ const dti=engDTI().ratio*100; comps.push({key:'dti',label:'Debt-to-income',icon:'⚖️',weight:20,score:clamp((1-dti/43)*100),value:Math.round(dti)+'%',
+    tip: dti<=36?'Healthy debt load.':`${Math.round(dti)}% of income goes to debt payments — under 36% is the goal.`}); }
+  // 4) Credit utilization — only if there are credit lines; under 10% is full marks
+  { const cu=engCreditUtil(); if(cu.limit>0){ comps.push({key:'util',label:'Credit utilization',icon:'💳',weight:15,score:clamp((1-(cu.pct-10)/40)*100),value:Math.round(cu.pct)+'%',
+    tip: cu.pct<=30?(cu.pct<=10?'Excellent utilization.':'Good — keep it under 30%.'):`Using ${Math.round(cu.pct)}% of your limit — paying under 30% helps your score.`}); } }
+  // 5) High-interest debt — none is full marks; scaled against annual income
+  { const hid=engHighInterestDebt(8); let score, value=hid>0?fmtK(hid):'$0';
+    if(hid<=0) score=100; else if(income>0){ score=clamp((1-(hid/(income*12))/0.5)*100); } else score=40;
+    comps.push({key:'hi_debt',label:'High-interest debt',icon:'🔥',weight:15,score,value,
+      tip: hid<=0?'No high-interest debt — that\'s the sweet spot.':`${fmtK(hid)} in high-interest debt — knocking this down lifts your score fastest.`}); }
+  // weighted average over applicable pillars
+  const totW=comps.reduce((s,c)=>s+c.weight,0)||1;
+  const overall=Math.round(comps.reduce((s,c)=>s+c.score*c.weight,0)/totW);
+  comps.forEach(c=>{ c.status=c.score>=75?'good':c.score>=50?'ok':'poor'; });
+  const weakest=comps.filter(c=>c.score<75).sort((a,b)=>a.score-b.score)[0]||null;
+  return {overall, grade:_hsGrade(overall), comps, weakest, hasData:comps.length>0};
+}
+function _hsColor(s){ return s>=80?'var(--pos)':s>=60?'var(--amber)':'var(--red)'; }
+function _hsRing(score,color,grade){
+  const r=42, c=2*Math.PI*r, off=c*(1-score/100);
+  return `<svg viewBox="0 0 100 100" width="100" height="100" style="flex:0 0 auto"><circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--surface3)" stroke-width="9"/><circle cx="50" cy="50" r="${r}" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 50 50)"/><text x="50" y="48" text-anchor="middle" font-size="27" font-weight="800" fill="var(--text)">${score}</text><text x="50" y="65" text-anchor="middle" font-size="12" font-weight="700" fill="${color}">${grade}</text></svg>`;
+}
+// Each health pillar links to the widget that fixes it — one tap sends Richie there.
+const HS_FIX={ savings_rate:'spending_trends', emergency:'savings_buckets', dti:'debt_hub', util:'debt_hub', hi_debt:'debt_hub' };
+function healthGoto(type){ if(!type) return; try{ _ensureWidgetOnPage(type); }catch(e){} try{ richieSpotlightAt(Object.assign({widgetType:type}, RICHIE_SPOTS[type]||{})); }catch(e){} }
+function healthScoreBody(w){
+  const h=engHealthScore();
+  if(!h.hasData) return `<div class="wph"><div class="ws-hint">Add your income, bills, and accounts and Richie will score your financial health across five pillars.</div></div>`;
+  const col=_hsColor(h.overall);
+  const rows=h.comps.map(c=>{ const sc=_hsColor(c.score); const fix=HS_FIX[c.key]; const go=fix?` hs-row-go" onclick="event.stopPropagation();healthGoto('${fix}')" title="Fix this — take me there` : '"'; return `<div class="hs-row${go}"><span class="hs-ico">${c.icon}</span><div class="hs-main"><div class="hs-toprow"><span class="hs-lbl">${esc(c.label)}${fix?' <span class="hs-chev">›</span>':''}</span><span class="hs-val" style="color:${sc}">${esc(c.value)}</span></div><div class="hs-barwrap"><div class="hs-bar" style="width:${c.score}%;background:${sc}"></div></div></div></div>`; }).join('');
+  const tip=h.weakest?`<div class="hs-tip"><span>💡</span><span>${esc(h.weakest.tip)}</span></div>`:`<div class="hs-tip"><span>🎉</span><span>Every pillar is in good shape — keep it up!</span></div>`;
+  return `<div class="hs-wrap">
+    <div class="hs-head">${_hsRing(h.overall,col,h.grade)}<div class="hs-headtxt"><div class="hs-headlbl">Financial health${dataLoaded?'':' · sample'}</div>${(function(){
+      const chg=(typeof hsChangeSince==='function')?hsChangeSince(7):null;
+      const nx=(typeof _hsToNext==='function')?_hsToNext(h.overall):null;
+      const parts=[];
+      if(chg && chg.abs!==0){ const up=chg.abs>0; parts.push(`<span style="color:${up?'var(--pos)':'var(--red)'};font-weight:700">${up?'▲':'▼'} ${Math.abs(chg.abs)} pt${Math.abs(chg.abs)!==1?'s':''} this week</span>`); }
+      if(nx){ parts.push(`<span style="color:var(--muted)">${nx.pts} to a ${esc(nx.grade)}</span>`); }
+      const line=parts.length?parts.join(' · '):`Across ${h.comps.length} pillar${h.comps.length!==1?'s':''} — savings, safety, and debt.`;
+      return `<div class="hs-headsub">${line}</div>`;
+    })()}</div></div>
+    <div class="hs-rows">${rows}</div>
+    ${tip}
+  </div>`;
 }
 function _ft(){ APP.fundTriage=APP.fundTriage||{extra:null, alloc:{}}; if(!APP.fundTriage.alloc) APP.fundTriage.alloc={}; return APP.fundTriage; }
 function engFundTriage(){
@@ -2842,8 +3218,12 @@ const BUNDLE_PAGES={
 };
 let _uidSeq=0;
 // Old widget types that were folded into the tabbed hubs — remap so they never render as "? Widget".
-const WIDGET_MIGRATE={debt_summary:'debt_hub',debt_payoff:'debt_hub',credit_util:'debt_hub',promo_tracker:'debt_hub',fire_progress:'fire_hub',retirement_proj:'fire_hub',fire_calc:'fire_hub',safe_to_spend:'cash_summary',budget_actual:'zero_budget'};
+const WIDGET_MIGRATE={debt_summary:'debt_hub',debt_payoff:'debt_hub',credit_util:'debt_hub',promo_tracker:'debt_hub',fire_progress:'fire_hub',retirement_proj:'fire_hub',fire_calc:'fire_hub',safe_to_spend:'cash_summary',budget_actual:'zero_budget',fire_drill:'fire_hub',debt_planner:'debt_hub',cashflow_chart:'cashflow_planner'};
 function makeWidget(type){ type=WIDGET_MIGRATE[type]||type; return {uid:'w'+Date.now()+'_'+(_uidSeq++),type:type,span:(WIDGET_BY_ID[type]&&WIDGET_BY_ID[type].span)||1}; }
+// Build widgets from a type list, silently dropping any type not registered in the current
+// catalog — so a starter set can name widgets that live behind an as-yet-unmerged feature
+// without producing a blank tile until that feature lands.
+function _regWidgets(list){ return (list||[]).filter(t=>{ const rt=WIDGET_MIGRATE[t]||t; return WIDGET_BY_ID[rt]; }).map(makeWidget); }
 // Heal existing/seeded pages: remap folded widget types to hubs, drop unknown/removed types, and
 // collapse duplicate hubs (e.g. a page that had 4 separate debt widgets becomes one Debt hub).
 function migratePages(pages){
@@ -2917,7 +3297,7 @@ function palColor(palette, i, n, fallback){
 }
 function seedPages(bundleKey){
   const bp=BUNDLE_PAGES[bundleKey]||BUNDLE_PAGES.overview;
-  return bp.map((p,i)=>({ id:'p'+Date.now()+'_'+i, name:p[0], icon:p[1], color:p[2], widgets:(p[3]||[]).map(makeWidget) }));
+  return bp.map((p,i)=>({ id:'p'+Date.now()+'_'+i, name:p[0], icon:p[1], color:p[2], widgets:_regWidgets(p[3]||[]) }));
 }
 /* Build the whole app around chosen goals: a Goals home page + one focused
    page per goal, each carrying the widgets that help achieve it. */
@@ -2926,7 +3306,7 @@ function seedPagesFromGoals(chosenGoals){
   const ts=Date.now();
   // 1) Goals home page — the command center
   pages.push({ id:'p'+ts+'_home', name:'My Goals', icon:'🎯', color:'#2ecc8a',
-    widgets:['goals','net_worth_summary','cash_summary'].map(makeWidget) });
+    widgets:_regWidgets(['goals','health_score','safe_spend','net_worth_chart']) });
   // 2) one focused page per goal (dedup by metric so 2 debt goals share one page)
   const seenMetric={};
   chosenGoals.forEach((g,gi)=>{
@@ -2935,7 +3315,7 @@ function seedPagesFromGoals(chosenGoals){
     seenMetric[g.metric]=true;
     pages.push({ id:'p'+ts+'_g'+gi, name:plan.page.name, icon:plan.page.icon, color:plan.page.color,
       goalMetric:g.metric,   // tag the page so Richie can coach it
-      widgets:plan.widgets.map(makeWidget) });
+      widgets:_regWidgets(plan.widgets) });
   });
   return pages;
 }
@@ -3040,7 +3420,7 @@ window.addEventListener('visibilitychange', ()=>{ if(document.visibilityState===
 let _persistTimer=null;
 function _persistSoon(){ clearTimeout(_persistTimer); _persistTimer=setTimeout(()=>{ try{ saveState(); }catch(e){} }, 400); }
 /* ── Cross-device state sync: push edits to the server, pull newer edits from other devices ── */
-const SYNC_KEYS=['mdf_categories','mdf_cat_overrides','mdf_cat_rules','mdf_txn_notes','mdf_txn_tags','mdf_acct_cats','mdf_nw_history','mdf_fire','mdf_gami','richie_setup','richie_proactive','richie_audio','richie_voice'];
+const SYNC_KEYS=['mdf_categories','mdf_cat_overrides','mdf_cat_rules','mdf_txn_notes','mdf_txn_tags','mdf_acct_cats','mdf_nw_history','mdf_health_history','mdf_health_grade','mdf_fire','mdf_gami','richie_setup','richie_proactive','richie_audio','richie_voice'];
 function syncCollect(){ try{ _saveActiveLayout(); }catch(e){}   /* fold live pages into layouts before EVERY push (immediate/flush/heartbeat), else a push can ship stale layouts */
   const stores={}; SYNC_KEYS.forEach(k=>{ const v=LS.getItem(k); if(v!=null) stores[k]=v; }); return { app:APP, stores, _ts:Date.now() }; }
 function _widgetCount(pages){ return (pages||[]).reduce((s,p)=>s+((p&&p.widgets||[]).length),0); }
@@ -3446,33 +3826,40 @@ function maybeCoachPage(pg){
    (Plaid data, charts, calculations) get wired in Phase 3.
    minLevel gates a widget behind a knowledge level (Pro Mode unlocks all). */
 const WIDGET_CATALOG=[
-  {id:'net_worth_summary',name:'Net Worth',icon:'📈',cat:'Overview',span:1,minLevel:1,desc:'Total assets minus liabilities.'},
+  {id:'net_worth_summary',name:'Net Worth',icon:'💎',cat:'Overview',span:1,minLevel:1,desc:'Total assets minus liabilities.'},
   {id:'journey',name:'Your Journey',icon:'🏆',cat:'Overview',span:2,minLevel:1,desc:'Your level, streak, badges, and milestone progress — real-money goals, gamified.'},
-  {id:'cash_summary',name:'Cash on Hand',icon:'💵',cat:'Overview',span:1,minLevel:1,desc:'Liquid balances + how much is safe to spend today after upcoming bills & goals.'},
+  {id:'cash_summary',name:'Cash on Hand',icon:'💵',cat:'Overview',span:1,minLevel:1,desc:'Liquid balances across your cash & savings accounts.'},
+  {id:'safe_spend',name:'Safe to Spend',icon:'👛',cat:'Overview',span:1,minLevel:1,desc:'The big one — how much you can safely spend today after upcoming bills, goal set-asides & a buffer.'},
   {id:'spending_month',name:"Current Spending",icon:'🛒',cat:'Overview',span:1,minLevel:1,desc:'Discretionary spending vs budget — your quick "how are we doing" marker (bills & savings excluded).'},
   {id:'income_month',name:"This Month's Income",icon:'💰',cat:'Overview',span:1,minLevel:1,desc:'Money in this month.'},
-  {id:'budget_doughnut',name:'Budget by Category',icon:'🎯',cat:'Budget',span:2,minLevel:1,desc:'Two donuts side by side — spending by group and by category (stacked on mobile).'},
+  {id:'budget_doughnut',name:'Budget by Category',icon:'🍩',cat:'Budget',span:2,minLevel:1,desc:'Two donuts side by side — spending by group and by category (stacked on mobile).'},
   {id:'bills_list',name:'Upcoming Bills',icon:'📋',cat:'Budget',span:1,minLevel:1,desc:"What's due and when."},
-  {id:'zero_budget',name:'Zero-Based Budget',icon:'🧮',cat:'Budget',span:2,minLevel:2,desc:'Give every dollar a job — with live actual-vs-budgeted spending per envelope.'},
+  {id:'bill_calendar',name:'Bill Calendar',icon:'🗓️',cat:'Budget',span:2,minLevel:1,desc:'A month view of upcoming bills & income by due date — spot heavy weeks, tap a day for detail.'},
+  {id:'zero_budget',name:'Every-Dollar Budget',icon:'🧮',cat:'Budget',span:2,minLevel:2,desc:'Give every dollar a job — with live actual-vs-budgeted spending per envelope (zero-based budgeting).'},
   {id:'savings_buckets',name:'Savings Buckets',icon:'🪣',cat:'Overview',span:2,minLevel:1,desc:'Sinking funds — Reserve, Home, Family, Medical — each with its own goal and progress.'},
-  {id:'cashflow_chart',name:'Cash Flow',icon:'🌊',cat:'Cash Flow',span:2,minLevel:1,desc:'Your projected running balance — the same forward line as the Cash Flow Planner.'},
-  {id:'pl_panel',name:'Profit & Loss',icon:'📊',cat:'Cash Flow',span:2,minLevel:1,desc:'Income, spending, net & savings rate by day/week/month.'},
+  // Cash Flow (read-only chart) folded into the Cash Flow Planner — same projection line, plus
+  // editing. Kept out of the catalog; existing widgets migrate via WIDGET_MIGRATE above.
+  {id:'pl_panel',name:'Profit & Loss',icon:'💹',cat:'Cash Flow',span:2,minLevel:1,desc:'Income, spending, net & savings rate by day/week/month.'},
   {id:'cashflow_planner',name:'Cash Flow Planner',icon:'📅',cat:'Cash Flow',span:2,minLevel:1,desc:'Project your running balance forward — edit bills, see your low point before it hits.'},
+  {id:'fund_triage',name:'Where Extra Money Goes',icon:'💸',cat:'Cash Flow',span:2,minLevel:1,desc:'Delegate your monthly surplus by priority — high-interest debt, then savings, then investing.'},
+  {id:'cashflow_planner',name:'Cash Flow',icon:'📅',cat:'Cash Flow',span:2,minLevel:1,desc:'Your projected running balance — see your low point before it hits, and edit bills to fix it.'},
   {id:'fund_triage',name:'Extra Funds Triage',icon:'💸',cat:'Cash Flow',span:2,minLevel:1,desc:'Delegate your monthly surplus by priority — high-interest debt, then savings, then investing.'},
   {id:'goals',name:'Financial Goals',icon:'🎯',cat:'Overview',span:2,minLevel:1,desc:'Set goals, track progress automatically, and let Richie coach you to the finish.'},
+  {id:'health_score',name:'Financial Health Score',icon:'🩺',cat:'Overview',span:2,minLevel:1,desc:'A single 0–100 score across savings rate, emergency fund, debt-to-income, credit use & high-interest debt — with Richie\'s top fix.'},
   {id:'accounts_list',name:'All Accounts',icon:'🏦',cat:'Overview',span:2,minLevel:1,desc:'Every account with balances — tap to see transactions.'},
   {id:'all_transactions',name:'All Transactions',icon:'🧾',cat:'Cash Flow',span:2,minLevel:1,desc:'Every transaction — search, categorize, and tag (paycheck, transfer, business…).'},
   {id:'recurring',name:'Subscriptions & Renewals',icon:'🔁',cat:'Cash Flow',span:2,minLevel:1,desc:'Auto-detected subscriptions & recurring bills — next renewal, price-hike alerts, flag any to cancel, monthly & yearly totals.'},
-  {id:'sankey',name:'Money Flow (Sankey)',icon:'🔀',cat:'Cash Flow',span:2,minLevel:2,desc:'Income → category group → category, flowing left to right through your category tree.'},
+  {id:'sankey',name:'Money Flow',icon:'🔀',cat:'Cash Flow',span:2,minLevel:2,desc:'Income → category group → category, flowing left to right through your category tree.'},
+  {id:'spending_hub',name:'Spending',icon:'🛍️',cat:'Cash Flow',span:2,minLevel:1,desc:'All your spending in one place — this month vs budget, the trend, top categories, and seasonal patterns, in tabs.'},
   {id:'top_categories',name:'Top Categories',icon:'📊',cat:'Cash Flow',span:1,minLevel:1,desc:'Where your money goes most.'},
-  {id:'spending_trends',name:'Spending Trends',icon:'📈',cat:'Cash Flow',span:2,minLevel:1,desc:'This month vs last — biggest category movers, projected month-end total, and whether you\'re pacing over or under budget.'},
-  {id:'category_heatmap',name:'Category Heatmap',icon:'🗓️',cat:'Cash Flow',span:2,minLevel:2,desc:'Spending by category across months — spot seasonal patterns at a glance.'},
+  {id:'spending_trends',name:'Spending Trends',icon:'🆚',cat:'Cash Flow',span:2,minLevel:1,desc:'This month vs last — biggest category movers, projected month-end total, and whether you\'re pacing over or under budget.'},
+  {id:'category_heatmap',name:'Seasonal Spending',icon:'🌡️',cat:'Cash Flow',span:2,minLevel:2,desc:'Spending by category across months — spot seasonal patterns at a glance.'},
   {id:'net_worth_chart',name:'Net Worth Trend',icon:'📈',cat:'Wealth',span:2,minLevel:2,desc:'Net worth over months.'},
-  {id:'investments',name:'Investments',icon:'🏦',cat:'Wealth',span:2,minLevel:5,desc:'Your portfolio — positions pulled from statements, allocation, and one-tap research. (Mogul)'},
+  {id:'investments',name:'Investments',icon:'💼',cat:'Wealth',span:2,minLevel:5,desc:'Your portfolio — positions pulled from statements, allocation, and one-tap research. (Mogul)'},
   {id:'fire_hub',name:'Wealth & FIRE',icon:'🔥',cat:'Wealth',span:2,minLevel:3,desc:'Financial-independence progress, long-term projection, and an interactive calculator — in tabs.'},
   {id:'debt_hub',name:'Debt',icon:'💳',cat:'Debt',span:2,minLevel:1,desc:'Everything you owe in one place — balances, payoff timeline, credit utilization, credit-score monitor, and 0% promos, in tabs.'},
-  {id:'fire_drill',name:'Fire Drill Simulator',icon:'🧯',cat:'Playground',span:2,minLevel:2,desc:'Stress-test your finances against job loss, disasters & more.'},
-  {id:'debt_planner',name:'Debt Payoff Lab',icon:'🏔️',cat:'Playground',span:2,minLevel:2,desc:'Interactive avalanche vs. snowball with extra-payment slider.'},
+  // Fire Drill (stress test) and Debt Payoff Lab now live as tabs inside Wealth & FIRE and Debt
+  // respectively — see FIRE_TABS / DEBT_TABS. Kept out of the catalog; existing widgets migrate below.
 ];
 const WIDGET_BY_ID=Object.fromEntries(WIDGET_CATALOG.map(w=>[w.id,w]));
 function widgetUnlocked(w){ return APP.proMode || w.minLevel<=APP.level; }
@@ -3507,12 +3894,14 @@ function wwCategoryStep(){
   const cats={};
   WIDGET_CATALOG.forEach(w=>{ (cats[w.cat]=cats[w.cat]||[]).push(w); });
   const icons={'Overview':'📊','Budget':'🎯','Cash Flow':'🌊','Wealth':'📈','Debt':'🚨','Playground':'🎮'};
+  const intents={'Overview':'See where you stand','Budget':'Plan your spending','Cash Flow':'Look ahead & find extra','Wealth':'Grow your net worth','Debt':'Pay down what you owe','Playground':'Stress-test scenarios'};
   return Object.keys(cats).map(cat=>{
     const items=cats[cat]; const unlocked=items.filter(w=>widgetUnlocked(w)).length;
+    const intent=intents[cat]?`${intents[cat]} · `:'';
     return `<div class="ww-card" onclick="wwPickCat('${cat.replace(/'/g,"\\'")}')">
       <div class="ww-card-icon">${icons[cat]||'🧩'}</div>
       <div style="flex:1;min-width:0"><div class="ww-card-name">${cat}</div>
-      <div class="ww-card-desc">${items.length} widget${items.length!==1?'s':''}${unlocked<items.length?` · ${unlocked} unlocked`:''}</div></div>
+      <div class="ww-card-desc">${intent}${items.length} widget${items.length!==1?'s':''}${unlocked<items.length?` · ${unlocked} unlocked`:''}</div></div>
       <div class="ww-card-arrow">→</div></div>`;
   }).join('');
 }
@@ -3756,6 +4145,7 @@ function buildGateHTML(){
     ${goals?`<div class="bgate-goals">${esc(goals)}</div>`:''}
     <button class="bgate-cta" onclick="openLinkHandler()">🔗 Connect my bank</button>
     <button class="bgate-alt" onclick="docUploadPick()">📄 Or upload a statement / bill</button>
+    <button class="bgate-alt" onclick="gg('csvFileInput').click()">📥 No bank? Import a transactions CSV</button>
     <button class="bgate-skip" onclick="richieBuildApp({sample:true})">Explore with sample data first</button>
     <div class="bgate-note">🔒 Bank-level encryption · read-only · disconnect anytime</div>
   </div></div>`;
@@ -3879,6 +4269,7 @@ function mountWidgetCharts(pg){
       if(w.type==='all_transactions'){ txnFeedMount(w); }
       if(w.type==='debt_hub'){ debtHubMount(w); }
       if(w.type==='fire_hub'){ fireHubMount(w); }
+      if(w.type==='spending_hub'){ spendHubMount(w); }
     }catch(e){ /* ignore */ }
   });
   if(typeof Chart==='undefined') return;
@@ -4039,7 +4430,7 @@ function retirementProjBody(w){
   return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Projected growth</div><div style="height:140px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
 }
 // One "Wealth" widget with tabs — replaces FIRE Progress / Retirement Projection / FIRE Calculator.
-const FIRE_TABS=[{id:'fi',label:'FI Progress',fn:'fireProgressBody'},{id:'proj',label:'Projection',fn:'retirementProjBody',chart:'retirement_proj'},{id:'calc',label:'Calculator',fn:'fireWidgetBody',chart:'fire_calc'}];
+const FIRE_TABS=[{id:'fi',label:'FI Progress',fn:'fireProgressBody'},{id:'proj',label:'Projection',fn:'retirementProjBody',chart:'retirement_proj'},{id:'calc',label:'Calculator',fn:'fireWidgetBody',chart:'fire_calc'},{id:'stress',label:'Stress test',fn:'fdWidgetBody',mount:'fire_drill'}];
 let _fireHub={};
 function fireHubBody(w){
   const cur=_fireHub[w.uid]||'fi';
@@ -4057,6 +4448,7 @@ function fireHubMount(w){
   // draw the tab's chart if it has one (canvas is cv_<uid>, shared with fireRefresh/buildWidgetChart)
   if(t.chart==='fire_calc'){ try{ fireRefresh(); }catch(e){} }
   else if(t.chart==='retirement_proj'){ try{ buildWidgetChart({...w, type:'retirement_proj'}, 'cv_'+w.uid); }catch(e){} }
+  else if(t.mount==='fire_drill'){ try{ fdSetScenario(_fd.scenario||'job'); }catch(e){} }
 }
 
 function fireWidgetBody(w){
@@ -4232,6 +4624,7 @@ function zbWidgetBody(w){
     <div class="zb-bar"><div class="zb-bar-fill" style="width:${Math.min(100,Math.round(assigned/Math.max(income,1)*100))}%;background:${left<0?'var(--red)':'var(--pos)'}"></div></div>
     ${sc.coveredPay>0?`<div class="ws-hint" style="margin:0 0 8px">💳 ${fmtK(sc.coveredPay)} of card payments is covered by envelopes and excluded from fixed bills${sc.extraPaydown>0?` · ${fmtK(sc.extraPaydown)} extra paydown stays in fixed`:''}.</div>`:''}
     ${balanceRow}
+    <div class="zb-tpl-cta"><button onclick="event.stopPropagation();openBudgetTemplates('${w.uid}')">✨ Start from a template</button></div>
     <div class="zb-section-label">Category envelopes <span class="ws-hint" style="margin:0">budget vs actual · ${fmtK(spentTotal)} spent of ${fmtK(envTotal)}</span></div>
     <div class="zb-buckets">
       ${buckets.map((b,i)=>{
@@ -4298,6 +4691,97 @@ function zbAddBucket(uid){
   const name=prompt('Envelope name (e.g. Hobbies, Pet, Gifts):'); if(!name) return;
   _zbBuckets().push({name:name.trim(), amt:0}); saveState();
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+}
+
+/* ═══ BUDGET TEMPLATES ═══
+   One-tap starting budgets. Percentage templates split income across needs/wants/savings
+   (fixed bills already cover part of "needs", so they're netted out); zero-based assigns
+   everything. Within a group, amounts are split by recent spending, else evenly. */
+const BUDGET_TEMPLATES=[
+  {id:'50-30-20', name:'50 / 30 / 20',   icon:'⚖️', needs:.50, wants:.30, savings:.20, blurb:'The classic balance — needs, wants, and savings.'},
+  {id:'70-20-10', name:'70 / 20 / 10',   icon:'🌱', needs:.70, wants:.20, savings:.10, blurb:'Easing in — more room for essentials, a starter savings habit.'},
+  {id:'60-20-20', name:'60 / 20 / 20',   icon:'🏠', needs:.60, wants:.20, savings:.20, blurb:'Higher fixed costs, steady 20% savings.'},
+  {id:'50-20-30', name:'Aggressive save',icon:'🚀', needs:.50, wants:.20, savings:.30, blurb:'Turbo mode — 30% straight to savings & investing.'},
+  {id:'zero',     name:'Zero-based',      icon:'🎯', zero:true,                          blurb:'Assign every dollar — seeded from your recent spending.'},
+];
+function _tplRole(cat){
+  const s=((cat.label||'')+' '+(cat.id||'')).toLowerCase();
+  if(/sav|emergency|invest|retire|401|ira|wealth/.test(s)) return 'savings';
+  if(/grocer|gas|fuel|auto|transport|transit|\bcar\b|utilit|insur|health|medical|rent|hous|mortgage|phone|internet|child|kid|educat|tuition|debt|loan|tax|pharmac/.test(s)) return 'needs';
+  return 'wants';
+}
+function engBudgetTemplate(tplId){
+  const tpl=BUDGET_TEMPLATES.find(t=>t.id===tplId)||BUDGET_TEMPLATES[0];
+  const income=Math.round(engMonthlyIncome());
+  const fixedBills=Math.round(engMonthlyBills());
+  const cats=_zbBudgetableCats();
+  const byId={}; cats.forEach(c=>byId[c.id]=c);
+  const weights={};   // recent 3-mo avg spend per category, for splitting within a group
+  try{ const g=engCategoryMonthGrid(3); g.cats.forEach(c=>{ const m=cats.find(x=>x.label===c.label); if(m) weights[m.id]=(weights[m.id]||0)+c.avg; }); }catch(e){}
+  const byRole={needs:[],wants:[],savings:[]}; cats.forEach(c=>byRole[_tplRole(c)].push(c));
+  const env={};
+  const distribute=(list,pool)=>{
+    if(pool<=0||!list.length) return;
+    const tw=list.reduce((s,c)=>s+(weights[c.id]||0),0);
+    if(tw>0) list.forEach(c=>{ env[c.id]=(env[c.id]||0)+Math.round(pool*(weights[c.id]||0)/tw); });
+    else { const each=Math.round(pool/list.length); list.forEach(c=>{ env[c.id]=(env[c.id]||0)+each; }); }
+  };
+  const savList=byRole.savings.length?byRole.savings:cats.filter(c=>/sav|invest/i.test(c.label));
+  let groups=null;
+  if(tpl.zero){
+    const pool=Math.max(0, income-fixedBills);
+    distribute(cats.filter(c=>_tplRole(c)!=='savings'), Math.round(pool*0.85));
+    distribute(savList, Math.round(pool*0.15));
+  } else {
+    const savings=Math.round(income*tpl.savings);
+    const wants=Math.round(income*tpl.wants);
+    const needsTarget=Math.round(income*tpl.needs);
+    const needsEnv=Math.max(0, needsTarget-fixedBills);   // fixed bills already cover part of needs
+    distribute(byRole.needs, needsEnv);
+    distribute(byRole.wants, wants);
+    distribute(savList, savings);
+    groups={needsTarget,needsEnv,wants,savings};
+  }
+  const envelopes=Object.entries(env).filter(([id,amt])=>amt>0).map(([id,amt])=>({catId:id, name:(byId[id]?byId[id].label:id), amt})).sort((a,b)=>b.amt-a.amt);
+  const envTotal=envelopes.reduce((s,e)=>s+e.amt,0);
+  return {tpl,income,fixedBills,envelopes,envTotal,leftover:income-fixedBills-envTotal,groups};
+}
+let _budTpl={uid:null, tpl:'50-30-20'};
+function openBudgetTemplates(uid){ try{ discoverXp('budget_templates',10,'budget templates'); }catch(e){} _budTpl.uid=uid||null; if(!BUDGET_TEMPLATES.find(t=>t.id===_budTpl.tpl)) _budTpl.tpl='50-30-20'; const m=gg('budgetTplModal'); if(!m) return; m.style.display='flex'; renderBudgetTemplates(); }
+function closeBudgetTemplates(){ const m=gg('budgetTplModal'); if(m) m.style.display='none'; }
+function btPick(id){ _budTpl.tpl=id; renderBudgetTemplates(); }
+function renderBudgetTemplates(){
+  const el=gg('budgetTplBody'); if(!el) return;
+  const r=engBudgetTemplate(_budTpl.tpl);
+  const cards=BUDGET_TEMPLATES.map(t=>`<button class="bt-card${t.id===_budTpl.tpl?' on':''}" onclick="btPick('${t.id}')"><span class="bt-ico">${t.icon}</span><span class="bt-nm">${esc(t.name)}</span><span class="bt-blurb">${esc(t.blurb)}</span></button>`).join('');
+  const maxE=Math.max(1,...r.envelopes.map(e=>e.amt));
+  const envRows=r.envelopes.length?r.envelopes.map(e=>`<div class="bt-row"><span class="bt-dot" style="background:${getCatColor(e.name)}"></span><span class="bt-lbl">${esc(e.name)}</span><span class="bt-barwrap"><span class="bt-bar" style="width:${Math.round(e.amt/maxE*100)}%;background:${getCatColor(e.name)}"></span></span><b class="bt-amt">${fmtK(e.amt)}</b></div>`).join(''):'<div class="ws-hint">Add your income first — templates size envelopes from your monthly income.</div>';
+  const balCol=Math.abs(r.leftover)<1?'var(--green)':r.leftover>0?'var(--amber)':'var(--red)';
+  const balTxt=Math.abs(r.leftover)<1?'✓ every dollar assigned':r.leftover>0?fmtK(r.leftover)+' left':fmtK(-r.leftover)+' over';
+  const curCount=(APP.zeroBuckets||[]).length;
+  el.innerHTML=`
+    <div class="bt-cards">${cards}</div>
+    <div class="bt-summary">
+      <div><span>Monthly income</span><b>${fmtK(r.income)}</b></div>
+      <div><span>Fixed bills</span><b style="color:var(--red)">${fmtK(r.fixedBills)}</b></div>
+      <div><span>Into envelopes</span><b>${fmtK(r.envTotal)}</b></div>
+      <div><span>Balance</span><b style="color:${balCol}">${balTxt}</b></div>
+    </div>
+    <div class="bt-sec">Proposed envelopes</div>
+    <div class="bt-list">${envRows}</div>
+    <div class="ws-hint" style="margin-top:10px">${curCount?`This replaces your current ${curCount} envelope${curCount!==1?'s':''}. `:''}Every amount stays editable afterward.</div>
+    <div class="mf-actions"><button class="btn" onclick="closeBudgetTemplates()">Cancel</button><button class="btn primary" onclick="applyBudgetTemplate()"${r.envelopes.length?'':' disabled'}>Apply template</button></div>`;
+}
+function applyBudgetTemplate(){
+  const r=engBudgetTemplate(_budTpl.tpl);
+  if(!r.envelopes.length){ alert('Add your income first so Richie can size the budget.'); return; }
+  try{ gamiMarkEngaged('template'); }catch(e){}
+  APP.zeroBuckets=r.envelopes.map(e=>({catId:e.catId, name:e.name, amt:e.amt}));
+  saveState();
+  closeBudgetTemplates();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+  if(typeof richieSay==='function') richieSay(`✨ Applied the ${r.tpl.name} budget — I sized your envelopes from your income and recent spending. Tweak any of them anytime.`);
+  if(typeof sbRichie!=='undefined'&&sbRichie) sbRichie.do('tada');
 }
 
 /* ═══ BILLS WIDGET (all bills, timeframe selector) ═══ */
@@ -4668,16 +5152,9 @@ function cashSummaryBody(w){
   const gear=`<button class="cash-pick" onclick="event.stopPropagation();openAcctCatPicker('${w.uid}')" title="Choose account types">⚙︎</button>`;
   if(!accts.length) return `<div class="wph"><div class="wph-sub">No ${esc(label)} accounts.</div><div style="text-align:center;margin-top:10px"><button class="manual-add-btn" style="width:auto;display:inline-block" onclick="event.stopPropagation();openAcctCatPicker('${w.uid}')">⚙︎ Choose account types</button></div></div>`;
   const rows=top.map(a=>`<div class="cash-row"><span class="cash-nm">${esc(a.name||'Account')}</span><span class="cash-track"><i style="width:${Math.max(5,Math.round(Math.abs(a.bal||0)/mx*100))}%"></i></span><b>${fmtK(a.bal)}</b></div>`).join('');
-  // Safe-to-spend section (folded in from the old Safe to Spend widget)
-  const s=engSafeToSpend();
-  const perDay=Math.max(0,s.perDay);
-  const safe=`<div class="cash-safe">
-    <div class="cash-safe-top"><span>🟢 Safe to spend today</span><b style="color:${perDay>0?'var(--pos)':'var(--red)'}">${fmtK(perDay)}<span style="font-size:10px;font-weight:600;color:var(--muted)">/day</span></b></div>
-    <div class="ws-hint">${fmtK(s.pool)} free ${s.nextIncomeDay!=null?`until pay in ${s.horizon}d`:`over ${s.horizon} days`} · after ${fmtK(s.billsDue)} bills${s.goalPortion>0.5?` + ${fmtK(s.goalPortion)} goals`:''}</div>
-  </div>`;
   const pend=accts.reduce((o,a)=>{const p=engAcctPending(a);o.count+=p.count;o.sum+=p.sum;return o;},{count:0,sum:0});
   const pendLine=pend.count?`<div class="wph-sub" style="color:var(--amber)">⏳ ${pend.count} pending → ${fmtK(total-pend.sum)} expected</div>`:'';
-  return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(total)}">${fmtK(total)}</div><div class="wph-sub">cash on hand · ${accts.length} ${esc(label)} account${accts.length!==1?'s':''}${dataLoaded?'':' · sample'} ${gear}</div>${pendLine}${safe}<div class="cash-list">${rows}</div></div>`;
+  return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(total)}">${fmtK(total)}</div><div class="wph-sub">cash on hand · ${accts.length} ${esc(label)} account${accts.length!==1?'s':''}${dataLoaded?'':' · sample'} ${gear}</div>${pendLine}<div class="cash-list">${rows}</div></div>`;
 }
 /* Per-widget picker: which ACCOUNT CATEGORIES this widget counts */
 let _acctPick={uid:null, sel:[]};
@@ -4856,7 +5333,7 @@ function debtPayoffBody(w){
   </div>`;
 }
 // One "Debt" widget with tabs — replaces the separate Total Debt / Payoff / Credit / Promo cards.
-const DEBT_TABS=[{id:'owed',label:'Owed',fn:'debtSummaryBody'},{id:'payoff',label:'Payoff',fn:'debtPayoffBody'},{id:'credit',label:'Credit',fn:'creditUtilBody'},{id:'score',label:'Score',fn:'creditScoreBody'},{id:'promo',label:'0% Promo',fn:'promoTrackerBody'}];
+const DEBT_TABS=[{id:'owed',label:'Owed',fn:'debtSummaryBody'},{id:'payoff',label:'Payoff',fn:'debtPayoffBody'},{id:'lab',label:'Lab',fn:'dpWidgetBody',mount:'debt_planner'},{id:'credit',label:'Credit',fn:'creditUtilBody'},{id:'score',label:'Score',fn:'creditScoreBody'},{id:'promo',label:'0% Promo',fn:'promoTrackerBody'}];
 let _debtHub={};
 function debtHubBody(w){
   const cur=_debtHub[w.uid]||'owed';
@@ -4873,6 +5350,7 @@ function debtHubMount(w){
   // sync tab button states
   const btns=wrap.parentElement.querySelectorAll('.hub-tab');
   DEBT_TABS.forEach((x,i)=>{ if(btns[i]) btns[i].classList.toggle('on', x.id===cur); });
+  if(t.mount==='debt_planner'){ try{ dpRecalc(); dpRenderOrder(); }catch(e){} }
 }
 
 /* ═══ CREDIT SCORE MONITOR (Debt hub tab) ═══
@@ -4937,6 +5415,7 @@ function scoreEditorRender(){
 function saveScoreEntry(){
   const v=Math.round(_num('csVal')); const d=(gg('csDate').value||'').trim();
   if(!(v>=300&&v<=850)){ gg('csVal').focus(); return; }
+  try{ gamiMarkEngaged('score'); }catch(e){}
   if(!d) return;
   const list=_ccScores();
   const i=list.findIndex(x=>x.d===d);
@@ -5101,6 +5580,7 @@ function bkAcctChange(){
 }
 function saveBucket(){
   const name=(gg('bkName').value||'').trim(); if(!name){ gg('bkName').focus(); return; }
+  try{ gamiMarkEngaged('bucket'); }catch(e){}
   const acctId=gg('bkAcct')?gg('bkAcct').value:'';
   const item={name, icon:window._bkIcon||'🪣', acctId:acctId||'', balance: acctId?0:_num('bkBal'), target:_num('bkTgt'), monthly:_num('bkMo'), note:acctId?'linked':''};
   const list=_savingsBuckets();
@@ -5143,6 +5623,32 @@ function budgetTiersBody(w){
       <div class="bd2-legend">${legend(cats2)}</div>
     </div>
   </div>${dataLoaded?'':'<div class="ws-hint" style="margin-top:8px;text-align:center">sample data — connect a bank for live spending</div>'}`;
+}
+
+/* ═══ SPENDING HUB — one widget, four lenses ═══
+   Consolidates the spending views into tabs (this month vs budget · trend · top
+   categories · seasonal). Each tab reuses its existing widget body verbatim; all four
+   are pure-innerHTML (no chart canvas), so no per-tab mount is needed. */
+const SPEND_TABS=[
+  {id:'now',    label:'Now',        type:'spending_month'},
+  {id:'trend',  label:'Trend',      type:'spending_trends'},
+  {id:'cats',   label:'Categories', type:'top_categories'},
+  {id:'season', label:'Seasonal',   type:'category_heatmap'},
+];
+let _spendHub={};
+function spendingHubBody(w){
+  const cur=_spendHub[w.uid]||'now';
+  const tabs=SPEND_TABS.map(t=>`<button class="hub-tab${cur===t.id?' on':''}" onclick="event.stopPropagation();spendHubTab('${w.uid}','${t.id}')">${esc(t.label)}</button>`).join('');
+  return `<div class="hub-wrap"><div class="hub-tabs">${tabs}</div><div class="hub-body" id="shub_${w.uid}"></div></div>`;
+}
+function spendHubTab(uid,tab){ _spendHub[uid]=tab; const w=_findWidget(uid); if(w) spendHubMount(w); }
+function spendHubMount(w){
+  const cur=_spendHub[w.uid]||'now';
+  const wrap=gg('shub_'+w.uid); if(!wrap) return;
+  const t=SPEND_TABS.find(x=>x.id===cur)||SPEND_TABS[0];
+  try{ wrap.innerHTML=renderWidgetBody({...w, type:t.type}); }catch(e){ wrap.innerHTML='<div class="acct-empty">—</div>'; }
+  const btns=wrap.parentElement.querySelectorAll('.hub-tab');
+  SPEND_TABS.forEach((x,i)=>{ if(btns[i]) btns[i].classList.toggle('on', x.id===cur); });
 }
 
 /* ═══ CURRENT (DISCRETIONARY) SPENDING WIDGET ═══ */
@@ -5589,11 +6095,11 @@ function cfpRefresh(uid){ const pg=APP.pages.find(p=>p.id===APP.activePage); if(
 function fundTriageBody(w){
   const t=engFundTriage();
   const barPct=v=>t.pool>0?Math.min(100,Math.round(v/t.pool*100)):0;
-  const row=(icon,name,desc,val,key,color)=>`
+  const row=(icon,name,desc,val,key,color,goto)=>`
     <div class="ft-row">
       <div class="ft-row-top">
         <span class="ft-ic">${icon}</span>
-        <div class="ft-meta"><div class="ft-nm">${name}</div><div class="ft-desc">${desc}</div></div>
+        <div class="ft-meta"><div class="ft-nm">${name}${goto?` <span class="ft-go" onclick="event.stopPropagation();briefGoto('${goto}')" title="Open this widget">›</span>`:''}</div><div class="ft-desc">${desc}</div></div>
         <div class="ft-edit"><span>$</span><input type="number" min="0" step="10" value="${val}" onclick="event.stopPropagation()" oninput="ftSetAlloc('${key}',this.value)" onblur="ftCommit('${w.uid}')" aria-label="${esc(name)} allocation"></div>
       </div>
       <div class="ft-bar"><div class="ft-bar-fill" style="width:${barPct(val)}%;background:${color}"></div></div>
@@ -5624,9 +6130,9 @@ function fundTriageBody(w){
     <div class="ft-extra-edit"><span>Extra to delegate</span><div class="ft-edit"><span>$</span><input type="number" min="0" step="10" value="${t.pool}" onclick="event.stopPropagation()" oninput="ftSetExtra(this.value)" onblur="ftCommit('${w.uid}')" aria-label="Extra funds to delegate"></div><button class="ft-auto" onclick="event.stopPropagation();ftReset('${w.uid}')" title="Reset to computed surplus & priority split">↺ Auto</button></div>
     ${balanceRow}
     <div class="zb-section-label">Priority order <span class="ws-hint" style="margin:0">high-interest debt → savings → investing</span></div>
-    ${row('🔥','1 · Kill high-interest debt', debtDesc, t.debt, 'debt', 'var(--red)')}
-    ${row('🪣','2 · Fund savings buckets', savDesc, t.savings, 'savings', 'var(--blue)')}
-    ${row('📈','3 · Invest the rest', invDesc, t.invest, 'invest', 'var(--green)')}
+    ${row('🔥','1 · Kill high-interest debt', debtDesc, t.debt, 'debt', 'var(--red)', 'debt_hub')}
+    ${row('🪣','2 · Fund savings buckets', savDesc, t.savings, 'savings', 'var(--blue)', 'savings_buckets')}
+    ${row('📈','3 · Invest the rest', invDesc, t.invest, 'invest', 'var(--green)', 'investments')}
     ${note}
   </div>`;
 }
@@ -5969,7 +6475,7 @@ function txnFeedRender(w){
 function txnFeedSearch(uid,val){ (_txnFeed[uid]=_txnFeed[uid]||{q:'',filter:'all'}).q=val; const w=_findWidget(uid); if(w) txnFeedRender(w); }
 function txnFeedFilter(uid,f){ (_txnFeed[uid]=_txnFeed[uid]||{q:'',filter:'all'}).filter=f; const w=_findWidget(uid); if(w) txnFeedMount(w); }
 function txnFeedTf(uid,key){ (_txnFeed[uid]=_txnFeed[uid]||{q:'',filter:'all'}).tf=key; const w=_findWidget(uid); if(w) txnFeedMount(w); }
-function txnFeedSetCat(uid,idx,cat){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; if(cat)_catOverrides[k]=cat; else delete _catOverrides[k]; try{LS.setItem('mdf_cat_overrides',JSON.stringify(_catOverrides));}catch(e){} const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+function txnFeedSetCat(uid,idx,cat){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; if(cat)_catOverrides[k]=cat; else delete _catOverrides[k]; try{LS.setItem('mdf_cat_overrides',JSON.stringify(_catOverrides));}catch(e){} try{ gamiMarkEngaged('categorize'); }catch(e){} const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function txnFeedSetNote(uid,idx,note){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; if(note&&note.trim())_txnNotes[k]=note.trim(); else delete _txnNotes[k]; try{LS.setItem('mdf_txn_notes',JSON.stringify(_txnNotes));}catch(e){} }
 function txnFeedSetTag(uid,idx,tag){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; setTxnTag(k,tag); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function txnFeedRule(uid,idx){ const t=(_txnFeedRows[uid]||[])[idx]; if(!t)return; const mk=_merchKey(t); if(!mk)return; if(_catRules[mk]){ setCatRule(mk,''); } else { setCatRule(mk, getTxnCategory(t)); } const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
@@ -6242,15 +6748,70 @@ const ACHIEVEMENTS=[
   {id:'goals5',   tier:'grand', icon:'👑', name:'Goal Machine',   desc:'Complete 5 goals.',                      xp:160, cond:m=>m.completedGoals>=5, prog:m=>({cur:m.completedGoals,target:5,unit:''})},
 ];
 const ACH_BY_ID=Object.fromEntries(ACHIEVEMENTS.map(a=>[a.id,a]));
+// Records daily activity only. The STREAK no longer advances just for opening the app —
+// it advances on a real action (see gamiMarkEngaged), which is what makes it meaningful.
 function gamiCheckin(){
-  const s=gamiLoad(); const today=new Date(); today.setHours(0,0,0,0); const t=today.getTime();
-  if(s.lastSeen===t) return;
-  if(s.lastSeen!=null){ const diff=Math.round((t-s.lastSeen)/86400000); if(diff===1) s.streak=(s.streak||0)+1; else if(diff>1) s.streak=1; else s.streak=s.streak||1; }
-  else s.streak=1;
-  s.lastSeen=t; gamiSave();
+  const s=gamiLoad(); const today=new Date(); today.setHours(0,0,0,0);
+  s.lastSeen=today.getTime(); gamiSave();
+}
+function _streakDay(ts){ ts=ts||Date.now(); return Math.floor((ts - new Date(ts).getTimezoneOffset()*60000)/86400000); }   // local day number
+const STREAK_MILESTONES=[3,7,14,30,60,100,180,365];
+function streakNextMilestone(n){ for(const mi of STREAK_MILESTONES){ if(mi>n) return mi; } return null; }
+function _refreshJourney(){ try{ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg && (pg.widgets||[]).some(w=>w.type==='journey')) renderCanvas(pg); }catch(e){} }
+// Advance the daily streak when the user takes a real action. One missed day is forgiven by a
+// weekly-regenerating grace day; a bigger gap resets. No-op if today is already counted.
+function gamiMarkEngaged(reason){
+  const s=gamiLoad(); const today=_streakDay();
+  if(s.lastAction==null && s.lastSeen!=null){ s.lastAction=_streakDay(s.lastSeen); if(!s.streak) s.streak=1; }   // carry existing streaks over on first run
+  if(s.lastAction===today) return s.streak||0;
+  if(s.freeze==null) s.freeze=1;
+  const prev=s.lastAction;
+  if(prev==null) s.streak=1;
+  else { const gap=today-prev;
+    if(gap<=1) s.streak=(s.streak||0)+1;
+    else if(gap===2 && s.freeze>0){ s.freeze=0; s.freezeUsedDay=today; s.streak=(s.streak||0)+1; }   // one missed day forgiven
+    else s.streak=1;
+  }
+  s.lastAction=today; s.bestStreak=Math.max(s.bestStreak||0, s.streak||0);
+  if(s.freeze<1 && s.freezeUsedDay!=null && (today-s.freezeUsedDay)>=7) s.freeze=1;   // grace regenerates weekly
+  gamiSave();
+  if(STREAK_MILESTONES.includes(s.streak)){
+    try{ gamiCelebrate({icon:'🔥', title:'Streak milestone!', name:`${s.streak}-day streak`, desc:`You've shown up ${s.streak} days running — that consistency is exactly how the money habit sticks.`, share:`I'm on a ${s.streak}-day money streak with Richie! 🔥`}); }catch(e){}
+  }
+  try{ gamiEvaluate(); }catch(e){}   // may unlock streak badges
+  try{ _refreshJourney(); }catch(e){}
+  return s.streak;
+}
+/* ═══ DAILY / WEEKLY QUESTS ═══
+   A repeatable XP loop on top of the one-time achievements. Each quest checks derivable
+   state; completing it credits XP once per period (day or ISO week). Evaluated from
+   gamiEvaluate, so it re-checks on every data refresh and after any tracked action. */
+const QUESTS=[
+  {id:'review',   scope:'daily',  icon:'🏷️', label:'Clear your review queue',       xp:15, check:()=>{ try{ return dataLoaded && _reviewTxns().length===0; }catch(e){ return false; } }},
+  {id:'onpace',   scope:'daily',  icon:'🎯', label:'Keep spending on pace',          xp:10, check:()=>{ try{ const s=engSpendTrends(); return !s.budget || s.budget.pace>=0; }catch(e){ return false; } }},
+  {id:'balanced', scope:'daily',  icon:'🧮', label:'Give every dollar a job',         xp:10, check:()=>{ try{ const inc=engMonthlyIncome(); if(inc<=0) return false; const env=_zbBuckets().reduce((s,b)=>s+(b.amt||0),0); return Math.abs(inc-(env+engMonthlyBills()))<1; }catch(e){ return false; } }},
+  {id:'util',     scope:'weekly', icon:'💳', label:'Credit utilization under 30%',    xp:30, check:()=>{ try{ const c=engCreditUtil(); return !(c.limit>0) || c.pct<30; }catch(e){ return false; } }},
+  {id:'streak5',  scope:'weekly', icon:'🔥', label:'Reach a 5-day streak',            xp:40, check:()=>{ try{ return (gamiLoad().streak||0)>=5; }catch(e){ return false; } }},
+];
+function _questDayKey(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function _questWeekKey(){ const d=new Date(); const oneJan=new Date(d.getFullYear(),0,1); const wk=Math.ceil((((d-oneJan)/86400000)+oneJan.getDay()+1)/7); return d.getFullYear()+'-W'+String(wk).padStart(2,'0'); }
+function _questState(){ const s=gamiLoad(); if(!s.quests) s.quests={}; const dk=_questDayKey(), wk=_questWeekKey();
+  if(!s.quests.d || s.quests.d.k!==dk) s.quests.d={k:dk, done:{}};
+  if(!s.quests.w || s.quests.w.k!==wk) s.quests.w={k:wk, done:{}};
+  return s.quests; }
+function questEvaluate(){
+  const q=_questState(); let awarded=0;
+  QUESTS.forEach(def=>{ const bucket=def.scope==='daily'?q.d:q.w; if(bucket.done[def.id]) return;
+    let ok=false; try{ ok=!!def.check(); }catch(e){}
+    if(ok){ bucket.done[def.id]=true; awarded+=def.xp; }
+  });
+  gamiSave();
+  if(awarded>0){ try{ awardXp(awarded,'quest'); }catch(e){}
+    try{ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg && (pg.widgets||[]).some(w=>w.type==='journey')) renderCanvas(pg); }catch(e){} }
+  return q;
 }
 function gamiEvaluate(opts){
-  opts=opts||{}; try{ nwHistRecord(); }catch(e){}
+  opts=opts||{}; try{ nwHistRecord(); }catch(e){} try{ hsHistRecord(); }catch(e){} try{ questEvaluate(); }catch(e){}
   const s=gamiLoad(); const firstRun=!s.seeded; const m=gamiMetrics(); const newly=[];
   ACHIEVEMENTS.forEach(a=>{
     if(s.unlocked[a.id]) return;
@@ -6287,6 +6848,32 @@ function gamiInit(){
 }
 function _gProgLabel(p){ if(p.unit==='$') return fmtK(p.cur)+' / '+fmtK(p.target); if(p.unit==='%') return Math.round(p.cur)+'% / '+p.target+'%'; if(p.unit==='d') return p.cur+' / '+p.target+'d'; return p.cur+' / '+p.target; }
 function _gRelDate(ts){ const d=Math.floor((Date.now()-ts)/86400000); if(d<=0) return 'today'; if(d===1) return 'yesterday'; if(d<7) return d+'d ago'; return new Date(ts).toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+// Household weekly challenge — this rolling 7-day spend vs the 7 before. State syncs across the
+// household, so it's a shared "beat last week" game for everyone on the account (not per-member
+// attribution, which the data model doesn't track).
+function _householdChallenge(){
+  try{
+    if(!dataLoaded) return '';
+    const now=Date.now();
+    const wk=(a,b)=>(allTxns||[]).filter(t=>{ const d=new Date(t.date).getTime(); return d>=now-b*86400000 && d<now-a*86400000 && t.amount>0 && !_txnExcludedFromSpend(t); }).reduce((s,t)=>s+t.amount,0);
+    const thisWk=Math.round(wk(0,7)), lastWk=Math.round(wk(7,14));
+    if(lastWk<=0 && thisWk<=0) return '';
+    const members=((APP.profiles)||[]).length;
+    const who=members>1?'Your household':'You';
+    const under=thisWk<=lastWk, diff=Math.abs(lastWk-thisWk);
+    const pct=lastWk>0?Math.min(100,Math.round(thisWk/lastWk*100)):100;
+    const col=under?'var(--pos)':'var(--amber)';
+    const msg = lastWk<=0 ? `First week tracked — ${fmtK(thisWk)} spent. Next week you'll have a number to beat.`
+      : under ? `${who} spent ${fmtK(thisWk)} — ${fmtK(diff)} under last week's ${fmtK(lastWk)}. 🏆 Keep it up!`
+      : `${who} spent ${fmtK(thisWk)} — ${fmtK(diff)} over last week's ${fmtK(lastWk)}. Rein it in to win the week.`;
+    return `<div class="jrn-sec">Beat last week${members>1?' · household':''}</div>
+      <div class="jrn-chal">
+        <div class="jrn-chal-top"><span class="jrn-chal-lbl">This week</span><b style="color:${col}">${fmtK(thisWk)}</b><span class="jrn-chal-vs">vs ${fmtK(lastWk)} last week</span></div>
+        <div class="jrn-chal-bar"><div class="jrn-chal-fill" style="width:${pct}%;background:${col}"></div></div>
+        <div class="jrn-chal-msg">${msg}</div>
+      </div>`;
+  }catch(e){ return ''; }
+}
 function journeyBody(w){
   try{ gamiCheckin(); gamiEvaluate(); }catch(e){}
   const s=gamiLoad(); const m=gamiMetrics();
@@ -6303,11 +6890,28 @@ function journeyBody(w){
   return `<div class="jrn">
     <div class="jrn-head">
       <div class="jrn-lvl"><span class="jrn-lvl-ic">${lv.icon}</span><div><div class="jrn-lvl-nm">Level ${lv.n} · ${esc(lv.name)}</div><div class="jrn-lvl-sub">${APP.proMode?'Pro Mode — maxed out':(nextLv?(lp.toNext.toLocaleString()+' XP to '+esc(nextLv.name)):'Top level reached')}</div></div></div>
-      <div class="jrn-streak" title="Daily check-in streak">🔥 <b>${s.streak||0}</b><span>day${(s.streak||0)===1?'':'s'}</span></div>
+      ${(function(){
+        const st=s.streak||0, today=_streakDay(), doneToday=(s.lastAction!=null && s.lastAction===today);
+        const nm=streakNextMilestone(st), freezeOn=(s.freeze==null?1:s.freeze)>0;
+        const sub=doneToday ? (nm?`${nm-st} to your ${nm}-day badge`:'every day counts') : 'do one thing today to keep it';
+        return `<div class="jrn-streak ${doneToday?'lit':'dim'}" title="${doneToday?'Checked in today ✓':'Take one action today to keep your streak alive'}">
+          <span class="jrn-flame">${st>0?'🔥':'🕯️'}</span>
+          <div class="jrn-streak-txt"><div class="jrn-streak-n"><b>${st}</b> day${st===1?'':'s'}${freezeOn?' <span class="jrn-freeze" title="Grace day — one miss is forgiven">❄️</span>':''}</div><div class="jrn-streak-sub">${sub}</div></div>
+        </div>`;
+      })()}
     </div>
     <div class="jrn-xp"><i style="width:${APP.proMode?100:lp.pct}%"></i></div>
-    <div class="jrn-stats"><span><b>${APP.xp}</b> XP</span><span><b>${unlockedCount}/${totalCount}</b> badges</span><span><b>${m.completedGoals}</b> goals done</span></div>
+    <div class="jrn-stats"><span><b>${APP.xp}</b> XP</span><span><b>${unlockedCount}/${totalCount}</b> badges</span><span><b>${m.completedGoals}</b> goals done</span><span><b>${s.bestStreak||s.streak||0}</b> best 🔥</span></div>
+    ${(function(){ try{
+      const q=_questState();
+      const row=def=>{ const done=(def.scope==='daily'?q.d:q.w).done[def.id]; return `<div class="jrn-quest${done?' done':''}"><span class="jrn-q-ic">${done?'✅':def.icon}</span><span class="jrn-q-lbl">${esc(def.label)}</span><span class="jrn-q-xp">+${def.xp} XP</span></div>`; };
+      const daily=QUESTS.filter(x=>x.scope==='daily'), weekly=QUESTS.filter(x=>x.scope==='weekly');
+      const dDone=daily.filter(x=>q.d.done[x.id]).length, wDone=weekly.filter(x=>q.w.done[x.id]).length;
+      return `<div class="jrn-sec">Daily quests <span class="jrn-sec-ct">${dDone}/${daily.length}</span></div><div class="jrn-quests">${daily.map(row).join('')}</div>`
+        + `<div class="jrn-sec">Weekly quests <span class="jrn-sec-ct">${wDone}/${weekly.length}</span></div><div class="jrn-quests">${weekly.map(row).join('')}</div>`;
+    }catch(e){ return ''; } })()}
     ${(function(){ try{ const h=nwHistMonthly(6); if(h&&h.length>=2){ const vals=h.map(x=>x.v); const diff=vals[vals.length-1]-vals[0]; const up=diff>=0; return `<div class="jrn-sec">Net worth trend <span class="jrn-trend-lbl ${up?'up':'down'}">${up?'▲':'▼'} ${fmtK(Math.abs(diff))} · ${h.length}mo</span></div><div class="jrn-trend">${_sparkline(vals, up?'#2ecc8a':'#e85d75', 260, 42)}</div>`; } }catch(e){} return ''; })()}
+    ${_householdChallenge()}
     <div class="jrn-sec">Next milestones</div>
     ${milestones}
     <div class="jrn-sec">Recent wins</div>
@@ -6339,11 +6943,61 @@ function nwHistMonthly(n){
   const out=keys.map(k=>{ const [y,m]=k.split('-'); const lbl=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][(+m)-1]; return {label:lbl, key:k, v:byMonth[k]}; });
   return n?out.slice(-n):out;
 }
+/* ── Health-score history (real trend + grade-up celebrations) ── */
+function hsHistLoad(){ try{ const a=JSON.parse(LS.getItem('mdf_health_history')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function _hsLetterRank(g){ const r={F:0,D:1,C:2,B:3,A:4}[String(g||'F').charAt(0)]; return r==null?0:r; }
+const HS_BANDS=[[60,'D'],[67,'D+'],[70,'C−'],[73,'C'],[77,'C+'],[80,'B−'],[83,'B'],[87,'B+'],[90,'A−'],[93,'A']];
+function _hsToNext(score){ for(let i=0;i<HS_BANDS.length;i++){ if(HS_BANDS[i][0]>score) return {pts:HS_BANDS[i][0]-score, grade:HS_BANDS[i][1]}; } return null; }
+function hsHistRecord(){
+  try{
+    if(!dataLoaded || typeof engHealthScore!=='function') return;
+    const r=engHealthScore(); if(!r||!r.hasData) return;
+    const d=new Date(); const key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    let h=hsHistLoad();
+    if(h.length && h[h.length-1].d===key){ h[h.length-1].v=r.overall; h[h.length-1].g=r.grade; }
+    else h.push({d:key, v:r.overall, g:r.grade});
+    if(h.length>420) h=h.slice(h.length-420);
+    LS.setItem('mdf_health_history', JSON.stringify(h));
+    const ack=LS.getItem('mdf_health_grade')||'';
+    if(!ack){ LS.setItem('mdf_health_grade', r.grade); }
+    else if(_hsLetterRank(r.grade)>_hsLetterRank(ack)){ LS.setItem('mdf_health_grade', r.grade);
+      try{ gamiCelebrate({icon:'🩺', title:'Health grade up!', name:`You reached ${r.grade}`, desc:`Your financial-health grade climbed to ${r.grade} (${r.overall}/100) — real progress across the pillars.`, share:`My financial-health grade just hit ${r.grade} on Richie! 🩺`}); }catch(e){}
+    }
+    else if(_hsLetterRank(r.grade)<_hsLetterRank(ack)){ LS.setItem('mdf_health_grade', r.grade); }   // dropped — reset baseline so a re-climb re-celebrates
+  }catch(e){}
+}
+// Health-score change over the last `days` (points). Returns {abs, fromKey} or null.
+function hsChangeSince(days){
+  const h=hsHistLoad(); if(h.length<2) return null;
+  const now=h[h.length-1].v; const cutoff=Date.now()-days*86400000;
+  let base=null;
+  for(let i=h.length-1;i>=0;i--){ if(new Date(h[i].d+'T12:00:00').getTime()<=cutoff){ base=h[i]; break; } }
+  if(!base) base=h[0];
+  if(base.d===h[h.length-1].d) return null;
+  return {abs:now-base.v, fromKey:base.d};
+}
 function nwUpStreak(){
   const mo=nwHistMonthly(); if(mo.length<2) return 0;
   let streak=0;
   for(let i=mo.length-1;i>0;i--){ if(mo[i].v>mo[i-1].v) streak++; else break; }
   return streak;
+}
+// Net-worth change over the last `days` (from the daily snapshot log). Returns {abs, pct, fromKey} or null.
+function nwChangeSince(days){
+  const h=nwHistLoad(); if(h.length<2) return null;
+  const now=h[h.length-1].v;
+  const cutoff=Date.now()-days*86400000;
+  let base=null;
+  for(let i=h.length-1;i>=0;i--){ if(new Date(h[i].d+'T12:00:00').getTime()<=cutoff){ base=h[i]; break; } }
+  if(!base) base=h[0];              // not enough history yet — compare to the earliest snapshot
+  if(base.d===h[h.length-1].d) return null;
+  const prev=base.v;
+  return {abs:now-prev, pct: prev!==0?((now-prev)/Math.abs(prev)*100):0, fromKey:base.d};
+}
+// Monthly snapshots with month-over-month deltas, for the history detail view.
+function nwHistWithDeltas(n){
+  const mo=nwHistMonthly(n);
+  return mo.map((m,i)=>({...m, delta: i>0 ? m.v-mo[i-1].v : null}));
 }
 /* ── Goal completion → wins + celebration (custom or preset goals) ── */
 function gamiGoalCompleted(g){
@@ -6395,6 +7049,8 @@ function renderWidgetBody(w){
     case 'journey': return journeyBody(w);
     case 'net_worth_summary': { const a=engNWAssets(), l=engNWLiab(); const nw=dataLoaded?(engNetBalance()+a-l):(a-l); const nwGoalG=(APP.goals||[]).filter(x=>x.metric==='networth'&&x.target>0).sort((x,y)=>y.target-x.target)[0]; const goalNW=nwGoalG?nwGoalG.target:(nw>0?Math.max(100000,Math.ceil((nw+1)/100000)*100000):100000); const gPct=goalNW>0?Math.max(0,Math.min(100,Math.round(nw/goalNW*100))):0; return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(nw)}">${fmtK(nw)}</div><div class="wph-sub">net worth · ${gPct}% to goal</div><div class="ds-budget"><div class="ds-budget-top"><span style="color:${moneyCol(nw)};font-weight:700">Now ${fmtK(nw)}</span><span style="color:var(--muted)">Goal ${fmtK(goalNW)}</span></div><div class="ds-bar" style="background:var(--surface3)"><div class="ds-bar-fill" style="width:${gPct}%;background:var(--pos)"></div></div></div><button class="nw-manage" onclick="event.stopPropagation();openNetWorthEditor()">🏠 Add home, car & other assets</button></div>`; }
     case 'cash_summary': return cashSummaryBody(w);
+    case 'health_score': return healthScoreBody(w);
+    case 'spending_hub': return spendingHubBody(w);
     case 'spending_month': return discretionarySpendBody(w);
     case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); const now=Date.now(), ps=new Date(now-2*days*86400000), pe=new Date(now-days*86400000); const prev=allTxns.filter(t=>{const d=new Date(t.date);return d>=ps&&d<pe&&_isIncomeTxn(t);}).reduce((s,t)=>s+Math.abs(t.amount),0); const dl=prev>0?Math.round((inc-prev)/prev*100):null; const up=dl!==null&&dl>=0; const trend=dl===null?'':`<div class="ds-trend-label" style="color:${up?'var(--green)':'var(--amber)'};margin-top:9px">${up?'▲':'▼'} ${Math.abs(dl)}% vs prior ${tfLabel(w.tf||'30d')}</div>`; const rec=engRecent(days).filter(_isIncomeTxn); const byC={}; rec.forEach(t=>{const c=getTxnCategory(t);byC[c]=(byC[c]||0)+Math.abs(t.amount);}); const top=Object.entries(byC).sort((a,b)=>b[1]-a[1])[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--pos)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${trend}${top?`<div class="wph-inline"><span>Top source: ${esc(top[0])}</span><b style="color:var(--pos)">${fmtK(top[1])}</b></div>`:''}</div>`; } const top=incomeSources.slice().sort((a,b)=>b.amt*(FREQ_TO_MONTHLY[b.freq]||1)-a.amt*(FREQ_TO_MONTHLY[a.freq]||1))[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--pos)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">${incomeSources.length} sources \u00b7 sample</div><div class="ds-trend-label" style="color:var(--green);margin-top:9px">▲ 6% vs prior 30d</div><div class="wph-inline"><span>Top source: ${top.name}</span><b style="color:var(--green)">${fmtK(Math.round(top.amt*(FREQ_TO_MONTHLY[top.freq]||1)))}/mo</b></div></div>`; }
     case 'debt_summary': return debtSummaryBody(w);
@@ -6437,17 +7093,26 @@ function renderWidgetBody(w){
       return `<div class="wph wph-${cfg.density}">${cats.map((c,i)=>`<div class="wph-row"><span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col(c,i)};margin-right:7px"></span>${esc(c.label)}</span><b>${itemVal(c)}</b></div>`).join('')}</div>`;
     }
     case 'bills_list': { return billsWidgetBody(w); }
+    case 'bill_calendar': return billCalBody(w);
     case 'cashflow_chart': return cashflowChartBody(w);
     case 'pl_panel': return plWidgetBody(w);
     case 'cashflow_planner': return cfpWidgetBody(w);
     case 'goals': return goalsWidgetBody(w);
     case 'accounts_list': return acctWidgetBody(w);
     case 'all_transactions': return txnFeedBody(w);
-    case 'safe_to_spend': return safeToSpendBody(w);
+    case 'safe_to_spend': case 'safe_spend': return safeToSpendBody(w);
     case 'recurring': return recurringBody(w);
     case 'investments': return portfolioBody(w);
     case 'sankey': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Income → group → category${dataLoaded?' · last '+tfLabel(w.tf||'30d'):' · sample'}</div><div style="position:relative"><canvas id="cv_${w.uid}"></canvas></div></div>`;
-    case 'net_worth_chart': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Net worth trend${dataLoaded?'':' · sample'}</div><div style="height:150px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
+    case 'net_worth_chart': {
+      const nw=Math.round(_nwNow());
+      const chg=(typeof nwChangeSince==='function')?nwChangeSince(30):null;
+      const tracked=(typeof nwHistMonthly==='function')?nwHistMonthly().length:0;
+      let head;
+      if(chg){ const up=chg.abs>=0; const pctStr=Math.abs(chg.pct)>=0.1?` (${up?'+':'−'}${Math.abs(chg.pct).toFixed(1)}%)`:''; head=`<div style="font-size:12.5px;font-weight:700;color:${up?'var(--pos)':'var(--red)'};margin-top:2px">${up?'▲':'▼'} ${fmtK(Math.abs(chg.abs))}${pctStr}<span style="color:var(--muted);font-weight:500"> · last 30 days</span></div>`; }
+      else head=`<div class="wph-sub" style="margin-top:2px">Trend builds as you check in${tracked?` · ${tracked} month${tracked!==1?'s':''} tracked`:''}.</div>`;
+      return `<div class="wph"><div class="wph-stat" style="font-size:23px">${nw<0?'−':''}${fmtK(Math.abs(nw))}</div>${head}<div style="height:128px;margin-top:8px"><canvas id="cv_${w.uid}"></canvas></div>${dataLoaded?'':'<div class="ws-hint" style="margin-top:4px">Sample trend — connect a bank to track for real.</div>'}</div>`;
+    }
     case 'fire_progress': return fireProgressBody(w);
     case 'fire_hub': return fireHubBody(w);
     case 'retirement_proj': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Projected growth</div><div style="height:140px"><canvas id="cv_${w.uid}"></canvas></div></div>`;
@@ -6469,7 +7134,7 @@ let dragUid=null;
 /* ── Widget detail drill-down ──
    Widgets that support an expanded view declare it here. Opening shows a modal
    with richer Plaid / bills / income breakdowns (amounts + %, sortable lists). */
-const WIDGET_HAS_DETAIL=['net_worth_summary','cash_summary','spending_month','income_month','debt_summary','top_categories','budget_doughnut','cashflow_chart','sankey','net_worth_chart','debt_payoff','fire_progress'];
+const WIDGET_HAS_DETAIL=['net_worth_summary','cash_summary','spending_month','income_month','debt_summary','top_categories','budget_doughnut','cashflow_chart','sankey','net_worth_chart','debt_payoff','fire_progress','health_score'];
 function widgetHasDetail(type){ return WIDGET_HAS_DETAIL.includes(type); }
 function _detailRows(items, total){
   // items: [{label, value, color?, note?}] → rows with amount + %
@@ -6530,15 +7195,27 @@ function widgetDetailContent(type, days){
       return { title:'Income sources', sub:`${fmtK(tot)}/mo from ${items.length} sources`, body:`<div class="wdt-total" style="color:var(--green)">${fmtK(tot)}<span>per month</span></div>${_detailRows(items,tot)}` };
     }
     case 'net_worth_summary': case 'net_worth_chart': {
+      // Real monthly history with month-over-month deltas (empty until a couple of check-ins accrue).
+      const histSection=(()=>{ try{
+        const h=(typeof nwHistWithDeltas==='function')?nwHistWithDeltas(12):[];
+        if(!h.length) return '';
+        const rows=h.slice().reverse().map(m=>{ const d=m.delta; const dTxt=d==null?'<span style="color:var(--muted)">—</span>':`<span style="color:${d>=0?'var(--pos)':'var(--red)'}">${d>=0?'▲':'▼'} ${fmtK(Math.abs(d))}</span>`; const [y,mo]=m.key.split('-'); const yr=(''+y).slice(2); return `<div class="wdt-row"><span class="wdt-label">${esc(m.label)} '${yr}</span><span style="display:flex;gap:12px;align-items:center">${dTxt}<b>${m.v<0?'−':''}${fmtK(Math.abs(m.v))}</b></span></div>`; }).join('');
+        return `<div class="wdt-section">Monthly history · ${h.length} month${h.length!==1?'s':''} tracked</div>${rows}`;
+      }catch(e){ return ''; } })();
       if(live){ const ea=engAccounts().filter(a=>!a.manual&&!a.excluded); const acctA=ea.filter(a=>(a.bal||0)>=0&&a.type!=='credit'&&a.type!=='loan').map(a=>({label:a.name,value:a.bal||0,note:(a.institution||'bank')+(a.mask?' ···'+a.mask:'')})); const acctD=ea.filter(a=>(a.bal||0)<0||a.type==='credit'||a.type==='loan').map(a=>({label:a.name||'Debt',value:Math.abs(a.bal||0),note:(a.institution||'bank')+(a.mask?' ···'+a.mask:'')})); const manA=nwAssets.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat||'manual'})).concat(_nwManA()); const manL=nwLiab.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat||'manual'})).concat(_nwManL()); const assets=acctA.concat(manA); const debts=acctD.concat(manL); const aTot=assets.reduce((s,a)=>s+a.value,0); const dTot=debts.reduce((s,d)=>s+d.value,0); const net=engNetBalance()+engNWAssets()-engNWLiab();
-        return { title:'Net worth breakdown', sub:`${fmtK(net)} net · ${fmtK(aTot)} assets − ${fmtK(dTot)} debts`, body:`<div class="wdt-total">${fmtK(net)}<span>net worth</span></div><div class="wdt-section">Assets</div>${_detailRows(assets,aTot)}<div class="wdt-section">Debts</div>${_detailRows(debts,dTot)}` }; }
+        return { title:'Net worth breakdown', sub:`${fmtK(net)} net · ${fmtK(aTot)} assets − ${fmtK(dTot)} debts`, body:`<div class="wdt-total">${fmtK(net)}<span>net worth</span></div>${histSection}<div class="wdt-section">Assets</div>${_detailRows(assets,aTot)}<div class="wdt-section">Debts</div>${_detailRows(debts,dTot)}` }; }
       const a=nwAssets.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat})).concat(_nwManA()); const l=nwLiab.filter(x=>x.value>0).map(x=>({label:x.name,value:x.value,note:x.cat})).concat(_nwManL()); const aT=engNWAssets(),lT=engNWLiab();
-      return { title:'Net worth breakdown', sub:`${fmtK(aT-lT)} net`, body:`<div class="wdt-total">${fmtK(aT-lT)}<span>net worth</span></div><div class="wdt-section">Assets</div>${_detailRows(a,aT)}<div class="wdt-section">Liabilities</div>${_detailRows(l,lT)}` };
+      return { title:'Net worth breakdown', sub:`${fmtK(aT-lT)} net`, body:`<div class="wdt-total">${fmtK(aT-lT)}<span>net worth</span></div>${histSection}<div class="wdt-section">Assets</div>${_detailRows(a,aT)}<div class="wdt-section">Liabilities</div>${_detailRows(l,lT)}` };
     }
     case 'cash_summary': {
       const dep=live?allAccts.filter(a=>a.type==='depository').map(a=>({label:(a.name||'Account'),value:(a.balances&&(a.balances.available??a.balances.current))||0,note:a.institution})):[{label:'Checking',value:5200,note:'sample'},{label:'Savings',value:3040,note:'sample'}];
       const tot=dep.reduce((s,a)=>s+a.value,0);
       return { title:'Cash accounts', sub:`${fmtK(tot)} across ${dep.length} account${dep.length!==1?'s':''}`, body:`<div class="wdt-total">${fmtK(tot)}<span>available cash</span></div>${_detailRows(dep,tot)}` };
+    }
+    case 'health_score': {
+      const h=engHealthScore();
+      const rows=h.comps.map(c=>{ const sc=_hsColor(c.score); return `<div class="wdt-row"><span class="wdt-label">${c.icon} ${esc(c.label)}<br><span style="font-size:10.5px;color:var(--muted)">${esc(c.tip)}</span></span><span style="display:flex;gap:10px;align-items:center"><span style="color:var(--muted);font-size:11px">${esc(c.value)}</span><b style="color:${sc}">${c.score}</b></span></div>`; }).join('');
+      return { title:'Financial health score', sub:`${h.overall}/100 · grade ${h.grade} · ${h.comps.length} pillar${h.comps.length!==1?'s':''} weighted`, body:`<div class="wdt-total" style="color:${_hsColor(h.overall)}">${h.overall}<span>grade ${h.grade}</span></div>${rows}` };
     }
     case 'promo_tracker': return promoTrackerBody(w);
     case 'credit_util': return creditUtilBody(w);
@@ -6756,6 +7433,15 @@ function renderSettings(){
             <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">A clean one-month summary — income, spending by category, income sources, top merchants, and a net-worth snapshot. Export as CSV or save to PDF.</div>
           </div>
           <button class="btn primary" onclick="openReport()">View report</button>
+        </div>
+      </div>
+      <div class="set-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
+          <div>
+            <div class="set-card-label" style="margin:0">📥 Import transactions (CSV)</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Bring in transactions from a bank or card CSV — map the columns, skip duplicates, and auto-categorize. Great for accounts Plaid can't reach.</div>
+          </div>
+          <button class="btn primary" onclick="gg('csvFileInput').click()">Choose CSV</button>
         </div>
       </div>
       <div class="set-card">
@@ -7044,6 +7730,12 @@ function awardXp(amount,reason){
   gg('sbXp').textContent=APP.xp+' XP';
   if(reason) richieSay(reason+' (+'+amount+' XP)');
 }
+// Award XP the first time a feature is used (once ever, tracked in the synced gami store).
+function discoverXp(key, xp, label){
+  try{ const s=gamiLoad(); s.discovered=s.discovered||{}; if(s.discovered[key]) return; s.discovered[key]=Date.now(); gamiSave();
+    awardXp(xp||10, `✨ First time using ${label}`);
+  }catch(e){}
+}
 function levelUp(){
   const lv=LEVELS.find(l=>l.n===APP.level);
   if(sbRichie)sbRichie.do('tada');
@@ -7327,20 +8019,53 @@ let _raProactiveOn=true; try{ const v=LS.getItem('richie_proactive'); if(v!==nul
 let _raLastPop=0, _raSnoozeUntil=0, _raOffTrackAt=0;
 function setRichieProactive(on){ _raProactiveOn=!!on; try{ LS.setItem('richie_proactive', on?'1':'0'); }catch(e){} const b=gg('setProactiveBtn'); if(b)b.textContent=_raProactiveOn?'🔔 Pop-in tips: on':'🔕 Pop-in tips: off'; const t=gg('proactiveToggle'); if(t)t.classList.toggle('on',_raProactiveOn); if(_raProactiveOn && typeof richieSay==='function') richieSay("I'll pop in with a tip now and then. Tap me anytime too!"); else if(!_raProactiveOn){ try{ richieGoHome(); }catch(e){} } }
 function richieOffTrackSignal(pg){
+  // Anomaly first — a category running well above its usual pace is the most useful thing to flag.
+  try{ const st=engSpendTrends(); const a=(st.movers||[]).filter(m=>m.delta>60 && m.prev>0 && m.cur>=m.prev*1.8).sort((x,y)=>y.delta-x.delta)[0];
+    if(a){ const x=a.cur/a.prev; const desc=x>=2?`${x>=10?Math.round(x):x.toFixed(1)}× your usual`:`${Math.round((x-1)*100)}% over your usual`;
+      return {msg:`Heads up — ${esc(a.label)} is running ${desc} this month (${fmtK(a.cur)} vs ${fmtK(a.prev)} by now last month). Want to see what's driving it?`, widget:'spending_trends', cta:'Show me'}; } }catch(e){}
   try{ const pace=engPaceAlert(); if(pace){ return {msg:`You're moving fast on ${esc(pace.name)} — ${fmtK(pace.spent)} spent of a ${fmtK(pace.budget)} budget, with ${pace.daysLeft} day${pace.daysLeft!==1?'s':''} left this month. Want to ease off or adjust it?`, widget:'budget_actual', cta:'Show me'}; } }catch(e){}
   try{ const bills=(engUpcomingBills()||[]).filter(b=>!b.paid);
     if(bills.length>=3){ const tot=bills.reduce((s,b)=>s+(b.pay||b.amount||0),0); return {msg:`Heads up — you've got ${bills.length} bills coming up, about ${typeof fmtK==='function'?fmtK(tot):'$'+Math.round(tot)}. Want to run through them?`, widget:'bills_list', cta:'Show me'}; } }catch(e){}
   try{ const inc=engMonthlyIncome(), sp=engSpend30(); if(inc>0 && sp>inc*1.05){ return {msg:`Spending's running ahead of income this month. Want a quick look at where it's going?`, widget:'top_categories', cta:'Show me'}; } }catch(e){}
   return null;
 }
+// A once-a-week recap: this week's spend vs last, the health grade, safe-to-spend, and the
+// one move that helps most (which is also the health-score coaching line). Returns a signal or null.
+function richieWeeklyRecap(){
+  try{
+    if(!dataLoaded) return null;
+    let last=0; try{ last=parseInt(LS.getItem('richie_recap_ts')||'0',10)||0; }catch(e){}
+    if(Date.now()-last < 7*86400000) return null;
+    const now=Date.now();
+    const wk=(a,b)=>(allTxns||[]).filter(t=>{ const d=new Date(t.date).getTime(); return d>=now-b*86400000 && d<now-a*86400000 && t.amount>0 && !_txnExcludedFromSpend(t); }).reduce((s,t)=>s+t.amount,0);
+    const thisWk=Math.round(wk(0,7)), lastWk=Math.round(wk(7,14));
+    let h=null; try{ h=engHealthScore(); }catch(e){}
+    let pool=null; try{ pool=Math.round(engSafeToSpend().pool); }catch(e){}
+    if(thisWk<=0 && !(h&&h.hasData)) return null;   // nothing meaningful to recap yet
+    const dlt=lastWk>0?Math.round((thisWk-lastWk)/lastWk*100):null;
+    const trend=dlt==null?'':(thisWk>=lastWk?` (▲ ${Math.abs(dlt)}% vs last week)`:` (▼ ${Math.abs(dlt)}% vs last week)`);
+    const bits=[`Quick week recap — you spent ${fmtK(thisWk)}${trend}.`];
+    if(h&&h.hasData) bits.push(`Health score's a ${h.grade} (${h.overall}/100).`);
+    if(pool!=null) bits.push(`Safe to spend right now: ${fmtK(pool)}.`);
+    if(h&&h.weakest){ bits.push(h.weakest.tip); return { msg:bits.join(' '), widget:'health_score', cta:'Show me' }; }
+    bits.push(`Nice and steady — keep it rolling.`);
+    return { msg:bits.join(' '), widget:'spending_trends', cta:'Show me' };
+  }catch(e){ return null; }
+}
 function richieMaybeProactive(pg){
   if(!_raProactiveOn || _raBusy || _richieBlocked() || !pg || pg.id==='__settings__') return;
   const now=Date.now();
   if(now<_raSnoozeUntil || now-_raLastPop<1500) return;     // debounce duplicate renders only
   _raLastPop=now;
-  const off=(now-_raOffTrackAt>480000) ? richieOffTrackSignal(pg) : null;   // surface off-track at most ~every 8 min
+  const recap=richieWeeklyRecap();                          // weekly recap wins when it's due
+  const off=(!recap && now-_raOffTrackAt>480000) ? richieOffTrackSignal(pg) : null;   // else off-track at most ~every 8 min
   setTimeout(()=>{ if(_raBusy||document.hidden||APP.activePage!==pg.id) return;
-    if(off){ _raOffTrackAt=Date.now(); richieShow(off.msg, {emo:'curious', actions:[
+    if(recap){ try{ LS.setItem('richie_recap_ts', String(Date.now())); }catch(e){}
+      richieShow(recap.msg, {emo:'happy', actions:[
+        {label:recap.cta||'Show me', cls:'ra-go', on:()=>richieSpotlightAt(Object.assign({widgetType:recap.widget}, RICHIE_SPOTS[recap.widget]||{}))},
+        {label:'Thanks', on:richieDismiss}
+      ]}); }
+    else if(off){ _raOffTrackAt=Date.now(); richieShow(off.msg, {emo:'curious', actions:[
         {label:off.cta||'Show me', cls:'ra-go', on:()=>richieSpotlightAt(Object.assign({widgetType:off.widget}, RICHIE_SPOTS[off.widget]||{}))},   // decide first, THEN Richie flies to the spot
         {label:'Not now', on:richieDismiss}
       ]}); }
@@ -8506,7 +9231,9 @@ let _briefChar=null, _briefTxns=[], _briefBills=[], _briefSteps=[], _briefStep=0
 function _briefCutoff(){ let v=0; try{ v=parseInt(LS.getItem('richie_lastvisit')||'0',10); }catch(e){} return (isFinite(v)&&v>0)?v:(Date.now()-7*86400000); }
 function _markBriefingSeen(){ try{ LS.setItem('richie_lastvisit', String(Date.now())); }catch(e){} }
 function _newTxns(){ const cut=new Date(_briefCutoff()); const ex=(typeof _excludedAcctIds==='function')?_excludedAcctIds():new Set();
-  return (allTxns||[]).filter(t=> t && !ex.has(t.account_id) && new Date((t.date||'')+'T12:00:00')>=cut)
+  // Freshly-imported transactions (last 3 days) are reviewable even when their CSV dates are old.
+  const recentImports=new Set((APP.imports||[]).filter(im=>im&&im.txnImportId&&(Date.now()-(im.ts||0))<3*86400000).map(im=>im.txnImportId));
+  return (allTxns||[]).filter(t=> t && !ex.has(t.account_id) && (new Date((t.date||'')+'T12:00:00')>=cut || (t._importId && recentImports.has(t._importId))))
     .sort((a,b)=> new Date(b.date)-new Date(a.date)); }
 // Transactions the user hasn't explicitly confirmed yet (auto-categories may be wrong, so we
 // ask them to review each — even ones that already have a category). Persisted in mdf_txn_confirmed.
@@ -8533,8 +9260,8 @@ function _briefTxnStepBody(){
   return `<div class="brief-txns-hd"><span>${list.length} to review — fix any wrong category, then Confirm</span><button class="brief-confirm-all" onclick="event.stopPropagation();briefConfirmAll()">Confirm all ✓</button></div><div class="brief-txns">${rows}</div>`;
 }
 function briefTxnCat(i,cat){ const t=_briefTxns[i]; if(!t||!cat) return; const k=_txnKey(t); _catOverrides[k]=cat; try{ LS.setItem('mdf_cat_overrides',JSON.stringify(_catOverrides)); }catch(e){} }   // change now; stays until Confirmed
-function briefConfirm(i){ const t=_briefTxns[i]; if(!t) return; _confSet().add(_txnKey(t)); _confSave(); if(_briefChar)_briefChar.do('nod'); _briefRefreshBody(); }
-function briefConfirmAll(){ (_briefTxns||[]).forEach(t=>_confSet().add(_txnKey(t))); _confSave(); if(_briefChar)_briefChar.do('tada'); _briefRefreshBody(); }
+function briefConfirm(i){ const t=_briefTxns[i]; if(!t) return; _confSet().add(_txnKey(t)); _confSave(); try{ gamiMarkEngaged('confirm'); }catch(e){} if(_briefChar)_briefChar.do('nod'); _briefRefreshBody(); }
+function briefConfirmAll(){ (_briefTxns||[]).forEach(t=>_confSet().add(_txnKey(t))); _confSave(); try{ gamiMarkEngaged('confirm'); }catch(e){} if(_briefChar)_briefChar.do('tada'); _briefRefreshBody(); }
 
 // ── High-interest debt step (pay a little extra toward the top-APR card, inline) ──
 function _topHiCard(){ try{ const g=engDebtGroups(); const all=[...g.revolving,...g.installment].filter(b=>Math.abs(b.bal||0)>0 && (b.cat==='CC'||(b.apr||0)>=8)); all.sort((a,b)=>(b.apr||0)-(a.apr||0)); return all[0]||null; }catch(e){ return null; } }
@@ -8706,6 +9433,10 @@ const RICHIE_SPOTS={
   recurring:{ focusSel:'.rec-cancelbtn', message:"Here are your subscriptions 👇 — flag any to ⊘ Cancel and watch the ▲ price rises." },
   bills_list:{ focusSel:'.bill-row', message:"Here are your bills 👇 — mark them paid or tweak what you'll pay." },
   top_categories:{ message:"Here's where your money's going 👇 — pick a category to trim this month." },
+  health_score:{ focusSel:'.hs-tip', message:"Here's your money check-up 👇 — this one move lifts your score the most." },
+  spending_trends:{ focusSel:'.st-row', message:"Here's what changed vs last month 👇 — tap a mover to see the transactions behind it." },
+  bill_calendar:{ focusSel:'.bcal-summary', message:"Here's your month at a glance 👇 — watch the heavy weeks so nothing catches you out." },
+  net_worth_chart:{ focusSel:'.wph-stat', message:"Here's your net worth trend 👇 — every check-in adds a real data point." },
 };
 function briefGoto(type){
   const spot=RICHIE_SPOTS[type]||{};
@@ -8757,6 +9488,8 @@ function buildNotifications(){
   try{ const p=engCashFlowProjection(30); if(p.low.bal<0){ const d=_projDate(p.low.day); const when=p.low.day===0?'today':d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); N.push({key:'shortfall:'+d.toISOString().slice(0,10), icon:'⚠️', crit:true, title:`Low balance coming ${when}`, sub:`Projected to dip to ${fmtK(p.low.bal)}.`, go:'cashflow_planner'}); } }catch(e){}
   try{ (engPromos()||[]).filter(p=>p.bal>0.5&&p.days>=0&&p.days<=45).forEach(p=>N.push({key:'promo:'+(p.name||''), icon:'⏰', title:`0% promo ending: ${esc(p.name)}`, sub:`Rate jumps to ${p.apr?p.apr.toFixed(1)+'%':'its APR'} in ${p.days} day${p.days!==1?'s':''}.`, go:'debt_hub', tab:'promo'})); }catch(e){}
   try{ engRecurring().filter(r=>r.priceUp).forEach(r=>N.push({key:'hike:'+r.merchKey+':'+Math.round(r.recent), icon:'🔁', title:`${esc(r.merchant)} raised its price`, sub:`${fmtK(r.prior)} → ${fmtK(r.recent)}.`, go:'recurring'})); }catch(e){}
+  try{ const st=engSpendTrends(); if(st.budget && st.elapsed>=0.25 && st.budget.pace<-25){ N.push({key:'overbudget:'+new Date().toISOString().slice(0,7), icon:'🆚', title:'Spending is pacing over budget', sub:`On track for ${fmtK(Math.abs(st.budget.pace))} over this month — tap to see the movers.`, go:'spending_trends'}); } }catch(e){}
+  try{ const h=engHealthScore(); if(h.hasData && h.overall<70 && h.weakest){ N.push({key:'health:'+new Date().toISOString().slice(0,7)+':'+h.grade, icon:'🩺', title:`Your financial health is ${h.grade} (${h.overall}/100)`, sub:h.weakest.tip, go:'health_score'}); } }catch(e){}
   try{ const ss=_scoreStale(); if(ss.stale){ N.push({key:'score:'+new Date().toISOString().slice(0,7), icon:'📊', title:'Log your credit score', sub: ss.days==null?'None on file yet — takes 10 seconds.':`Last logged ${ss.days} days ago.`, open:'openScoreEditor'}); } }catch(e){}
   const read=_notifRead();
   N.forEach(n=>{ n.unread=!read[n.key]; });
