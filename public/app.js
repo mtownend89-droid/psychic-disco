@@ -158,6 +158,40 @@ function _txnExcludedFromIncome(t){ const g=getTxnTag(t); return g==='transfer'|
 function _txnKey(t){ return t.transaction_id || t.id || ((t.date||'')+'|'+(t.merchant_name||t.name||'')+'|'+t.amount); }
 let _catRules=JSON.parse(LS.getItem('mdf_cat_rules')||'{}');   // merchant key → category (auto-apply)
 function setCatRule(mk, cat){ if(!mk) return; if(cat) _catRules[mk]=cat; else delete _catRules[mk]; try{ LS.setItem('mdf_cat_rules', JSON.stringify(_catRules)); }catch(e){} }
+/* ═══ CATEGORY RULES MANAGER (Settings) ═══
+   Every "always categorize this merchant as X" rule in one place — view, re-point, delete,
+   or add by hand. Rules live in _catRules (merchant key → category), synced via mdf_cat_rules. */
+function _titleCaseKey(s){ return String(s||'').replace(/\b\w/g,c=>c.toUpperCase()); }
+function renderRulesManager(){
+  const host=gg('rulesList'); if(!host) return;
+  const cats=getUserCategories().filter(c=>!c.group).map(c=>c.label);
+  const keys=Object.keys(_catRules).sort();
+  const counts={}; try{ (allTxns||[]).forEach(t=>{ const mk=_merchKey(t); if(mk&&_catRules[mk]!==undefined) counts[mk]=(counts[mk]||0)+1; }); }catch(e){}
+  const catOpts=(sel)=>cats.map(c=>`<option value="${esc(c)}"${c===sel?' selected':''}>${esc(c)}</option>`).join('');
+  const addRow=`<div class="rule-add">
+    <input id="ruleAddName" class="mf-in" placeholder="Merchant (e.g. Starbucks)" aria-label="Merchant name for new rule">
+    <select id="ruleAddCat" class="txn-cat-sel" aria-label="Category for new rule"><option value="">Category…</option>${catOpts('')}</select>
+    <button class="btn primary rule-addbtn" onclick="ruleAdd()">Add</button>
+  </div>`;
+  if(!keys.length){ host.innerHTML=`<div class="ws-hint">No rules yet. Tap the ＝ button on any transaction to always categorize that merchant — or add one below.</div>${addRow}`; return; }
+  const rows=keys.map(mk=>{
+    const cat=_catRules[mk]; const catList=cats.includes(cat)?cats:[cat].concat(cats);
+    const opts=catList.map(c=>`<option value="${esc(c)}"${c===cat?' selected':''}>${esc(c)}</option>`).join('');
+    const n=counts[mk]||0; const k=esc(mk).replace(/'/g,"\\'");
+    return `<div class="rule-row"><span class="rule-nm">${esc(_titleCaseKey(mk))}${n?`<span class="rule-count">${n} txn${n!==1?'s':''}</span>`:''}</span><span class="rule-arrow" aria-hidden="true">→</span><select class="txn-cat-sel" onchange="ruleSetCat('${k}',this.value)" aria-label="Category for ${esc(mk)}">${opts}</select><button class="rule-del" onclick="ruleDelete('${k}')" title="Delete rule" aria-label="Delete rule for ${esc(mk)}">🗑</button></div>`;
+  }).join('');
+  host.innerHTML=`<div class="rule-list">${rows}</div>${addRow}`;
+}
+function _rulesRefresh(){ renderRulesManager(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg&&pg.id!=='__settings__') renderCanvas(pg); }
+function ruleSetCat(mk,cat){ if(!mk||!cat) return; setCatRule(mk,cat); _rulesRefresh(); if(sbRichie)sbRichie.do('nod'); }
+function ruleDelete(mk){ if(!mk) return; setCatRule(mk,''); _rulesRefresh(); }
+function ruleAdd(){
+  const nEl=gg('ruleAddName'), cEl=gg('ruleAddCat'); if(!nEl||!cEl) return;
+  const mk=_merchKeyName(nEl.value); const cat=cEl.value;
+  if(!mk){ nEl.focus(); return; }
+  if(!cat){ cEl.focus(); return; }
+  setCatRule(mk,cat); nEl.value=''; cEl.value=''; _rulesRefresh(); if(sbRichie)sbRichie.do('tada');
+}
 function getTxnCategory(t){
   const id=_txnKey(t);
   if(id&&_catOverrides[id]) return _catOverrides[id];               // 1) per-transaction override wins
@@ -1197,13 +1231,16 @@ function engSafeToSpend(){
 }
 // Detect recurring charges / subscriptions — groups outflows by merchant, keeps those
 // that repeat at a regular cadence with consistent amounts.
-function _merchKey(t){
-  let s=(t.merchant_name||t.name||'').toLowerCase();
+// Normalize a raw merchant name → the key rules/recurring group on (used for both live
+// transactions and manually-typed rules, so a hand-added rule matches real transactions).
+function _merchKeyName(name){
+  let s=(name||'').toLowerCase();
   s=s.replace(/\d[\d,.]*/g,' ').replace(/[^a-z ]+/g,' ')
      .replace(/\b(com|inc|llc|co|ltd|www|http|https|pos|purchase|payment|pmt|recurring|autopay|auto|bill|debit|card|ach)\b/g,' ')
      .replace(/\s+/g,' ').trim();
   return s.split(' ').slice(0,2).join(' ').slice(0,26);
 }
+function _merchKey(t){ return _merchKeyName(t.merchant_name||t.name||''); }
 function engRecurring(){
   if(!dataLoaded) return [
     {merchant:'Streaming Service (example)',amount:15.99,cadence:'monthly',count:3,monthly:15.99,category:'Subscriptions'},
@@ -6418,6 +6455,11 @@ function renderSettings(){
         </div>
       </div>
       <div class="set-card">
+        <div class="set-card-label">🔁 Category rules</div>
+        <div style="font-size:12px;color:var(--muted);margin:2px 0 12px;line-height:1.5">"Always categorize this merchant as…" — every rule in one place. Change where one points, delete it, or add a new one. Rules auto-apply to matching transactions and sync across your devices.</div>
+        <div id="rulesList"></div>
+      </div>
+      <div class="set-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
           <div>
             <div class="set-card-label" style="margin:0">🏦 Account Categories</div>
@@ -6478,6 +6520,7 @@ function renderSettings(){
   gg('setXpText').textContent=APP.proMode?'Pro Mode active — all features unlocked':(APP.xp.toLocaleString()+' XP'+(levelProgress().next!=null?(' · '+levelProgress().toNext.toLocaleString()+' to next level'):' · max level'));
   try{ renderConnectedData(); }catch(e){}
   try{ renderAppearance(); }catch(e){}
+  try{ renderRulesManager(); }catch(e){}
 }
 /* ── Appearance render + handlers (per profile) ── */
 function renderAppearance(){
