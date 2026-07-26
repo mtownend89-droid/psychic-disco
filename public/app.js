@@ -2385,6 +2385,124 @@ function docAddSelected(){
   APP.imports.push({ id:impId, kind:'bank', label:importLabel, ts:Date.now(), txnImportId:importId, billName, summary:`${added} transaction${added!==1?'s':''}${billName?' + bill':''}` });
   finish((added?`Added ${added} transaction${added!==1?'s':''}${addBill?' and a bill':''} from your ${((type||'statement').replace('_',' '))}. \ud83d\udcc4`:`Saved the details from your ${((type||'statement').replace('_',' '))}.`)+promoMsg);
 }
+/* ═══ CSV TRANSACTION IMPORT ═══
+   A fully client-side importer (no server/OpenAI): parse a bank/card CSV, map columns,
+   dedupe against existing transactions, and push into APP.importedTxns as a removable
+   batch — for accounts Plaid can't reach or manual tracking. */
+let _csv=null;
+function _parseCSV(text){
+  const rows=[]; let row=[], field='', inQ=false;
+  text=String(text||'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  for(let i=0;i<text.length;i++){ const ch=text[i];
+    if(inQ){ if(ch==='"'){ if(text[i+1]==='"'){ field+='"'; i++; } else inQ=false; } else field+=ch; }
+    else if(ch==='"') inQ=true;
+    else if(ch===','){ row.push(field); field=''; }
+    else if(ch==='\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+    else field+=ch;
+  }
+  if(field!==''||row.length){ row.push(field); rows.push(row); }
+  return rows.filter(r=>r.some(c=>String(c).trim()!==''));
+}
+function _csvMoney(s){ s=String(s==null?'':s).trim(); if(!s) return null; let neg=false;
+  if(/^\(.*\)$/.test(s)){ neg=true; s=s.slice(1,-1); }
+  s=s.replace(/[$,\s]/g,''); if(s.charAt(0)==='-'){ neg=true; s=s.slice(1); } else if(s.charAt(0)==='+'){ s=s.slice(1); }
+  const n=parseFloat(s); if(isNaN(n)) return null; return neg?-n:n;
+}
+function _csvDate(s){ s=String(s==null?'':s).trim(); if(!s) return null;
+  let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if(m) return `${m[1]}-${String(+m[2]).padStart(2,'0')}-${String(+m[3]).padStart(2,'0')}`;
+  m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/); if(m){ let mm=+m[1],dd=+m[2],yy=+m[3]; if(yy<100)yy+=2000; if(mm>12&&dd<=12){ const t=mm; mm=dd; dd=t; } return `${yy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`; }
+  const d=new Date(s); if(!isNaN(d)) return d.toISOString().slice(0,10); return null;
+}
+function _guessCol(H, re){ for(let i=0;i<H.length;i++){ if(re.test(H[i]||'')) return i; } return -1; }
+function csvFileChosen(inp){
+  const f=inp.files&&inp.files[0]; inp.value=''; if(!f) return;
+  if(f.size>8*1024*1024){ alert('That CSV is large (max ~8MB). Try splitting it into smaller files.'); return; }
+  const rd=new FileReader();
+  rd.onload=()=>{ try{ _csvInit(String(rd.result||''), f.name||'transactions.csv'); }catch(e){ alert('Could not parse that file — is it a CSV?'); } };
+  rd.onerror=()=>alert('Could not read that file.');
+  rd.readAsText(f);
+}
+function _csvInit(text, name){
+  const rows=_parseCSV(text);
+  if(rows.length<2){ alert('That file has a header but no data rows.'); return; }
+  const headers=rows[0].map(h=>String(h||'').trim());
+  const H=headers.map(h=>h.toLowerCase());
+  const map={ date:_guessCol(H,/date|posted/), amount:_guessCol(H,/amount|amt|value/), desc:_guessCol(H,/desc|payee|memo|merchant|detail|narrat|name/), cat:_guessCol(H,/category|^type$/) };
+  if(map.date<0) map.date=0;
+  if(map.amount<0) map.amount=Math.min(headers.length-1,1);
+  if(map.desc<0) map.desc=Math.min(headers.length-1,2);
+  // sign guess: if amounts under this mapping skew negative, negative=out is right (the default)
+  _csv={ name, headers, rows, hasHeader:true, map, sign:'negOut' };
+  gg('csvModal').style.display='flex';
+  csvRenderMap();
+}
+function csvSetMap(field,val){ if(!_csv) return; _csv.map[field]=parseInt(val,10); csvRenderMap(); }
+function csvSetSign(v){ if(!_csv) return; _csv.sign=v; csvRenderMap(); }
+function csvSetHeader(on){ if(!_csv) return; _csv.hasHeader=on; csvRenderMap(); }
+function _csvBuildTxns(){
+  if(!_csv) return [];
+  const {rows,map,sign,hasHeader}=_csv;
+  const body=rows.slice(hasHeader?1:0);
+  const out=[];
+  body.forEach(r=>{
+    const date=_csvDate(r[map.date]); let amt=_csvMoney(r[map.amount]); if(date==null||amt==null) return;
+    if(sign==='negOut') amt=-amt;   // file negative = money out → flip so "out" is positive (Plaid convention)
+    const description=(map.desc!=null&&map.desc>=0?String(r[map.desc]||'').trim():'')||'Imported';
+    const cat=(map.cat!=null&&map.cat>=0)?String(r[map.cat]||'').trim():'';
+    out.push({date, amount:amt, description, cat});
+  });
+  out.forEach(t=>{ t._dup=_docDupCheck(t); });
+  return out;
+}
+function csvRenderMap(){
+  const el=gg('csvBody'); if(!el||!_csv) return;
+  const cols=_csv.headers.map((h,i)=>({i, label:_csv.hasHeader?((h||'').trim()||('Column '+(i+1))):('Column '+(i+1))}));
+  const sel=(field)=>{ const cur=_csv.map[field]; const none=field==='cat'?`<option value="-1"${cur<0?' selected':''}>— none —</option>`:''; return `<select class="csv-sel" onchange="csvSetMap('${field}',this.value)">${none}${cols.map(c=>`<option value="${c.i}"${c.i===cur?' selected':''}>${esc(c.label)}</option>`).join('')}</select>`; };
+  const txns=_csvBuildTxns();
+  const toImport=txns.filter(t=>!t._dup);
+  const dups=txns.length-toImport.length;
+  const preview=txns.slice(0,6).map(t=>{ const pos=t.amount>0; return `<div class="csv-prow${t._dup?' dup':''}"><span class="csv-pdate">${esc(t.date)}</span><span class="csv-pdesc">${esc(t.description)}</span><span class="csv-pamt" style="color:${pos?'var(--red)':'var(--pos)'}">${pos?'-':'+'}${fmtK(t.amount)}</span>${t._dup?'<span class="csv-dupbadge">dup</span>':''}</div>`; }).join('')||'<div class="ws-hint">No valid rows with the current mapping — check the Date and Amount columns.</div>';
+  const canImport=toImport.length>0;
+  el.innerHTML=`
+    <div class="ws-hint" style="margin:0 0 10px">${esc(_csv.name)} · ${_csv.rows.length-(_csv.hasHeader?1:0)} data row${(_csv.rows.length-(_csv.hasHeader?1:0))!==1?'s':''}</div>
+    <div class="csv-maps">
+      <label class="csv-m"><span>Date *</span>${sel('date')}</label>
+      <label class="csv-m"><span>Amount *</span>${sel('amount')}</label>
+      <label class="csv-m"><span>Description *</span>${sel('desc')}</label>
+      <label class="csv-m"><span>Category</span>${sel('cat')}</label>
+    </div>
+    <div class="csv-opts">
+      <label class="csv-chk"><input type="checkbox" ${_csv.hasHeader?'checked':''} onchange="csvSetHeader(this.checked)"> First row is a header</label>
+      <div class="csv-sign"><span>In this file, a</span>
+        <label><input type="radio" name="csvsign" ${_csv.sign==='negOut'?'checked':''} onchange="csvSetSign('negOut')"> negative</label>
+        <label><input type="radio" name="csvsign" ${_csv.sign==='posOut'?'checked':''} onchange="csvSetSign('posOut')"> positive</label>
+        <span>amount = money out</span>
+      </div>
+    </div>
+    <div class="csv-sec">Preview${txns.length>6?` · first 6 of ${txns.length}`:''}</div>
+    <div class="csv-preview">${preview}</div>
+    <div class="csv-summary"><b>${toImport.length}</b> to import${dups?` · <span style="color:var(--muted)">${dups} duplicate${dups!==1?'s':''} skipped</span>`:''}</div>
+    <div class="mf-actions"><button class="btn" onclick="closeCsvModal()">Cancel</button><button class="btn primary" onclick="csvDoImport()"${canImport?'':' disabled'}>Import${toImport.length?' '+toImport.length:''}</button></div>`;
+}
+function csvDoImport(){
+  if(!_csv) return;
+  const nm=_csv.name;
+  const txns=_csvBuildTxns().filter(t=>!t._dup);
+  if(!txns.length) return;
+  APP.importedTxns=APP.importedTxns||[]; APP.imports=APP.imports||[];
+  const importId='csv'+Date.now()+Math.floor(Math.random()*999);
+  const importLabel=String(nm||'CSV import').replace(/\.(csv|txt)$/i,'')+' · '+new Date().toLocaleDateString();
+  let added=0;
+  txns.forEach(t=>{ APP.importedTxns.push({ transaction_id:'imp_'+Date.now()+'_'+(added++), account_id:'imported', date:t.date, name:t.description||'Imported', merchant_name:t.description||'', amount:+t.amount, personal_finance_category:{primary:t.cat||''}, category:t.cat?[t.cat]:undefined, institution:'CSV import', _imported:true, _importId:importId, _importLabel:importLabel }); });
+  APP.imports.push({ id:importId, kind:'bank', label:importLabel, ts:Date.now(), txnImportId:importId, summary:`${added} transaction${added!==1?'s':''} · CSV` });
+  saveState(); _rebuildTxns(); if(allTxns.length>0) dataLoaded=true;
+  closeCsvModal();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+  if(typeof richieSay==='function') richieSay(`📥 Imported ${added} transaction${added!==1?'s':''} from ${nm}. Remove this batch anytime from Settings → connected sources.`);
+  if(typeof sbRichie!=='undefined'&&sbRichie) sbRichie.do('tada');
+}
+function closeCsvModal(){ const m=gg('csvModal'); if(m) m.style.display='none'; _csv=null; }
+
 /* ═══ INVESTMENTS / PORTFOLIO (Mogul) — positions from statements + research,
    plus investment accounts & assets linked in from Net Worth ═══ */
 function engHoldings(){ return (APP.holdings||[]).slice(); }
@@ -6983,6 +7101,15 @@ function renderSettings(){
       </div>
 
       <div class="set-section">📊 Data & tools</div>
+      <div class="set-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
+          <div>
+            <div class="set-card-label" style="margin:0">📥 Import transactions (CSV)</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Bring in transactions from a bank or card CSV — map the columns, skip duplicates, and auto-categorize. Great for accounts Plaid can't reach.</div>
+          </div>
+          <button class="btn primary" onclick="gg('csvFileInput').click()">Choose CSV</button>
+        </div>
+      </div>
       <div class="set-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
           <div>

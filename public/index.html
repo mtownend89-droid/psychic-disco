@@ -31,6 +31,13 @@
     <div class="doc-body" id="docBody"></div>
   </div>
 </div>
+<input type="file" id="csvFileInput" accept=".csv,.txt" style="display:none" onchange="csvFileChosen(this)">
+<div id="csvModal" class="doc-modal" style="display:none" onclick="if(event.target===this)closeCsvModal()">
+  <div class="doc-card">
+    <div class="doc-head"><span>📥 Import transactions (CSV)</span><button class="doc-x" onclick="closeCsvModal()" aria-label="Close">✕</button></div>
+    <div class="doc-body" id="csvBody"></div>
+  </div>
+</div>
 <div id="researchModal" class="doc-modal" style="display:none">
   <div class="doc-card">
     <div class="doc-head"><span id="rsTitle">Research</span><button class="doc-x" onclick="closeResearch()">✕</button></div>
