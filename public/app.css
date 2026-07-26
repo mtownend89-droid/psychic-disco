@@ -32,6 +32,13 @@ body{font-family:var(--font);background-color:var(--bg);background-image:var(--b
     transition-duration:0.001ms!important; scroll-behavior:auto!important;
   }
 }
+/* Manual "reduce motion" toggle (Settings → Accessibility) — same calming, user-controlled */
+body.reduce-motion *,body.reduce-motion *::before,body.reduce-motion *::after{
+  animation-duration:0.001ms!important; animation-iteration-count:1!important;
+  transition-duration:0.001ms!important; scroll-behavior:auto!important;
+}
+body.reduce-motion #themeFx{display:none!important;}
+body.reduce-motion .ra-focus{animation:none!important;}
 
 /* ══════════════════════════════════════════════════════════════════════
    RICHIE ANIMATIONS
@@ -1797,8 +1804,10 @@ select.mf-in{appearance:none;cursor:pointer;}
 /* Settings fills the page like the widget canvas — headers span full width, cards flow into
    as many ~460px columns as fit (masonry via multicol; cards never split). */
 .settings-page{max-width:none;columns:460px;column-gap:16px;}
-.settings-page>h2,.settings-page>p{column-span:all;-webkit-column-span:all;}
+.settings-page>h2,.settings-page>p,.set-section{column-span:all;-webkit-column-span:all;}
 .settings-page .set-card{break-inside:avoid;-webkit-column-break-inside:avoid;}
+.set-section{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:16px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.set-section:first-of-type{margin-top:4px;}
 @media(max-width:560px){.settings-page{columns:1;}}
 .set-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:14px;}
 .set-card-label{font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;}

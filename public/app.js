@@ -374,6 +374,10 @@ function _a11yObserve(){
     mo.observe(document.body||document.documentElement, {childList:true, subtree:true});
   }catch(e){}
 }
+// Manual "reduce motion" preference (in addition to the OS-level prefers-reduced-motion).
+let _reduceMotion=false; try{ _reduceMotion=LS.getItem('mdf_reduce_motion')==='1'; }catch(e){}
+function _applyReduceMotion(){ try{ document.body.classList.toggle('reduce-motion', _reduceMotion); }catch(e){} }
+function setReduceMotion(on){ _reduceMotion=!!on; try{ LS.setItem('mdf_reduce_motion', on?'1':'0'); }catch(e){} _applyReduceMotion(); const t=gg('reduceMotionToggle'); if(t) t.classList.toggle('on', _reduceMotion); }
 function engAccounts(){ return _memoFrame('accounts', _engAccountsRaw); }
 function _engAccountsRaw(){
   const manual=(APP.manualAccounts||[]).map(a=>({...a, manual:true, excluded:_acctExcluded(a.name)}));
@@ -3138,6 +3142,7 @@ function setThemeAnim(on){ _setAppearance({fx:!!on}); applyThemeFx(_appearance()
 function renderShell(){
   applyAccent();
   try{ _a11yObserve(); }catch(e){}   // start the accessibility name sweep once the shell exists
+  try{ _applyReduceMotion(); }catch(e){}
   gg('sbHousehold').textContent=APP.household;
   const lv=LEVELS.find(l=>l.n===APP.level)||LEVELS[0];
   gg('sbLevelLabel').textContent=lv.icon+' Level '+lv.n+' · '+lv.name;
@@ -6420,42 +6425,14 @@ function renderSettings(){
   gg('page-content').innerHTML=`
     <div class="settings-page">
       <h2 style="font-size:19px;margin-bottom:4px">Settings</h2>
-      <p style="color:var(--muted);font-size:13px;margin-bottom:22px">Tune how Richie guides you. More options arrive as we build.</p>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:14px">Tune how Richie guides you, how the app looks, and how your data is handled.</p>
 
+      <div class="set-section">🤝 Your Guide</div>
       <div class="set-card">
-        <div class="set-card-label">🔗 Connected data</div>
-        <div style="font-size:12px;color:var(--muted);margin:2px 0 12px;line-height:1.5">Your linked banks and anything you've uploaded. Remove a bank or an import to pull its data out of every widget.</div>
-        <div class="cd-tabs">
-          <button class="cd-tab on" id="cdTabBanks" onclick="setCdTab('banks')">🏦 Linked banks</button>
-          <button class="cd-tab" id="cdTabUploads" onclick="setCdTab('uploads')">📄 Uploaded documents</button>
-        </div>
-        <div id="cdList" class="cd-list"><div class="ws-hint">Loading…</div></div>
-      </div>
-
-      <div class="set-card">
-        <div class="set-card-label">🎨 Appearance</div>
-        <div style="font-size:12px;color:var(--muted);margin:2px 0 12px;line-height:1.5">Pick a theme, tweak any color, and choose a font. Starts from your Richie persona — change it whenever you like. Saved per profile.</div>
-        <div class="ap-sub">Theme</div>
-        <div class="ap-themes" id="apThemes"></div>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:13px">
-          <div>
-            <div style="font-size:13px;font-weight:700;color:var(--text)">✨ Theme animations</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">Playful ambient motion for fun themes — spaceships for Galaxy, sparkles for Princess, falling leaves for Forest, slime drip for Slime, and more. Auto-off if your device prefers reduced motion.</div>
-          </div>
-          <button class="toggle${_appearance().fx!==false?' on':''}" id="animToggle" onclick="setThemeAnim(_appearance().fx===false)" aria-label="Toggle theme animations"><span class="toggle-knob"></span></button>
-        </div>
-        <div class="ap-sub" style="margin-top:15px">Font</div>
-        <div class="ap-fonts" id="apFonts"></div>
-        <div class="ap-sub" style="margin-top:15px">Custom colors</div>
-        <div class="ap-colors" id="apColors"></div>
-        <button class="btn" style="margin-top:13px" onclick="resetAppearance()">↺ Reset to Richie default</button>
-      </div>
-
-      <div class="set-card">
-        <div class="set-card-label">Your Guide (Richie's personality)</div>
+        <div class="set-card-label">Richie's personality</div>
+        <div style="font-size:12px;color:var(--muted);margin:2px 0 10px;line-height:1.5">Pick the coaching style that fits you — it shapes how Richie talks and what he nudges.</div>
         <div class="persona-row" id="setPersonaRow"></div>
       </div>
-
       <div class="set-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
           <div>
@@ -6465,7 +6442,6 @@ function renderSettings(){
           <button class="toggle${_raProactiveOn?' on':''}" id="proactiveToggle" onclick="setRichieProactive(!_raProactiveOn)" aria-label="Toggle Richie auto-responses"><span class="toggle-knob"></span></button>
         </div>
       </div>
-
       <div class="set-card">
         <div class="set-card-label">Knowledge Level</div>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
@@ -6477,24 +6453,49 @@ function renderSettings(){
         </div>
       </div>
 
+      <div class="set-section">🎨 Appearance</div>
+      <div class="set-card">
+        <div style="font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.5">Pick a theme, tweak any color, and choose a font. Starts from your Richie persona — change it whenever you like. Saved per profile.</div>
+        <div class="ap-sub">Theme</div>
+        <div class="ap-themes" id="apThemes"></div>
+        <div class="ap-sub" style="margin-top:15px">Font</div>
+        <div class="ap-fonts" id="apFonts"></div>
+        <div class="ap-sub" style="margin-top:15px">Custom colors</div>
+        <div class="ap-colors" id="apColors"></div>
+        <button class="btn" style="margin-top:13px" onclick="resetAppearance()">↺ Reset to Richie default</button>
+      </div>
+
+      <div class="set-section">♿ Accessibility</div>
       <div class="set-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
           <div>
-            <div class="set-card-label" style="margin:0">📊 Export to Excel</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Download a full workbook — bills & debt with payoff times, cash-flow projection, budget vs actual, savings buckets, credit & utilization, income, and goals.</div>
+            <div class="set-card-label" style="margin:0">🐢 Reduce motion</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Calm animations and transitions across the whole app — Richie's movements, celebrations, and theme effects. (Also honored automatically if your device already asks for reduced motion.)</div>
           </div>
-          <button class="btn primary" onclick="exportToExcel()">Download .xlsx</button>
+          <button class="toggle${_reduceMotion?' on':''}" id="reduceMotionToggle" onclick="setReduceMotion(!_reduceMotion)" aria-label="Toggle reduce motion"><span class="toggle-knob"></span></button>
         </div>
       </div>
       <div class="set-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
           <div>
-            <div class="set-card-label" style="margin:0">🔓 Pro Mode — unlock everything</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Ignore level gating and show every feature & advanced widget right now.</div>
+            <div class="set-card-label" style="margin:0">✨ Theme animations</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Playful ambient motion for fun themes — spaceships for Galaxy, sparkles for Princess, falling leaves for Forest, slime drip for Slime. Off automatically under reduce motion.</div>
           </div>
-          <button class="toggle${APP.proMode?' on':''}" id="proToggle" onclick="toggleProMode()"><span class="toggle-knob"></span></button>
+          <button class="toggle${_appearance().fx!==false?' on':''}" id="animToggle" onclick="setThemeAnim(_appearance().fx===false)" aria-label="Toggle theme animations"><span class="toggle-knob"></span></button>
         </div>
       </div>
+
+      <div class="set-section">🔗 Connected data</div>
+      <div class="set-card">
+        <div style="font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.5">Your linked banks and anything you've uploaded. Remove a bank or an import to pull its data out of every widget.</div>
+        <div class="cd-tabs">
+          <button class="cd-tab on" id="cdTabBanks" onclick="setCdTab('banks')">🏦 Linked banks</button>
+          <button class="cd-tab" id="cdTabUploads" onclick="setCdTab('uploads')">📄 Uploaded documents</button>
+        </div>
+        <div id="cdList" class="cd-list"><div class="ws-hint">Loading…</div></div>
+      </div>
+
+      <div class="set-section">🏷️ Categories</div>
       <div class="set-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
           <div>
@@ -6518,6 +6519,28 @@ function renderSettings(){
           <button class="btn" onclick="openAcctCatEditor()">Manage accounts</button>
         </div>
       </div>
+
+      <div class="set-section">📊 Data & tools</div>
+      <div class="set-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
+          <div>
+            <div class="set-card-label" style="margin:0">📊 Export to Excel</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Download a full workbook — bills & debt with payoff times, cash-flow projection, budget vs actual, savings buckets, credit & utilization, income, and goals.</div>
+          </div>
+          <button class="btn primary" onclick="exportToExcel()">Download .xlsx</button>
+        </div>
+      </div>
+      <div class="set-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
+          <div>
+            <div class="set-card-label" style="margin:0">🔓 Pro Mode — unlock everything</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Ignore level gating and show every feature & advanced widget right now.</div>
+          </div>
+          <button class="toggle${APP.proMode?' on':''}" id="proToggle" onclick="toggleProMode()" aria-label="Toggle Pro Mode"><span class="toggle-knob"></span></button>
+        </div>
+      </div>
+
+      <div class="set-section">🔒 Security</div>
       <div class="set-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
           <div>
@@ -6527,17 +6550,6 @@ function renderSettings(){
           <button class="btn" onclick="openChangePassword()">Change password</button>
         </div>
       </div>
-
-      <div class="set-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
-          <div>
-            <div class="set-card-label" style="margin:0">🔄 Reset my world</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Rebuild your pages and widgets from a fresh starter layout. Your login and bank stay connected.</div>
-          </div>
-          <button class="btn" onclick="resetWorld()">Reset pages</button>
-        </div>
-      </div>
-
       <div class="set-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
           <div>
@@ -6548,6 +6560,16 @@ function renderSettings(){
         </div>
       </div>
 
+      <div class="set-section" style="color:var(--red)">⚠️ Danger zone</div>
+      <div class="set-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
+          <div>
+            <div class="set-card-label" style="margin:0">🔄 Reset my world</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Rebuild your pages and widgets from a fresh starter layout. Your login and bank stay connected.</div>
+          </div>
+          <button class="btn" onclick="resetWorld()">Reset pages</button>
+        </div>
+      </div>
       <div class="set-card set-danger">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
           <div>
