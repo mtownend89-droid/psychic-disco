@@ -575,7 +575,7 @@ function applyBillOverrides(list){
 function toggleBillPaid(key){
   const ov=_billOverrides(); ov[key]=ov[key]||{}; ov[key].paid=!ov[key].paid; saveState();
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
-  if(ov[key].paid){ const nm=(key.split('|')[0]||'that').trim(); try{ richieCelebrate(`Boom — ${nm} marked paid! ✅ One less thing on the list.`); }catch(e){} }
+  if(ov[key].paid){ try{ gamiMarkEngaged('billpaid'); }catch(e){} const nm=(key.split('|')[0]||'that').trim(); try{ richieCelebrate(`Boom — ${nm} marked paid! ✅ One less thing on the list.`); }catch(e){} }
 }
 function setBillPay(key,val){
   const ov=_billOverrides(); ov[key]=ov[key]||{}; const n=parseFloat(val); if(!isNaN(n)&&n>=0) ov[key].pay=n; saveState();
@@ -4605,6 +4605,7 @@ function renderBudgetTemplates(){
 function applyBudgetTemplate(){
   const r=engBudgetTemplate(_budTpl.tpl);
   if(!r.envelopes.length){ alert('Add your income first so Richie can size the budget.'); return; }
+  try{ gamiMarkEngaged('template'); }catch(e){}
   APP.zeroBuckets=r.envelopes.map(e=>({catId:e.catId, name:e.name, amt:e.amt}));
   saveState();
   closeBudgetTemplates();
@@ -5250,6 +5251,7 @@ function scoreEditorRender(){
 function saveScoreEntry(){
   const v=Math.round(_num('csVal')); const d=(gg('csDate').value||'').trim();
   if(!(v>=300&&v<=850)){ gg('csVal').focus(); return; }
+  try{ gamiMarkEngaged('score'); }catch(e){}
   if(!d) return;
   const list=_ccScores();
   const i=list.findIndex(x=>x.d===d);
@@ -5414,6 +5416,7 @@ function bkAcctChange(){
 }
 function saveBucket(){
   const name=(gg('bkName').value||'').trim(); if(!name){ gg('bkName').focus(); return; }
+  try{ gamiMarkEngaged('bucket'); }catch(e){}
   const acctId=gg('bkAcct')?gg('bkAcct').value:'';
   const item={name, icon:window._bkIcon||'🪣', acctId:acctId||'', balance: acctId?0:_num('bkBal'), target:_num('bkTgt'), monthly:_num('bkMo'), note:acctId?'linked':''};
   const list=_savingsBuckets();
@@ -6282,7 +6285,7 @@ function txnFeedRender(w){
 function txnFeedSearch(uid,val){ (_txnFeed[uid]=_txnFeed[uid]||{q:'',filter:'all'}).q=val; const w=_findWidget(uid); if(w) txnFeedRender(w); }
 function txnFeedFilter(uid,f){ (_txnFeed[uid]=_txnFeed[uid]||{q:'',filter:'all'}).filter=f; const w=_findWidget(uid); if(w) txnFeedMount(w); }
 function txnFeedTf(uid,key){ (_txnFeed[uid]=_txnFeed[uid]||{q:'',filter:'all'}).tf=key; const w=_findWidget(uid); if(w) txnFeedMount(w); }
-function txnFeedSetCat(uid,idx,cat){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; if(cat)_catOverrides[k]=cat; else delete _catOverrides[k]; try{LS.setItem('mdf_cat_overrides',JSON.stringify(_catOverrides));}catch(e){} const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+function txnFeedSetCat(uid,idx,cat){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; if(cat)_catOverrides[k]=cat; else delete _catOverrides[k]; try{LS.setItem('mdf_cat_overrides',JSON.stringify(_catOverrides));}catch(e){} try{ gamiMarkEngaged('categorize'); }catch(e){} const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function txnFeedSetNote(uid,idx,note){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; if(note&&note.trim())_txnNotes[k]=note.trim(); else delete _txnNotes[k]; try{LS.setItem('mdf_txn_notes',JSON.stringify(_txnNotes));}catch(e){} }
 function txnFeedSetTag(uid,idx,tag){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; setTxnTag(k,tag); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function txnFeedRule(uid,idx){ const t=(_txnFeedRows[uid]||[])[idx]; if(!t)return; const mk=_merchKey(t); if(!mk)return; if(_catRules[mk]){ setCatRule(mk,''); } else { setCatRule(mk, getTxnCategory(t)); } const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
@@ -6555,12 +6558,39 @@ const ACHIEVEMENTS=[
   {id:'goals5',   tier:'grand', icon:'👑', name:'Goal Machine',   desc:'Complete 5 goals.',                      xp:160, cond:m=>m.completedGoals>=5, prog:m=>({cur:m.completedGoals,target:5,unit:''})},
 ];
 const ACH_BY_ID=Object.fromEntries(ACHIEVEMENTS.map(a=>[a.id,a]));
+// Records daily activity only. The STREAK no longer advances just for opening the app —
+// it advances on a real action (see gamiMarkEngaged), which is what makes it meaningful.
 function gamiCheckin(){
-  const s=gamiLoad(); const today=new Date(); today.setHours(0,0,0,0); const t=today.getTime();
-  if(s.lastSeen===t) return;
-  if(s.lastSeen!=null){ const diff=Math.round((t-s.lastSeen)/86400000); if(diff===1) s.streak=(s.streak||0)+1; else if(diff>1) s.streak=1; else s.streak=s.streak||1; }
-  else s.streak=1;
-  s.lastSeen=t; gamiSave();
+  const s=gamiLoad(); const today=new Date(); today.setHours(0,0,0,0);
+  s.lastSeen=today.getTime(); gamiSave();
+}
+function _streakDay(ts){ ts=ts||Date.now(); return Math.floor((ts - new Date(ts).getTimezoneOffset()*60000)/86400000); }   // local day number
+const STREAK_MILESTONES=[3,7,14,30,60,100,180,365];
+function streakNextMilestone(n){ for(const mi of STREAK_MILESTONES){ if(mi>n) return mi; } return null; }
+function _refreshJourney(){ try{ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg && (pg.widgets||[]).some(w=>w.type==='journey')) renderCanvas(pg); }catch(e){} }
+// Advance the daily streak when the user takes a real action. One missed day is forgiven by a
+// weekly-regenerating grace day; a bigger gap resets. No-op if today is already counted.
+function gamiMarkEngaged(reason){
+  const s=gamiLoad(); const today=_streakDay();
+  if(s.lastAction==null && s.lastSeen!=null){ s.lastAction=_streakDay(s.lastSeen); if(!s.streak) s.streak=1; }   // carry existing streaks over on first run
+  if(s.lastAction===today) return s.streak||0;
+  if(s.freeze==null) s.freeze=1;
+  const prev=s.lastAction;
+  if(prev==null) s.streak=1;
+  else { const gap=today-prev;
+    if(gap<=1) s.streak=(s.streak||0)+1;
+    else if(gap===2 && s.freeze>0){ s.freeze=0; s.freezeUsedDay=today; s.streak=(s.streak||0)+1; }   // one missed day forgiven
+    else s.streak=1;
+  }
+  s.lastAction=today; s.bestStreak=Math.max(s.bestStreak||0, s.streak||0);
+  if(s.freeze<1 && s.freezeUsedDay!=null && (today-s.freezeUsedDay)>=7) s.freeze=1;   // grace regenerates weekly
+  gamiSave();
+  if(STREAK_MILESTONES.includes(s.streak)){
+    try{ gamiCelebrate({icon:'🔥', title:'Streak milestone!', name:`${s.streak}-day streak`, desc:`You've shown up ${s.streak} days running — that consistency is exactly how the money habit sticks.`, share:`I'm on a ${s.streak}-day money streak with Richie! 🔥`}); }catch(e){}
+  }
+  try{ gamiEvaluate(); }catch(e){}   // may unlock streak badges
+  try{ _refreshJourney(); }catch(e){}
+  return s.streak;
 }
 function gamiEvaluate(opts){
   opts=opts||{}; try{ nwHistRecord(); }catch(e){}
@@ -6616,10 +6646,18 @@ function journeyBody(w){
   return `<div class="jrn">
     <div class="jrn-head">
       <div class="jrn-lvl"><span class="jrn-lvl-ic">${lv.icon}</span><div><div class="jrn-lvl-nm">Level ${lv.n} · ${esc(lv.name)}</div><div class="jrn-lvl-sub">${APP.proMode?'Pro Mode — maxed out':(nextLv?(lp.toNext.toLocaleString()+' XP to '+esc(nextLv.name)):'Top level reached')}</div></div></div>
-      <div class="jrn-streak" title="Daily check-in streak">🔥 <b>${s.streak||0}</b><span>day${(s.streak||0)===1?'':'s'}</span></div>
+      ${(function(){
+        const st=s.streak||0, today=_streakDay(), doneToday=(s.lastAction!=null && s.lastAction===today);
+        const nm=streakNextMilestone(st), freezeOn=(s.freeze==null?1:s.freeze)>0;
+        const sub=doneToday ? (nm?`${nm-st} to your ${nm}-day badge`:'every day counts') : 'do one thing today to keep it';
+        return `<div class="jrn-streak ${doneToday?'lit':'dim'}" title="${doneToday?'Checked in today ✓':'Take one action today to keep your streak alive'}">
+          <span class="jrn-flame">${st>0?'🔥':'🕯️'}</span>
+          <div class="jrn-streak-txt"><div class="jrn-streak-n"><b>${st}</b> day${st===1?'':'s'}${freezeOn?' <span class="jrn-freeze" title="Grace day — one miss is forgiven">❄️</span>':''}</div><div class="jrn-streak-sub">${sub}</div></div>
+        </div>`;
+      })()}
     </div>
     <div class="jrn-xp"><i style="width:${APP.proMode?100:lp.pct}%"></i></div>
-    <div class="jrn-stats"><span><b>${APP.xp}</b> XP</span><span><b>${unlockedCount}/${totalCount}</b> badges</span><span><b>${m.completedGoals}</b> goals done</span></div>
+    <div class="jrn-stats"><span><b>${APP.xp}</b> XP</span><span><b>${unlockedCount}/${totalCount}</b> badges</span><span><b>${m.completedGoals}</b> goals done</span><span><b>${s.bestStreak||s.streak||0}</b> best 🔥</span></div>
     ${(function(){ try{ const h=nwHistMonthly(6); if(h&&h.length>=2){ const vals=h.map(x=>x.v); const diff=vals[vals.length-1]-vals[0]; const up=diff>=0; return `<div class="jrn-sec">Net worth trend <span class="jrn-trend-lbl ${up?'up':'down'}">${up?'▲':'▼'} ${fmtK(Math.abs(diff))} · ${h.length}mo</span></div><div class="jrn-trend">${_sparkline(vals, up?'#2ecc8a':'#e85d75', 260, 42)}</div>`; } }catch(e){} return ''; })()}
     <div class="jrn-sec">Next milestones</div>
     ${milestones}
@@ -8885,8 +8923,8 @@ function _briefTxnStepBody(){
   return `<div class="brief-txns-hd"><span>${list.length} to review — fix any wrong category, then Confirm</span><button class="brief-confirm-all" onclick="event.stopPropagation();briefConfirmAll()">Confirm all ✓</button></div><div class="brief-txns">${rows}</div>`;
 }
 function briefTxnCat(i,cat){ const t=_briefTxns[i]; if(!t||!cat) return; const k=_txnKey(t); _catOverrides[k]=cat; try{ LS.setItem('mdf_cat_overrides',JSON.stringify(_catOverrides)); }catch(e){} }   // change now; stays until Confirmed
-function briefConfirm(i){ const t=_briefTxns[i]; if(!t) return; _confSet().add(_txnKey(t)); _confSave(); if(_briefChar)_briefChar.do('nod'); _briefRefreshBody(); }
-function briefConfirmAll(){ (_briefTxns||[]).forEach(t=>_confSet().add(_txnKey(t))); _confSave(); if(_briefChar)_briefChar.do('tada'); _briefRefreshBody(); }
+function briefConfirm(i){ const t=_briefTxns[i]; if(!t) return; _confSet().add(_txnKey(t)); _confSave(); try{ gamiMarkEngaged('confirm'); }catch(e){} if(_briefChar)_briefChar.do('nod'); _briefRefreshBody(); }
+function briefConfirmAll(){ (_briefTxns||[]).forEach(t=>_confSet().add(_txnKey(t))); _confSave(); try{ gamiMarkEngaged('confirm'); }catch(e){} if(_briefChar)_briefChar.do('tada'); _briefRefreshBody(); }
 
 // ── High-interest debt step (pay a little extra toward the top-APR card, inline) ──
 function _topHiCard(){ try{ const g=engDebtGroups(); const all=[...g.revolving,...g.installment].filter(b=>Math.abs(b.bal||0)>0 && (b.cat==='CC'||(b.apr||0)>=8)); all.sort((a,b)=>(b.apr||0)-(a.apr||0)); return all[0]||null; }catch(e){ return null; } }
