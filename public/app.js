@@ -7685,14 +7685,43 @@ function richieOffTrackSignal(pg){
   try{ const inc=engMonthlyIncome(), sp=engSpend30(); if(inc>0 && sp>inc*1.05){ return {msg:`Spending's running ahead of income this month. Want a quick look at where it's going?`, widget:'top_categories', cta:'Show me'}; } }catch(e){}
   return null;
 }
+// A once-a-week recap: this week's spend vs last, the health grade, safe-to-spend, and the
+// one move that helps most (which is also the health-score coaching line). Returns a signal or null.
+function richieWeeklyRecap(){
+  try{
+    if(!dataLoaded) return null;
+    let last=0; try{ last=parseInt(LS.getItem('richie_recap_ts')||'0',10)||0; }catch(e){}
+    if(Date.now()-last < 7*86400000) return null;
+    const now=Date.now();
+    const wk=(a,b)=>(allTxns||[]).filter(t=>{ const d=new Date(t.date).getTime(); return d>=now-b*86400000 && d<now-a*86400000 && t.amount>0 && !_txnExcludedFromSpend(t); }).reduce((s,t)=>s+t.amount,0);
+    const thisWk=Math.round(wk(0,7)), lastWk=Math.round(wk(7,14));
+    let h=null; try{ h=engHealthScore(); }catch(e){}
+    let pool=null; try{ pool=Math.round(engSafeToSpend().pool); }catch(e){}
+    if(thisWk<=0 && !(h&&h.hasData)) return null;   // nothing meaningful to recap yet
+    const dlt=lastWk>0?Math.round((thisWk-lastWk)/lastWk*100):null;
+    const trend=dlt==null?'':(thisWk>=lastWk?` (▲ ${Math.abs(dlt)}% vs last week)`:` (▼ ${Math.abs(dlt)}% vs last week)`);
+    const bits=[`Quick week recap — you spent ${fmtK(thisWk)}${trend}.`];
+    if(h&&h.hasData) bits.push(`Health score's a ${h.grade} (${h.overall}/100).`);
+    if(pool!=null) bits.push(`Safe to spend right now: ${fmtK(pool)}.`);
+    if(h&&h.weakest){ bits.push(h.weakest.tip); return { msg:bits.join(' '), widget:'health_score', cta:'Show me' }; }
+    bits.push(`Nice and steady — keep it rolling.`);
+    return { msg:bits.join(' '), widget:'spending_trends', cta:'Show me' };
+  }catch(e){ return null; }
+}
 function richieMaybeProactive(pg){
   if(!_raProactiveOn || _raBusy || _richieBlocked() || !pg || pg.id==='__settings__') return;
   const now=Date.now();
   if(now<_raSnoozeUntil || now-_raLastPop<1500) return;     // debounce duplicate renders only
   _raLastPop=now;
-  const off=(now-_raOffTrackAt>480000) ? richieOffTrackSignal(pg) : null;   // surface off-track at most ~every 8 min
+  const recap=richieWeeklyRecap();                          // weekly recap wins when it's due
+  const off=(!recap && now-_raOffTrackAt>480000) ? richieOffTrackSignal(pg) : null;   // else off-track at most ~every 8 min
   setTimeout(()=>{ if(_raBusy||document.hidden||APP.activePage!==pg.id) return;
-    if(off){ _raOffTrackAt=Date.now(); richieShow(off.msg, {emo:'curious', actions:[
+    if(recap){ try{ LS.setItem('richie_recap_ts', String(Date.now())); }catch(e){}
+      richieShow(recap.msg, {emo:'happy', actions:[
+        {label:recap.cta||'Show me', cls:'ra-go', on:()=>richieSpotlightAt(Object.assign({widgetType:recap.widget}, RICHIE_SPOTS[recap.widget]||{}))},
+        {label:'Thanks', on:richieDismiss}
+      ]}); }
+    else if(off){ _raOffTrackAt=Date.now(); richieShow(off.msg, {emo:'curious', actions:[
         {label:off.cta||'Show me', cls:'ra-go', on:()=>richieSpotlightAt(Object.assign({widgetType:off.widget}, RICHIE_SPOTS[off.widget]||{}))},   // decide first, THEN Richie flies to the spot
         {label:'Not now', on:richieDismiss}
       ]}); }
