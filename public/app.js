@@ -1987,6 +1987,18 @@ function checkGoalCompletion(){
       awardXp(50);
       if(sbRichie)sbRichie.do('tada');
       try{ gamiGoalCompleted(g); }catch(e){}
+    } else {
+      // Milestone cheers on the way up — fire once for the highest newly-crossed of 25/50/75%.
+      g._ms=g._ms||{};
+      const crossed=[25,50,75].filter(mk=>p.pct>=mk);
+      const top=crossed[crossed.length-1];
+      if(top && !g._ms[top]){
+        crossed.forEach(mk=>{ g._ms[mk]=true; });   // mark all up to the top as seen (no backfill pops)
+        any=true;
+        try{ awardXp(10); }catch(e){}
+        if(sbRichie)sbRichie.do('nod');
+        try{ richieCelebrate(`${top}% of the way to your "${g.name||'goal'}" goal — ${top>=75?'so close, keep pushing! 🔥':top>=50?'halfway there! 🎯':'strong start! 💪'}`); }catch(e){}
+      }
     }
   });
   if(any) saveState();
