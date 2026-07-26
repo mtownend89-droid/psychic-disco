@@ -1568,15 +1568,22 @@ function recurringToBill(i){
 }
 function safeToSpendBody(w){
   const s=engSafeToSpend();
-  const perDay=Math.max(0,s.perDay);
-  return `<div class="wph"><div class="wph-sub">Safe to spend today</div>
-    <div class="wph-stat" style="color:${perDay>0?'var(--pos)':'var(--red)'}">${fmtK(perDay)}</div>
-    <div class="wph-sub">${fmtK(s.pool)} free ${s.nextIncomeDay!=null?`until pay in ${s.horizon}d`:`over ${s.horizon} days`}</div>
+  const perDay=Math.max(0,Math.round(s.perDay));
+  const col=s.pool>0?'var(--pos)':'var(--red)';
+  const sub = s.nextIncomeDay!=null
+    ? `safe to spend · ≈ ${fmtK(perDay)}/day until payday (${s.horizon}d)`
+    : `safe to spend over the next ${s.horizon} days`;
+  return `<div class="wph">
+    <div class="wph-stat" style="color:${col}">${fmtK(s.pool)}</div>
+    <div class="wph-sub">${sub}</div>
     <div class="sts-break">
       <div><span>Cash on hand</span><b>${fmtK(s.cash)}</b></div>
-      <div><span>− Bills before pay</span><b style="color:var(--red)">${fmtK(s.billsDue)}</b></div>
-      ${s.goalPortion>0.5?`<div><span>− Goal savings</span><b style="color:var(--amber)">${fmtK(s.goalPortion)}</b></div>`:''}
-    </div></div>`;
+      <div><span>− Bills before payday</span><b style="color:var(--red)">${fmtK(s.billsDue)}</b></div>
+      ${s.goalPortion>0.5?`<div><span>− Goal set-aside</span><b style="color:var(--amber)">${fmtK(s.goalPortion)}</b></div>`:''}
+      <div><span>− Safety buffer</span><b style="color:var(--muted)">${fmtK(s.buffer)}</b></div>
+    </div>
+    ${s.pool<=0?`<div class="ws-hint" style="margin-top:8px;color:var(--amber)">Tight until payday — bills &amp; set-asides cover your cash. Ease a goal contribution or move a bill.</div>`:''}
+  </div>`;
 }
 function engBillsDebt(){ return engBills().reduce((s,b)=>s+Math.abs(b.bal||0),0); }
 
@@ -3668,7 +3675,8 @@ function maybeCoachPage(pg){
 const WIDGET_CATALOG=[
   {id:'net_worth_summary',name:'Net Worth',icon:'📈',cat:'Overview',span:1,minLevel:1,desc:'Total assets minus liabilities.'},
   {id:'journey',name:'Your Journey',icon:'🏆',cat:'Overview',span:2,minLevel:1,desc:'Your level, streak, badges, and milestone progress — real-money goals, gamified.'},
-  {id:'cash_summary',name:'Cash on Hand',icon:'💵',cat:'Overview',span:1,minLevel:1,desc:'Liquid balances + how much is safe to spend today after upcoming bills & goals.'},
+  {id:'cash_summary',name:'Cash on Hand',icon:'💵',cat:'Overview',span:1,minLevel:1,desc:'Liquid balances across your cash & savings accounts.'},
+  {id:'safe_spend',name:'Safe to Spend',icon:'👛',cat:'Overview',span:1,minLevel:1,desc:'The big one — how much you can safely spend today after upcoming bills, goal set-asides & a buffer.'},
   {id:'spending_month',name:"Current Spending",icon:'🛒',cat:'Overview',span:1,minLevel:1,desc:'Discretionary spending vs budget — your quick "how are we doing" marker (bills & savings excluded).'},
   {id:'income_month',name:"This Month's Income",icon:'💰',cat:'Overview',span:1,minLevel:1,desc:'Money in this month.'},
   {id:'budget_doughnut',name:'Budget by Category',icon:'🎯',cat:'Budget',span:2,minLevel:1,desc:'Two donuts side by side — spending by group and by category (stacked on mobile).'},
@@ -4981,16 +4989,9 @@ function cashSummaryBody(w){
   const gear=`<button class="cash-pick" onclick="event.stopPropagation();openAcctCatPicker('${w.uid}')" title="Choose account types">⚙︎</button>`;
   if(!accts.length) return `<div class="wph"><div class="wph-sub">No ${esc(label)} accounts.</div><div style="text-align:center;margin-top:10px"><button class="manual-add-btn" style="width:auto;display:inline-block" onclick="event.stopPropagation();openAcctCatPicker('${w.uid}')">⚙︎ Choose account types</button></div></div>`;
   const rows=top.map(a=>`<div class="cash-row"><span class="cash-nm">${esc(a.name||'Account')}</span><span class="cash-track"><i style="width:${Math.max(5,Math.round(Math.abs(a.bal||0)/mx*100))}%"></i></span><b>${fmtK(a.bal)}</b></div>`).join('');
-  // Safe-to-spend section (folded in from the old Safe to Spend widget)
-  const s=engSafeToSpend();
-  const perDay=Math.max(0,s.perDay);
-  const safe=`<div class="cash-safe">
-    <div class="cash-safe-top"><span>🟢 Safe to spend today</span><b style="color:${perDay>0?'var(--pos)':'var(--red)'}">${fmtK(perDay)}<span style="font-size:10px;font-weight:600;color:var(--muted)">/day</span></b></div>
-    <div class="ws-hint">${fmtK(s.pool)} free ${s.nextIncomeDay!=null?`until pay in ${s.horizon}d`:`over ${s.horizon} days`} · after ${fmtK(s.billsDue)} bills${s.goalPortion>0.5?` + ${fmtK(s.goalPortion)} goals`:''}</div>
-  </div>`;
   const pend=accts.reduce((o,a)=>{const p=engAcctPending(a);o.count+=p.count;o.sum+=p.sum;return o;},{count:0,sum:0});
   const pendLine=pend.count?`<div class="wph-sub" style="color:var(--amber)">⏳ ${pend.count} pending → ${fmtK(total-pend.sum)} expected</div>`:'';
-  return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(total)}">${fmtK(total)}</div><div class="wph-sub">cash on hand · ${accts.length} ${esc(label)} account${accts.length!==1?'s':''}${dataLoaded?'':' · sample'} ${gear}</div>${pendLine}${safe}<div class="cash-list">${rows}</div></div>`;
+  return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(total)}">${fmtK(total)}</div><div class="wph-sub">cash on hand · ${accts.length} ${esc(label)} account${accts.length!==1?'s':''}${dataLoaded?'':' · sample'} ${gear}</div>${pendLine}<div class="cash-list">${rows}</div></div>`;
 }
 /* Per-widget picker: which ACCOUNT CATEGORIES this widget counts */
 let _acctPick={uid:null, sel:[]};
@@ -6775,7 +6776,7 @@ function renderWidgetBody(w){
     case 'goals': return goalsWidgetBody(w);
     case 'accounts_list': return acctWidgetBody(w);
     case 'all_transactions': return txnFeedBody(w);
-    case 'safe_to_spend': return safeToSpendBody(w);
+    case 'safe_to_spend': case 'safe_spend': return safeToSpendBody(w);
     case 'recurring': return recurringBody(w);
     case 'investments': return portfolioBody(w);
     case 'sankey': return `<div class="wph"><div class="wph-sub" style="margin-bottom:6px">Income → group → category${dataLoaded?' · last '+tfLabel(w.tf||'30d'):' · sample'}</div><div style="position:relative"><canvas id="cv_${w.uid}"></canvas></div></div>`;
