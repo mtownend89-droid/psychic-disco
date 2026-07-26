@@ -6553,6 +6553,15 @@ function renderSettings(){
       <div class="set-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
           <div>
+            <div class="set-card-label" style="margin:0">🛡️ Two-factor authentication</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5" id="twofaDesc">Require a 6-digit code from an authenticator app (Google Authenticator, Authy, 1Password) each time you sign in.</div>
+          </div>
+          <div id="twofaAction"><button class="btn" disabled>…</button></div>
+        </div>
+      </div>
+      <div class="set-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
+          <div>
             <div class="set-card-label" style="margin:0">🔐 Session</div>
             <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Sign out — you'll log back in and get a fresh SWOT next time.</div>
           </div>
@@ -6593,6 +6602,7 @@ function renderSettings(){
   try{ renderConnectedData(); }catch(e){}
   try{ renderAppearance(); }catch(e){}
   try{ renderRulesManager(); }catch(e){}
+  try{ render2faStatus(); }catch(e){}
 }
 /* ── Appearance render + handlers (per profile) ── */
 function renderAppearance(){
@@ -7873,6 +7883,80 @@ function refreshEnvBadge(){
     else { b.style.display=''; b.textContent=env.charAt(0).toUpperCase()+env.slice(1); }
   }).catch(()=>{});
 }
+// ── Two-factor authentication (Settings) ──
+let _2faSecret='', _2faOtpauth='';
+async function render2faStatus(){
+  const act=gg('twofaAction'), desc=gg('twofaDesc'); if(!act) return;
+  act.innerHTML='<button class="btn" disabled>…</button>';
+  let enabled=false, userLogin=true;
+  try{ const r=await fetch('/api/2fa/status'); if(r.ok){ const d=await r.json(); enabled=!!d.enabled; userLogin=!!d.userLogin; } }catch(e){}
+  if(!userLogin){ if(desc) desc.textContent='Create a username/password login first — 2FA protects that login.'; act.innerHTML=''; return; }
+  if(enabled){
+    if(desc) desc.innerHTML='✅ <b style="color:var(--green)">On</b> — you enter a code from your authenticator app each time you sign in.';
+    act.innerHTML='<button class="btn danger-btn" onclick="open2faDisable()">Turn off</button>';
+  } else {
+    if(desc) desc.textContent='Require a 6-digit code from an authenticator app (Google Authenticator, Authy, 1Password) each time you sign in.';
+    act.innerHTML='<button class="btn primary" onclick="open2faSetup()">Enable 2FA</button>';
+  }
+}
+async function open2faSetup(){
+  gg('manualModal').style.display='flex';
+  gg('manualTitle').textContent='Enable two-factor';
+  gg('manualSub').textContent='Scan the QR with your authenticator app, then enter the code to confirm.';
+  gg('manualBody').innerHTML='<div class="ws-hint">Setting up…</div>';
+  try{
+    const r=await fetch('/api/2fa/setup',{method:'POST'});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok){ gg('manualBody').innerHTML=`<div class="login-err">${esc(d.error||'Could not start setup.')}</div><div class="mf-actions"><span></span><button class="btn" onclick="closeManual()">Close</button></div>`; return; }
+    _2faSecret=d.secret||''; _2faOtpauth=d.otpauth||'';
+    render2faSetupBody();
+  }catch(e){ gg('manualBody').innerHTML='<div class="login-err">Could not reach the server.</div>'; }
+}
+function render2faSetupBody(err){
+  const grouped=(_2faSecret.match(/.{1,4}/g)||[]).join(' ');
+  gg('manualBody').innerHTML=`
+    <div style="text-align:center"><img id="twofaQr" alt="Two-factor QR code" width="180" height="180" style="background:#fff;border-radius:10px;padding:6px"></div>
+    <div class="ws-hint" style="text-align:center;margin:8px 0 4px">Can't scan? Type this key into your app instead:</div>
+    <div style="text-align:center;font-family:var(--font);font-size:14px;font-weight:700;letter-spacing:.06em;word-break:break-all;color:var(--text);margin-bottom:12px">${esc(grouped)}</div>
+    <label class="mf-label">6-digit code from your app</label>
+    <input class="mf-in" id="twofaCode" inputmode="numeric" maxlength="6" placeholder="123456" style="text-align:center;letter-spacing:.3em;font-size:18px" onkeydown="if(event.key==='Enter')do2faEnable()">
+    ${err?`<div class="login-err" style="margin-top:8px">${esc(err)}</div>`:''}
+    <div class="mf-actions"><button class="btn" onclick="closeManual()">Cancel</button><button class="btn primary" onclick="do2faEnable()">Turn on 2FA</button></div>`;
+  setTimeout(()=>{ const c=gg('twofaCode'); if(c) c.focus(); },80);
+  try{ _loadScript('https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js').then(()=>{
+    try{ if(window.QRCode && _2faOtpauth) QRCode.toDataURL(_2faOtpauth,{margin:1,width:180,errorCorrectionLevel:'M'},(e,url)=>{ const img=gg('twofaQr'); if(img&&url) img.src=url; }); }catch(e){}
+  }).catch(()=>{}); }catch(e){}
+}
+async function do2faEnable(){
+  const code=(gg('twofaCode').value||'').trim();
+  if(!/^\d{6}$/.test(code)){ render2faSetupBody('Enter the 6-digit code.'); return; }
+  try{
+    const r=await fetch('/api/2fa/enable',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok){ render2faSetupBody(d.error||"That code didn't match — check your device's clock and try again."); return; }
+    closeManual(); render2faStatus(); if(sbRichie)sbRichie.do('tada'); try{ richieSay('Two-factor is on — your account just got a lot harder to break into. 🛡️'); }catch(e){}
+  }catch(e){ render2faSetupBody('Could not reach the server.'); }
+}
+function open2faDisable(){
+  gg('manualModal').style.display='flex';
+  gg('manualTitle').textContent='Turn off two-factor';
+  gg('manualSub').textContent='Confirm your password to turn 2FA off.';
+  gg('manualBody').innerHTML=`
+    <label class="mf-label">Password</label>
+    <input class="mf-in" id="twofaOffPw" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')do2faDisable()">
+    <div class="login-err" id="twofaOffErr" style="margin-top:8px"></div>
+    <div class="mf-actions"><button class="btn" onclick="closeManual()">Cancel</button><button class="btn danger-btn" onclick="do2faDisable()">Turn off 2FA</button></div>`;
+  setTimeout(()=>{ const el=gg('twofaOffPw'); if(el) el.focus(); },80);
+}
+async function do2faDisable(){
+  const pw=gg('twofaOffPw').value; const err=gg('twofaOffErr'); if(err) err.textContent='';
+  try{
+    const r=await fetch('/api/2fa/disable',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok){ if(err) err.textContent=d.error||'Password incorrect.'; return; }
+    closeManual(); render2faStatus();
+  }catch(e){ if(err) err.textContent='Could not reach the server.'; }
+}
 // ── Change password (Settings) ──
 function openChangePassword(){
   gg('manualModal').style.display='flex';
@@ -7923,6 +8007,7 @@ async function doChangePassword(){
 let _loginMode='signin';
 function setLoginMode(m){
   _loginMode=m;
+  if(_await2fa){ _await2fa=false; _pending2fa=null; const f=gg('login2fa'); if(f){ f.style.display='none'; f.value=''; } const b=gg('loginBtn'); if(b) b.textContent='Sign in'; ['loginUser','loginPass'].forEach(id=>{ const el=gg(id); if(el) el.style.display=''; }); }
   const err=gg('loginErr'); if(err) err.textContent='';
   const show=(id,on)=>{ const el=gg(id); if(el) el.style.display=on?'':'none'; };
   const rb=gg('loginRecoveryBox'); if(rb){ rb.style.display='none'; rb.innerHTML=''; }
@@ -7964,24 +8049,41 @@ function _showRecovery(code,contLabel){
   rb.style.display='block';
   rb.innerHTML='<div class="lrec-h">🔑 Save your recovery code</div><div class="lrec-code">'+esc(code)+'</div><div class="lrec-note">This is the only way to reset your password if you forget it. Store it somewhere safe — you won\u2019t see it again.</div><button class="btn primary" style="width:100%;margin-top:10px" onclick="_afterAuthedEnter()">'+(contLabel||'I saved it — continue')+'</button>';
 }
+let _await2fa=false, _pending2fa=null;
+function _show2fa(on){
+  ['loginUser','loginPass','loginForgotLink'].forEach(id=>{ const el=gg(id); if(el) el.style.display=on?'none':''; });
+  const f=gg('login2fa'); if(f) f.style.display=on?'block':'none';
+  const back=gg('loginBackLink'); if(back && on) back.style.display='inline';
+  const sub=gg('loginSub'); if(sub) sub.textContent=on?'Two-factor is on — enter the 6-digit code from your authenticator app.':"Richie's been keeping an eye on things. Sign in to see where you stand.";
+}
 async function doLogin(){
   if(_loginMode==='create') return doCreateLogin();
   if(_loginMode==='forgot') return doResetPassword();
-  const u=gg('loginUser').value.trim(), p=gg('loginPass').value;
   const err=gg('loginErr'), btn=gg('loginBtn');
   err.textContent='';
-  if(!u||!p){ err.textContent='Enter your username and password.'; return; }
-  btn.disabled=true; btn.textContent='Signing in…';
+  let u, p, code='';
+  if(_await2fa && _pending2fa){ u=_pending2fa.u; p=_pending2fa.p; code=(gg('login2fa').value||'').trim(); if(!code){ err.textContent='Enter the 6-digit code from your authenticator.'; return; } }
+  else { u=gg('loginUser').value.trim(); p=gg('loginPass').value; if(!u||!p){ err.textContent='Enter your username and password.'; return; } }
+  btn.disabled=true; btn.textContent=_await2fa?'Verifying…':'Signing in…';
   let loginRichie=window._loginRichie;
   try{
-    const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+    const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p,code})});
     const d=await r.json().catch(()=>({}));
+    if(d.needs2fa && !d.ok){   // password OK, second factor required (or the code was wrong)
+      _await2fa=true; _pending2fa={u,p}; _show2fa(true);
+      err.textContent = code ? (d.error||"That code didn't match — try again.") : '';
+      btn.disabled=false; btn.textContent='Verify code';
+      const f=gg('login2fa'); if(f){ f.value=''; try{ f.focus(); }catch(e){} }
+      if(code && loginRichie) loginRichie.emotion('no');
+      return;
+    }
     if(!r.ok || (!d.token && !d.ok)){
       err.textContent=d.error||'Wrong username or password.';
-      btn.disabled=false; btn.textContent='Sign in';
+      btn.disabled=false; btn.textContent=_await2fa?'Verify code':'Sign in';
       if(loginRichie) loginRichie.emotion('no');
       return;
     }
+    _await2fa=false; _pending2fa=null; _show2fa(false); const _f2=gg('login2fa'); if(_f2) _f2.value='';
     if(d.token || d.ok || d.success){ setToken(1); try{ SS.setItem('mdf_user',u); }catch(e){} }
     gg('loginScreen').style.display='none';
     gg('loginPass').value='';
