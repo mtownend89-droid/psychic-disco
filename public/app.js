@@ -3756,12 +3756,14 @@ function wwCategoryStep(){
   const cats={};
   WIDGET_CATALOG.forEach(w=>{ (cats[w.cat]=cats[w.cat]||[]).push(w); });
   const icons={'Overview':'📊','Budget':'🎯','Cash Flow':'🌊','Wealth':'📈','Debt':'🚨','Playground':'🎮'};
+  const intents={'Overview':'See where you stand','Budget':'Plan your spending','Cash Flow':'Look ahead & find extra','Wealth':'Grow your net worth','Debt':'Pay down what you owe','Playground':'Stress-test scenarios'};
   return Object.keys(cats).map(cat=>{
     const items=cats[cat]; const unlocked=items.filter(w=>widgetUnlocked(w)).length;
+    const intent=intents[cat]?`${intents[cat]} · `:'';
     return `<div class="ww-card" onclick="wwPickCat('${cat.replace(/'/g,"\\'")}')">
       <div class="ww-card-icon">${icons[cat]||'🧩'}</div>
       <div style="flex:1;min-width:0"><div class="ww-card-name">${cat}</div>
-      <div class="ww-card-desc">${items.length} widget${items.length!==1?'s':''}${unlocked<items.length?` · ${unlocked} unlocked`:''}</div></div>
+      <div class="ww-card-desc">${intent}${items.length} widget${items.length!==1?'s':''}${unlocked<items.length?` · ${unlocked} unlocked`:''}</div></div>
       <div class="ww-card-arrow">→</div></div>`;
   }).join('');
 }
