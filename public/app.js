@@ -229,10 +229,31 @@ async function _fetchJSON(url){
   try{ const j=await r.json(); serverAvailable=true; return j; }catch(e){ serverAvailable=false; return null; }
 }
 let _acctErrors=[];  // per-institution sync failures from /api/accounts (e.g. ITEM_LOGIN_REQUIRED → bank needs reconnect)
+let _reconnectDismissed=false;
 async function loadAccounts(){
   const d=await _fetchJSON('/api/accounts'); if(!d) return false;
-  allAccts=d.accounts||[]; _acctErrors=d.errors||[]; return true;
+  allAccts=d.accounts||[]; _acctErrors=d.errors||[];
+  try{ renderReconnectBanner(); }catch(e){}   // surface any bank that needs re-linking
+  return true;
 }
+// Banks whose Plaid access expired and need the user to sign in again (update-mode re-link).
+function _relinkErrors(){ return (_acctErrors||[]).filter(e=>e && e.needsRelink && e.itemId); }
+// Persistent bar under the topbar — the #1 reliability pain in every budgeting app.
+function renderReconnectBanner(){
+  const main=gg('main'), pc=gg('page-content'); if(!main||!pc) return;
+  const rl=_relinkErrors();
+  let bn=gg('reconnectBanner');
+  if(!rl.length || _reconnectDismissed){ if(bn) bn.style.display='none'; return; }
+  if(!bn){ bn=document.createElement('div'); bn.id='reconnectBanner'; bn.className='reconnect-banner'; main.insertBefore(bn, pc); }
+  bn.style.display='flex';
+  const one=rl.length===1;
+  const lead=one?`${esc(rl[0].institution||'A bank')} needs`:`${rl.length} banks need`;
+  const btn=one
+    ? `<button class="reconnect-btn" onclick="openLinkHandler('${esc(String(rl[0].itemId)).replace(/'/g,"\\'")}')">Reconnect ${esc(rl[0].institution||'bank')}</button>`
+    : `<button class="reconnect-btn" onclick="openBriefing()">Reconnect ${rl.length} banks</button>`;
+  bn.innerHTML=`<span class="reconnect-ic" aria-hidden="true">⚠️</span><span class="reconnect-msg"><b>${lead} reconnecting</b> — sign in again so your balances and transactions stay live.</span>${btn}<button class="reconnect-x" onclick="dismissReconnectBanner()" title="Dismiss" aria-label="Dismiss reconnect banner">✕</button>`;
+}
+function dismissReconnectBanner(){ _reconnectDismissed=true; const bn=gg('reconnectBanner'); if(bn) bn.style.display='none'; }
 async function loadTransactions(){
   const d=await _fetchJSON('/api/transactions'); if(!d) return false;
   _plaidTxns=d.transactions||[]; _rebuildTxns(); return true;
@@ -3128,6 +3149,7 @@ function switchPage(id){
   gg('tbTitle').textContent=pg.name;
   renderPage(pg);
   try{ updateReviewBadge(); }catch(e){}
+  try{ renderReconnectBanner(); }catch(e){}
   if(window.innerWidth<=900) closeSidebar();
 }
 
@@ -8225,8 +8247,10 @@ function _briefActionItems(){
 }
 function buildBriefSteps(){
   const steps=[];
+  const rl=_relinkErrors();
+  if(rl.length){ steps.push({ id:'relink', icon:'🔌', title:'Reconnect a bank', say:`Quick one first — ${rl.length===1?(rl[0].institution||'a bank')+' needs':rl.length+' banks need'} you to sign in again so I can keep your numbers live. It only takes a sec.` }); }
   const rev=_reviewTxns();
-  if(rev.length){ steps.push({ id:'txncat', icon:'🏷️', title:'Confirm your transactions', say:`First up — ${rev.length} new transaction${rev.length>1?'s':''} since you were last here. My auto-categories aren't always right, so give each a glance, fix anything off, and hit Confirm.` }); }
+  if(rev.length){ steps.push({ id:'txncat', icon:'🏷️', title:'Confirm your transactions', say:`${rl.length?'Next':'First'} up — ${rev.length} new transaction${rev.length>1?'s':''} since you were last here. My auto-categories aren't always right, so give each a glance, fix anything off, and hit Confirm.` }); }
   _briefActionItems().forEach(it=>{
     it.body=`<div class="brief-actbody"><div class="brief-actdesc">${it.sub||''}</div>${it.action?`<button class="brief-goto" onclick="event.stopPropagation();${it.action.go?`briefGoto('${it.action.go}')`:`briefOpen('${it.action.open}')`}">${esc(it.action.label)} →</button>`:''}</div>`;
     steps.push(it);
@@ -8247,12 +8271,21 @@ function _briefEl(){ let el=gg('briefModal'); if(el) return el;
   return el;
 }
 function _briefRefreshBody(){ const step=_briefSteps[_briefStep]; const body=gg('briefStepBody'); if(!step||!body) return;
-  body.innerHTML = step.id==='txncat' ? _briefTxnStepBody()
+  body.innerHTML = step.id==='relink' ? _briefRelinkStepBody()
+    : step.id==='txncat' ? _briefTxnStepBody()
     : step.id==='bills' ? _briefBillsStepBody()
     : step.id==='score' ? _briefScoreStepBody()
     : step.id==='hidebt' ? _briefHidebtStepBody()
     : step.id==='emergency' ? _briefEmergencyStepBody()
     : (step.body||''); }
+function _briefRelinkStepBody(){
+  const rl=_relinkErrors();
+  if(!rl.length) return `<div class="brief-allclear">✅ All your banks are connected.</div>`;
+  return `<div class="brief-mini"><div class="brief-actdesc">Banks expire access every so often — it's normal. Sign back in to keep the data flowing:</div>`
+    + rl.map(e=>`<div class="brief-txn"><div class="brief-txn-main"><div class="brief-txn-nm">🏦 ${esc(e.institution||'Bank')}</div><div class="brief-txn-meta">login expired</div></div><button class="brief-confirm" onclick="event.stopPropagation();briefReconnect('${esc(String(e.itemId)).replace(/'/g,"\\'")}')">Reconnect</button></div>`).join('')
+    + `</div>`;
+}
+function briefReconnect(itemId){ briefFinish(); setTimeout(()=>{ try{ openLinkHandler(itemId); }catch(e){} }, 220); }
 function _briefGoStep(i){
   _briefStep=Math.max(0, Math.min(i, _briefSteps.length-1));
   const step=_briefSteps[_briefStep]; if(!step) return;
