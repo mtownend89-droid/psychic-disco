@@ -1126,13 +1126,12 @@ function _incomeEvents(days){
     const monthly=src.amt*(FREQ_TO_MONTHLY[src.freq]||1);
     if(src.freq==='weekly' || src.freq==='biweekly'){
       const step=src.freq==='weekly'?7:14;
-      // start from anchor, roll forward to the first occurrence >= today
       let cur = src.anchor ? new Date(src.anchor+'T00:00:00') : new Date(today.getTime()+ (src.freq==='weekly'?3:5)*86400000);
       if(isNaN(cur)) cur=new Date(today);
-      // fast-forward / rewind to near today
-      while(cur < today) cur.setDate(cur.getDate()+step);
-      while(cur >= today && (cur-today)/86400000 >= step) cur.setDate(cur.getDate()-step);
-      if(cur<today) cur.setDate(cur.getDate()+step);
+      // A PAST anchor is the last real payday → advance on-cadence to the first occurrence today
+      // or later. A FUTURE anchor is a start date (e.g. a new job / est. stream) → begin there,
+      // never rewind before it (that was pulling future income back to today and skewing cash flow).
+      if(cur < today){ const behind=Math.ceil((today-cur)/(step*86400000)); cur.setDate(cur.getDate()+behind*step); }
       while(cur<=horizon){
         const off=dayOffset(cur);
         if(off>=1 && off<=days && okEnd(cur)) out.push({day:off, amt:src.amt, name:src.name, type:'income', freq:src.freq});
