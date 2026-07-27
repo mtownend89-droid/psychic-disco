@@ -8089,12 +8089,12 @@ function richieSetProp(key){
 /* ── Emoji FX: full-screen animated-emoji moments that make the app feel alive.
    All Noto animated webp (CSP img-src https: already allows it); onerror hides silently. ── */
 const FX_EMOJI={ rocket:'1f680', boom:'1f4a5', party:'1f389', tada:'1f38a', stars:'2728', alarm:'1f6a8', fire:'1f525', trophy:'1f3c6', up:'1f4c8', coin:'1fa99', star:'2b50', glow:'1f31f', hundred:'1f4af', money:'1f911' };
-function _fxLayer(){ let el=gg('fxLayer'); if(el) return el; el=document.createElement('div'); el.id='fxLayer'; el.className='fx-layer'; document.body.appendChild(el); return el; }
+function _emojiFxLayer(){ let el=gg('fxLayer'); if(el) return el; el=document.createElement('div'); el.id='fxLayer'; el.className='fx-layer'; document.body.appendChild(el); return el; }
 function emojiBurst(kind, opts){
   opts=opts||{};
   try{
     const hex=FX_EMOJI[kind]||FX_EMOJI.party;
-    const layer=_fxLayer();
+    const layer=_emojiFxLayer();
     const reduce=(typeof _reduceMotion!=='undefined'&&_reduceMotion);
     const main=document.createElement('img'); main.className='fx-main fx-'+kind+(reduce?' fx-reduce':''); main.alt=''; main.setAttribute('aria-hidden','true');
     main.onerror=()=>{ try{ main.remove(); }catch(e){} }; main.src=_notoAnim(hex);
@@ -8115,7 +8115,7 @@ function emojiBurst(kind, opts){
 }
 // A quick sparkle at the XP badge — the lightweight "+XP" beat used on every award.
 function _xpSparkle(){
-  try{ const b=gg('sbXp'); if(!b || (typeof _reduceMotion!=='undefined'&&_reduceMotion)) return; const r=b.getBoundingClientRect(); const layer=_fxLayer();
+  try{ const b=gg('sbXp'); if(!b || (typeof _reduceMotion!=='undefined'&&_reduceMotion)) return; const r=b.getBoundingClientRect(); const layer=_emojiFxLayer();
     for(let i=0;i<4;i++){ const s=document.createElement('img'); s.className='fx-sparkle'; s.alt=''; s.setAttribute('aria-hidden','true');
       s.style.left=(r.left+r.width*Math.random())+'px'; s.style.top=(r.top+r.height/2)+'px';
       s.style.setProperty('--sx',(-12+Math.random()*24)+'px'); s.style.animationDelay=(i*55)+'ms';
