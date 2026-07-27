@@ -1373,8 +1373,11 @@ function _engBillsRaw(){
   // product at all, so they simply won't have an entry here — handled with an estimate below.
   const loanByAcct={}; [].concat(plaidLiabilities&&plaidLiabilities.mortgages||[], plaidLiabilities&&plaidLiabilities.student_loans||[]).forEach(x=>{ if(x.account_id) loanByAcct[x.account_id]=x; });
   const out=[];
+  const exIds=(typeof _excludedAcctIds==='function')?_excludedAcctIds():new Set();
   (allAccts||[]).forEach(a=>{
-    if(_acctExcluded(a.name||a.official_name)) return;   // excluded accounts stay out of debt/bills too
+    // Exclusion is stored per-account (id), not on the shared name record — so resolve it the
+    // same way engAccounts does (by id) rather than the name record, which never carries it.
+    if(exIds.has(a.account_id) || _acctExcluded(a.name||a.official_name)) return;   // excluded accounts stay out of debt/bills too
     const cur=(a.balances&&(a.balances.current))??0;
     if(a.type==='credit'){
       const c=liabByAcct[a.account_id]||{};
