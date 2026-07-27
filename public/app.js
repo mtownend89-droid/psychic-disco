@@ -356,6 +356,7 @@ async function loadEngineData(){
   try{ _memoInvalidate(); }catch(e){}   // fresh bank data → drop any memoized derivations
   dataLoaded=((a||b)&&(allAccts.length>0||allTxns.length>0)) || ((APP.importedTxns||[]).length>0);
   try{ if(typeof checkGoalCompletion==='function') checkGoalCompletion(); }catch(e){}
+  try{ if(typeof bucketCheckGoals==='function') bucketCheckGoals(); }catch(e){}
   try{ if(typeof maybeWarnPromos==='function') maybeWarnPromos(); }catch(e){}
   return dataLoaded;
 }
@@ -576,7 +577,7 @@ function applyBillOverrides(list){
 function toggleBillPaid(key){
   const ov=_billOverrides(); ov[key]=ov[key]||{}; ov[key].paid=!ov[key].paid; saveState();
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
-  if(ov[key].paid){ try{ gamiMarkEngaged('billpaid'); }catch(e){} const nm=(key.split('|')[0]||'that').trim(); try{ richieCelebrate(`Boom — ${nm} marked paid! ✅ One less thing on the list.`); }catch(e){} }
+  if(ov[key].paid){ try{ gamiMarkEngaged('billpaid'); }catch(e){} try{ emojiBurst('coin',{particle:'coin',count:8,life:1600}); }catch(e){} const nm=(key.split('|')[0]||'that').trim(); try{ richieCelebrate(`Boom — ${nm} marked paid! ✅ One less thing on the list.`); }catch(e){} }
 }
 function setBillPay(key,val){
   const ov=_billOverrides(); ov[key]=ov[key]||{}; const n=parseFloat(val); if(!isNaN(n)&&n>=0) ov[key].pay=n; saveState();
@@ -1302,9 +1303,11 @@ function _billPaidOcc(){ APP.billPaidOcc=APP.billPaidOcc||{}; return APP.billPai
 function _billOccPaid(okey){ return !!(okey && _billPaidOcc()[okey]); }
 function cfpToggleBillPaid(okey, uid){
   if(!okey) return; const m=_billPaidOcc(); if(m[okey]) delete m[okey]; else m[okey]=1; saveState();
+  const nowPaid=!!m[okey];
   try{ _memoInvalidate&&_memoInvalidate(); }catch(e){}
   const w=(typeof _findWidget==='function')?_findWidget(uid):null;
   if(w && typeof cfpMount==='function'){ cfpMount(w); } else { const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+  if(nowPaid){ try{ gamiMarkEngaged('billpaid'); }catch(e){} try{ emojiBurst('coin',{particle:'coin',count:8,life:1600}); }catch(e){} }
   try{ if(sbRichie)sbRichie.do('nod'); }catch(e){}
 }
 function engCashFlowProjection(days, cats){
@@ -2210,6 +2213,25 @@ function checkGoalCompletion(){
     }
   });
   if(any) saveState();
+}
+// Savings-bucket goals: celebrate 🎊 the moment a bucket first reaches its target. Seeds silently
+// on first run so already-funded buckets don't all pop at once; re-arms if a bucket drops below.
+function bucketCheckGoals(){
+  try{
+    APP.bucketDone=APP.bucketDone||{};
+    const buckets=(typeof engSavingsBuckets==='function')?engSavingsBuckets():[];
+    if(!APP._bucketSeeded){ buckets.forEach(b=>{ if(b.done&&b.name) APP.bucketDone[b.name]=1; }); APP._bucketSeeded=1; saveState(); return; }
+    let changed=false;
+    buckets.forEach(b=>{ const k=b.name; if(!k) return;
+      if(b.done && b.target>0){ if(!APP.bucketDone[k]){ APP.bucketDone[k]=1; changed=true;
+        try{ emojiBurst('tada',{particle:'stars',count:14}); }catch(e){}
+        try{ richieCelebrate(`🎊 ${b.name} is fully funded — ${fmtK(b.target)} saved! Enjoy it, or set the next goal.`); }catch(e){}
+        try{ awardXp(20); }catch(e){}
+      } }
+      else if(APP.bucketDone[k]){ delete APP.bucketDone[k]; changed=true; }   // spent back below target → re-arm
+    });
+    if(changed) saveState();
+  }catch(e){}
 }
 // Cadenced action plans per goal type (mirrors the workbook's Daily/Weekly/Monthly/Quarterly columns)
 const GOAL_CADENCE={
@@ -5679,6 +5701,7 @@ function saveBucket(){
   saveState(); closeManual();
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
   if(sbRichie)sbRichie.do('nod');
+  try{ bucketCheckGoals(); }catch(e){}   // just funded one to its target? 🎊
 }
 function deleteBucket(i){ if(!confirm('Delete this bucket?'))return; _savingsBuckets().splice(i,1); saveState(); closeManual(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 
