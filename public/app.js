@@ -3218,7 +3218,7 @@ const BUNDLE_PAGES={
 };
 let _uidSeq=0;
 // Old widget types that were folded into the tabbed hubs — remap so they never render as "? Widget".
-const WIDGET_MIGRATE={debt_summary:'debt_hub',debt_payoff:'debt_hub',credit_util:'debt_hub',promo_tracker:'debt_hub',fire_progress:'fire_hub',retirement_proj:'fire_hub',fire_calc:'fire_hub',safe_to_spend:'cash_summary',budget_actual:'zero_budget',fire_drill:'fire_hub',debt_planner:'debt_hub',cashflow_chart:'cashflow_planner'};
+const WIDGET_MIGRATE={debt_summary:'debt_hub',debt_payoff:'debt_hub',credit_util:'debt_hub',promo_tracker:'debt_hub',fire_progress:'fire_hub',retirement_proj:'fire_hub',fire_calc:'fire_hub',safe_to_spend:'cash_summary',budget_actual:'zero_budget',fire_drill:'fire_hub',debt_planner:'debt_hub',cashflow_chart:'cashflow_planner',top_categories:'spending_hub',spending_trends:'spending_hub',category_heatmap:'spending_hub'};
 function makeWidget(type){ type=WIDGET_MIGRATE[type]||type; return {uid:'w'+Date.now()+'_'+(_uidSeq++),type:type,span:(WIDGET_BY_ID[type]&&WIDGET_BY_ID[type].span)||1}; }
 // Build widgets from a type list, silently dropping any type not registered in the current
 // catalog — so a starter set can name widgets that live behind an as-yet-unmerged feature
@@ -3849,9 +3849,9 @@ const WIDGET_CATALOG=[
   {id:'recurring',name:'Subscriptions & Renewals',icon:'🔁',cat:'Cash Flow',span:2,minLevel:1,desc:'Auto-detected subscriptions & recurring bills — next renewal, price-hike alerts, flag any to cancel, monthly & yearly totals.'},
   {id:'sankey',name:'Money Flow',icon:'🔀',cat:'Cash Flow',span:2,minLevel:2,desc:'Income → category group → category, flowing left to right through your category tree.'},
   {id:'spending_hub',name:'Spending',icon:'🛍️',cat:'Cash Flow',span:2,minLevel:1,desc:'All your spending in one place — this month vs budget, the trend, top categories, and seasonal patterns, in tabs.'},
-  {id:'top_categories',name:'Top Categories',icon:'📊',cat:'Cash Flow',span:1,minLevel:1,desc:'Where your money goes most.'},
-  {id:'spending_trends',name:'Spending Trends',icon:'🆚',cat:'Cash Flow',span:2,minLevel:1,desc:'This month vs last — biggest category movers, projected month-end total, and whether you\'re pacing over or under budget.'},
-  {id:'category_heatmap',name:'Seasonal Spending',icon:'🌡️',cat:'Cash Flow',span:2,minLevel:2,desc:'Spending by category across months — spot seasonal patterns at a glance.'},
+  // Top Categories, Spending Trends and Seasonal Spending are now tabs inside the Spending hub
+  // (SPEND_TABS). Kept out of the catalog; existing standalone widgets migrate to spending_hub
+  // above. Their render cases stay — the hub renders each tab through renderWidgetBody.
   {id:'net_worth_chart',name:'Net Worth Trend',icon:'📈',cat:'Wealth',span:2,minLevel:2,desc:'Net worth over months.'},
   {id:'investments',name:'Investments',icon:'💼',cat:'Wealth',span:2,minLevel:5,desc:'Your portfolio — positions pulled from statements, allocation, and one-tap research. (Mogul)'},
   {id:'fire_hub',name:'Wealth & FIRE',icon:'🔥',cat:'Wealth',span:2,minLevel:3,desc:'Financial-independence progress, long-term projection, and an interactive calculator — in tabs.'},
