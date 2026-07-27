@@ -1052,10 +1052,15 @@ function engMonthlyIncome(){ return _effectiveIncomeSources().reduce((s,i)=>s+i.
 
 /* ── Cash Flow Projection: build dated income/expense events forward N days,
    then compute a running daily balance starting from current cash. ── */
+// Liquid cash = depository balances, EXCLUDING accounts the user marked excluded (a work card,
+// a reimbursement account, etc.). Single source of truth so cash never counts money you've hidden.
+function _liquidCash(){
+  if(dataLoaded){ const ex=(typeof _excludedAcctIds==='function')?_excludedAcctIds():new Set(); return allAccts.filter(a=>a.type==='depository' && !ex.has(a.account_id)).reduce((s,a)=>s+((a.balances&&(a.balances.available??a.balances.current))||0),0); }
+  return nwAssets.filter(a=>a.cat==='Cash & Bank').reduce((s,a)=>s+(a.value||0),0);
+}
 function engStartCash(cats){
   if(cats && cats.length){ return engAccounts().filter(a=>!a.excluded && cats.includes(getAccountCategory(a))).reduce((s,a)=>s+(a.bal||0),0); }
-  if(dataLoaded){ return allAccts.filter(a=>a.type==='depository').reduce((s,a)=>s+((a.balances&&(a.balances.available??a.balances.current))||0),0); }
-  return nwAssets.filter(a=>a.cat==='Cash & Bank').reduce((s,a)=>s+(a.value||0),0);
+  return _liquidCash();
 }
 // Build recurring income sources from transactions tagged "Paycheck" in the All
 // Transactions widget — the single source of truth for pay. Grouped by PAYEE so each
@@ -1457,7 +1462,7 @@ function engMonthlyBills(){ return engBills().reduce((s,b)=>s+(b.pay||0),0); }
 function engSafeToSpend(){
   const cash=engStartCash();
   const proj=engCashFlowProjection(35);
-  const inc=(proj.events||[]).filter(e=>e.type==='income').sort((a,b)=>a.day-b.day)[0];
+  const inc=(proj.events||[]).filter(e=>e.type==='income' && !e.off).sort((a,b)=>a.day-b.day)[0];   // a paycheck the user checked off shouldn't set the horizon
   const horizon=inc?Math.max(1,inc.day):14;
   const billsDue=(proj.events||[]).filter(e=>e.type==='bill'&&e.day<=horizon).reduce((s,e)=>s+Math.abs(e.amt),0);  // savings handled via goalPortion below — don't double-count
   const goalMonthly=(typeof engSavingsBuckets==='function')?engSavingsBuckets().reduce((s,b)=>s+(b.monthly||0),0):0;
@@ -4511,11 +4516,7 @@ function fdScenarioIncome(){
 }
 function fdMonthlyBills(){ return engMonthlyBills(); }
 function fdExtraTotal(){ return _fd.extraCosts.reduce((s,c)=>s+(c.amt||0),0); }
-function fdCashAvailable(){
-  // cash & bank assets; live balances if connected
-  if(dataLoaded){ return allAccts.filter(a=>a.type==='depository').reduce((s,a)=>s+((a.balances&&(a.balances.available??a.balances.current))||0),0); }
-  return nwAssets.filter(a=>a.cat==='Cash & Bank').reduce((s,a)=>s+(a.value||0),0);
-}
+function fdCashAvailable(){ return _liquidCash(); }   // cash & bank, excluding hidden accounts
 function fdRunway(){
   const net=fdScenarioIncome()-fdMonthlyBills()-fdExtraTotal();
   const cash=fdCashAvailable();
@@ -6698,7 +6699,7 @@ function gamiSave(){ try{ LS.setItem('mdf_gami', JSON.stringify(_gami)); }catch(
 function _gMonthlyExpenses(){ try{ return dataLoaded?engSpend30():engMonthlyBills(); }catch(e){ return 0; } }
 function gamiMetrics(){
   const G=GOAL_METRICS; const safe=(f,d)=>{ try{ const v=f(); return (v==null||isNaN(v))?(d||0):v; }catch(e){ return d||0; } };
-  const liquid=safe(()=>dataLoaded?allAccts.filter(a=>a.type==='depository').reduce((s,a)=>s+((a.balances&&(a.balances.available??a.balances.current))||0),0):0);
+  const liquid=safe(()=>dataLoaded?_liquidCash():0);
   const emer=safe(()=>G.emergency.get());
   const m={
     accounts: safe(()=>allAccts.length),
