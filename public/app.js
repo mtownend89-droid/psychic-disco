@@ -7115,7 +7115,7 @@ function gamiCelebrate(opts){
   set('celeMeta', `${lv.icon} Level ${lv.n} · ${APP.xp} XP`);
   _celeShareText=opts.share||`I just unlocked "${opts.name}" on Richie! ${lv.icon} Level ${lv.n} · ${APP.xp} XP 💰`;
   el.style.display='flex';
-  requestAnimationFrame(()=>{ el.classList.add('show'); _celeConfetti(); });
+  requestAnimationFrame(()=>{ el.classList.add('show'); _celeConfetti(); try{ emojiBurst(opts.fx||'rocket', {particle:'stars', count:16}); }catch(e){} });
 }
 function closeGamiCele(){ const el=gg('gamiCele'); if(el){ el.classList.remove('show'); el.style.display='none'; } }
 async function gamiShare(){
@@ -7823,9 +7823,11 @@ function deletePage(id){
 function awardXp(amount,reason){
   APP.xp+=amount;
   const newLevel=xpToLevel(APP.xp);
-  if(newLevel>APP.level){ APP.level=newLevel; levelUp(); }
+  const leveled=newLevel>APP.level;
+  if(leveled){ APP.level=newLevel; levelUp(); }
   saveState();
   gg('sbXp').textContent=APP.xp+' XP';
+  if(!leveled){ try{ _xpSparkle(); }catch(e){} if(reason) try{ richieHopFx(); }catch(e){} }   // a lively "+XP" beat (level-up already bursts)
   if(reason) richieSay(reason+' (+'+amount+' XP)');
 }
 // Award XP the first time a feature is used (once ever, tracked in the synced gami store).
@@ -7837,6 +7839,8 @@ function discoverXp(key, xp, label){
 function levelUp(){
   const lv=LEVELS.find(l=>l.n===APP.level);
   if(sbRichie)sbRichie.do('tada');
+  try{ emojiBurst('stars', {particle:'star', count:16, life:2200}); }catch(e){}
+  try{ richieHopFx(); }catch(e){}
   richieCelebrate('🎉 LEVEL UP! You hit '+lv.icon+' '+lv.name+'! New features unlocked.');
   renderShell();
 }
@@ -8081,9 +8085,51 @@ function richieSetProp(key){
   el.onload=()=>{ el.style.display='block'; };
   el.src=_notoAnim(hex);
 }
+
+/* ── Emoji FX: full-screen animated-emoji moments that make the app feel alive.
+   All Noto animated webp (CSP img-src https: already allows it); onerror hides silently. ── */
+const FX_EMOJI={ rocket:'1f680', boom:'1f4a5', party:'1f389', tada:'1f38a', stars:'2728', alarm:'1f6a8', fire:'1f525', trophy:'1f3c6', up:'1f4c8', coin:'1fa99', star:'2b50', glow:'1f31f', hundred:'1f4af', money:'1f911' };
+function _emojiFxLayer(){ let el=gg('fxLayer'); if(el) return el; el=document.createElement('div'); el.id='fxLayer'; el.className='fx-layer'; document.body.appendChild(el); return el; }
+function emojiBurst(kind, opts){
+  opts=opts||{};
+  try{
+    const hex=FX_EMOJI[kind]||FX_EMOJI.party;
+    const layer=_emojiFxLayer();
+    const reduce=(typeof _reduceMotion!=='undefined'&&_reduceMotion);
+    const main=document.createElement('img'); main.className='fx-main fx-'+kind+(reduce?' fx-reduce':''); main.alt=''; main.setAttribute('aria-hidden','true');
+    main.onerror=()=>{ try{ main.remove(); }catch(e){} }; main.src=_notoAnim(hex);
+    layer.appendChild(main);
+    if(opts.particles!==false && !reduce){
+      const pHex=FX_EMOJI[opts.particle||'stars']; const n=opts.count||12;
+      for(let i=0;i<n;i++){ const s=document.createElement('img'); s.className='fx-part'; s.alt=''; s.setAttribute('aria-hidden','true');
+        const ang=(i/n)*Math.PI*2 + Math.random()*0.5, dist=90+Math.random()*170;
+        s.style.setProperty('--dx',Math.round(Math.cos(ang)*dist)+'px');
+        s.style.setProperty('--dy',Math.round(Math.sin(ang)*dist)+'px');
+        s.style.animationDelay=Math.round(Math.random()*160)+'ms';
+        s.onerror=()=>{ try{ s.remove(); }catch(e){} }; s.src=_notoAnim(pHex); layer.appendChild(s);
+      }
+    }
+    const life=opts.life||(kind==='rocket'?2200:kind==='alarm'?1700:2000);
+    setTimeout(()=>{ try{ main.remove(); layer.querySelectorAll('.fx-part').forEach(n=>n.remove()); }catch(e){} }, life);
+  }catch(e){}
+}
+// A quick sparkle at the XP badge — the lightweight "+XP" beat used on every award.
+function _xpSparkle(){
+  try{ const b=gg('sbXp'); if(!b || (typeof _reduceMotion!=='undefined'&&_reduceMotion)) return; const r=b.getBoundingClientRect(); const layer=_emojiFxLayer();
+    for(let i=0;i<4;i++){ const s=document.createElement('img'); s.className='fx-sparkle'; s.alt=''; s.setAttribute('aria-hidden','true');
+      s.style.left=(r.left+r.width*Math.random())+'px'; s.style.top=(r.top+r.height/2)+'px';
+      s.style.setProperty('--sx',(-12+Math.random()*24)+'px'); s.style.animationDelay=(i*55)+'ms';
+      s.onerror=()=>{ try{ s.remove(); }catch(e){} }; s.src=_notoAnim(FX_EMOJI.stars); layer.appendChild(s);
+      setTimeout(()=>{ try{ s.remove(); }catch(e){} }, 1100);
+    }
+  }catch(e){}
+}
+function richieHopFx(){ try{ const el=gg('raChar'); if(el){ el.classList.remove('richie-hop'); void el.offsetWidth; el.classList.add('richie-hop'); setTimeout(()=>{ try{ el.classList.remove('richie-hop'); }catch(e){} }, 900); } }catch(e){} }
+function richieShakeFx(){ try{ const el=gg('raChar'); if(el){ el.classList.remove('richie-shake'); void el.offsetWidth; el.classList.add('richie-shake'); setTimeout(()=>{ try{ el.classList.remove('richie-shake'); }catch(e){} }, 800); } }catch(e){} }
 function richieShow(msg, opts){
   opts=opts||{};
   if(_richieBlocked()){ richieGoHome(); return; }   // overlay came up — clean up, don't speak over it
+  if(opts.danger){ try{ emojiBurst('alarm',{particles:false}); }catch(e){} try{ richieShakeFx(); }catch(e){} }   // a real red-flag moment
   if(!_richieMobile()){ _panelShow(msg, opts); return; }   // desktop browser → original block panel
   if(opts.celebrate) _raConfetti();
   const present=()=>{
@@ -8135,11 +8181,11 @@ function richieOffTrackSignal(pg){
   // Anomaly first — a category running well above its usual pace is the most useful thing to flag.
   try{ const st=engSpendTrends(); const a=(st.movers||[]).filter(m=>m.delta>60 && m.prev>0 && m.cur>=m.prev*1.8).sort((x,y)=>y.delta-x.delta)[0];
     if(a){ const x=a.cur/a.prev; const desc=x>=2?`${x>=10?Math.round(x):x.toFixed(1)}× your usual`:`${Math.round((x-1)*100)}% over your usual`;
-      return {msg:`Heads up — ${esc(a.label)} is running ${desc} this month (${fmtK(a.cur)} vs ${fmtK(a.prev)} by now last month). Want to see what's driving it?`, widget:'spending_trends', cta:'Show me'}; } }catch(e){}
-  try{ const pace=engPaceAlert(); if(pace){ return {msg:`You're moving fast on ${esc(pace.name)} — ${fmtK(pace.spent)} spent of a ${fmtK(pace.budget)} budget, with ${pace.daysLeft} day${pace.daysLeft!==1?'s':''} left this month. Want to ease off or adjust it?`, widget:'budget_actual', cta:'Show me'}; } }catch(e){}
+      return {msg:`Heads up — ${esc(a.label)} is running ${desc} this month (${fmtK(a.cur)} vs ${fmtK(a.prev)} by now last month). Want to see what's driving it?`, widget:'spending_trends', cta:'Show me', danger:true}; } }catch(e){}
+  try{ const pace=engPaceAlert(); if(pace){ return {msg:`You're moving fast on ${esc(pace.name)} — ${fmtK(pace.spent)} spent of a ${fmtK(pace.budget)} budget, with ${pace.daysLeft} day${pace.daysLeft!==1?'s':''} left this month. Want to ease off or adjust it?`, widget:'budget_actual', cta:'Show me', danger:true}; } }catch(e){}
   try{ const bills=(engUpcomingBills()||[]).filter(b=>!b.paid);
     if(bills.length>=3){ const tot=bills.reduce((s,b)=>s+(b.pay||b.amount||0),0); return {msg:`Heads up — you've got ${bills.length} bills coming up, about ${typeof fmtK==='function'?fmtK(tot):'$'+Math.round(tot)}. Want to run through them?`, widget:'bills_list', cta:'Show me'}; } }catch(e){}
-  try{ const inc=engMonthlyIncome(), sp=engSpend30(); if(inc>0 && sp>inc*1.05){ return {msg:`Spending's running ahead of income this month. Want a quick look at where it's going?`, widget:'top_categories', cta:'Show me'}; } }catch(e){}
+  try{ const inc=engMonthlyIncome(), sp=engSpend30(); if(inc>0 && sp>inc*1.05){ return {msg:`Spending's running ahead of income this month. Want a quick look at where it's going?`, widget:'spending_hub', cta:'Show me', danger:true}; } }catch(e){}
   return null;
 }
 // A once-a-week recap: this week's spend vs last, the health grade, safe-to-spend, and the
@@ -8178,7 +8224,7 @@ function richieMaybeProactive(pg){
         {label:recap.cta||'Show me', cls:'ra-go', on:()=>richieSpotlightAt(Object.assign({widgetType:recap.widget}, RICHIE_SPOTS[recap.widget]||{}))},
         {label:'Thanks', on:richieDismiss}
       ]}); }
-    else if(off){ _raOffTrackAt=Date.now(); richieShow(off.msg, {emo:'curious', actions:[
+    else if(off){ _raOffTrackAt=Date.now(); richieShow(off.msg, {emo:off.danger?'no':'curious', danger:!!off.danger, actions:[
         {label:off.cta||'Show me', cls:'ra-go', on:()=>richieSpotlightAt(Object.assign({widgetType:off.widget}, RICHIE_SPOTS[off.widget]||{}))},   // decide first, THEN Richie flies to the spot
         {label:'Not now', on:richieDismiss}
       ]}); }
