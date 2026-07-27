@@ -1181,7 +1181,7 @@ function _billEvents(days){
     if(cur<today) cur=_dueDateInMonth(today.getFullYear(), today.getMonth()+1, b.due);
     while(cur<=horizon){
       const off=Math.round((cur-today)/86400000);
-      if(off>=0 && off<=days) out.push({day:off, amt:-(b.pay), name:b.name, type:'bill', key:billKey(b), due:b.due});
+      if(off>=0 && off<=days) out.push({day:off, amt:-(b.pay), name:b.name, type:'bill', key:billKey(b), okey:billKey(b)+'|'+_dk(cur), due:b.due});
       cur=_dueDateInMonth(cur.getFullYear(), cur.getMonth()+1, b.due);
     }
   });
@@ -1247,6 +1247,17 @@ function cfpToggleIncome(key, uid){
   if(w && typeof cfpMount==='function'){ cfpMount(w); } else { const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
   try{ if(sbRichie)sbRichie.do('nod'); }catch(e){}
 }
+// "Paid ahead" — mark a SPECIFIC bill occurrence paid so it drops from this cycle's forecast while
+// next month's occurrence stays visible & editable. Keyed 'billKey|YYYY-MM-DD', persisted in APP.
+function _billPaidOcc(){ APP.billPaidOcc=APP.billPaidOcc||{}; return APP.billPaidOcc; }
+function _billOccPaid(okey){ return !!(okey && _billPaidOcc()[okey]); }
+function cfpToggleBillPaid(okey, uid){
+  if(!okey) return; const m=_billPaidOcc(); if(m[okey]) delete m[okey]; else m[okey]=1; saveState();
+  try{ _memoInvalidate&&_memoInvalidate(); }catch(e){}
+  const w=(typeof _findWidget==='function')?_findWidget(uid):null;
+  if(w && typeof cfpMount==='function'){ cfpMount(w); } else { const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+  try{ if(sbRichie)sbRichie.do('nod'); }catch(e){}
+}
 function engCashFlowProjection(days, cats){
   const start=engStartCash(cats);
   const today=new Date(); today.setHours(0,0,0,0);
@@ -1259,7 +1270,7 @@ function engCashFlowProjection(days, cats){
   // in the list (shown unchecked) but are excluded from the running balance and totals everywhere.
   income.forEach(e=>{ e.key='inc|'+e.name+'|'+_dk(_projDate(e.day)); e.off=_incomeOff(e.key); });
   income.forEach(e=>shiftOff(e,-1));
-  const bills=_billEvents(days); bills.forEach(e=>shiftOff(e,1));
+  const bills=_billEvents(days); bills.forEach(e=>{ e.off=_billOccPaid(e.okey); shiftOff(e,1); });   // a bill occurrence already paid drops from the forecast (this cycle), next month's stays
   const savings=_savingsEvents(days, income.filter(e=>!e.off));   // skipped income doesn't fund savings
   const events=[...income, ...bills, ...savings];
   // sort by day; within a day: income → savings → bills ("pay yourself first", truer low point)
@@ -1274,8 +1285,8 @@ function engCashFlowProjection(days, cats){
     if(bal<low.bal) low={day:d, bal};
   }
   const totalIn=events.filter(e=>e.type==='income'&&!e.off).reduce((s,e)=>s+e.amt,0);
-  const totalOut=events.filter(e=>e.type==='bill').reduce((s,e)=>s+Math.abs(e.amt),0);
-  const totalSaved=events.filter(e=>e.type==='savings').reduce((s,e)=>s+Math.abs(e.amt),0);
+  const totalOut=events.filter(e=>e.type==='bill'&&!e.off).reduce((s,e)=>s+Math.abs(e.amt),0);
+  const totalSaved=events.filter(e=>e.type==='savings'&&!e.off).reduce((s,e)=>s+Math.abs(e.amt),0);
   return {start, end:bal, series, events, low, totalIn, totalOut, totalSaved, net:bal-start, byDay, days};
 }
 
@@ -6094,7 +6105,12 @@ function cfpMount(w){
           return `<div class="cfp-ev savings"><span class="cfp-ev-ind"></span><span class="cfp-ev-nm">💰 ${esc(e.name)}</span><span class="cfp-ev-amt" style="color:var(--blue)">-${fmtK(Math.abs(e.amt))}</span>${runBadge}</div>`;
         }
         const key=(e.key||'').replace(/'/g,"\\'");
-        return `<div class="cfp-ev bill"><span class="cfp-ev-ind"></span><span class="cfp-ev-nm">${esc(e.name)}</span><div class="cfp-ev-edit"><span>$</span><input type="number" value="${Math.round(Math.abs(e.amt))}" min="0" step="10" onclick="event.stopPropagation()" oninput="setBillPay('${key}',this.value)" onblur="cfpRefresh('${w.uid}')"></div>${runBadge}</div>`;
+        const okey=String(e.okey||'').replace(/'/g,"\\'");
+        const chk=`<input type="checkbox" class="cfp-ev-chk" ${isOff?'checked':''} onclick="event.stopPropagation();cfpToggleBillPaid('${okey}','${w.uid}')" title="${isOff?'Paid — drops from this cycle; next month stays':'Mark this one paid ahead'}">`;
+        const right=isOff
+          ? `<span class="cfp-ev-amt" style="color:var(--muted)">paid</span>`
+          : `<div class="cfp-ev-edit"><span>$</span><input type="number" value="${Math.round(Math.abs(e.amt))}" min="0" step="10" onclick="event.stopPropagation()" oninput="setBillPay('${key}',this.value)" onblur="cfpRefresh('${w.uid}')"></div>`;
+        return `<div class="cfp-ev bill${isOff?' cfp-ev-off':''}">${chk}<span class="cfp-ev-nm">${esc(e.name)}</span>${right}${runBadge}</div>`;
       }).join('');
       const netColor=dayNet>=0?'var(--pos)':'var(--red)';
       const header=`<div class="cfp-day"><span class="cfp-day-date">${dateLbl}</span><span class="cfp-day-dow">${dow}</span><span class="cfp-day-net" style="color:${netColor}">${dayNet>=0?'+':'-'}${fmtK(Math.abs(dayNet))}</span></div>`;
