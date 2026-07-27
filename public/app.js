@@ -1233,15 +1233,30 @@ function _savingsEvents(days, incomeEvents){
   }
   return out;
 }
+// User overrides for projected income occurrences the model may have gotten wrong. Persisted in
+// APP (synced), keyed by 'inc|name|YYYY-MM-DD' so a specific paycheck can be turned off.
+function _cfIncomeOff(){ APP.cfIncomeOff=APP.cfIncomeOff||{}; return APP.cfIncomeOff; }
+function _incomeOff(key){ return !!(key && _cfIncomeOff()[key]); }
+function cfpToggleIncome(key, uid){
+  if(!key) return; const m=_cfIncomeOff(); if(m[key]) delete m[key]; else m[key]=1; saveState();
+  const w=(typeof _findWidget==='function')?_findWidget(uid):null;
+  if(w && typeof cfpMount==='function'){ cfpMount(w); } else { const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+  try{ if(sbRichie)sbRichie.do('nod'); }catch(e){}
+}
 function engCashFlowProjection(days, cats){
   const start=engStartCash(cats);
   const today=new Date(); today.setHours(0,0,0,0);
   // Shift each source to real banking days BEFORE combining: deposits land the prior business
   // day, drafts the next. Savings then land on the already-shifted first payday of each month.
   const shiftOff=(e,dir)=>{ const sd=_shiftBusinessDay(_projDate(e.day), dir); let off=Math.round((sd-today)/86400000); if(off<0) off=0; e.day=off; };
-  const income=_incomeEvents(days); income.forEach(e=>shiftOff(e,-1));
+  const income=_incomeEvents(days);
+  // Stable per-occurrence key (name + scheduled date) so the user can check a projected paycheck
+  // off — a phantom/uncertain deposit shouldn't silently inflate the forecast. e.off events stay
+  // in the list (shown unchecked) but are excluded from the running balance and totals everywhere.
+  income.forEach(e=>{ e.key='inc|'+e.name+'|'+_dk(_projDate(e.day)); e.off=_incomeOff(e.key); });
+  income.forEach(e=>shiftOff(e,-1));
   const bills=_billEvents(days); bills.forEach(e=>shiftOff(e,1));
-  const savings=_savingsEvents(days, income);
+  const savings=_savingsEvents(days, income.filter(e=>!e.off));   // skipped income doesn't fund savings
   const events=[...income, ...bills, ...savings];
   // sort by day; within a day: income → savings → bills ("pay yourself first", truer low point)
   const rank=t=>t==='income'?0:t==='savings'?1:2;
@@ -1250,11 +1265,11 @@ function engCashFlowProjection(days, cats){
   let low={day:0, bal:start}; const byDay={};
   events.forEach(e=>{ byDay[e.day]=byDay[e.day]||[]; byDay[e.day].push(e); });
   for(let d=1; d<=days; d++){
-    if(byDay[d]) byDay[d].forEach(e=>{ bal+=e.amt; });
+    if(byDay[d]) byDay[d].forEach(e=>{ if(!e.off) bal+=e.amt; });
     series.push({day:d, bal});
     if(bal<low.bal) low={day:d, bal};
   }
-  const totalIn=events.filter(e=>e.type==='income').reduce((s,e)=>s+e.amt,0);
+  const totalIn=events.filter(e=>e.type==='income'&&!e.off).reduce((s,e)=>s+e.amt,0);
   const totalOut=events.filter(e=>e.type==='bill').reduce((s,e)=>s+Math.abs(e.amt),0);
   const totalSaved=events.filter(e=>e.type==='savings').reduce((s,e)=>s+Math.abs(e.amt),0);
   return {start, end:bal, series, events, low, totalIn, totalOut, totalSaved, net:bal-start, byDay, days};
@@ -6064,11 +6079,13 @@ function cfpMount(w){
       const dow=g.day===0?'':dt.toLocaleDateString('en-US',{weekday:'short'});
       let dayNet=0;
       const items=g.items.map(e=>{
-        run+=e.amt; dayNet+=e.amt;  // running balance after this event (checkbook register)
+        const isOff=!!e.off;
+        if(!isOff){ run+=e.amt; dayNet+=e.amt; }  // running balance after this event (skipped income doesn't count)
         const runColor=run<0?'var(--red)':run<200?'var(--amber)':'var(--text)';
         const runBadge=`<span class="cfp-ev-run" style="color:${runColor}">${run<0?'-':''}${fmtK(Math.abs(run))}</span>`;
         if(e.type==='income'){
-          return `<div class="cfp-ev income"><span class="cfp-ev-ind"></span><span class="cfp-ev-nm">${esc(e.name)}</span><span class="cfp-ev-amt" style="color:var(--green)">+${fmtK(e.amt)}</span>${runBadge}</div>`;
+          const ik=String(e.key||'').replace(/'/g,"\\'");
+          return `<div class="cfp-ev income${isOff?' cfp-ev-off':''}"><input type="checkbox" class="cfp-ev-chk" ${isOff?'':'checked'} onclick="event.stopPropagation();cfpToggleIncome('${ik}','${w.uid}')" title="Uncheck if this deposit won't actually land — it drops out of every projection"><span class="cfp-ev-nm">${esc(e.name)}</span><span class="cfp-ev-amt" style="color:${isOff?'var(--muted)':'var(--green)'}">${isOff?'skipped':'+'+fmtK(e.amt)}</span>${runBadge}</div>`;
         }
         if(e.type==='savings'){
           return `<div class="cfp-ev savings"><span class="cfp-ev-ind"></span><span class="cfp-ev-nm">💰 ${esc(e.name)}</span><span class="cfp-ev-amt" style="color:var(--blue)">-${fmtK(Math.abs(e.amt))}</span>${runBadge}</div>`;
