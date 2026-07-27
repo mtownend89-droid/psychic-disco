@@ -7969,6 +7969,20 @@ function richieSpotlightAt(opts){
 // ── ONE funnel for everything Richie says out of his house ──
 // Emerges if needed, types in lockstep with the voice, and only heads home
 // AFTER he has finished speaking (plus a short linger so the text stays up).
+// ── Richie's animated-emoji props (Google Noto Animated Emoji — free, CDN-hosted webp; the app's
+//    CSP img-src already allows https:, so no server change needed. A small animated prop appears
+//    on Richie's shoulder keyed to the moment — tips, goals, celebrations, nudges, etc.) ──
+// Codepoints verified to exist in Google's animated set (not every emoji is animated).
+const RICHIE_PROP_EMOJI={ tip:'1f4a1', goal:'1f3af', celebrate:'1f389', win:'1f973', trophy:'1f3c6', streak:'1f525', money:'1fa99', save:'1f911', debt:'1f4b8', invest:'1f680', warn:'26a0', nudge:'1f440', health:'1f4aa' };
+function _notoAnim(hex){ return `https://fonts.gstatic.com/s/e/notoemoji/latest/${hex}/512.webp`; }
+function richieSetProp(key){
+  const el=gg('raProp'); if(!el) return;
+  const hex=key&&RICHIE_PROP_EMOJI[key];
+  if(!hex){ el.style.display='none'; el.removeAttribute('src'); return; }
+  el.onerror=()=>{ el.style.display='none'; };   // CDN blocked/offline → hide silently, never a broken image
+  el.onload=()=>{ el.style.display='block'; };
+  el.src=_notoAnim(hex);
+}
 function richieShow(msg, opts){
   opts=opts||{};
   if(_richieBlocked()){ richieGoHome(); return; }   // overlay came up — clean up, don't speak over it
@@ -7976,6 +7990,7 @@ function richieShow(msg, opts){
   if(opts.celebrate) _raConfetti();
   const present=()=>{
     if(_raChar){ if(opts.celebrate){ _raChar.emotion('celebrate'); _raChar.do('tada'); } else { _raChar.emotion(opts.emo||'happy'); } }
+    try{ richieSetProp(opts.prop || (opts.celebrate?'celebrate':({curious:'nudge',no:'warn',proud:'trophy'}[opts.emo]||''))); }catch(e){}
     _raBubble(msg);
     _raActions = opts.actions || null; _renderRaActs();         // interactive choices, if any
     richieSpeakType(gg('raMsg'), msg, ()=>{                        // done = finished speaking
@@ -8077,6 +8092,7 @@ function richieMaybeProactive(pg){
 }
 function richieGoHome(){
   clearTimeout(_raHomeTimer); try{ _stopTts(); }catch(e){}
+  try{ richieSetProp(''); }catch(e){}   // drop the animated prop when he heads home
   const pn=gg('richiePanel'); if(pn) pn.classList.remove('open');   // close the desktop block panel
   if(!_richieMobile()){ _raBusy=false; _raActions=null; }
   gg('raBubble').classList.remove('show');
@@ -8121,7 +8137,7 @@ async function richieCoachNow(){
   }catch(e){}
   if(!tip){ const q=richieQuips(); tip=q[Math.floor(Math.random()*q.length)]; }
   _aiSeen.push(tip); if(_aiSeen.length>12)_aiSeen.shift();
-  richieShow(tip, {actions:[{label:'👍 Got it', cls:'ra-go', on:richieGoHome},{label:'💬 Ask Richie', on:openRichieChat}]});
+  richieShow(tip, {prop:'tip', actions:[{label:'👍 Got it', cls:'ra-go', on:richieGoHome},{label:'💬 Ask Richie', on:openRichieChat}]});
 }
 window.addEventListener('resize',()=>{ if(_raBusy){ const a=gg('raActor'); const r=_fabRect(); /* keep bubble anchored */ if(gg('raBubble').classList.contains('show')) _raBubble(gg('raMsg').textContent); } });
 function newSbTip(){ const b=richieQuips(); gg('sbRichieTip').textContent=b[Math.floor(Math.random()*b.length)]; }
