@@ -690,7 +690,11 @@ function incomeEditorRender(){
     ${detSection}
     ${detected.length?`<div class="nw-sec-h"><span>Manual streams</span></div>`:''}
     <div class="inc-list">${rows||'<div class="ws-hint">No income streams yet.</div>'}</div>
-    <button class="manual-add-btn" onclick="editIncome(-1)">➕ Add an income stream</button>`;
+    <button class="manual-add-btn" onclick="editIncome(-1)">➕ Add an income stream</button>
+    <div class="nw-sec-h" style="margin-top:14px"><span>🎁 One-time deposits</span></div>
+    <div class="ws-hint" style="margin:0 0 6px">A bonus, gift, or tax refund — appears on its date in Cash Flow, not counted as recurring monthly income.</div>
+    <div class="inc-list">${((APP.oneOffIncome||[]).map((o,i)=>`<div class="inc-row"><div class="inc-main"><div class="inc-nm">🎁 ${esc(o.name||'One-time deposit')}</div><div class="inc-sub">${fmtK(+o.amt||0)} · ${o.date?new Date(o.date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'no date'}</div></div><div class="inc-actions"><button class="goal-mini" onclick="openOneOffForm(${i})" title="Edit">✎</button><button class="goal-mini danger" onclick="deleteOneOff(${i})" title="Remove">✕</button></div></div>`).join(''))||'<div class="ws-hint">None yet.</div>'}</div>
+    <button class="manual-add-btn" onclick="openOneOffForm(-1)">➕ Add a one-time deposit</button>`;
 }
 // Adjust or stop a detected (tag-linked) stream. Detection stays live; this overrides it.
 function editDetectedIncome(key){
@@ -789,6 +793,44 @@ function saveIncome(){
 function deleteIncome(i){
   if(!confirm('Remove this income stream?')) return;
   _incomeList().splice(i,1); saveState(); incomeEditorRender();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+}
+// One-time deposits (bonus/gift/refund) — single dated inflows in Cash Flow, not monthly income.
+function openOneOffForm(i){
+  const list=APP.oneOffIncome||[]; const o = i>=0?(list[i]||{}):{name:'',amt:'',date:''};
+  gg('manualTitle').textContent = i>=0?'Edit one-time deposit':'Add one-time deposit';
+  gg('manualSub').textContent = 'A single dated inflow — bonus, gift, tax refund. Shows in Cash Flow on its date.';
+  gg('manualBody').innerHTML=`
+    <label class="mf-label">What is it?</label>
+    <input class="mf-in" id="ooName" type="text" placeholder="Bonus / Gift / Tax refund" value="${esc(o.name||'')}">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div><label class="mf-label">Amount</label><input class="mf-in" id="ooAmt" type="number" min="0" step="10" value="${o.amt!=null?esc(String(o.amt)):''}"></div>
+      <div><label class="mf-label">Date</label><input class="mf-in" id="ooDate" type="date" value="${esc(o.date||'')}"></div>
+    </div>
+    <div class="mf-actions">
+      <button class="btn" onclick="incomeEditorRender()">Cancel</button>
+      <button class="btn primary" onclick="saveOneOff(${i})">Save</button>
+    </div>`;
+  setTimeout(()=>{ const n=gg('ooName'); if(n) n.focus(); },60);
+}
+function saveOneOff(i){
+  const amt=Math.max(0, parseFloat(gg('ooAmt').value)||0);
+  const date=(gg('ooDate').value||'').trim();
+  if(!(amt>0)){ gg('ooAmt').focus(); return; }
+  if(!date){ gg('ooDate').focus(); return; }
+  const name=(gg('ooName').value||'').trim()||'One-time deposit';
+  APP.oneOffIncome=APP.oneOffIncome||[];
+  const rec={ id:(i>=0&&APP.oneOffIncome[i]&&APP.oneOffIncome[i].id)||('oo'+Date.now()), name, amt, date };
+  if(i>=0) APP.oneOffIncome[i]=rec; else APP.oneOffIncome.push(rec);
+  saveState(); try{ _memoInvalidate&&_memoInvalidate(); }catch(e){}
+  incomeEditorRender();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+  if(typeof richieSay==='function' && i<0){ try{ richieSay(`Added ${fmtK(amt)} on ${new Date(date+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})} — it's in your Cash Flow now. Uncheck it there if plans change.`); }catch(e){} }
+}
+function deleteOneOff(i){
+  const list=APP.oneOffIncome||[]; if(i<0||i>=list.length) return;
+  list.splice(i,1); saveState(); try{ _memoInvalidate&&_memoInvalidate(); }catch(e){}
+  incomeEditorRender();
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
 }
 
@@ -1163,6 +1205,13 @@ function _incomeEvents(days){
     } else { // annual / fallback: spread monthly
       for(let d=15; d<=days; d+=30){ const ed=new Date(today.getTime()+d*86400000); if(okEnd(ed)) out.push({day:d, amt:Math.round(monthly), name:src.name, type:'income', freq:src.freq}); }
     }
+  });
+  // One-time deposits the user added (bonus, gift, tax refund) — a single dated inflow, no cadence.
+  (APP.oneOffIncome||[]).forEach(o=>{
+    if(!o || !(+o.amt>0) || !o.date) return;
+    const d=new Date(o.date+'T00:00:00'); if(isNaN(d)) return;
+    const off=dayOffset(d);
+    if(off>=1 && off<=days) out.push({day:off, amt:+o.amt, name:o.name||'One-time deposit', type:'income', freq:'once', oneOff:true});
   });
   return out;
 }
