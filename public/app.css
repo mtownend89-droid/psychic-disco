@@ -1695,6 +1695,9 @@ body.fx-slime .canvas-widget-card::after{content:'';position:absolute;left:-2%;r
 .cfp-ev-start{display:flex;align-items:center;gap:10px;padding:6px 10px;font-size:12px;color:var(--muted);border-bottom:1px dashed var(--border);margin-bottom:2px;}
 .cfp-ev-start .cfp-ev-nm{flex:1;}
 .cfp-ev.income{border-left:3px solid var(--green);}
+.cfp-ev-chk{flex:0 0 auto;width:15px;height:15px;accent-color:var(--green);cursor:pointer;margin:0;}
+.cfp-ev.cfp-ev-off{opacity:.55;border-left-color:var(--muted);}
+.cfp-ev.cfp-ev-off .cfp-ev-nm{text-decoration:line-through;}
 .cfp-ev.bill{border-left:3px solid var(--red);}
 .cfp-ev-ind{width:12px;flex-shrink:0;}
 /* date-grouped register: a header row per day + a running day-net */
