@@ -1478,16 +1478,24 @@ function engMonthlyBills(){ return engBills().reduce((s,b)=>s+(b.pay||0),0); }
 // minus a prorated slice of goal contributions and a small buffer, spread over the days until pay.
 function engSafeToSpend(){
   const cash=engStartCash();
-  const proj=engCashFlowProjection(35);
+  const proj=engCashFlowProjection(90);   // look a full quarter ahead, not just to next payday
   const inc=(proj.events||[]).filter(e=>e.type==='income' && !e.off).sort((a,b)=>a.day-b.day)[0];   // a paycheck the user checked off shouldn't set the horizon
   const horizon=inc?Math.max(1,inc.day):14;
   const billsDue=(proj.events||[]).filter(e=>e.type==='bill'&&e.day<=horizon).reduce((s,e)=>s+Math.abs(e.amt),0);  // savings handled via goalPortion below — don't double-count
   const goalMonthly=(typeof engSavingsBuckets==='function')?engSavingsBuckets().reduce((s,b)=>s+(b.monthly||0),0):0;
   const goalPortion=goalMonthly*(horizon/30.44);
   const buffer=50;
-  const pool=Math.max(0,cash-billsDue-goalPortion-buffer);
+  const nearPool=Math.max(0,cash-billsDue-goalPortion-buffer);   // spendable before the next paycheck
+  // 90-day floor: spending $X today lowers EVERY future balance by $X, so the projected low point
+  // caps what's truly safe. If cash flow trends down (or dips below 0), this binds and safe-to-spend
+  // shrinks — you shouldn't be told to spend money a coming shortfall will need.
+  const low90=proj.low.bal;
+  const safe90=Math.max(0, low90-buffer);
+  const pool=Math.min(nearPool, safe90);
+  const constrainedBy90=safe90<nearPool;   // the quarter-ahead floor is the binding limit, not near-term cash
   const perDay=horizon>0?pool/horizon:pool;
-  return {pool,perDay,horizon,cash,billsDue,goalPortion,buffer,nextIncomeDay:inc?inc.day:null};
+  return {pool,perDay,horizon,cash,billsDue,goalPortion,buffer,nextIncomeDay:inc?inc.day:null,
+    low90:Math.round(low90), lowDay:proj.low.day, constrainedBy90, shortfall:low90<0};
 }
 // Detect recurring charges / subscriptions — groups outflows by merchant, keeps those
 // that repeat at a regular cadence with consistent amounts.
@@ -1609,8 +1617,15 @@ function safeToSpendBody(w){
       <div><span>− Bills before payday</span><b style="color:var(--red)">${fmtK(s.billsDue)}</b></div>
       ${s.goalPortion>0.5?`<div><span>− Goal set-aside</span><b style="color:var(--amber)">${fmtK(s.goalPortion)}</b></div>`:''}
       <div><span>− Safety buffer</span><b style="color:var(--muted)">${fmtK(s.buffer)}</b></div>
+      ${s.constrainedBy90?`<div><span>${s.shortfall?'⚠️ 90-day shortfall':'Held for 90-day low'}</span><b style="color:${s.shortfall?'var(--red)':'var(--amber)'}">${s.low90<0?'−':''}${fmtK(Math.abs(s.low90))}</b></div>`:''}
     </div>
-    ${s.pool<=0?`<div class="ws-hint" style="margin-top:8px;color:var(--amber)">Tight until payday — bills &amp; set-asides cover your cash. Ease a goal contribution or move a bill.</div>`:''}
+    ${s.shortfall
+      ? `<div class="ws-hint" style="margin-top:8px;color:var(--red)">Heads up — your balance is projected to dip to ${fmtK(s.low90)} ${s.lowDay!=null?`around ${_projDate(s.lowDay).toLocaleDateString('en-US',{month:'short',day:'numeric'})}`:'within 90 days'}. Safe-to-spend is held at ${fmtK(s.pool)} so you don't spend into it — trim a bill or add income.</div>`
+      : s.constrainedBy90
+        ? `<div class="ws-hint" style="margin-top:8px;color:var(--amber)">Held back to your 90-day low (${fmtK(s.low90)}${s.lowDay!=null?` around ${_projDate(s.lowDay).toLocaleDateString('en-US',{month:'short',day:'numeric'})}`:''}) — spending more risks a crunch later this quarter.</div>`
+        : s.pool<=0
+          ? `<div class="ws-hint" style="margin-top:8px;color:var(--amber)">Tight until payday — bills &amp; set-asides cover your cash. Ease a goal contribution or move a bill.</div>`
+          : ''}
   </div>`;
 }
 function engBillsDebt(){ return engBills().reduce((s,b)=>s+Math.abs(b.bal||0),0); }
