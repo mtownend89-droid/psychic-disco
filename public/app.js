@@ -1157,7 +1157,13 @@ function _paycheckSource(){ const s=_paycheckSources().filter(_paycheckActive); 
 function _effectiveIncomeSources(){
   const base = (APP.incomeSources && APP.incomeSources.length) ? APP.incomeSources : incomeSources;
   const pcs=_paycheckSources().filter(_paycheckActive);
-  if(pcs.length) return [...pcs, ...base.filter(s=>!/pay ?check/i.test(s.name||''))];
+  if(pcs.length){
+    // Detected paychecks are live-linked. Drop a MANUAL stream only if it's the example seed or it
+    // exactly duplicates a detected payee — never just because its name contains "paycheck" (that was
+    // silently hiding legit distinct streams like "Dana Paycheck Est").
+    const detNames=new Set(pcs.map(p=>(p.name||'').toLowerCase().trim()));
+    return [...pcs, ...base.filter(s=>{ const nm=(s.name||'').toLowerCase().trim(); return nm && !detNames.has(nm) && !/\(example\)/i.test(nm); })];
+  }
   return base;
 }
 // generate income events with REAL date-anchored cadence within the window.
