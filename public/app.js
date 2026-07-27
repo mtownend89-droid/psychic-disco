@@ -3840,10 +3840,8 @@ const WIDGET_CATALOG=[
   // Cash Flow (read-only chart) folded into the Cash Flow Planner — same projection line, plus
   // editing. Kept out of the catalog; existing widgets migrate via WIDGET_MIGRATE above.
   {id:'pl_panel',name:'Profit & Loss',icon:'💹',cat:'Cash Flow',span:2,minLevel:1,desc:'Income, spending, net & savings rate by day/week/month.'},
-  {id:'cashflow_planner',name:'Cash Flow Planner',icon:'📅',cat:'Cash Flow',span:2,minLevel:1,desc:'Project your running balance forward — edit bills, see your low point before it hits.'},
-  {id:'fund_triage',name:'Where Extra Money Goes',icon:'💸',cat:'Cash Flow',span:2,minLevel:1,desc:'Delegate your monthly surplus by priority — high-interest debt, then savings, then investing.'},
   {id:'cashflow_planner',name:'Cash Flow',icon:'📅',cat:'Cash Flow',span:2,minLevel:1,desc:'Your projected running balance — see your low point before it hits, and edit bills to fix it.'},
-  {id:'fund_triage',name:'Extra Funds Triage',icon:'💸',cat:'Cash Flow',span:2,minLevel:1,desc:'Delegate your monthly surplus by priority — high-interest debt, then savings, then investing.'},
+  {id:'fund_triage',name:'Where Extra Money Goes',icon:'💸',cat:'Cash Flow',span:2,minLevel:1,desc:'Delegate your monthly surplus by priority — high-interest debt, then savings, then investing.'},
   {id:'goals',name:'Financial Goals',icon:'🎯',cat:'Overview',span:2,minLevel:1,desc:'Set goals, track progress automatically, and let Richie coach you to the finish.'},
   {id:'health_score',name:'Financial Health Score',icon:'🩺',cat:'Overview',span:2,minLevel:1,desc:'A single 0–100 score across savings rate, emergency fund, debt-to-income, credit use & high-interest debt — with Richie\'s top fix.'},
   {id:'accounts_list',name:'All Accounts',icon:'🏦',cat:'Overview',span:2,minLevel:1,desc:'Every account with balances — tap to see transactions.'},
