@@ -357,6 +357,7 @@ async function loadEngineData(){
   dataLoaded=((a||b)&&(allAccts.length>0||allTxns.length>0)) || ((APP.importedTxns||[]).length>0);
   try{ if(typeof checkGoalCompletion==='function') checkGoalCompletion(); }catch(e){}
   try{ if(typeof bucketCheckGoals==='function') bucketCheckGoals(); }catch(e){}
+  try{ if(typeof financialMilestones==='function') financialMilestones(); }catch(e){}
   try{ if(typeof maybeWarnPromos==='function') maybeWarnPromos(); }catch(e){}
   return dataLoaded;
 }
@@ -2230,6 +2231,30 @@ function bucketCheckGoals(){
       } }
       else if(APP.bucketDone[k]){ delete APP.bucketDone[k]; changed=true; }   // spent back below target → re-arm
     });
+    if(changed) saveState();
+  }catch(e){}
+}
+// Big financial milestones — debt-free 🚀 and emergency-fund 🏆. Seeds silently on first run so an
+// already-hit milestone doesn't pop; each fires once on the crossing and re-arms if it slips back.
+function financialMilestones(){
+  try{
+    APP.fmDone=APP.fmDone||{}; let changed=false;
+    const seeding=!APP._fmSeeded;
+    const fire=(k,ok,fx,msg,xp)=>{
+      if(ok){ if(!APP.fmDone[k]){ APP.fmDone[k]=1; changed=true;
+        if(!seeding){ try{ emojiBurst(fx,{particle:'stars',count:15}); }catch(e){} try{ richieCelebrate(msg); }catch(e){} try{ awardXp(xp||50); }catch(e){} } } }
+      else if(APP.fmDone[k]){ delete APP.fmDone[k]; changed=true; }
+    };
+    // Emergency fund, measured in months of expenses
+    let ef=0, exp=1; try{ ef=engEmergencyFund(); }catch(e){} try{ exp=Math.max(engMonthlyBills(),1); }catch(e){}
+    const months=exp>0?ef/exp:0;
+    fire('ef3', months>=3, 'trophy', `🏆 Three months of expenses saved — a real safety net. Next stop: six.`, 60);
+    fire('ef6', months>=6, 'trophy', `🏆 Six months of expenses banked — fortress-level. Incredible.`, 100);
+    // Debt-free — only celebrated once you've actually carried tracked debt
+    let totalDebt=0; try{ totalDebt=(typeof engDebtGroups==='function')?(engDebtGroups().total||0):0; }catch(e){}
+    if(totalDebt>=1 && !APP._hadDebt){ APP._hadDebt=1; changed=true; }
+    fire('debtfree', (totalDebt<1 && !!APP._hadDebt), 'rocket', `🚀 DEBT-FREE! Every tracked balance is at zero. Aim that old payment straight at savings now.`, 120);
+    if(seeding){ APP._fmSeeded=1; changed=true; }
     if(changed) saveState();
   }catch(e){}
 }
@@ -4799,6 +4824,7 @@ function zbBalance(uid){
   }
   saveState(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
   if(sbRichie)sbRichie.do('nod');
+  try{ emojiBurst('stars',{count:9,life:1500}); }catch(e){}   // every dollar assigned ✨
 }
 function zbAddBucket(uid){
   const name=prompt('Envelope name (e.g. Hobbies, Pet, Gifts):'); if(!name) return;
