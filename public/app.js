@@ -3420,7 +3420,7 @@ window.addEventListener('visibilitychange', ()=>{ if(document.visibilityState===
 let _persistTimer=null;
 function _persistSoon(){ clearTimeout(_persistTimer); _persistTimer=setTimeout(()=>{ try{ saveState(); }catch(e){} }, 400); }
 /* ── Cross-device state sync: push edits to the server, pull newer edits from other devices ── */
-const SYNC_KEYS=['mdf_categories','mdf_cat_overrides','mdf_cat_rules','mdf_txn_notes','mdf_txn_tags','mdf_acct_cats','mdf_nw_history','mdf_health_history','mdf_health_grade','mdf_fire','mdf_gami','richie_setup','richie_proactive','richie_audio','richie_voice'];
+const SYNC_KEYS=['mdf_categories','mdf_cat_overrides','mdf_cat_rules','mdf_txn_notes','mdf_txn_tags','mdf_txn_confirmed','mdf_acct_cats','mdf_nw_history','mdf_health_history','mdf_health_grade','mdf_fire','mdf_gami','richie_setup','richie_lastvisit','richie_proactive','richie_audio','richie_voice'];
 function syncCollect(){ try{ _saveActiveLayout(); }catch(e){}   /* fold live pages into layouts before EVERY push (immediate/flush/heartbeat), else a push can ship stale layouts */
   const stores={}; SYNC_KEYS.forEach(k=>{ const v=LS.getItem(k); if(v!=null) stores[k]=v; }); return { app:APP, stores, _ts:Date.now() }; }
 function _widgetCount(pages){ return (pages||[]).reduce((s,p)=>s+((p&&p.widgets||[]).length),0); }
