@@ -1438,6 +1438,16 @@ body.fx-slime .canvas-widget-card::after{content:'';position:absolute;left:-2%;r
 .rec-cancelbtn{flex-shrink:0;background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);white-space:nowrap;}
 .rec-cancelbtn:hover{border-color:var(--red);color:var(--red);}
 .rec-cancelbtn.on{border-color:var(--green);color:var(--green);}
+.rec-donebtn{flex-shrink:0;background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);white-space:nowrap;}
+.rec-donebtn:hover{border-color:var(--green);color:var(--green);}
+.rec-donebtn.on{border-color:var(--blue);color:var(--blue);}
+.rec-billtag{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);background:var(--surface3);border-radius:5px;padding:1px 5px;margin-left:4px;vertical-align:middle;}
+.rec-row2.rec-isbill{opacity:.82;}
+.rec-row2.rec-addressed{opacity:.6;}
+.rec-hidden-sec{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px;border-top:1px solid var(--border);padding-top:9px;}
+.rec-hidden-note{font-size:12px;color:var(--muted);margin-top:10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.rec-linkbtn{background:none;border:none;color:var(--green);font-weight:700;font-size:12px;cursor:pointer;font-family:var(--font);padding:2px 4px;}
+.rec-linkbtn:hover{text-decoration:underline;}
 .rec-row2.rec-flagged{opacity:.72;}
 .rec-row2.rec-flagged .rec-nm{text-decoration:line-through;text-decoration-color:var(--muted);}
 .pf-wrap{display:flex;flex-direction:column;}
