@@ -1624,63 +1624,78 @@ function _subHiddenInfo(r){
   const expired = (Date.now()-a) >= 90*86400000;
   return {addressed:true, hidden: !newCharge && !expired};
 }
-let _recRows=[], _subShowHidden={};
+let _recRows=[], _subShowHidden={}, _recTab={};
+function _isSubCat(c){ return /subscri|streaming/i.test(String(c||'')); }   // categorized as a subscription
+function recTab(uid,tab){ _recTab[uid]=tab; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function recurringBody(w){
   const rec=engRecurring(); _recRows=rec;
   if(!rec.length) return `<div class="wph"><div class="wph-sub">No recurring charges detected yet.</div><div class="ws-hint" style="margin-top:6px">Once you've got a couple months of transactions, Richie spots subscriptions and recurring bills automatically.</div></div>`;
   const cancel=_cancelSubs();
   const showHidden=!!_subShowHidden[w.uid];
   const cats=getUserCategories().filter(c=>!c.group).map(c=>c.label);
-  // Detect "already a bill" against EVERY bill (Plaid + manual), not just manual — so a recurring
-  // charge that's tracked as a bill isn't double-counted in the subscriptions total.
   const billNames=new Set((typeof engBills==='function'?engBills():[]).map(b=>(b.name||'').toLowerCase().trim()));
   const inBills=r=>billNames.has((r.merchant||'').toLowerCase().trim());
   const today=new Date(); today.setHours(0,0,0,0);
-  const active=[], hidden=[];
-  rec.forEach((r,i)=>{ r._i=i; (_subHiddenInfo(r).hidden?hidden:active).push(r); });
-  const subsTotal=active.filter(r=>!inBills(r)).reduce((s,r)=>s+r.monthly,0);
-  const billsTotal=active.filter(r=>inBills(r)).reduce((s,r)=>s+r.monthly,0);
-  const flagged=rec.filter(r=>cancel[r.merchKey]); const savings=flagged.reduce((s,r)=>s+r.monthly,0);
-  const hikes=active.filter(r=>r.priceUp).length;
-  const rowHtml=(r,isHidden)=>{
-    const i=r._i; const isCancel=!!cancel[r.merchKey]; const bill=inBills(r);
+  rec.forEach((r,i)=>{ r._i=i; });
+  // Confirmed subscriptions (categorized as such, not already a bill) vs the New/Review list.
+  const notBill=rec.filter(r=>!inBills(r));
+  const current=notBill.filter(r=>_isSubCat(r.category));
+  const reviewAll=notBill.filter(r=>!_isSubCat(r.category));
+  const reviewActive=reviewAll.filter(r=>!_subHiddenInfo(r).hidden);
+  const reviewHidden=reviewAll.filter(r=>_subHiddenInfo(r).hidden);
+  const billsCount=rec.length-notBill.length;
+  const tab=_recTab[w.uid]||(current.length?'current':'review');
+  const rowHtml=(r,mode)=>{
+    const i=r._i; const isCancel=!!cancel[r.merchKey];
     const catList=cats.includes(r.category)?cats:[r.category].concat(cats);
     const opts=catList.map(c=>`<option value="${esc(c)}"${c===r.category?' selected':''}>${esc(c)}</option>`).join('');
-    const billBtn=bill
-      ? `<span class="rec-inbills" title="Already tracked in your Bills — not counted in the subscriptions total">✓ Bill</span>`
-      : `<button class="rec-billbtn" onclick="event.stopPropagation();recurringToBill(${i})" title="Add to Upcoming Bills">＋ Bill</button>`;
     const dLeft=r.nextTs?Math.round((r.nextTs-today.getTime())/86400000):null;
     const renewLbl = dLeft==null?'' : (()=>{ const d=new Date(r.nextTs).toLocaleDateString('en-US',{month:'short',day:'numeric'});
       return dLeft<0?`📅 renews around ${d}` : dLeft===0?`📅 renews today` : `📅 renews ${d} · in ${dLeft}d`; })();
     const priceBadge = r.priceUp?`<span class="rec-priceup" title="Price increase detected">▲ ${fmtK(r.prior)}→${fmtK(r.recent)}</span>`:'';
     const cancelBadge = isCancel?`<span class="rec-cancel-badge">cancelling</span>`:'';
     const mk=String(r.merchKey||'').replace(/'/g,"\\'");
-    const doneBtn = isHidden
-      ? `<button class="rec-donebtn on" onclick="event.stopPropagation();subUnaddress('${mk}')" title="Bring this back to the active list">↺ Restore</button>`
-      : `<button class="rec-donebtn" onclick="event.stopPropagation();subAddress(${i})" title="Mark reviewed — hides it until a new charge or 90 days">✓ Done</button>`;
-    return `<div class="rec-row2${isCancel?' rec-flagged':''}${bill?' rec-isbill':''}${isHidden?' rec-addressed':''}">
+    const cancelBtn=`<button class="rec-cancelbtn${isCancel?' on':''}" onclick="event.stopPropagation();subToggleCancel(${i})" title="${isCancel?'Keep':'Flag to cancel'}" aria-label="${isCancel?'Keep':'Flag to cancel'} ${esc(r.merchant)}">${isCancel?'↺ Keep':'⊘ Cancel'}</button>`;
+    let actions;
+    if(mode==='current'){ actions=cancelBtn; }
+    else if(mode==='hidden'){ actions=`<button class="rec-donebtn on" onclick="event.stopPropagation();subUnaddress('${mk}')" title="Bring this back to Review">↺ Restore</button>`; }
+    else { actions=`<button class="rec-billbtn" onclick="event.stopPropagation();recurringToBill(${i})" title="Add to Upcoming Bills">＋ Bill</button>${cancelBtn}<button class="rec-donebtn" onclick="event.stopPropagation();subAddress(${i})" title="Mark reviewed — hides it until a new charge or 90 days">✓ Done</button>`; }
+    const yrChip = mode==='current'?`<div class="rec-yr">${fmtK(r.monthly*12)}/yr</div>`:'';
+    return `<div class="rec-row2${isCancel?' rec-flagged':''}${mode==='hidden'?' rec-addressed':''}">
       <div class="rec-r2-top">
-        <div class="rec-nm">${esc(r.merchant)} ${priceBadge}${cancelBadge}${bill?'<span class="rec-billtag">bill</span>':''}</div>
-        <div class="rec-side"><div class="rec-amt">${fmtK(r.amount)}</div><div class="rec-mo">${r.cadence} · ${fmtK(r.monthly)}/mo</div></div>
+        <div class="rec-nm">${esc(r.merchant)} ${priceBadge}${cancelBadge}</div>
+        <div class="rec-side"><div class="rec-amt">${fmtK(r.amount)}</div><div class="rec-mo">${r.cadence} · ${fmtK(r.monthly)}/mo</div>${yrChip}</div>
       </div>
       ${renewLbl?`<div class="rec-renew${dLeft!=null&&dLeft>=0&&dLeft<=7?' soon':''}">${renewLbl}</div>`:''}
       <div class="rec-r2-ctrls">
         <select class="txn-cat-sel rec-catsel" onclick="event.stopPropagation()" onchange="recurringSetCat(${i},this.value)" title="Set category (applies to this merchant)" aria-label="Category for ${esc(r.merchant)}">${opts}</select>
-        ${billBtn}
-        <button class="rec-cancelbtn${isCancel?' on':''}" onclick="event.stopPropagation();subToggleCancel(${i})" title="${isCancel?'Keep this subscription':'Flag to cancel'}" aria-label="${isCancel?'Keep':'Flag to cancel'} ${esc(r.merchant)}">${isCancel?'↺ Keep':'⊘ Cancel'}</button>
-        ${doneBtn}
+        ${actions}
       </div>
     </div>`;
   };
-  const rows = active.slice(0,40).map(r=>rowHtml(r,false)).join('')
-    + (showHidden && hidden.length ? `<div class="rec-hidden-sec">Addressed · hidden</div>`+hidden.map(r=>rowHtml(r,true)).join('') : '');
-  const savingsChip = savings>0?` · <span style="color:var(--pos)">save ${fmtK(savings)}/mo by cancelling ${flagged.length}</span>`:'';
-  const hikeChip = hikes>0?` · <span style="color:var(--amber)">▲ ${hikes} price rise${hikes>1?'s':''}</span>`:'';
-  const billsChip = billsTotal>0?` · <span style="color:var(--muted)">${fmtK(billsTotal)}/mo already in Bills</span>`:'';
-  const hiddenNote = hidden.length?`<div class="rec-hidden-note">${hidden.length} addressed &amp; hidden <span class="ws-hint" style="display:inline">— back on a new charge or after 90 days</span> <button class="rec-linkbtn" onclick="event.stopPropagation();subToggleShowHidden('${w.uid}')">${showHidden?'hide':'show'}</button></div>`:'';
-  return `<div class="rec-wrap">
-    <div class="rec-total"><b>${fmtK(subsTotal)}</b>/mo subscriptions · <b>${fmtK(subsTotal*12)}</b>/yr${billsChip}${hikeChip}${savingsChip}</div>
-    <div class="ws-hint" style="margin:2px 0 9px">Auto-detected recurring charges. <b>✓ Done</b> hides one you've handled, <b>⊘ Cancel</b> flags it, <b>＋ Bill</b> adds it to Bills. Items already in Bills aren't counted in the total.</div>${rows}${hiddenNote}</div>`;
+  const tabs=`<div class="hub-tabs">
+    <button class="hub-tab${tab==='current'?' on':''}" onclick="event.stopPropagation();recTab('${w.uid}','current')">Subscriptions${current.length?` · ${current.length}`:''}</button>
+    <button class="hub-tab${tab==='review'?' on':''}" onclick="event.stopPropagation();recTab('${w.uid}','review')">Review${reviewActive.length?` · ${reviewActive.length}`:''}</button>
+  </div>`;
+  let body;
+  if(tab==='current'){
+    const moTot=current.reduce((s,r)=>s+r.monthly,0);
+    const hikes=current.filter(r=>r.priceUp).length;
+    const flagged=current.filter(r=>cancel[r.merchKey]); const savings=flagged.reduce((s,r)=>s+r.monthly,0);
+    const hikeChip=hikes>0?` · <span style="color:var(--amber)">▲ ${hikes} price rise${hikes>1?'s':''}</span>`:'';
+    const savingsChip=savings>0?` · <span style="color:var(--pos)">save ${fmtK(savings)}/mo cancelling ${flagged.length}</span>`:'';
+    const rows=current.length? current.slice(0,80).map(r=>rowHtml(r,'current')).join('')
+      : `<div class="ws-hint" style="margin-top:10px">No subscriptions confirmed yet. Open <b>Review →</b> and set a charge's category to <b>Subscriptions</b> to start tracking its yearly cost here.</div>`;
+    body=`<div class="rec-total"><b>${fmtK(moTot)}</b>/mo · <b>${fmtK(moTot*12)}</b>/yr across ${current.length} subscription${current.length!==1?'s':''}${hikeChip}${savingsChip}</div>
+      <div class="ws-hint" style="margin:2px 0 9px">Your confirmed subscriptions and estimated yearly cost, from your transactions. Recategorize a row to move it out.</div>${rows}`;
+  } else {
+    const rows=reviewActive.length? reviewActive.slice(0,80).map(r=>rowHtml(r,'review')).join('')
+      : `<div class="ws-hint" style="margin-top:10px">All caught up — nothing new to review. 🎉</div>`;
+    const shown = showHidden&&reviewHidden.length ? `<div class="rec-hidden-sec">Addressed · hidden</div>`+reviewHidden.map(r=>rowHtml(r,'hidden')).join('') : '';
+    const hiddenNote = reviewHidden.length?`<div class="rec-hidden-note">${reviewHidden.length} addressed &amp; hidden <span class="ws-hint" style="display:inline">— back on a new charge or after 90 days</span> <button class="rec-linkbtn" onclick="event.stopPropagation();subToggleShowHidden('${w.uid}')">${showHidden?'hide':'show'}</button></div>`:'';
+    body=`<div class="ws-hint" style="margin:2px 0 9px">New recurring charges to sort. Pick a <b>category</b> (choose <b>Subscriptions</b> to track it), <b>＋ Bill</b> if it's a bill, or <b>✓ Done</b> to dismiss.${billsCount?` <span style="color:var(--muted)">· ${billsCount} already in Bills</span>`:''}</div>${rows}${shown}${hiddenNote}`;
+  }
+  return `<div class="rec-wrap">${tabs}<div class="rec-tabbody" style="margin-top:10px">${body}</div></div>`;
 }
 function subToggleCancel(i){ const r=_recRows[i]; if(!r||!r.merchKey) return; const c=_cancelSubs(); if(c[r.merchKey]) delete c[r.merchKey]; else c[r.merchKey]=true; saveState(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); if(sbRichie)sbRichie.do('nod'); }
 function subAddress(i){ const r=_recRows[i]; if(!r||!r.merchKey) return; _subAddressed()[r.merchKey]=Date.now(); saveState(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); if(sbRichie)sbRichie.do('nod'); }

@@ -1422,6 +1422,7 @@ body.fx-slime .canvas-widget-card::after{content:'';position:absolute;left:-2%;r
 .rec-side{text-align:right;flex-shrink:0;}
 .rec-amt{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;}
 .rec-mo{font-size:10.5px;color:var(--muted);}
+.rec-yr{font-size:11px;font-weight:700;color:var(--green);margin-top:1px;}
 .rec-row2{padding:9px 0;border-bottom:1px solid var(--border);}
 .rec-row2:last-of-type{border-bottom:none;}
 .rec-r2-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
