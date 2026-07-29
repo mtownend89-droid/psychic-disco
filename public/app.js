@@ -4779,6 +4779,7 @@ function zbWidgetBody(w){
   const buckets=_zbBuckets();
   const ccNames=Array.from(new Set(engBills().filter(b=>b.cat==='CC').map(b=>b.name)));
   const zbActual={}; if(dataLoaded){ try{ engCategoryBreakdown(30).forEach(r=>{ zbActual[r.label]=r.value; }); }catch(e){} }
+  const zbAvg90={}; if(dataLoaded){ try{ engCategoryBreakdown(90).forEach(r=>{ zbAvg90[r.label]=r.value/3; }); }catch(e){} }  // avg monthly spend over last 90d
   const spentTotal=buckets.reduce((s,b)=>s+(zbActual[b.name]||0),0);
   const envTotal=buckets.reduce((s,z)=>s+z.amt,0);
   const assigned=envTotal+bills;
@@ -4816,7 +4817,9 @@ function zbWidgetBody(w){
         const pct=b.amt>0?Math.min(100,Math.round(spent/b.amt*100)):(spent>0?100:0);
         const over=b.amt>0&&spent>b.amt;
         const barColor=over?'var(--red)':pct>=85?'var(--amber)':'var(--green)';
-        const actualLbl=`${fmtK(spent)} spent`+(b.amt>0?` · `+(over?`<b style="color:var(--red)">${fmtK(spent-b.amt)} over</b>`:`${fmtK(Math.max(0,b.amt-spent))} left`):' · no budget');
+        const avg90=zbAvg90[b.name];
+        const avgLbl=(avg90!=null&&avg90>0)?` <span class="zb-avg90" title="Average monthly spend over the last 90 days">· avg ${fmtK(avg90)}/mo</span>`:'';
+        const actualLbl=`${fmtK(spent)} spent`+(b.amt>0?` · `+(over?`<b style="color:var(--red)">${fmtK(spent-b.amt)} over</b>`:`${fmtK(Math.max(0,b.amt-spent))} left`):' · no budget')+avgLbl;
         const ccOpts=ccNames.map(n=>`<option value="${esc(n)}"${b.card===n?' selected':''}>\ud83d\udcb3 ${esc(n)}</option>`).join('');
         return `<div class="zb-bucket">
         <div class="zb-bk-top">
