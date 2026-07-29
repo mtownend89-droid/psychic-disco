@@ -4040,8 +4040,12 @@ const WIDGET_CATALOG=[
   {id:'sankey',name:'Money Flow',icon:'🔀',cat:'Cash Flow',span:2,minLevel:2,desc:'Income → category group → category, flowing left to right through your category tree.'},
   {id:'spending_hub',name:'Spending',icon:'🛍️',cat:'Cash Flow',span:2,minLevel:1,desc:'All your spending in one place — this month vs budget, the trend, top categories, and seasonal patterns, in tabs.'},
   // Top Categories, Spending Trends and Seasonal Spending are now tabs inside the Spending hub
-  // (SPEND_TABS). Kept out of the catalog; existing standalone widgets migrate to spending_hub
-  // above. Their render cases stay — the hub renders each tab through renderWidgetBody.
+  // (SPEND_TABS). Kept registered but hidden:true so they don't show in the picker (existing
+  // standalone widgets still migrate to spending_hub via WIDGET_MIGRATE) — the hub renders each
+  // tab through renderWidgetBody, which needs a catalog entry to exist, so they must stay here.
+  {id:'top_categories',name:'Top Categories',icon:'📊',cat:'Cash Flow',span:1,minLevel:1,hidden:true,desc:'Where your money goes most.'},
+  {id:'spending_trends',name:'Spending Trends',icon:'🆚',cat:'Cash Flow',span:2,minLevel:1,hidden:true,desc:'This month vs last — biggest movers, projected total, pacing.'},
+  {id:'category_heatmap',name:'Seasonal Spending',icon:'🌡️',cat:'Cash Flow',span:2,minLevel:1,hidden:true,desc:'Spending by category across months.'},
   {id:'net_worth_chart',name:'Net Worth Trend',icon:'📈',cat:'Wealth',span:2,minLevel:2,desc:'Net worth over months.'},
   {id:'investments',name:'Investments',icon:'💼',cat:'Wealth',span:2,minLevel:5,desc:'Your portfolio — positions pulled from statements, allocation, and one-tap research. (Mogul)'},
   {id:'fire_hub',name:'Wealth & FIRE',icon:'🔥',cat:'Wealth',span:2,minLevel:3,desc:'Financial-independence progress, long-term projection, and an interactive calculator — in tabs.'},
@@ -4080,7 +4084,7 @@ function wwRender(){
 }
 function wwCategoryStep(){
   const cats={};
-  WIDGET_CATALOG.forEach(w=>{ (cats[w.cat]=cats[w.cat]||[]).push(w); });
+  WIDGET_CATALOG.forEach(w=>{ if(w.hidden) return; (cats[w.cat]=cats[w.cat]||[]).push(w); });
   const icons={'Overview':'📊','Budget':'🎯','Cash Flow':'🌊','Wealth':'📈','Debt':'🚨','Playground':'🎮'};
   const intents={'Overview':'See where you stand','Budget':'Plan your spending','Cash Flow':'Look ahead & find extra','Wealth':'Grow your net worth','Debt':'Pay down what you owe','Playground':'Stress-test scenarios'};
   return Object.keys(cats).map(cat=>{
@@ -4095,7 +4099,7 @@ function wwCategoryStep(){
 }
 function wwPickCat(cat){ _ww.cat=cat; _ww.step=2; wwRender(); }
 function wwWidgetStep(){
-  const items=WIDGET_CATALOG.filter(w=>w.cat===_ww.cat);
+  const items=WIDGET_CATALOG.filter(w=>w.cat===_ww.cat && !w.hidden);
   return items.map(w=>{
     const locked=!widgetUnlocked(w);
     return `<div class="ww-card${locked?' locked':''}" onclick="${locked?`wwLocked(${w.minLevel})`:`wwPickWidget('${w.id}')`}">
