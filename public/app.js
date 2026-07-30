@@ -1493,17 +1493,26 @@ function engBillCalendar(monthOffset){
   const last=new Date(first.getFullYear(), first.getMonth()+1, 0);
   const label=first.toLocaleString('en-US',{month:'long',year:'numeric'});
   const horizon=Math.max(1, Math.round((last-today)/86400000)+2);
-  let events=[]; try{ events=(engCashFlowProjection(horizon).events)||[]; }catch(e){}
   const byDate={};
-  events.forEach(e=>{ const k=_dk(_projDate(e.day)); (byDate[k]=byDate[k]||[]).push({name:e.name, amt:e.amt, type:e.type}); });
+  const pushEv=(k,ev)=>{ (byDate[k]=byDate[k]||[]).push(ev); };
+  // Income & savings come from the forward projection (keeps paycheck cadence + business-day logic).
+  let projEvents=[]; try{ projEvents=(engCashFlowProjection(horizon).events)||[]; }catch(e){}
+  projEvents.forEach(e=>{ if(e.type==='bill') return; const k=_dk(_projDate(e.day)); pushEv(k,{name:e.name, amt:e.amt, type:e.type, off:!!e.off}); });
+  // Bills: every bill's occurrence in THIS calendar month (including days already past), each with
+  // its per-month paid state — so the calendar mirrors the Bills widget's Past/Current/Next tabs.
+  (engUpcomingBills()||[]).filter(b=>b.pay>0).forEach(b=>{
+    const due=_dueDateInMonth(first.getFullYear(), first.getMonth(), b.due||1);
+    const k=_dk(due), okey=billKey(b)+'|'+k;
+    pushEv(k,{name:b.name, amt:-(b.pay||0), type:'bill', off:_billOccPaid(okey), okey});
+  });
   const gridStart=new Date(first); gridStart.setDate(first.getDate()-first.getDay());   // Sunday on/before the 1st
-  const weeks=[]; let cur=new Date(gridStart); let monthIn=0, monthOut=0;
+  const weeks=[]; let cur=new Date(gridStart); let monthIn=0, monthOut=0, monthPaid=0;
   for(let wk=0; wk<6; wk++){
     const week=[];
     for(let col=0; col<7; col++){
       const k=_dk(cur), evs=byDate[k]||[], inMonth=cur.getMonth()===first.getMonth();
-      const net=evs.reduce((s,e)=>s+e.amt,0);
-      if(inMonth) evs.forEach(e=>{ if(e.amt>=0) monthIn+=e.amt; else monthOut+=-e.amt; });
+      const net=evs.reduce((s,e)=>s+(e.off?0:e.amt),0);   // paid/off items don't move the running balance
+      if(inMonth) evs.forEach(e=>{ if(e.off){ if(e.amt<0) monthPaid+=-e.amt; return; } if(e.amt>=0) monthIn+=e.amt; else monthOut+=-e.amt; });
       week.push({key:k, dom:cur.getDate(), inMonth, isToday:k===_dk(today), events:evs, net});
       cur=new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()+1);
     }
@@ -1511,16 +1520,18 @@ function engBillCalendar(monthOffset){
     if(cur>last && cur.getMonth()!==first.getMonth() && weeks.length>=5) break;   // don't draw an all-trailing 6th week
   }
   const monthEvents=Object.keys(byDate).filter(k=>{ const d=_dkParse(k); return d.getMonth()===first.getMonth()&&d.getFullYear()===first.getFullYear(); }).sort().map(k=>({key:k, events:byDate[k]}));
-  return {monthOffset, label, weeks, monthIn:Math.round(monthIn), monthOut:Math.round(monthOut), monthNet:Math.round(monthIn-monthOut), monthEvents};
+  return {monthOffset, label, weeks, monthIn:Math.round(monthIn), monthOut:Math.round(monthOut), monthPaid:Math.round(monthPaid), monthNet:Math.round(monthIn-monthOut), monthEvents};
 }
 let _billCal={};
 function _billCalDayLabel(k){ return _dkParse(k).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); }
-function _billCalList(days){
+function _billCalList(days, uid){
   return days.map(d=>{
     const rows=d.events.slice().sort((a,b)=>a.amt-b.amt).map(e=>{
-      const isBill=e.type==='bill';
-      const go=isBill?' bcal-li-go" onclick="event.stopPropagation();billCalGotoBills()" title="Open in Bills':'"';
-      return `<div class="bcal-li${go}"><span class="bcal-li-dot ${e.amt>=0?'in':'out'}"></span><span class="bcal-li-nm">${esc(e.name)}${isBill?' <span class="bcal-chev">›</span>':''}</span><b style="color:${e.amt>=0?'var(--pos)':'var(--red)'}">${e.amt>=0?'+':'−'}${fmtK(e.amt)}</b></div>`;
+      const isBill=e.type==='bill', paid=!!e.off;
+      // Bills with an occurrence key get a tap-to-toggle checkbox tied to the SAME per-month paid
+      // state as the Bills widget (billPaidOcc), so paying here reflects everywhere and vice-versa.
+      const chk=(isBill&&e.okey)?`<button class="bcal-li-chk${paid?' on':''}" onclick="event.stopPropagation();billsToggleOcc('${String(e.okey).replace(/'/g,"\\'")}','${uid}')" title="${paid?'Mark unpaid':'Mark paid'}">${paid?'✓':''}</button>`:'<span class="bcal-li-chk sp"></span>';
+      return `<div class="bcal-li${paid?' paid':''}">${chk}<span class="bcal-li-dot ${e.amt>=0?'in':'out'}"></span><span class="bcal-li-nm">${esc(e.name)}</span><b style="color:${paid?'var(--muted)':(e.amt>=0?'var(--pos)':'var(--red)')}">${e.amt>=0?'+':'−'}${fmtK(e.amt)}</b></div>`;
     }).join('');
     return `<div class="bcal-li-day"><div class="bcal-li-date">${_billCalDayLabel(d.key)}</div>${rows}</div>`;
   }).join('');
@@ -1537,17 +1548,17 @@ function billCalBody(w){
   </div>`;
   const dowRow=`<div class="bcal-dow">${dow.map(d=>`<span>${d}</span>`).join('')}</div>`;
   const grid=c.weeks.map(week=>`<div class="bcal-week">${week.map(cell=>{
-    const hasIn=cell.events.some(e=>e.amt>=0), hasOut=cell.events.some(e=>e.amt<0);
-    const dots=(hasIn?'<span class="bcal-dot in"></span>':'')+(hasOut?'<span class="bcal-dot out"></span>':'');
+    const hasIn=cell.events.some(e=>e.amt>=0&&!e.off), hasOut=cell.events.some(e=>e.amt<0&&!e.off), hasPaid=cell.events.some(e=>e.off&&e.amt<0);
+    const dots=(hasIn?'<span class="bcal-dot in"></span>':'')+(hasOut?'<span class="bcal-dot out"></span>':'')+(hasPaid?'<span class="bcal-dot paid"></span>':'');
     const netTxt=cell.events.length?`<span class="bcal-net" style="color:${cell.net>=0?'var(--pos)':'var(--red)'}">${cell.net>=0?'+':'−'}${_calAmt(cell.net)}</span>`:'';
     const cls=['bcal-cell']; if(!cell.inMonth)cls.push('out'); if(cell.isToday)cls.push('today'); if(cell.events.length)cls.push('has'); if(st.sel===cell.key)cls.push('sel');
     const click=cell.events.length?`onclick="event.stopPropagation();billCalDay('${w.uid}','${cell.key}')"`:'';
     return `<div class="${cls.join(' ')}" ${click}><span class="bcal-dom">${cell.dom}</span><span class="bcal-marks">${dots}</span>${netTxt}</div>`;
   }).join('')}</div>`).join('');
-  const summary=`<div class="bcal-summary"><span>In <b style="color:var(--pos)">${fmtK(c.monthIn)}</b></span><span>Out <b style="color:var(--red)">${fmtK(c.monthOut)}</b></span><span>Net <b style="color:${c.monthNet>=0?'var(--pos)':'var(--red)'}">${c.monthNet<0?'−':''}${fmtK(c.monthNet)}</b></span></div>`;
+  const summary=`<div class="bcal-summary"><span>In <b style="color:var(--pos)">${fmtK(c.monthIn)}</b></span><span>${c.monthPaid>0?'To pay':'Out'} <b style="color:var(--red)">${fmtK(c.monthOut)}</b></span>${c.monthPaid>0?`<span>Paid <b style="color:var(--muted)">${fmtK(c.monthPaid)}</b></span>`:''}<span>Net <b style="color:${c.monthNet>=0?'var(--pos)':'var(--red)'}">${c.monthNet<0?'−':''}${fmtK(c.monthNet)}</b></span></div>`;
   let list, listHdr;
-  if(st.sel){ const day=c.monthEvents.find(e=>e.key===st.sel); list=day?_billCalList([day]):'<div class="ws-hint">Nothing scheduled that day.</div>'; listHdr=`${_billCalDayLabel(st.sel)} · <a onclick="event.stopPropagation();billCalDay('${w.uid}','${st.sel}')" style="cursor:pointer;color:var(--muted)">show whole month</a>`; }
-  else { list=c.monthEvents.length?_billCalList(c.monthEvents):'<div class="ws-hint">No bills or income scheduled this month.</div>'; listHdr='This month'; }
+  if(st.sel){ const day=c.monthEvents.find(e=>e.key===st.sel); list=day?_billCalList([day],w.uid):'<div class="ws-hint">Nothing scheduled that day.</div>'; listHdr=`${_billCalDayLabel(st.sel)} · <a onclick="event.stopPropagation();billCalDay('${w.uid}','${st.sel}')" style="cursor:pointer;color:var(--muted)">show whole month</a>`; }
+  else { list=c.monthEvents.length?_billCalList(c.monthEvents,w.uid):'<div class="ws-hint">No bills or income scheduled this month.</div>'; listHdr='This month · tap a bill to mark it paid'; }
   return `<div class="bcal-wrap">${head}${dowRow}<div class="bcal-grid">${grid}</div>${summary}<div class="bcal-listhdr">${listHdr}</div><div class="bcal-list">${list}</div></div>`;
 }
 function billCalShift(uid,delta){ try{ discoverXp('bill_calendar',10,'the bill calendar'); }catch(e){} const st=_billCal[uid]||(_billCal[uid]={off:0,sel:null}); st.off=Math.max(0,Math.min(11,st.off+delta)); st.sel=null; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
@@ -1711,7 +1722,7 @@ function engSafeToSpend(){
   const proj=engCashFlowProjection(90, null, paidPending);   // look a full quarter ahead, from expected (not just to next payday); those paid bills are dropped from future events too, so no double-count
   const inc=(proj.events||[]).filter(e=>e.type==='income' && !e.off).sort((a,b)=>a.day-b.day)[0];   // a paycheck the user checked off shouldn't set the horizon
   const horizon=inc?Math.max(1,inc.day):14;
-  const billsDue=(proj.events||[]).filter(e=>e.type==='bill'&&e.day<=horizon).reduce((s,e)=>s+Math.abs(e.amt),0);  // savings handled via goalPortion below — don't double-count
+  const billsDue=(proj.events||[]).filter(e=>e.type==='bill'&&e.day<=horizon&&!e.off).reduce((s,e)=>s+Math.abs(e.amt),0);  // !e.off: a bill already marked paid is committed via paidPending — don't subtract it here too. savings handled via goalPortion below.
   const goalMonthly=(typeof engSavingsBuckets==='function')?engSavingsBuckets().reduce((s,b)=>s+(b.monthly||0),0):0;
   const goalPortion=goalMonthly*(horizon/30.44);
   const buffer=50;
