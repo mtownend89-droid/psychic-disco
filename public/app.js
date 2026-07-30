@@ -1452,7 +1452,11 @@ function engBills(){ return _memoFrame('bills', _engBillsRaw); }   // frame-scop
 function _engBillsRaw(){
   const manual=(APP.manualBills||[]).map(b=>({...b, manual:true, min:b.min!=null?b.min:b.pay}));
   // Not connected → show the example seed so widgets have something to learn from.
-  if(!dataLoaded || !(allAccts||[]).length) return _applyEnvelopePlan(_applyCardData(applyBillOverrides(bills.concat(manual))));
+  if(!dataLoaded || !(allAccts||[]).length){
+    const seed=bills.concat(manual);
+    const seedNames=new Set(seed.map(b=>(b.name||'').toLowerCase()));
+    return _applyEnvelopePlan(_applyCardData(applyBillOverrides(seed.concat(_manualCreditAcctBills(seedNames)))));
+  }
   // Connected → drive off the ACTUAL accounts (source of truth for what cards/loans exist),
   // and enrich each with Plaid liabilities detail (APR, min payment, due date) when available.
   // This way a credit card shows even when the institution returns no liabilities data.
@@ -1499,7 +1503,31 @@ function _engBillsRaw(){
         promo:'', promoEnd:'', paid:false, source:'plaid' });
     }
   });
-  return _applyEnvelopePlan(_applyCardData(applyBillOverrides(out.concat(manual))));
+  const liveNames=new Set(out.concat(manual).map(b=>(b.name||'').toLowerCase()));
+  return _applyEnvelopePlan(_applyCardData(applyBillOverrides(out.concat(manual, _manualCreditAcctBills(liveNames)))));
+}
+/* Manual credit/debt accounts (an uploaded credit-card statement, or a card added by hand)
+   become CC "bills" the same way a Plaid credit account does in _engBillsRaw — so the balance
+   flows into the Bills widget, credit-utilization, and the Debt widget's payoff list, not just
+   the Accounts widget. Limit / APR / minimum payment / due day / promo merge in by name from
+   cardData via _applyCardData, exactly like edits on a linked card. existingNames skips any card
+   already represented (a Plaid-synthesized row or an explicit manual CC bill) so a card that's
+   both linked AND uploaded, or accounted-for twice, is never double-counted. */
+function _manualCreditAcctBills(existingNames){
+  const out=[];
+  (APP.manualAccounts||[]).forEach(a=>{
+    if(!a || a.type!=='credit') return;
+    if(_acctExcluded(a.name)) return;                       // manual-account exclusion is name-keyed
+    const nm=(a.name||'Credit Card');
+    if(existingNames && existingNames.has(nm.toLowerCase())) return;
+    const owed=Math.abs(a.bal||0);
+    // Mirror Plaid: institutions that omit a minimum leave it estimated (~2% of balance, $25 floor).
+    const estMin=owed>0?Math.max(25,Math.round(owed*0.02)):0;
+    out.push({ name:nm, note:a.institution||'', cat:'CC', manualAcctId:a.id, manual:true,
+      bal:-owed, apr:0, min:estMin, pay:estMin, estMin:estMin>0, limit:0,
+      due:1, dueEst:true, promo:'', promoEnd:'', paid:false, source:'manual-acct' });
+  });
+  return out;
 }
 // Persistent overlay so promo end dates / credit limits the user enters survive even
 // when bills are coming live from Plaid (Plaid can't know your 0% promo end date).
@@ -2578,8 +2606,23 @@ function docReviewRender(){
   const hasTxns=txns.length>0;
   const isScore=(type==='credit_score')||(!!r.creditScore&&!hasTxns&&!r.accountValue&&r.amountDue==null&&r.premium==null);
   const isInvest=!isScore&&((type==='investment')||(!!r.accountValue&&!hasTxns));
-  const isBill=!isInvest&&!isScore&&!hasTxns;   // insurance / phone / cable / utility / loan / any bill
+  const isCard=!isScore&&!isInvest&&(type==='credit_card');   // a credit-card statement → track it as a card (balance, utilization, payoff)
+  const isBill=!isInvest&&!isScore&&!isCard&&!hasTxns;   // insurance / phone / cable / utility / loan / any bill
   const field=(lbl,id,val,ph)=>`<div class="doc-f"><label>${lbl}</label><input id="${id}" value="${val!=null?esc(String(val)):''}" placeholder="${ph||''}"></div>`;
+  // Selectable transaction list — shared by the credit-card and bank-statement branches.
+  const buildTxnSection=()=>{
+    const dupCount=txns.filter(t=>t._dup).length, selCount=txns.filter((_,i)=>_docSel[i]).length;
+    const rows=txns.map((t,i)=>`<label class="doc-txn${t._dup?' dup':''}">
+      <input type="checkbox" ${_docSel[i]?'checked':''} onchange="_docSel[${i}]=this.checked;docUpdateCount()">
+      <span class="doc-tx-date">${esc(t.date||'—')}</span>
+      <input class="doc-tx-desc" value="${esc(t.description||'')}" onchange="_docResult.transactions[${i}].description=this.value">
+      <input class="doc-tx-amt" type="number" step="0.01" value="${t.amount!=null?t.amount:''}" onchange="_docResult.transactions[${i}].amount=parseFloat(this.value)||0">
+      ${t._dup?'<span class="doc-dupflag" title="Looks like it is already in your data">dup</span>':''}
+    </label>`).join('');
+    return `<div class="doc-section-h">Transactions · ${txns.length}${dupCount?` · <span style="color:var(--amber)">${dupCount} duplicate${dupCount!==1?'s':''} unchecked</span>`:''}</div>
+      <div class="doc-selrow"><button class="btn" onclick="docSelectAll(true)">Select all</button><button class="btn" onclick="docSelectAll(false)">None</button><span class="ws-hint" id="docSelCount" style="margin-left:auto">${selCount} selected</span></div>
+      <div class="doc-txns">${rows||'<div class="ws-hint">No transactions found in this document.</div>'}</div>`;
+  };
   let header, addOpt='', section='', detailLbl='Account / bill';
   if(isScore){
     detailLbl='Score';
@@ -2594,6 +2637,14 @@ function docReviewRender(){
       addOpt+=`<label class="doc-addbill"><input type="checkbox" id="docImportHoldings" checked> Import ${hold.length} position${hold.length!==1?'s':''} into your Portfolio</label>`;
       section=`<div class="doc-section-h">Holdings \u00b7 ${hold.length}</div><div class="doc-txns">${hold.slice(0,80).map(h=>`<div class="doc-txn"><span class="doc-tx-desc" style="border:none">${esc(h.name||'')}${h.symbol?' \u00b7 '+esc(h.symbol):''}</span><span class="doc-tx-amt" style="border:none;background:none">${fmtK(+h.value||0)}</span></div>`).join('')}</div>`;
     }
+  } else if(isCard){
+    detailLbl='Credit card';
+    const owed=(r.statementBalance!=null?r.statementBalance:(r.amountDue!=null?r.amountDue:''));
+    const minPay=(r.minimumPayment!=null?r.minimumPayment:r.amountDue);
+    header=`<div class="doc-hgrid">${field('Card issuer','docInst',r.institution,'Chase / Amex')}${field('Card name','docAcct',r.accountName,'e.g. Sapphire')}${field('Balance owed ($)','docBal',owed,'total owed')}${field('Credit limit ($)','docLimit',r.creditLimit,'for utilization')}${field('APR (%)','docApr',r.apr,'0')}${field('Min payment ($)','docMin',minPay,'0')}${field('Payment due','docDueDate',r.dueDate,'YYYY-MM-DD')}${field('0% promo ends','docPromoEnd',r.promoEndDate,'YYYY-MM-DD')}${field('Promo balance ($)','docPromoAmt',r.promoBalance,'blank = full balance')}</div>`
+      +(r.promoDescription||r.promoAPR!=null?`<div class="ws-hint">🎁 Promo found: ${esc(r.promoDescription||'promotional rate')}${r.promoAPR!=null?` · ${r.promoAPR}% APR`:''}${r.promoEndDate?` · ends ${esc(r.promoEndDate)}`:''} — saved to this card so the 0% Promo tracker can warn you before it expires.</div>`:'');
+    addOpt=`<label class="doc-addbill"><input type="checkbox" id="docAddCard" checked> Add as a credit card — tracks the balance in your Bills, credit utilization &amp; Debt widget (like a linked card)</label>`;
+    if(hasTxns) section=buildTxnSection();
   } else if(isBill){
     detailLbl='Bill';
     const due=(r.amountDue!=null?r.amountDue:r.premium);
@@ -2605,19 +2656,9 @@ function docReviewRender(){
     header=`<div class="doc-hgrid">${field('Institution','docInst',r.institution,'Bank')}${field('Account / bill','docAcct',r.accountName,'Name')}${field('Amount due ($)','docDue',r.amountDue,'0')}${field('Due date','docDueDate',r.dueDate,'YYYY-MM-DD')}${field('APR (%)','docApr',r.apr,'0')}${field('Credit limit ($)','docLimit',r.creditLimit,'0')}${field('0% promo ends','docPromoEnd',r.promoEndDate,'YYYY-MM-DD')}${field('Promo balance ($)','docPromoAmt',r.promoBalance,'blank = full balance')}</div>`
       +(r.promoDescription||r.promoAPR!=null?`<div class="ws-hint">🎁 Promo found: ${esc(r.promoDescription||'promotional rate')}${r.promoAPR!=null?` · ${r.promoAPR}% APR`:''}${r.promoEndDate?` · ends ${esc(r.promoEndDate)}`:''} — saved to this card so the 0% Promo tracker can warn you before it expires.</div>`:'');
     if(r.amountDue||r.apr||r.creditLimit) addOpt=`<label class="doc-addbill"><input type="checkbox" id="docAddBill" ${r.amountDue?'checked':''}> Also add this as a bill in Upcoming Bills</label>`;
-    const dupCount=txns.filter(t=>t._dup).length, selCount=txns.filter((_,i)=>_docSel[i]).length;
-    const rows=txns.map((t,i)=>`<label class="doc-txn${t._dup?' dup':''}">
-      <input type="checkbox" ${_docSel[i]?'checked':''} onchange="_docSel[${i}]=this.checked;docUpdateCount()">
-      <span class="doc-tx-date">${esc(t.date||'\u2014')}</span>
-      <input class="doc-tx-desc" value="${esc(t.description||'')}" onchange="_docResult.transactions[${i}].description=this.value">
-      <input class="doc-tx-amt" type="number" step="0.01" value="${t.amount!=null?t.amount:''}" onchange="_docResult.transactions[${i}].amount=parseFloat(this.value)||0">
-      ${t._dup?'<span class="doc-dupflag" title="Looks like it is already in your data">dup</span>':''}
-    </label>`).join('');
-    section=`<div class="doc-section-h">Transactions \u00b7 ${txns.length}${dupCount?` \u00b7 <span style="color:var(--amber)">${dupCount} duplicate${dupCount!==1?'s':''} unchecked</span>`:''}</div>
-      <div class="doc-selrow"><button class="btn" onclick="docSelectAll(true)">Select all</button><button class="btn" onclick="docSelectAll(false)">None</button><span class="ws-hint" id="docSelCount" style="margin-left:auto">${selCount} selected</span></div>
-      <div class="doc-txns">${rows||'<div class="ws-hint">No transactions found in this document.</div>'}</div>`;
+    section=buildTxnSection();
   }
-  const kindLbl=isScore?'a credit-score snapshot':isInvest?'an investment statement':isBill?('a '+((type||'bill').replace('_',' '))):('a '+((type||'statement').replace('_',' ')));
+  const kindLbl=isScore?'a credit-score snapshot':isInvest?'an investment statement':isCard?'a credit-card statement':isBill?('a '+((type||'bill').replace('_',' '))):('a '+((type||'statement').replace('_',' ')));
   gg('docBody').innerHTML=`
     <div class="doc-sub">Richie found ${esc(kindLbl)}${r.institution?' from '+esc(r.institution):''}. Edit anything, then add it.</div>
     <div class="doc-section-h">${detailLbl} details</div>${header}
@@ -2677,6 +2718,36 @@ function docAddSelected(){
   const pa=(gg('docPromoAmt')&&gg('docPromoAmt').value!=='')?(parseFloat(gg('docPromoAmt').value)||0):0;
   if(pe) setCardData(nm, {promoEnd:pe, promoAmt:pa});
   const promoMsg=pe?` I also logged the 0% promo ending ${pe} — the Promo tracker will warn you before the rate jumps.`:'';
+  // Credit-card statement -> a credit ACCOUNT carrying the total owed (so Net Worth / Accounts and
+  // engCCDebt see it) that _engBillsRaw then synthesizes into a CC bill (so Bills, credit
+  // utilization and the Debt widget see it) — i.e. it behaves like a Plaid-linked card. Limit /
+  // APR / min payment / due day persist in cardData by name, exactly like editing a linked card.
+  if(type==='credit_card'){
+    const balV=parseFloat((gg('docBal')&&gg('docBal').value));
+    const owed=Math.abs(isNaN(balV)?(+r.statementBalance||+r.amountDue||0):balV);
+    const limit=parseFloat((gg('docLimit')&&gg('docLimit').value))||0;
+    const apr=parseFloat((gg('docApr')&&gg('docApr').value))||0;
+    const minPay=parseFloat((gg('docMin')&&gg('docMin').value))||0;
+    const dd=(gg('docDueDate')&&gg('docDueDate').value)||''; const dueDay=dd?Math.max(1,Math.min(31,(new Date(dd+'T12:00:00').getDate()||1))):0;
+    const cd={}; if(limit>0)cd.limit=limit; if(apr>0)cd.apr=apr; if(minPay>0)cd.minPay=minPay; if(dueDay>0)cd.dueDay=dueDay;
+    if(Object.keys(cd).length) setCardData(nm, cd);
+    if(!gg('docAddCard')||gg('docAddCard').checked){
+      APP.manualAccounts=APP.manualAccounts||[];
+      const ex=APP.manualAccounts.find(a=>a.type==='credit' && (a.name||'').toLowerCase()===nm.toLowerCase());
+      if(ex){ ex.bal=-owed; if(inst)ex.institution=inst; }
+      else APP.manualAccounts.push({ name:nm, bal:-owed, type:'credit', subtype:'credit card', institution:inst, id:'m'+Date.now()+Math.floor(Math.random()*99), note:'imported' });
+    }
+    let added=0;
+    if(hasTxns){
+      APP.importedTxns=APP.importedTxns||[];
+      const importId=impId, importLabel=inst+' · '+new Date().toLocaleDateString();
+      txns.forEach((t,i)=>{ if(!_docSel[i]||!t.date||t.amount==null) return; APP.importedTxns.push({ transaction_id:'imp_'+Date.now()+'_'+(added++), account_id:'imported', date:t.date, name:t.description||'Imported', merchant_name:t.description||'', amount:+t.amount, personal_finance_category:{primary:''}, institution:inst, _imported:true, _importId:importId, _importLabel:importLabel }); });
+      APP.imports.push({ id:impId, kind:'card', label:nm, ts:Date.now(), manualAcctName:nm, txnImportId:importId, summary:`Credit card · ${fmtK(owed)} owed${added?` · ${added} txn${added!==1?'s':''}`:''}` });
+    } else {
+      APP.imports.push({ id:impId, kind:'card', label:nm, ts:Date.now(), manualAcctName:nm, summary:`Credit card · ${fmtK(owed)} owed` });
+    }
+    return finish(`Added ${nm} as a credit card — ${fmtK(owed)} owed${limit>0?`, ${fmtK(limit)} limit`:''}. 💳 It now feeds your Bills, credit utilization, and the Debt widget.${added?` Imported ${added} transaction${added!==1?'s':''}.`:''}${promoMsg}`);
+  }
   // Any bill (insurance / phone / cable / utility / loan / generic) -> Upcoming Bills
   if(!hasTxns){
     if(gg('docAddBill')&&gg('docAddBill').checked){
@@ -7779,7 +7850,7 @@ async function renderConnectedData(){
   if(_cdTab==='uploads'){
     const ups=_collectImports();
     box.innerHTML = ups.length ? ups.map(im=>{
-      const icon=im.kind==='investment'?'📈':im.kind==='bill'?'🧾':im.kind==='score'?'📊':'📄';
+      const icon=im.kind==='investment'?'📈':im.kind==='bill'?'🧾':im.kind==='score'?'📊':im.kind==='card'?'💳':'📄';
       return `<div class="cd-row"><div class="cd-meta"><div class="cd-nm">${icon} ${esc(im.label||'Upload')}</div><div class="cd-info">${esc(im.summary||'')}</div></div><button class="cd-rm" onclick="removeImport('${esc(im.id)}')">Remove</button></div>`;
     }).join('') : '<div class="ws-hint">No uploaded documents yet. Use “📄 Upload statement” to add one.</div>';
     return;
@@ -7814,6 +7885,7 @@ function removeImport(id){
     if(rec.holdingIds&&rec.holdingIds.length) APP.holdings=(APP.holdings||[]).filter(h=>!rec.holdingIds.includes(h.id));
     if(rec.assetId) APP.nwManualAssets=(APP.nwManualAssets||[]).filter(a=>a.id!==rec.assetId);
     if(rec.billName) APP.manualBills=(APP.manualBills||[]).filter(b=>(b.name||'').toLowerCase()!==String(rec.billName).toLowerCase());
+    if(rec.manualAcctName) APP.manualAccounts=(APP.manualAccounts||[]).filter(a=>!(a.type==='credit' && (a.name||'').toLowerCase()===String(rec.manualAcctName).toLowerCase()));
   }
   APP.imports=(APP.imports||[]).filter(im=>im.id!==id);
   saveState(); _rebuildTxns(); try{ nwHistRecord(); }catch(e){}
