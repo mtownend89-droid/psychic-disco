@@ -572,11 +572,13 @@ function applyBillOverrides(list){
     const o=ov[billKey(b)]||{};
     const min=b.min!=null?b.min:b.pay;            // Plaid (or manual) minimum
     const expected=o.pay!==undefined?o.pay:b.pay; // user's expected payment (defaults to bill's pay)
-    return {...b, min, pay:expected, expected, paid:o.paid!==undefined?o.paid:b.paid};
+    return {...b, min, pay:expected, expected, paid:o.paid!==undefined?o.paid:b.paid, payAcct:o.payAcct||b.payAcct||'', paidAt:o.paidAt||null};
   });
 }
 function toggleBillPaid(key){
-  const ov=_billOverrides(); ov[key]=ov[key]||{}; ov[key].paid=!ov[key].paid; saveState();
+  const ov=_billOverrides(); ov[key]=ov[key]||{}; ov[key].paid=!ov[key].paid;
+  if(ov[key].paid) ov[key].paidAt=Date.now();   // stamp payment time so a real posted/pending txn can be matched within a window
+  saveState();
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
   if(ov[key].paid){ try{ gamiMarkEngaged('billpaid'); }catch(e){} try{ emojiBurst('coin',{particle:'coin',count:8,life:1600}); }catch(e){} const nm=(key.split('|')[0]||'that').trim(); try{ richieCelebrate(`Boom — ${nm} marked paid! ✅ One less thing on the list.`); }catch(e){} }
 }
@@ -584,6 +586,39 @@ function setBillPay(key,val){
   const ov=_billOverrides(); ov[key]=ov[key]||{}; const n=parseFloat(val); if(!isNaN(n)&&n>=0) ov[key].pay=n; saveState();
 }
 function setBillPayCommit(){ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+// Which account a bill is paid from (a live cash account) — lets Cash on Hand / Safe to Spend treat
+// a bill you've marked paid as already spent against that account, before the debit posts.
+function setBillPayAcct(key,val){
+  const ov=_billOverrides(); ov[key]=ov[key]||{}; ov[key].payAcct=val||''; saveState();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+}
+/* Once a bill is marked paid AND assigned a pay-from account, we deduct it from that account's
+   EXPECTED balance — but only until a real transaction shows up (pending OR posted), at which point
+   the bank's own data reflects the debit and the manual deduction must stop so nothing double-counts.
+   Match = an outflow on that account near the bill's amount, on/after it was marked paid (small grace). */
+function _billPayMatched(b){
+  if(!dataLoaded || !b || !b.payAcct || !(b.pay>0)) return false;
+  const tol=Math.max(2, b.pay*0.04);
+  const since=(b.paidAt? b.paidAt-4*86400000 : Date.now()-25*86400000);
+  return (allTxns||[]).some(t=> t.account_id===b.payAcct && (+t.amount)>0 && Math.abs((+t.amount)-b.pay)<=tol && new Date((t.date||'')+'T12:00:00').getTime()>=since);
+}
+// Marked-paid bills that haven't posted yet, grouped by their pay-from cash account.
+function engManualPending(cats){
+  const out={byAcct:{}, total:0, count:0};
+  if(!dataLoaded) return out;
+  const byId={}; engAccounts().forEach(a=>{ byId[a.id]=a; });
+  engBills().forEach(b=>{
+    if(!b.paid || !b.payAcct || !(b.pay>0)) return;
+    const a=byId[b.payAcct];
+    if(!a || a.excluded || a.manual || a.type!=='depository') return;   // only live cash accounts have a txn feed to reconcile against
+    if(cats && cats.length && !cats.includes(getAccountCategory(a))) return;
+    if(_billPayMatched(b)) return;                                      // real txn already reflects it → don't deduct twice
+    const e=out.byAcct[a.id]||(out.byAcct[a.id]={sum:0,count:0,names:[]});
+    e.sum+=b.pay; e.count++; e.names.push(b.name); out.total+=b.pay; out.count++;
+  });
+  return out;
+}
+function engManualPendingForAcct(id){ return engManualPending().byAcct[id]||{sum:0,count:0,names:[]}; }
 
 /* ── Manual bills & accounts editor (items not linked to Plaid) ── */
 let _manualEdit={kind:'bill', idx:null};
@@ -1317,8 +1352,8 @@ function cfpToggleBillPaid(okey, uid){
   if(nowPaid){ try{ gamiMarkEngaged('billpaid'); }catch(e){} try{ emojiBurst('coin',{particle:'coin',count:8,life:1600}); }catch(e){} }
   try{ if(sbRichie)sbRichie.do('nod'); }catch(e){}
 }
-function engCashFlowProjection(days, cats){
-  const start=engStartCash(cats);
+function engCashFlowProjection(days, cats, startAdjust){
+  const start=engStartCash(cats)-(startAdjust||0);   // startAdjust: money already committed (e.g. bills marked paid, not yet posted)
   const today=new Date(); today.setHours(0,0,0,0);
   // Shift each source to real banking days BEFORE combining: deposits land the prior business
   // day, drafts the next. Savings then land on the already-shifted first payday of each month.
@@ -1575,8 +1610,10 @@ function engMonthlyBills(){ return engBills().reduce((s,b)=>s+(b.pay||0),0); }
 // How much is safe to spend today: liquid cash, minus bills due before the next paycheck,
 // minus a prorated slice of goal contributions and a small buffer, spread over the days until pay.
 function engSafeToSpend(){
-  const cash=engStartCash();
-  const proj=engCashFlowProjection(90);   // look a full quarter ahead, not just to next payday
+  const actualCash=engStartCash();
+  const paidPending=engManualPending().total;   // bills you marked paid that haven't debited yet — already committed
+  const cash=actualCash-paidPending;             // expected cash once those clear
+  const proj=engCashFlowProjection(90, null, paidPending);   // look a full quarter ahead, from expected (not just to next payday); those paid bills are dropped from future events too, so no double-count
   const inc=(proj.events||[]).filter(e=>e.type==='income' && !e.off).sort((a,b)=>a.day-b.day)[0];   // a paycheck the user checked off shouldn't set the horizon
   const horizon=inc?Math.max(1,inc.day):14;
   const billsDue=(proj.events||[]).filter(e=>e.type==='bill'&&e.day<=horizon).reduce((s,e)=>s+Math.abs(e.amt),0);  // savings handled via goalPortion below — don't double-count
@@ -1592,7 +1629,7 @@ function engSafeToSpend(){
   const pool=Math.min(nearPool, safe90);
   const constrainedBy90=safe90<nearPool;   // the quarter-ahead floor is the binding limit, not near-term cash
   const perDay=horizon>0?pool/horizon:pool;
-  return {pool,perDay,horizon,cash,billsDue,goalPortion,buffer,nextIncomeDay:inc?inc.day:null,
+  return {pool,perDay,horizon,cash:actualCash,expectedCash:cash,paidPending,billsDue,goalPortion,buffer,nextIncomeDay:inc?inc.day:null,
     low90:Math.round(low90), lowDay:proj.low.day, constrainedBy90, shortfall:low90<0};
 }
 // Detect recurring charges / subscriptions — groups outflows by merchant, keeps those
@@ -1752,6 +1789,7 @@ function safeToSpendBody(w){
     <div class="wph-sub">${sub}</div>
     <div class="sts-break">
       <div><span>Cash on hand</span><b>${fmtK(s.cash)}</b></div>
+      ${s.paidPending>0.5?`<div><span>− Paid bills (not posted)</span><b style="color:var(--amber)" title="Bills you marked paid whose debit hasn't hit your account yet — already spent, so held out of safe-to-spend until they post">${fmtK(s.paidPending)}</b></div>`:''}
       <div><span>− Bills before payday</span><b style="color:var(--red)">${fmtK(s.billsDue)}</b></div>
       ${s.goalPortion>0.5?`<div><span>− Goal set-aside</span><b style="color:var(--amber)">${fmtK(s.goalPortion)}</b></div>`:''}
       <div><span>− Safety buffer</span><b style="color:var(--muted)">${fmtK(s.buffer)}</b></div>
@@ -5099,7 +5137,11 @@ function billsWidgetBody(w){
   });
   const totMin=all.filter(b=>!b.paid).reduce((s,b)=>s+(b.min||0),0)*factor;
   const totPay=all.filter(b=>!b.paid).reduce((s,b)=>s+(b.pay||0),0)*factor;
+  // Live cash accounts a bill can be paid from — drives the "Paid from" selector so a paid bill
+  // reduces Cash on Hand / Safe to Spend against the right account until the debit posts.
+  const cashAccts=(dataLoaded?engAccounts():[]).filter(a=>!a.excluded && !a.manual && a.type==='depository').sort((x,y)=>Math.abs(y.bal||0)-Math.abs(x.bal||0));
   const rows=sorted.map(b=>{ const key=billKey(b).replace(/'/g,"\\'"); const paid=b.paid; const diff=(b.pay||0)-(b.min||0);
+    const acctSel=cashAccts.length?`<div class="bill-acctrow"><label class="bill-acctlbl">${paid?'Paid from':'Pay from'}</label><select class="bill-acct-sel" onclick="event.stopPropagation()" onchange="setBillPayAcct('${key}',this.value)"><option value="">— account —</option>${cashAccts.map(a=>`<option value="${esc(a.id)}"${b.payAcct===a.id?' selected':''}>${esc(a.name)}</option>`).join('')}</select>${paid&&b.payAcct?(_billPayMatched(b)?'<span class="bill-posted" title="A matching transaction has posted or is pending at your bank — counted from there, not double-counted">✓ posted</span>':'<span class="bill-pend" title="Held out of Cash on Hand / Safe to Spend as expected-spent until the debit posts">⏳ pending</span>'):''}</div>`:'';
     const dispPay=tf==='month'?Math.round(b.pay):(b.pay*factor).toFixed(tf==='day'?2:0);
     // Auto/other loans arrive from Plaid with a balance but no APR/payment/due — prompt to fill
     // them in (once entered via the account editor, they persist and this disappears).
@@ -5116,6 +5158,7 @@ function billsWidgetBody(w){
           ${Math.abs(diff)>=1?`<span class="bill-diff" style="color:${diff>0?'var(--amber)':'var(--green)'}">${diff>0?'+':''}${fmtK(diff)} vs min</span>`:''}
         </div>
         ${fillPrompt}
+        ${acctSel}
       </div>
       <div class="bill-paywrap">
         <label class="bill-paylabel">You pay${tf!=='month'?' '+unit:''}</label>
@@ -5422,7 +5465,10 @@ function cashSummaryBody(w){
   if(!accts.length) return `<div class="wph"><div class="wph-sub">No ${esc(label)} accounts.</div><div style="text-align:center;margin-top:10px"><button class="manual-add-btn" style="width:auto;display:inline-block" onclick="event.stopPropagation();openAcctCatPicker('${w.uid}')">⚙︎ Choose account types</button></div></div>`;
   const rows=top.map(a=>`<div class="cash-row"><span class="cash-nm">${esc(a.name||'Account')}</span><span class="cash-track"><i style="width:${Math.max(5,Math.round(Math.abs(a.bal||0)/mx*100))}%"></i></span><b>${fmtK(a.bal)}</b></div>`).join('');
   const pend=accts.reduce((o,a)=>{const p=engAcctPending(a);o.count+=p.count;o.sum+=p.sum;return o;},{count:0,sum:0});
-  const pendLine=pend.count?`<div class="wph-sub" style="color:var(--amber)">⏳ ${pend.count} pending → ${fmtK(total-pend.sum)} expected</div>`:'';
+  const _mpAll=engManualPending();   // bills marked paid, not yet posted, by account
+  const mp=accts.reduce((o,a)=>{const m=_mpAll.byAcct[a.id]||{sum:0,count:0};o.count+=m.count;o.sum+=m.sum;return o;},{count:0,sum:0});
+  const pendBits=[]; if(pend.count) pendBits.push(`${pend.count} pending`); if(mp.count) pendBits.push(`${mp.count} paid bill${mp.count!==1?'s':''}`);
+  const pendLine=pendBits.length?`<div class="wph-sub" style="color:var(--amber)">⏳ ${pendBits.join(' · ')} → ${fmtK(total-pend.sum-mp.sum)} expected</div>`:'';
   return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(total)}">${fmtK(total)}</div><div class="wph-sub">cash on hand · ${accts.length} ${esc(label)} account${accts.length!==1?'s':''}${dataLoaded?'':' · sample'} ${gear}</div>${pendLine}<div class="cash-list">${rows}</div></div>`;
 }
 /* Per-widget picker: which ACCOUNT CATEGORIES this widget counts */
