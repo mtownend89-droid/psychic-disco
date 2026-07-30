@@ -2701,10 +2701,10 @@ function docAddSelected(){
     const detectedContrib=_perC>0?Math.round(_perC):(_ytdC>0?Math.round(_ytdC/12):0);
     if(gg('docAddAsset')&&gg('docAddAsset').checked){
       const val=parseFloat(gg('docValue').value)||r.accountValue||0;
-      if(val>0){ assetId='nw'+Date.now()+Math.floor(Math.random()*999); APP.nwManualAssets=APP.nwManualAssets||[]; APP.nwManualAssets.push({ id:assetId, cat:'Investment', name:nm, value:val, contrib:detectedContrib||0 }); msg=`Added ${nm} (${fmtK(val)}) to your Net Worth. \ud83d\udcc8`; if(detectedContrib) msg+=` I spotted ~${fmtK(detectedContrib)}/mo in contributions \u2014 saved as your planned contribution (edit it anytime in the Accounts widget).`; }
+      if(val>0){ APP.nwManualAssets=APP.nwManualAssets||[]; const _ex=APP.nwManualAssets.find(a=>a.cat==='Investment' && (a.name||'').toLowerCase()===nm.toLowerCase()); if(_ex){ _ex.value=val; if(detectedContrib)_ex.contrib=detectedContrib; msg=`Updated ${nm} (${fmtK(val)}) in your Net Worth. \ud83d\udcc8`; /* assetId stays null so removing this re-upload won't delete the pre-existing asset */ }else{ assetId='nw'+Date.now()+Math.floor(Math.random()*999); APP.nwManualAssets.push({ id:assetId, cat:'Investment', name:nm, value:val, contrib:detectedContrib||0 }); msg=`Added ${nm} (${fmtK(val)}) to your Net Worth. \ud83d\udcc8`; } if(detectedContrib) msg+=` I spotted ~${fmtK(detectedContrib)}/mo in contributions \u2014 saved as your planned contribution (edit it anytime in the Accounts widget).`; }
     }
     if(gg('docImportHoldings')&&gg('docImportHoldings').checked && Array.isArray(r.holdings)){
-      APP.holdings=APP.holdings||[]; let n=0;
+      APP.holdings=(APP.holdings||[]).filter(h=>(h.account||'').toLowerCase()!==nm.toLowerCase()); let n=0;   // replace this account's positions so a re-upload refreshes rather than duplicates
       r.holdings.forEach(h=>{ if(!h||(!h.value&&!h.name))return; const hid='h'+Date.now()+'_'+(n++); holdingIds.push(hid); APP.holdings.push({ id:hid, name:h.name||h.symbol||'Position', symbol:(h.symbol||'').toString().toUpperCase().trim(), shares:(h.shares!=null?h.shares:null), value:+h.value||0, cost:(h.costBasis!=null?+h.costBasis:(h.cost!=null?+h.cost:null)), gain:(h.gain!=null?+h.gain:null), account:nm, addedAt:Date.now() }); });
       if(n) msg=(msg?msg+' ':'')+`Imported ${n} position${n!==1?'s':''} to your Portfolio.`;
     }
@@ -2731,11 +2731,15 @@ function docAddSelected(){
     const dd=(gg('docDueDate')&&gg('docDueDate').value)||''; const dueDay=dd?Math.max(1,Math.min(31,(new Date(dd+'T12:00:00').getDate()||1))):0;
     const cd={}; if(limit>0)cd.limit=limit; if(apr>0)cd.apr=apr; if(minPay>0)cd.minPay=minPay; if(dueDay>0)cd.dueDay=dueDay;
     if(Object.keys(cd).length) setCardData(nm, cd);
+    let updated=false;
     if(!gg('docAddCard')||gg('docAddCard').checked){
       APP.manualAccounts=APP.manualAccounts||[];
       const ex=APP.manualAccounts.find(a=>a.type==='credit' && (a.name||'').toLowerCase()===nm.toLowerCase());
-      if(ex){ ex.bal=-owed; if(inst)ex.institution=inst; }
+      if(ex){ ex.bal=-owed; if(inst)ex.institution=inst; updated=true; }   // re-uploaded statement just refreshes the balance
       else APP.manualAccounts.push({ name:nm, bal:-owed, type:'credit', subtype:'credit card', institution:inst, id:'m'+Date.now()+Math.floor(Math.random()*99), note:'imported' });
+      // Drop any stale auto-imported CC bill of the same name (from before cards were tracked as
+      // accounts) so it doesn't suppress the account's synthesized bill / live balance.
+      APP.manualBills=(APP.manualBills||[]).filter(b=>!(b.cat==='CC' && b.note==='imported' && (b.name||'').toLowerCase()===nm.toLowerCase()));
     }
     let added=0;
     if(hasTxns){
@@ -2746,7 +2750,7 @@ function docAddSelected(){
     } else {
       APP.imports.push({ id:impId, kind:'card', label:nm, ts:Date.now(), manualAcctName:nm, summary:`Credit card · ${fmtK(owed)} owed` });
     }
-    return finish(`Added ${nm} as a credit card — ${fmtK(owed)} owed${limit>0?`, ${fmtK(limit)} limit`:''}. 💳 It now feeds your Bills, credit utilization, and the Debt widget.${added?` Imported ${added} transaction${added!==1?'s':''}.`:''}${promoMsg}`);
+    return finish(`${updated?'Updated':'Added'} ${nm} ${updated?'—':'as a credit card —'} ${fmtK(owed)} owed${limit>0?`, ${fmtK(limit)} limit`:''}. 💳 It ${updated?'feeds':'now feeds'} your Bills, credit utilization, and the Debt widget.${added?` Imported ${added} transaction${added!==1?'s':''}.`:''}${promoMsg}`);
   }
   // Any bill (insurance / phone / cable / utility / loan / generic) -> Upcoming Bills
   if(!hasTxns){
@@ -2755,6 +2759,7 @@ function docAddSelected(){
       const dd=gg('docDueDate').value, dueDay=dd?Math.max(1,Math.min(31,(new Date(dd+'T12:00:00').getDate()||1))):1;
       const catMap={insurance:'Insurance',utility:'Utilities',phone:'Utilities',cable:'Utilities',loan:'Loan Payments',credit_card:'CC'};
       APP.manualBills=APP.manualBills||[];
+      { const _ex=due>0&&APP.manualBills.find(b=>(b.name||'').toLowerCase()===nm.toLowerCase()); if(_ex){ const _apr=parseFloat((gg('docApr')&&gg('docApr').value))||0; _ex.pay=Math.round(due); _ex.min=Math.round(due); _ex.due=dueDay; if(_apr>0)_ex.apr=_apr; if(pe){_ex.promoEnd=pe; if(!_ex.promo)_ex.promo='0% APR';} APP.imports.push({ id:impId, kind:'bill', label:nm, ts:Date.now(), summary:'Bill updated: '+fmtK(due) }); return finish('Updated '+nm+' in your Bills: '+fmtK(due)+' due.'+promoMsg); } }
       if(due>0 && !APP.manualBills.some(b=>(b.name||'').toLowerCase()===nm.toLowerCase())){ APP.manualBills.push({ name:nm, pay:Math.round(due), min:Math.round(due), bal:0, apr:parseFloat((gg('docApr')&&gg('docApr').value))||0, due:dueDay, cat:(catMap[type]||'OTHER'), promoEnd:pe||'', limit:0, promo:pe?'0% APR':'', note:'imported', paid:false }); APP.imports.push({ id:impId, kind:'bill', label:nm, ts:Date.now(), billName:nm, summary:`Bill · ${fmtK(due)}` }); return finish(`Added ${nm} to your Bills \u2014 ${fmtK(due)}.`+promoMsg); }
     }
     return finish(pe?('Saved the promo details from '+nm+'.'+promoMsg):'');
@@ -2771,6 +2776,7 @@ function docAddSelected(){
   if(addBill){
     const due=parseFloat(gg('docDue').value)||0;
     APP.manualBills=APP.manualBills||[];
+    { const _ex=due>0&&APP.manualBills.find(b=>(b.name||'').toLowerCase()===nm.toLowerCase()); if(_ex){ const _dd=gg('docDueDate').value, _dueDay=_dd?Math.max(1,Math.min(31,(new Date(_dd+'T12:00:00').getDate()||1))):1; const _apr=parseFloat(gg('docApr').value)||0, _lim=parseFloat(gg('docLimit').value)||0; _ex.pay=Math.round(due); _ex.min=Math.round(due); _ex.due=_dueDay; if(_apr>0)_ex.apr=_apr; if(_lim>0)_ex.limit=_lim; if(pe){_ex.promoEnd=pe; if(!_ex.promo)_ex.promo='0% APR';} } }   // re-upload refreshes an existing bill in place (no dup); billName stays null so removal won't delete it
     if(due>0 && !APP.manualBills.some(b=>(b.name||'').toLowerCase()===nm.toLowerCase())){
       const dd=gg('docDueDate').value, dueDay=dd?Math.max(1,Math.min(31,(new Date(dd+'T12:00:00').getDate()||1))):1;
       billName=nm; APP.manualBills.push({ name:nm, pay:Math.round(due), min:Math.round(due), bal:0, apr:parseFloat(gg('docApr').value)||0, due:dueDay, cat:(type==='credit_card'?'CC':'OTHER'), promoEnd:pe||'', limit:parseFloat(gg('docLimit').value)||0, promo:pe?'0% APR':'', note:'imported', paid:false });
