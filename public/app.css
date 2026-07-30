@@ -1804,6 +1804,7 @@ body.fx-slime .canvas-widget-card::after{content:'';position:absolute;left:-2%;r
 .bill-row.paid .bill-nm{text-decoration:line-through;opacity:.5;}
 .bill-row.paid .bill-sub{opacity:.5;}
 .bills-hint{font-size:11px;color:var(--hint);margin:0 0 8px;}
+.bills-monthlbl{font-size:11.5px;font-weight:600;color:var(--muted);margin:0 0 10px;}
 .bill-check{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--border2);background:var(--surface2);color:var(--green);font-size:15px;font-weight:800;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .12s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
 .bill-check:hover{border-color:var(--green);}
 .bill-check:active{transform:scale(0.92);}

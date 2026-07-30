@@ -606,7 +606,10 @@ function applyBillOverrides(list){
     const o=ov[billKey(b)]||{};
     const min=b.min!=null?b.min:b.pay;            // Plaid (or manual) minimum
     const expected=o.pay!==undefined?o.pay:b.pay; // user's expected payment (defaults to bill's pay)
-    return {...b, min, pay:expected, expected, paid:o.paid!==undefined?o.paid:b.paid, payAcct:o.payAcct||b.payAcct||'', paidAt:o.paidAt||null};
+    // "paid" is now per calendar-month occurrence (billPaidOcc), so a bill paid in July is NOT
+    // still paid in August. b.paid reflects THIS month's occurrence (for sort/counts/expected-spend).
+    const paidCur=_billOccPaid(_billOkeyForMonth({...b, pay:expected}, 0));
+    return {...b, min, pay:expected, expected, paid:paidCur, payAcct:o.payAcct||b.payAcct||''};
   });
 }
 function toggleBillPaid(key){
@@ -626,30 +629,41 @@ function setBillPayAcct(key,val){
   const ov=_billOverrides(); ov[key]=ov[key]||{}; ov[key].payAcct=val||''; saveState();
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
 }
-/* Once a bill is marked paid AND assigned a pay-from account, we deduct it from that account's
-   EXPECTED balance — but only until a real transaction shows up (pending OR posted), at which point
-   the bank's own data reflects the debit and the manual deduction must stop so nothing double-counts.
-   Match = an outflow on that account near the bill's amount, on/after it was marked paid (small grace). */
-function _billPayMatched(b){
+/* Once a bill OCCURRENCE is marked paid AND the bill has a pay-from account, we deduct it from that
+   account's EXPECTED balance — but only until a real transaction shows up (pending OR posted), at
+   which point the bank's own data reflects the debit and the manual deduction must stop so nothing
+   double-counts. Match = an outflow on that account near the bill's amount, on/after the occurrence's
+   due date (or when it was marked paid). Keyed by occurrence so July's payment doesn't shadow August's. */
+function _billOccMatched(b, dueStr, paidAt){
   if(!dataLoaded || !b || !b.payAcct || !(b.pay>0)) return false;
   const tol=Math.max(2, b.pay*0.04);
-  const since=(b.paidAt? b.paidAt-4*86400000 : Date.now()-25*86400000);
+  const dueTs=dueStr?new Date(dueStr+'T12:00:00').getTime():NaN;
+  const since = paidAt ? paidAt-4*86400000 : (isFinite(dueTs)? dueTs-4*86400000 : Date.now()-25*86400000);
   return (allTxns||[]).some(t=> t.account_id===b.payAcct && (+t.amount)>0 && Math.abs((+t.amount)-b.pay)<=tol && new Date((t.date||'')+'T12:00:00').getTime()>=since);
 }
-// Marked-paid bills that haven't posted yet, grouped by their pay-from cash account.
-// Cash/savings only (live OR manual) — a bill paid by CREDIT CARD doesn't reduce cash, so
-// credit accounts are excluded here. liveTotal tracks the live-account portion only, since
-// Safe to Spend's cash base (liquid Plaid cash) doesn't include manual accounts.
+// Bill OCCURRENCES marked paid that haven't posted yet, grouped by their pay-from cash account.
+// Iterates billPaidOcc (per calendar-month occurrence) so paying next month's bill early counts now,
+// and last month's (already posted) drops out. Cash/savings only (live OR manual) — a bill paid by
+// CREDIT CARD doesn't reduce cash. liveTotal tracks the live-account portion for Safe to Spend
+// (whose cash base excludes manual accounts). Far-future planning marks (>62d out) are ignored.
 function engManualPending(cats){
   const out={byAcct:{}, total:0, count:0, liveTotal:0};
   if(!dataLoaded) return out;
   const byId={}; engAccounts().forEach(a=>{ byId[a.id]=a; });
-  engBills().forEach(b=>{
-    if(!b.paid || !b.payAcct || !(b.pay>0)) return;
+  const byKey={}; engBills().forEach(b=>{ byKey[billKey(b)]=b; });
+  const occ=_billPaidOcc();
+  Object.keys(occ).forEach(okey=>{
+    if(!occ[okey]) return;
+    const parts=okey.split('|'); if(parts.length<3) return;          // name|cat|YYYY-MM-DD
+    const dueStr=parts[parts.length-1], bk=parts.slice(0,-1).join('|');
+    const b=byKey[bk]; if(!b || !b.payAcct || !(b.pay>0)) return;
     const a=byId[b.payAcct];
-    if(!a || a.excluded || a.type!=='depository') return;   // cash/savings only; CC-paid bills never touch cash
+    if(!a || a.excluded || a.type!=='depository') return;            // cash/savings only; CC-paid bills never touch cash
     if(cats && cats.length && !cats.includes(getAccountCategory(a))) return;
-    if(_billPayMatched(b)) return;                          // a real txn (pending/posted) already reflects it → don't double-count (live accounts only; manual have no feed, so they stay deducted while marked paid)
+    const dueTs=new Date(dueStr+'T12:00:00').getTime();
+    if(isFinite(dueTs) && dueTs > Date.now()+62*86400000) return;    // ignore far-out planning marks
+    const paidAt=(typeof occ[okey]==='number' && occ[okey]>1e12)?occ[okey]:null;
+    if(_billOccMatched(b, dueStr, paidAt)) return;                   // a real txn (pending/posted) already reflects it
     const e=out.byAcct[a.id]||(out.byAcct[a.id]={sum:0,count:0,names:[]});
     e.sum+=b.pay; e.count++; e.names.push(b.name); out.total+=b.pay; out.count++;
     if(!a.manual) out.liveTotal+=b.pay;
@@ -1327,7 +1341,7 @@ function _projDate(off){ const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.ge
 function _billEvents(days){
   const out=[]; const today=new Date(); today.setHours(0,0,0,0);
   const horizon=new Date(today); horizon.setDate(horizon.getDate()+days);
-  engUpcomingBills().filter(b=>!b.paid && b.pay>0).forEach(b=>{
+  engUpcomingBills().filter(b=>b.pay>0).forEach(b=>{   // paid is handled per-occurrence via e.off in the projection, not by dropping the whole bill
     let cur=_dueDateInMonth(today.getFullYear(), today.getMonth(), b.due);
     if(cur<today) cur=_dueDateInMonth(today.getFullYear(), today.getMonth()+1, b.due);
     while(cur<=horizon){
@@ -1402,8 +1416,30 @@ function cfpToggleIncome(key, uid){
 // next month's occurrence stays visible & editable. Keyed 'billKey|YYYY-MM-DD', persisted in APP.
 function _billPaidOcc(){ APP.billPaidOcc=APP.billPaidOcc||{}; return APP.billPaidOcc; }
 function _billOccPaid(okey){ return !!(okey && _billPaidOcc()[okey]); }
+// The occurrence key for a bill's due date in a given calendar month (offset from this month).
+// Uses the SAME due-date math as the cash-flow projection so widget/projection/expected-spend agree.
+function _dueDateInMonthFor(b, monthOffset){ const t=new Date(); t.setHours(0,0,0,0); return _dueDateInMonth(t.getFullYear(), t.getMonth()+(monthOffset||0), b.due||1); }
+function _billOkeyForMonth(b, monthOffset){ return billKey(b)+'|'+_dk(_dueDateInMonthFor(b, monthOffset)); }
+// Toggle a specific month's occurrence paid from the Bills widget (stores a timestamp so a real
+// posted/pending txn can be matched within a window). Shares billPaidOcc with the cash-flow planner.
+function billsToggleOcc(okey, uid){
+  if(!okey) return; const m=_billPaidOcc(); const nowPaid=!m[okey];
+  if(nowPaid) m[okey]=Date.now(); else delete m[okey];
+  saveState(); try{ _memoInvalidate&&_memoInvalidate(); }catch(e){}
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+  if(nowPaid){ try{ gamiMarkEngaged('billpaid'); }catch(e){} try{ emojiBurst('coin',{particle:'coin',count:8,life:1600}); }catch(e){} const nm=(okey.split('|')[0]||'that').trim(); try{ richieCelebrate(`Boom — ${nm} marked paid! ✅ One less thing this month.`); }catch(e){} }
+}
+// One-time migration: fold the old global per-bill paid flag into THIS month's occurrence so
+// existing "paid" marks aren't lost when the widget moves to per-month tracking.
+function _migrateBillPaid(){
+  if(APP._billPaidMigrated) return;
+  try{ const ov=_billOverrides(); const occ=_billPaidOcc(); let touched=false;
+    engBills().forEach(b=>{ const k=billKey(b); const o=ov[k]; if(o && o.paid){ const ok=_billOkeyForMonth(b,0); if(!occ[ok]) occ[ok]=(o.paidAt||Date.now()); delete o.paid; delete o.paidAt; touched=true; } });
+    APP._billPaidMigrated=1; if(touched) saveState();
+  }catch(e){ APP._billPaidMigrated=1; }
+}
 function cfpToggleBillPaid(okey, uid){
-  if(!okey) return; const m=_billPaidOcc(); if(m[okey]) delete m[okey]; else m[okey]=1; saveState();
+  if(!okey) return; const m=_billPaidOcc(); if(m[okey]) delete m[okey]; else m[okey]=Date.now(); saveState();
   const nowPaid=!!m[okey];
   try{ _memoInvalidate&&_memoInvalidate(); }catch(e){}
   const w=(typeof _findWidget==='function')?_findWidget(uid):null;
@@ -5166,8 +5202,9 @@ function applyBudgetTemplate(){
 }
 
 /* ═══ BILLS WIDGET (all bills, timeframe selector) ═══ */
-let _billsTf={};  // per-widget: 'month' | 'week' | 'day'
-const BILLS_TABS=[['month','Monthly'],['week','Weekly'],['day','Daily'],['cards','💳 Cards']];
+let _billsTf={};  // per-widget: 'past' | 'cur' | 'next' | 'cards'
+const BILLS_TABS=[['past','Past Month'],['cur','Current Month'],['next','Next Month'],['cards','💳 Cards']];
+const _BILLS_MO={past:-1, cur:0, next:1};
 function _billsTabStrip(w,tf){ return BILLS_TABS.map(t=>`<button class="bills-tf-btn${tf===t[0]?' active':''}" onclick="event.stopPropagation();setBillsTf('${w.uid}','${t[0]}')">${t[1]}</button>`).join(''); }
 /* Card plan: your Excel workflow — each card shows the envelopes assigned to it (Zero-Based
    Budget 💳 selector), live 30-day purchases on that card, and its planned payment. */
@@ -5192,76 +5229,64 @@ function billsCardsPlanBody(w){
   return `<div class="ws-hint" style="margin:4px 0 9px">Leaving checking monthly: ${fmtK(fixedBills)} bills + ${fmtK(totalPay)} card payments = <b>${fmtK(fixedBills+totalPay)}</b></div>${rows}`;
 }
 function billsWidgetBody(w){
-  const tf=_billsTf[w.uid]||'month';
+  const tf=_billsTf[w.uid]||'cur';
   if(tf==='cards') return `<div class="bills-mgr"><div class="bills-tf">${_billsTabStrip(w,tf)}</div>${billsCardsPlanBody(w)}</div>`;
-  const factor={month:1, week:12/52, day:1/30.44}[tf];
-  const unit={month:'/mo', week:'/wk', day:'/day'}[tf];
-  // Show anything payable: a set payment, a bill you added by hand (even at $0 so you can set
-  // it), or a card/loan carrying a balance (so paid-in-full store cards still appear and can
-  // be given a payment). Cash-flow projection still only counts bills with pay>0.
+  if(dataLoaded) _migrateBillPaid();
+  const mo=(_BILLS_MO[tf]!=null)?_BILLS_MO[tf]:0;   // -1 past month, 0 current, +1 next
+  // Show anything payable: a set payment, a hand-added bill (even $0), or a card/loan with a balance.
   const all=engBills().filter(b=>b.pay>0 || b.manual || Math.abs(b.bal||0)>0);
-  if(!all.length) return `<div class="wph"><div class="wph-sub">No bills yet.</div><button class="manual-add-btn" onclick="event.stopPropagation();openManualBill()">\u2795 Add a bill</button></div>`;
+  if(!all.length) return `<div class="bills-mgr"><div class="bills-tf">${_billsTabStrip(w,tf)}</div><div class="wph"><div class="wph-sub">No bills yet.</div><button class="manual-add-btn" onclick="event.stopPropagation();openManualBill()">＋ Add a bill</button></div></div>`;
   const ord=(d)=>d+(d%10===1&&d!==11?'st':d%10===2&&d!==12?'nd':d%10===3&&d!==13?'rd':'th');
   const live=plaidHasLiab();
-  const today=new Date().getDate();
-  // stable sort: unpaid first (by due date), then paid (by due date) — paid stay visible, sink to bottom
-  const sorted=[...all].sort((a,b)=>{
-    if(!!a.paid!==!!b.paid) return a.paid?1:-1;
-    const da=a.due<today?a.due+31:a.due, db=b.due<today?b.due+31:b.due; return da-db;
-  });
-  const totMin=all.filter(b=>!b.paid).reduce((s,b)=>s+(b.min||0),0)*factor;
-  const totPay=all.filter(b=>!b.paid).reduce((s,b)=>s+(b.pay||0),0)*factor;
-  // Live cash accounts a bill can be paid from — drives the "Paid from" selector so a paid bill
-  // reduces Cash on Hand / Safe to Spend against the right account until the debit posts.
-  // Accounts a bill can be paid from: live OR manual cash/savings, plus credit cards. A cash/savings
-  // payment reduces Cash on Hand / Safe to Spend (as expected-spent) until it posts; a card payment
-  // is flagged "on card" and deliberately does NOT touch cash.
+  // Each row is a specific calendar-month OCCURRENCE: paid is tracked per month (billPaidOcc), so a
+  // bill paid in July is NOT still paid in August. Switching tabs shows that month's own paid state.
+  const occ=_billPaidOcc();
+  const withOcc=all.map(b=>{ const okey=_billOkeyForMonth(b, mo); return { b, okey, paid:_billOccPaid(okey), dueStr:_dk(_dueDateInMonthFor(b, mo)) }; });
+  const sorted=withOcc.sort((x,y)=>{ if(!!x.paid!==!!y.paid) return x.paid?1:-1; return (x.b.due||99)-(y.b.due||99); });   // unpaid first, paid sink to bottom
+  const totMin=withOcc.filter(x=>!x.paid).reduce((s,x)=>s+(x.b.min||0),0);
+  const totPay=withOcc.filter(x=>!x.paid).reduce((s,x)=>s+(x.b.pay||0),0);
+  const paidCount=withOcc.filter(x=>x.paid).length;
+  // Accounts a bill can be paid from: live OR manual cash/savings, plus credit cards.
   const payAccts=(dataLoaded?engAccounts():[]).filter(a=>!a.excluded && (a.type==='depository'||a.type==='credit'));
   const _payCash=payAccts.filter(a=>a.type==='depository').sort((x,y)=>Math.abs(y.bal||0)-Math.abs(x.bal||0));
   const _payCard=payAccts.filter(a=>a.type==='credit').sort((x,y)=>Math.abs(y.bal||0)-Math.abs(x.bal||0));
   const _acctById={}; payAccts.forEach(a=>{ _acctById[a.id]=a; });
-  const rows=sorted.map(b=>{ const key=billKey(b).replace(/'/g,"\\'"); const paid=b.paid; const diff=(b.pay||0)-(b.min||0);
+  const rows=sorted.map(({b,okey,paid,dueStr})=>{ const key=billKey(b).replace(/'/g,"\\'"); const okeyEsc=okey.replace(/'/g,"\\'"); const diff=(b.pay||0)-(b.min||0);
     const pa=b.payAcct?_acctById[b.payAcct]:null;
+    const _pv=occ[okey]; const paidAt=(typeof _pv==='number' && _pv>1e12)?_pv:null;
     const _tag=(paid&&pa)?(pa.type==='credit'
       ? '<span class="bill-oncard" title="Paid with this card — it lands on the card and does not reduce your cash">💳 on card</span>'
-      : (_billPayMatched(b)?'<span class="bill-posted" title="A matching transaction has posted or is pending at your bank — counted from there, not double-counted">✓ posted</span>':'<span class="bill-pend" title="Held out of Cash on Hand / Safe to Spend as expected-spent until it clears">⏳ expected</span>')):'';
+      : (_billOccMatched(b, dueStr, paidAt)?'<span class="bill-posted" title="A matching transaction has posted or is pending — counted from the bank, not double-counted">✓ posted</span>':'<span class="bill-pend" title="Held out of Cash on Hand / Safe to Spend as expected-spent until it clears">⏳ expected</span>')):'';
     const acctSel=payAccts.length?`<div class="bill-acctrow"><label class="bill-acctlbl">${paid?'Paid from':'Pay from'}</label><select class="bill-acct-sel" onclick="event.stopPropagation()" onchange="setBillPayAcct('${key}',this.value)"><option value="">— account —</option>${_payCash.map(a=>`<option value="${esc(a.id)}"${b.payAcct===a.id?' selected':''}>${esc(a.name)}${a.manual?' (manual)':''}</option>`).join('')}${_payCard.length?`<optgroup label="Credit cards">${_payCard.map(a=>`<option value="${esc(a.id)}"${b.payAcct===a.id?' selected':''}>💳 ${esc(a.name)}</option>`).join('')}</optgroup>`:''}</select>${_tag}</div>`:'';
-    const dispPay=tf==='month'?Math.round(b.pay):(b.pay*factor).toFixed(tf==='day'?2:0);
-    // Auto/other loans arrive from Plaid with a balance but no APR/payment/due — prompt to fill
-    // them in (once entered via the account editor, they persist and this disappears).
     const isLoan=['HM','CAR','LOAN'].includes(b.cat);
     const miss=[]; if(isLoan && !b.manual){ if(!(b.apr>0)) miss.push('APR'); if(b.estMin) miss.push('payment'); if(b.dueEst) miss.push('due date'); }
     const fillPrompt=miss.length?`<button class="bill-fill" onclick="event.stopPropagation();openAccountEditor('${esc(b.name).replace(/'/g,"\\'")}')" title="Plaid doesn't send these for this loan — add them once and they stick everywhere">＋ Add ${miss.join(' · ')}</button>`:'';
     return `<div class="bill-row${paid?' paid':''}">
-      <button class="bill-check" onclick="event.stopPropagation();toggleBillPaid('${key}')" title="${paid?'Mark unpaid':'Mark paid'}">${paid?'\u2713':''}</button>
+      <button class="bill-check" onclick="event.stopPropagation();billsToggleOcc('${okeyEsc}','${w.uid}')" title="${paid?'Mark unpaid':'Mark paid'}">${paid?'✓':''}</button>
       <div class="bill-info">
-        <div class="bill-nm">${esc(b.name)}${b.manual?`<span class="bill-edit" role="button" onclick="event.stopPropagation();openManualBill(${(APP.manualBills||[]).findIndex(x=>x.name===b.name&&x.cat===b.cat)})" title="Edit">\u270E</span>`:`<span class="bill-edit" role="button" onclick="event.stopPropagation();openAccountEditor('${esc(b.name).replace(/'/g,"\\'")}')" title="Edit min payment / due day / promo">\u270E</span>`}</div>
-        <div class="bill-sub">${b.dueEst?'<span style="color:var(--muted)">due date not set</span>':'due '+ord(b.due)}${b.apr?` \u00b7 ${b.apr.toFixed(1)}%`:''}${b.promo?` \u00b7 ${esc(b.promo)}`:''}${_billPayoffLabel(b)}</div>
+        <div class="bill-nm">${esc(b.name)}${b.manual?`<span class="bill-edit" role="button" onclick="event.stopPropagation();openManualBill(${(APP.manualBills||[]).findIndex(x=>x.name===b.name&&x.cat===b.cat)})" title="Edit">✎</span>`:`<span class="bill-edit" role="button" onclick="event.stopPropagation();openAccountEditor('${esc(b.name).replace(/'/g,"\\'")}')" title="Edit min payment / due day / promo">✎</span>`}</div>
+        <div class="bill-sub">${b.dueEst?'<span style="color:var(--muted)">due date not set</span>':'due '+ord(b.due)}${b.apr?` · ${b.apr.toFixed(1)}%`:''}${b.promo?` · ${esc(b.promo)}`:''}${_billPayoffLabel(b)}</div>
         <div class="bill-amts">
-          <span class="bill-min">Min <b>${fmtK(b.min)}</b>${b.estMin?' \u00b7 <span style="color:var(--amber)" title="No minimum reported by the bank \u2014 estimated at ~2% of balance. Tap \u270e to set the real one.">est.</span>':(live&&!b.manual?' \u00b7 Plaid':'')}</span>
+          <span class="bill-min">Min <b>${fmtK(b.min)}</b>${b.estMin?' · <span style="color:var(--amber)" title="No minimum reported by the bank — estimated at ~2% of balance. Tap the pencil to set the real one.">est.</span>':(live&&!b.manual?' · Plaid':'')}</span>
           ${Math.abs(diff)>=1?`<span class="bill-diff" style="color:${diff>0?'var(--amber)':'var(--green)'}">${diff>0?'+':''}${fmtK(diff)} vs min</span>`:''}
         </div>
         ${fillPrompt}
         ${acctSel}
       </div>
       <div class="bill-paywrap">
-        <label class="bill-paylabel">You pay${tf!=='month'?' '+unit:''}</label>
-        ${tf==='month'
-          ? `<div class="bill-pay"><span>$</span><input type="number" value="${dispPay}" min="0" step="10" onclick="event.stopPropagation()" oninput="setBillPay('${key}',this.value)" onblur="setBillPayCommit()"></div>`
-          : `<div class="bill-pay-static">${fmtK(b.pay*factor)}</div>`}
+        <label class="bill-paylabel">You pay</label>
+        <div class="bill-pay"><span>$</span><input type="number" value="${Math.round(b.pay)}" min="0" step="10" onclick="event.stopPropagation()" oninput="setBillPay('${key}',this.value)" onblur="setBillPayCommit()"></div>
       </div>
     </div>`; }).join('');
   return `<div class="bills-mgr">
-    <div class="bills-tf">
-      ${_billsTabStrip(w,tf)}
-    </div>
-    <div class="bills-hint">Tap the box on the left to mark a bill paid</div>
+    <div class="bills-tf">${_billsTabStrip(w,tf)}</div>
+    <div class="bills-monthlbl">${esc(_monthLabel(mo))}${mo===0?' · this month':''} — check a box to mark that bill paid for this month</div>
     ${rows}
     <div class="bills-foot">
-      <span>${all.filter(b=>!b.paid).length} unpaid \u00b7 ${all.filter(b=>b.paid).length} paid</span>
-      <span class="bills-foot-amts">${live?`<span class="bills-foot-min">min ${fmtK(totMin)}</span>`:''}<b>${fmtK(totPay)}${unit} you pay</b></span>
+      <span>${withOcc.length-paidCount} unpaid · ${paidCount} paid</span>
+      <span class="bills-foot-amts">${live?`<span class="bills-foot-min">min ${fmtK(totMin)}</span>`:''}<b>${fmtK(totPay)} left to pay</b></span>
     </div>
-    <button class="manual-add-btn" onclick="event.stopPropagation();openManualBill()">\u2795 Add a bill</button>
+    <button class="manual-add-btn" onclick="event.stopPropagation();openManualBill()">＋ Add a bill</button>
   </div>`;
 }
 function setBillsTf(uid,tf){ _billsTf[uid]=tf; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
