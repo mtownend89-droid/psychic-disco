@@ -1716,7 +1716,13 @@ function engMonthlyBills(){ return engBills().reduce((s,b)=>s+(b.pay||0),0); }
 // How much is safe to spend today: liquid cash, minus bills due before the next paycheck,
 // minus a prorated slice of goal contributions and a small buffer, spread over the days until pay.
 function engSafeToSpend(){
-  const actualCash=engStartCash();
+  const actualCash=engStartCash();                    // spendable base: AVAILABLE balances (already net of bank-pending) — the pool math runs on this
+  // Gross (current/ledger) balance of the same live cash accounts — this is what the Cash on Hand
+  // widget shows. Displaying it + an explicit "Pending (bank)" line makes the two widgets reconcile.
+  const _exC=(typeof _excludedAcctIds==='function')?_excludedAcctIds():new Set();
+  const grossCash = dataLoaded ? allAccts.filter(a=>a.type==='depository' && !_exC.has(a.account_id)).reduce((s,a)=>s+((a.balances&&a.balances.current)||0),0) : actualCash;
+  const displayCash = Math.max(grossCash, actualCash);
+  const bankPending = Math.max(0, Math.round(displayCash - actualCash));   // pending the bank has already held out of available
   const paidPending=engManualPending().liveTotal;   // bills marked paid from LIVE cash that haven't debited yet (manual accounts aren't in this cash base)
   const cash=actualCash-paidPending;                  // expected cash once those clear
   const proj=engCashFlowProjection(90, null, paidPending);   // look a full quarter ahead, from expected (not just to next payday); those paid bills are dropped from future events too, so no double-count
@@ -1735,7 +1741,7 @@ function engSafeToSpend(){
   const pool=Math.min(nearPool, safe90);
   const constrainedBy90=safe90<nearPool;   // the quarter-ahead floor is the binding limit, not near-term cash
   const perDay=horizon>0?pool/horizon:pool;
-  return {pool,perDay,horizon,cash:actualCash,expectedCash:cash,paidPending,billsDue,goalPortion,buffer,nextIncomeDay:inc?inc.day:null,
+  return {pool,perDay,horizon,cash:displayCash,spendableCash:actualCash,grossCash:displayCash,bankPending,expectedCash:cash,paidPending,billsDue,goalPortion,buffer,nextIncomeDay:inc?inc.day:null,
     low90:Math.round(low90), lowDay:proj.low.day, constrainedBy90, shortfall:low90<0};
 }
 // Detect recurring charges / subscriptions — groups outflows by merchant, keeps those
@@ -1894,7 +1900,8 @@ function safeToSpendBody(w){
     <div class="wph-stat" style="color:${col}">${fmtK(s.pool)}</div>
     <div class="wph-sub">${sub}</div>
     <div class="sts-break">
-      <div><span>Cash on hand</span><b>${fmtK(s.cash)}</b></div>
+      <div><span>Cash on hand</span><b>${fmtK(s.grossCash!=null?s.grossCash:s.cash)}</b></div>
+      ${s.bankPending>0.5?`<div><span>− Pending (bank)</span><b style="color:var(--amber)" title="Transactions your bank is already holding against your available balance (same pending shown in Cash on Hand)">${fmtK(s.bankPending)}</b></div>`:''}
       ${s.paidPending>0.5?`<div><span>− Paid bills (not posted)</span><b style="color:var(--amber)" title="Bills you marked paid whose debit hasn't hit your account yet — already spent, so held out of safe-to-spend until they post">${fmtK(s.paidPending)}</b></div>`:''}
       <div><span>− Bills before payday</span><b style="color:var(--red)">${fmtK(s.billsDue)}</b></div>
       ${s.goalPortion>0.5?`<div><span>− Goal set-aside</span><b style="color:var(--amber)">${fmtK(s.goalPortion)}</b></div>`:''}
