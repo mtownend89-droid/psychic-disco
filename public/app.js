@@ -391,9 +391,11 @@ function _calMonthStart(d){ const x=new Date(d); return new Date(x.getFullYear()
 function _calQuarterStart(d){ const x=new Date(d); return new Date(x.getFullYear(), Math.floor(x.getMonth()/3)*3, 1); }
 function _calYearStart(d){ return new Date(new Date(d).getFullYear(), 0, 1); }
 // Map a canonical rolling day-count to a {start,end,calendar} window honoring the current basis.
-function engRange(days){
+// forceRolling=true always returns a trailing N-day window (used where "last N days" is the point,
+// e.g. the budget sliders' 90-day average, regardless of the calendar/rolling toggle).
+function engRange(days, forceRolling){
   const now=new Date(); const end=now.getTime();
-  if(_periodBasis()==='calendar'){
+  if(!forceRolling && _periodBasis()==='calendar'){
     let start=null;
     if(days<=1){ const s=new Date(now); s.setHours(0,0,0,0); start=s; }        // Today
     else if(days===7) start=_calWeekStart(now);                                // This calendar week
@@ -412,7 +414,7 @@ function engRangeLabel(days){
   }
   return 'last '+days+' days';
 }
-function engRecent(days){ const r=engRange(days); const ex=_excludedAcctIds(); return allTxns.filter(t=>new Date(t.date).getTime()>=r.start && !ex.has(t.account_id)); }
+function engRecent(days, forceRolling){ const r=engRange(days, forceRolling); const ex=_excludedAcctIds(); return allTxns.filter(t=>new Date(t.date).getTime()>=r.start && !ex.has(t.account_id)); }
 
 /* ── P&L engine: group income vs spending by day/week/month with full stats ── */
 function engPLBuckets(days, group){
@@ -965,10 +967,29 @@ function tfDays(key){ const t=TIMEFRAMES.find(x=>x.key===key); return t?t.days:3
 const _CAL_TF_LABEL={7:'This week',30:'This month',90:'This quarter',365:'This year'};
 function tfLabel(key){ const t=TIMEFRAMES.find(x=>x.key===key); if(!t) return _periodBasis()==='calendar'?'This month':'30 days'; return _periodBasis()==='calendar'?(_CAL_TF_LABEL[t.days]||t.label):t.label; }
 function engTotalDebt(){ return allAccts.filter(a=>_isDebtAcct(a)).reduce((s,a)=>s+Math.abs((a.balances&&a.balances.current)||0),0); }
-function engCategoryBreakdown(days){
-  const rec=engRecent(days).filter(t=>t.amount>0 && !_txnExcludedFromSpend(t)); const byCat={};
+function engCategoryBreakdown(days, forceRolling){
+  const rec=engRecent(days, forceRolling).filter(t=>t.amount>0 && !_txnExcludedFromSpend(t)); const byCat={};
   rec.forEach(t=>{ const c=getTxnCategory(t); byCat[c]=(byCat[c]||0)+t.amount; });
   return Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([label,value])=>({label,value,color:getCatColor(label)}));
+}
+// Spend per category within a SPECIFIC calendar month (offset from the current month: 0=this month,
+// -1=last month, +1=next). Powers the budget widget's month picker. Returns a {label: amount} map.
+function engCategoryBreakdownMonth(monthOffset){
+  monthOffset=monthOffset||0;
+  const now=new Date();
+  const start=new Date(now.getFullYear(), now.getMonth()+monthOffset, 1);
+  const end=new Date(now.getFullYear(), now.getMonth()+monthOffset+1, 1);
+  const ex=_excludedAcctIds(); const byCat={};
+  (allTxns||[]).forEach(t=>{
+    if(ex.has(t.account_id) || !(t.amount>0) || _txnExcludedFromSpend(t)) return;
+    const d=new Date((t.date||'')+'T12:00:00'); if(d<start || d>=end) return;
+    const c=getTxnCategory(t); byCat[c]=(byCat[c]||0)+t.amount;
+  });
+  return byCat;
+}
+function _monthLabel(offset){
+  const now=new Date(); const d=new Date(now.getFullYear(), now.getMonth()+(offset||0), 1);
+  return d.toLocaleDateString('en-US',{month:'long',year:'numeric'});
 }
 /* ═══ DISCRETIONARY SPENDING ═══
    "Discretionary" = day-to-day controllable spend. Excludes fixed bills (housing,
@@ -4929,14 +4950,22 @@ function _cardSpend30(accountId){
   const cut=new Date(engRange(30).start).toISOString().slice(0,10);   // this month (calendar) or last 30 days (rolling)
   return allTxns.filter(t=>t.account_id===accountId&&t.date>=cut&&t.amount>0&&!_txnExcludedFromSpend(t)).reduce((s,t)=>s+t.amount,0);
 }
+// Budget widget month picker: per-widget calendar-month offset (0=this month, -1=last, +1=next).
+let _budMonth={};
+function zbMonthNav(uid,delta){
+  const cur=_budMonth[uid]||0;
+  _budMonth[uid]=(delta===0)?0:Math.max(-60, Math.min(12, cur+delta));   // up to 5y back, 1y ahead for planning
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+}
 function zbWidgetBody(w){
   const income=engMonthlyIncome();
   const sc=engSpendingCards();
   const bills=engMonthlyBills()-sc.coveredPay;   // spending-card payments live in the envelopes; extra paydown stays fixed
   const buckets=_zbBuckets();
   const ccNames=Array.from(new Set(engBills().filter(b=>b.cat==='CC').map(b=>b.name)));
-  const zbActual={}; if(dataLoaded){ try{ engCategoryBreakdown(30).forEach(r=>{ zbActual[r.label]=r.value; }); }catch(e){} }
-  const zbAvg90={}; if(dataLoaded){ try{ engCategoryBreakdown(90).forEach(r=>{ zbAvg90[r.label]=r.value/3; }); }catch(e){} }  // avg monthly spend over last 90d
+  const _bm=_budMonth[w.uid]||0;   // which calendar month is being viewed/edited
+  const zbActual={}; if(dataLoaded){ try{ const m=engCategoryBreakdownMonth(_bm); Object.keys(m).forEach(k=>{ zbActual[k]=m[k]; }); }catch(e){} }   // spend for the SELECTED calendar month
+  const zbAvg90={}; if(dataLoaded){ try{ engCategoryBreakdown(90, true).forEach(r=>{ zbAvg90[r.label]=r.value/3; }); }catch(e){} }  // true rolling 90-day monthly avg (pinned; ignores the calendar/rolling toggle)
   const spentTotal=buckets.reduce((s,b)=>s+(zbActual[b.name]||0),0);
   const envTotal=buckets.reduce((s,z)=>s+z.amt,0);
   const assigned=envTotal+bills;
@@ -4956,7 +4985,14 @@ function zbWidgetBody(w){
       <div class="ws-hint" style="margin:0 0 7px">Add a category to budget:</div>
       <div class="zb-chips">${avail.map(c=>`<button class="zb-chip" onclick="event.stopPropagation();zbAddCat('${c.id}','${w.uid}')"><span class="zb-dot" style="background:${c.color}"></span>${esc(c.label)}</button>`).join('')}</div>
     </div>` : '';
+  const monthNav=`<div class="zb-monthnav">
+      <button class="zb-mbtn" onclick="event.stopPropagation();zbMonthNav('${w.uid}',-1)" title="Previous month">◀</button>
+      <span class="zb-monthlbl">${esc(_monthLabel(_bm))}${_bm===0?' · this month':(_bm<0?` · ${-_bm} mo ago`:` · in ${_bm} mo`)}</span>
+      <button class="zb-mbtn" onclick="event.stopPropagation();zbMonthNav('${w.uid}',1)" title="Next month">▶</button>
+      ${_bm!==0?`<button class="zb-mtoday" onclick="event.stopPropagation();zbMonthNav('${w.uid}',0)">Today</button>`:''}
+    </div>`;
   return `<div class="zb-wrap">
+    ${monthNav}
     <div class="zb-head">
       <div class="zb-hstat"><span>Monthly income</span><b>${fmtK(income)}</b></div>
       <div class="zb-hstat"><span>Bills (fixed)</span><b style="color:var(--red)">${fmtK(bills)}</b></div>

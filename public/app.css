@@ -1874,6 +1874,11 @@ body.fx-slime .canvas-widget-card::after{content:'';position:absolute;left:-2%;r
 .bills-tf-btn.active{background:var(--green-dim);color:var(--green);}
 /* ── Zero-Based Budget ── */
 .zb-wrap{padding:2px;}
+.zb-monthnav{display:flex;align-items:center;gap:8px;margin:0 0 12px;}
+.zb-mbtn{width:28px;height:28px;flex:0 0 auto;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer;line-height:1;}
+.zb-mbtn:hover{background:var(--surface3,var(--surface2));}
+.zb-monthlbl{font-weight:700;font-size:13.5px;flex:1;text-align:center;}
+.zb-mtoday{flex:0 0 auto;border:1px solid var(--border);background:transparent;color:var(--accent,#8b5cf6);font-family:var(--font);font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;cursor:pointer;}
 .zb-head{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px;}
 .zb-hstat{background:var(--surface2);border-radius:9px;padding:9px 11px;display:flex;flex-direction:column;gap:2px;}
 .zb-hstat span{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;}
