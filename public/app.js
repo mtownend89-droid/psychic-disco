@@ -380,7 +380,39 @@ function _excludedAcctIds(){
     return set;
   });
 }
-function engRecent(days){ const cut=new Date(Date.now()-days*86400000); const ex=_excludedAcctIds(); return allTxns.filter(t=>new Date(t.date)>=cut && !ex.has(t.account_id)); }
+/* ── Period basis: Calendar (month-to-month, 1st→today regardless of day count) vs Rolling
+   (trailing N days). A global toggle in Settings (APP.periodBasis) flips every time-based
+   analytic at once, because they all funnel through engRecent → engRange. In calendar mode the
+   standard buckets snap to the current calendar week / month / quarter / year; a non-standard day
+   count (e.g. 14, 60) stays a trailing window in either mode. ── */
+function _periodBasis(){ return APP.periodBasis==='rolling'?'rolling':'calendar'; }   // default: calendar
+function _calWeekStart(d){ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-x.getDay()); return x; }   // Sunday-start week
+function _calMonthStart(d){ const x=new Date(d); return new Date(x.getFullYear(), x.getMonth(), 1); }
+function _calQuarterStart(d){ const x=new Date(d); return new Date(x.getFullYear(), Math.floor(x.getMonth()/3)*3, 1); }
+function _calYearStart(d){ return new Date(new Date(d).getFullYear(), 0, 1); }
+// Map a canonical rolling day-count to a {start,end,calendar} window honoring the current basis.
+function engRange(days){
+  const now=new Date(); const end=now.getTime();
+  if(_periodBasis()==='calendar'){
+    let start=null;
+    if(days<=1){ const s=new Date(now); s.setHours(0,0,0,0); start=s; }        // Today
+    else if(days===7) start=_calWeekStart(now);                                // This calendar week
+    else if(days>=28 && days<=31) start=_calMonthStart(now);                   // This calendar month
+    else if(days>=88 && days<=93) start=_calQuarterStart(now);                 // This calendar quarter
+    else if(days>=360 && days<=372) start=_calYearStart(now);                  // This calendar year
+    if(start) return {start:start.getTime(), end, calendar:true};
+  }
+  return {start: end - days*86400000, end, calendar:false};
+}
+function engRangeLabel(days){
+  if(_periodBasis()==='calendar'){
+    if(days<=1) return 'today'; if(days===7) return 'this week';
+    if(days>=28&&days<=31) return 'this month'; if(days>=88&&days<=93) return 'this quarter';
+    if(days>=360&&days<=372) return 'this year';
+  }
+  return 'last '+days+' days';
+}
+function engRecent(days){ const r=engRange(days); const ex=_excludedAcctIds(); return allTxns.filter(t=>new Date(t.date).getTime()>=r.start && !ex.has(t.account_id)); }
 
 /* ── P&L engine: group income vs spending by day/week/month with full stats ── */
 function engPLBuckets(days, group){
@@ -552,7 +584,7 @@ function _dedupeAcctList(list){
 }
 function engAcctNet30(acct){
   if(!dataLoaded||!acct._acct) return null;
-  const cut=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+  const cut=new Date(engRange(30).start).toISOString().slice(0,10);   // this month (calendar) or last 30 days (rolling)
   const txns=allTxns.filter(t=>t.account_id===acct.id&&t.date>=cut);
   const net=txns.reduce((s,t)=>s+(t.amount>0?-t.amount:Math.abs(t.amount)),0);
   return {net, count:txns.length, txns:txns.slice(0,25)};
@@ -929,7 +961,9 @@ function engIncome(days){ return engRecent(days).filter(_isIncomeTxn).reduce((s,
 // Timeframe options: label, days, and a noun for "per period"
 const TIMEFRAMES=[{key:'1w',label:'1 wk',days:7},{key:'30d',label:'30 days',days:30},{key:'3m',label:'3 mo',days:90},{key:'1y',label:'1 yr',days:365}];
 function tfDays(key){ const t=TIMEFRAMES.find(x=>x.key===key); return t?t.days:30; }
-function tfLabel(key){ const t=TIMEFRAMES.find(x=>x.key===key); return t?t.label:'30 days'; }
+// Basis-aware chip label: rolling shows "30 days", calendar shows "This month", etc.
+const _CAL_TF_LABEL={7:'This week',30:'This month',90:'This quarter',365:'This year'};
+function tfLabel(key){ const t=TIMEFRAMES.find(x=>x.key===key); if(!t) return _periodBasis()==='calendar'?'This month':'30 days'; return _periodBasis()==='calendar'?(_CAL_TF_LABEL[t.days]||t.label):t.label; }
 function engTotalDebt(){ return allAccts.filter(a=>_isDebtAcct(a)).reduce((s,a)=>s+Math.abs((a.balances&&a.balances.current)||0),0); }
 function engCategoryBreakdown(days){
   const rec=engRecent(days).filter(t=>t.amount>0 && !_txnExcludedFromSpend(t)); const byCat={};
@@ -4289,7 +4323,7 @@ function wsRenderPreview(){
 // ── Step: Data & query ──
 function wsDataStep(){
   const c=widgetConfig(_ws.w);
-  const tfChips=TIMEFRAMES.map(t=>`<button class="ws-chip${(_ws.w.tf||'30d')===t.key?' active':''}" onclick="wsSetTf('${t.key}')">${t.label}</button>`).join('');
+  const tfChips=TIMEFRAMES.map(t=>`<button class="ws-chip${(_ws.w.tf||'30d')===t.key?' active':''}" onclick="wsSetTf('${t.key}')">${tfLabel(t.key)}</button>`).join('');
   const srcOpts=[['auto','Auto','Live data if connected, else sample'],['live','Live (Plaid)','Only your connected accounts'],['manual','Manual','Your entered bills & income'],['sample','Sample','Demo numbers']];
   const srcHtml=srcOpts.map(o=>`<div class="ws-opt${c.source===o[0]?' selected':''}" onclick="wsSet('source','${o[0]}');wsRender()"><div class="ws-opt-name">${o[1]}</div><div class="ws-opt-desc">${o[2]}</div></div>`).join('');
   // query builder — categories (for spend/category widgets) and accounts
@@ -4537,7 +4571,7 @@ function renderCanvas(pg){
     const bodyClick='';  // drill-down opens ONLY from the ⓘ info icon, never the body
     const hasTf=widgetHasTimeframe(w.type) && widgetUnlocked(def);
     const tfCur=w.tf||'30d';
-    const tfRow=hasTf?`<div class="cwt-row">${TIMEFRAMES.map(t=>`<button class="cwt-chip${tfCur===t.key?' active':''}" onclick="event.stopPropagation();setWidgetTf('${w.uid}','${t.key}')">${t.label}</button>`).join('')}</div>`:'';
+    const tfRow=hasTf?`<div class="cwt-row">${TIMEFRAMES.map(t=>`<button class="cwt-chip${tfCur===t.key?' active':''}" onclick="event.stopPropagation();setWidgetTf('${w.uid}','${t.key}')">${tfLabel(t.key)}</button>`).join('')}</div>`:'';
     const _cfg=widgetConfig(w);
     const _icon=_cfg.icon||def.icon;
     const _subtitle=_cfg.subtitle?`<div class="cwh-subtitle">${esc(_cfg.subtitle)}</div>`:'';
@@ -4892,7 +4926,7 @@ function engSpendingCards(){
 // 30-day purchases on one card account (payments/transfers excluded)
 function _cardSpend30(accountId){
   if(!accountId||!dataLoaded) return null;
-  const cut=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+  const cut=new Date(engRange(30).start).toISOString().slice(0,10);   // this month (calendar) or last 30 days (rolling)
   return allTxns.filter(t=>t.account_id===accountId&&t.date>=cut&&t.amount>0&&!_txnExcludedFromSpend(t)).reduce((s,t)=>s+t.amount,0);
 }
 function zbWidgetBody(w){
@@ -6017,7 +6051,7 @@ function discretionarySpendBody(w){
   const trendPct = prev>0?Math.round((cur-prev)/prev*100):0;
   const trendColor = trendUp?'var(--red)':'var(--pos)';  // spending up = bad
   const scope = linked?'in budget':'discretionary';
-  const sub = (w.tf==='30d'||!w.tf) ? scope+' · last 30 days' : `${scope} · ${tfLabel(w.tf)}`;
+  const sub = `${scope} · ${engRangeLabel(tfDays(w.tf||'30d'))}`;
   const filterBtn=`<button class="cash-pick" onclick="event.stopPropagation();openSpendCatPicker('${w.uid}')" title="Choose which categories to include">⚙︎</button>`;
   return `<div class="wph">
     <div class="wph-stat" style="color:${(budget>0&&spend>budget)?'var(--red)':'var(--pos)'}">${fmtK(spend)}</div>
@@ -6049,7 +6083,7 @@ function budgetActualBody(w){
   const tf=_baTf[w.uid]||30;
   const d=engBudgetVsActual(tf);
   if(!d.rows.length) return `<div class="wph"><div class="wph-sub">Set up your Zero-Based Budget first, then this compares it to actual spending.</div></div>`;
-  const tfLbl={7:'1 wk',30:'This month',90:'3 mo'};
+  const tfLbl=_periodBasis()==='calendar'?{7:'This week',30:'This month',90:'This quarter'}:{7:'1 wk',30:'30 days',90:'3 mo'};
   const rows=d.rows.map(r=>{
     const barColor = r.over?'var(--red)':r.pct>=85?'var(--amber)':'var(--green)';
     const diffColor = r.diff>=0?'var(--pos)':'var(--red)';
@@ -6683,8 +6717,8 @@ function acctMount(w){
   const info=engAcctNet30(acct);
   if(!info){ el.innerHTML='<div class="acct-empty">Connect your bank to see transactions for this account.</div>'; return; }
   const net=info.net;
-  let html=`<div class="acct-txn-head">${info.count} txns · last 30d · net <b style="color:${net>=0?'var(--pos)':'var(--red)'}">${net>=0?'+':'-'}${fmt2(Math.abs(net))}</b></div>`;
-  if(!info.txns.length){ html+='<div class="acct-empty">No transactions in last 30 days.</div>'; el.innerHTML=html; return; }
+  let html=`<div class="acct-txn-head">${info.count} txns · ${engRangeLabel(30)} · net <b style="color:${net>=0?'var(--pos)':'var(--red)'}">${net>=0?'+':'-'}${fmt2(Math.abs(net))}</b></div>`;
+  if(!info.txns.length){ html+=`<div class="acct-empty">No transactions ${engRangeLabel(30)}.</div>`; el.innerHTML=html; return; }
   const keys=[];
   html+=info.txns.map((t,i)=>{ const key=_txnKey(t); keys[i]=key; const pos=t.amount>0; const col=pos?'var(--red)':'var(--pos)'; const amt=(pos?'-':'+')+fmt2(Math.abs(t.amount)); const cat=getTxnCategory(t); const note=getTxnNote(t); const tag=getTxnTag(t); const name=t.merchant_name||t.name||''; const dt=new Date(t.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
       const tagChip = tag&&TXN_TAG_BY_ID[tag]?`<span class="txf-tag">${TXN_TAG_BY_ID[tag].icon} ${esc(TXN_TAG_BY_ID[tag].label)}</span>`:'';
@@ -6718,8 +6752,11 @@ function setAcctTxnNote(uid, idx, note){
 /* ═══ ALL TRANSACTIONS widget — searchable feed with per-txn category, note & tag ═══ */
 let _txnFeed={}, _txnFeedKeys={}, _txnFeedRows={};
 const TXF_FILTERS=[{id:'all',label:'All'},{id:'income',label:'Income'},{id:'spending',label:'Spending'},{id:'pending',label:'⏳ Pending'},{id:'paycheck',label:'💵 Paychecks'},{id:'tagged',label:'Tagged'},{id:'untagged',label:'Untagged'}];
-const TXN_TF=[{key:'1w',label:'1 wk',days:7},{key:'30d',label:'30 days',days:30},{key:'3m',label:'3 mo',days:90},{key:'1y',label:'1 yr',days:365},{key:'all',label:'All',days:100000}];
+const TXN_TF=[{key:'1d',label:'1 day',days:1},{key:'1w',label:'1 wk',days:7},{key:'30d',label:'30 days',days:30},{key:'3m',label:'3 mo',days:90},{key:'1y',label:'1 yr',days:365},{key:'all',label:'All',days:100000}];
 function _txfDays(tf){ const t=TXN_TF.find(x=>x.key===tf); return t?t.days:30; }
+// Basis-aware filter label: calendar → Today/This week/This month/This quarter/This year.
+const _CAL_TXF_LABEL={1:'Today',7:'This week',30:'This month',90:'This quarter',365:'This year'};
+function _txfLabel(t){ if(t.key==='all') return 'All'; return _periodBasis()==='calendar'?(_CAL_TXF_LABEL[t.days]||t.label):t.label; }
 function txnFeedBody(w){
   const st=_txnFeed[w.uid]||(_txnFeed[w.uid]={q:'',filter:'all',tf:'30d'});
   if(!st.tf) st.tf='30d';
@@ -6741,9 +6778,9 @@ function _txnFeedData(w){
     {date:'2026-01-04',name:'Transfer to Savings',amount:300,transaction_id:'ex5',institution:'Example'},
   ];
   const q=(st.q||'').toLowerCase().trim();
-  const cut=Date.now()-_txfDays(st.tf||'30d')*86400000;
+  const _r=engRange(_txfDays(st.tf||'30d'));   // calendar or rolling window per the global basis
   list=list.filter(t=>{
-    if(new Date(t.date).getTime()<cut) return false;
+    if(new Date(t.date).getTime()<_r.start) return false;
     if(q){ const name=(t.merchant_name||t.name||'').toLowerCase(); const cat=getTxnCategory(t).toLowerCase(); if(!(name.includes(q)||cat.includes(q))) return false; }
     const tag=getTxnTag(t);
     switch(st.filter){
@@ -6764,7 +6801,7 @@ function txnFeedMount(w){
   const chipsEl=gg('txfchips_'+w.uid);
   if(chipsEl) chipsEl.innerHTML=TXF_FILTERS.map(f=>`<button class="txf-chip${st.filter===f.id?' on':''}" onclick="event.stopPropagation();txnFeedFilter('${w.uid}','${f.id}')">${esc(f.label)}</button>`).join('');
   const tfEl=gg('txftf_'+w.uid);
-  if(tfEl) tfEl.innerHTML=TXN_TF.map(t=>`<button class="txf-tfchip${(st.tf||'30d')===t.key?' on':''}" onclick="event.stopPropagation();txnFeedTf('${w.uid}','${t.key}')">${esc(t.label)}</button>`).join('');
+  if(tfEl) tfEl.innerHTML=TXN_TF.map(t=>`<button class="txf-tfchip${(st.tf||'30d')===t.key?' on':''}" onclick="event.stopPropagation();txnFeedTf('${w.uid}','${t.key}')">${esc(_txfLabel(t))}</button>`).join('');
   txnFeedRender(w);
 }
 function txnFeedRender(w){
@@ -7707,6 +7744,17 @@ function renderSettings(){
         <button class="btn" style="margin-top:13px" onclick="resetAppearance()">↺ Reset to Richie default</button>
       </div>
 
+      <div class="set-section">📅 Time &amp; periods</div>
+      <div class="set-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
+          <div>
+            <div class="set-card-label" style="margin:0">📅 Calendar months</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Base every time filter on the <b>calendar</b> — “This month” means the 1st through today no matter how many days the month has; week, quarter (3 mo) and year work the same way. Turn this off for <b>rolling</b> windows (last 7 / 30 / 90 / 365 days). Either way, bills stay on their day-of-month and paychecks keep their day-of-month or every-other-week schedule.</div>
+          </div>
+          <button class="toggle${_periodBasis()==='calendar'?' on':''}" id="periodBasisToggle" onclick="togglePeriodBasis()" aria-label="Toggle calendar months"><span class="toggle-knob"></span></button>
+        </div>
+      </div>
+
       <div class="set-section">♿ Accessibility</div>
       <div class="set-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
@@ -7961,6 +8009,17 @@ function removeImport(id){
 
 function setPersona(key){ APP.persona=key; saveState(); applyAccent(); renderShell(); renderSettings(); if(sbRichie)sbRichie.do('bounce'); richieSay(RICHIE_PERSONAS[key].quips[0]); }
 function toggleProMode(){ APP.proMode=!APP.proMode; saveState(); gg('proToggle').classList.toggle('on',APP.proMode); renderSettings(); richieSay(APP.proMode?"Pro Mode ON. Everything's unlocked — go wild.":"Pro Mode off. Back to leveling up the fun way."); }
+function togglePeriodBasis(){
+  APP.periodBasis=(_periodBasis()==='calendar')?'rolling':'calendar';
+  saveState();
+  try{ _memoInvalidate&&_memoInvalidate(); }catch(e){}
+  const t=gg('periodBasisToggle'); if(t) t.classList.toggle('on', _periodBasis()==='calendar');
+  renderSettings();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg&&APP.activePage!=='__settings__')renderCanvas(pg);
+  if(typeof richieSay==='function') richieSay(_periodBasis()==='calendar'
+    ? "Switched to calendar months — every time filter now runs 1st-of-period through today, month to month regardless of the day count."
+    : "Switched to rolling windows — filters now look back a fixed 7 / 30 / 90 / 365 days.");
+}
 // ── Full reset: wipe all data and revert to onboarding (type-YES confirm) ──
 function openFullResetConfirm(){
   const inp=gg('resetConfirmInput'); if(inp){ inp.value=''; }
