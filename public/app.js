@@ -603,18 +603,22 @@ function _billPayMatched(b){
   return (allTxns||[]).some(t=> t.account_id===b.payAcct && (+t.amount)>0 && Math.abs((+t.amount)-b.pay)<=tol && new Date((t.date||'')+'T12:00:00').getTime()>=since);
 }
 // Marked-paid bills that haven't posted yet, grouped by their pay-from cash account.
+// Cash/savings only (live OR manual) — a bill paid by CREDIT CARD doesn't reduce cash, so
+// credit accounts are excluded here. liveTotal tracks the live-account portion only, since
+// Safe to Spend's cash base (liquid Plaid cash) doesn't include manual accounts.
 function engManualPending(cats){
-  const out={byAcct:{}, total:0, count:0};
+  const out={byAcct:{}, total:0, count:0, liveTotal:0};
   if(!dataLoaded) return out;
   const byId={}; engAccounts().forEach(a=>{ byId[a.id]=a; });
   engBills().forEach(b=>{
     if(!b.paid || !b.payAcct || !(b.pay>0)) return;
     const a=byId[b.payAcct];
-    if(!a || a.excluded || a.manual || a.type!=='depository') return;   // only live cash accounts have a txn feed to reconcile against
+    if(!a || a.excluded || a.type!=='depository') return;   // cash/savings only; CC-paid bills never touch cash
     if(cats && cats.length && !cats.includes(getAccountCategory(a))) return;
-    if(_billPayMatched(b)) return;                                      // real txn already reflects it → don't deduct twice
+    if(_billPayMatched(b)) return;                          // a real txn (pending/posted) already reflects it → don't double-count (live accounts only; manual have no feed, so they stay deducted while marked paid)
     const e=out.byAcct[a.id]||(out.byAcct[a.id]={sum:0,count:0,names:[]});
     e.sum+=b.pay; e.count++; e.names.push(b.name); out.total+=b.pay; out.count++;
+    if(!a.manual) out.liveTotal+=b.pay;
   });
   return out;
 }
@@ -1611,8 +1615,8 @@ function engMonthlyBills(){ return engBills().reduce((s,b)=>s+(b.pay||0),0); }
 // minus a prorated slice of goal contributions and a small buffer, spread over the days until pay.
 function engSafeToSpend(){
   const actualCash=engStartCash();
-  const paidPending=engManualPending().total;   // bills you marked paid that haven't debited yet — already committed
-  const cash=actualCash-paidPending;             // expected cash once those clear
+  const paidPending=engManualPending().liveTotal;   // bills marked paid from LIVE cash that haven't debited yet (manual accounts aren't in this cash base)
+  const cash=actualCash-paidPending;                  // expected cash once those clear
   const proj=engCashFlowProjection(90, null, paidPending);   // look a full quarter ahead, from expected (not just to next payday); those paid bills are dropped from future events too, so no double-count
   const inc=(proj.events||[]).filter(e=>e.type==='income' && !e.off).sort((a,b)=>a.day-b.day)[0];   // a paycheck the user checked off shouldn't set the horizon
   const horizon=inc?Math.max(1,inc.day):14;
@@ -5139,9 +5143,19 @@ function billsWidgetBody(w){
   const totPay=all.filter(b=>!b.paid).reduce((s,b)=>s+(b.pay||0),0)*factor;
   // Live cash accounts a bill can be paid from — drives the "Paid from" selector so a paid bill
   // reduces Cash on Hand / Safe to Spend against the right account until the debit posts.
-  const cashAccts=(dataLoaded?engAccounts():[]).filter(a=>!a.excluded && !a.manual && a.type==='depository').sort((x,y)=>Math.abs(y.bal||0)-Math.abs(x.bal||0));
+  // Accounts a bill can be paid from: live OR manual cash/savings, plus credit cards. A cash/savings
+  // payment reduces Cash on Hand / Safe to Spend (as expected-spent) until it posts; a card payment
+  // is flagged "on card" and deliberately does NOT touch cash.
+  const payAccts=(dataLoaded?engAccounts():[]).filter(a=>!a.excluded && (a.type==='depository'||a.type==='credit'));
+  const _payCash=payAccts.filter(a=>a.type==='depository').sort((x,y)=>Math.abs(y.bal||0)-Math.abs(x.bal||0));
+  const _payCard=payAccts.filter(a=>a.type==='credit').sort((x,y)=>Math.abs(y.bal||0)-Math.abs(x.bal||0));
+  const _acctById={}; payAccts.forEach(a=>{ _acctById[a.id]=a; });
   const rows=sorted.map(b=>{ const key=billKey(b).replace(/'/g,"\\'"); const paid=b.paid; const diff=(b.pay||0)-(b.min||0);
-    const acctSel=cashAccts.length?`<div class="bill-acctrow"><label class="bill-acctlbl">${paid?'Paid from':'Pay from'}</label><select class="bill-acct-sel" onclick="event.stopPropagation()" onchange="setBillPayAcct('${key}',this.value)"><option value="">— account —</option>${cashAccts.map(a=>`<option value="${esc(a.id)}"${b.payAcct===a.id?' selected':''}>${esc(a.name)}</option>`).join('')}</select>${paid&&b.payAcct?(_billPayMatched(b)?'<span class="bill-posted" title="A matching transaction has posted or is pending at your bank — counted from there, not double-counted">✓ posted</span>':'<span class="bill-pend" title="Held out of Cash on Hand / Safe to Spend as expected-spent until the debit posts">⏳ pending</span>'):''}</div>`:'';
+    const pa=b.payAcct?_acctById[b.payAcct]:null;
+    const _tag=(paid&&pa)?(pa.type==='credit'
+      ? '<span class="bill-oncard" title="Paid with this card — it lands on the card and does not reduce your cash">💳 on card</span>'
+      : (_billPayMatched(b)?'<span class="bill-posted" title="A matching transaction has posted or is pending at your bank — counted from there, not double-counted">✓ posted</span>':'<span class="bill-pend" title="Held out of Cash on Hand / Safe to Spend as expected-spent until it clears">⏳ expected</span>')):'';
+    const acctSel=payAccts.length?`<div class="bill-acctrow"><label class="bill-acctlbl">${paid?'Paid from':'Pay from'}</label><select class="bill-acct-sel" onclick="event.stopPropagation()" onchange="setBillPayAcct('${key}',this.value)"><option value="">— account —</option>${_payCash.map(a=>`<option value="${esc(a.id)}"${b.payAcct===a.id?' selected':''}>${esc(a.name)}${a.manual?' (manual)':''}</option>`).join('')}${_payCard.length?`<optgroup label="Credit cards">${_payCard.map(a=>`<option value="${esc(a.id)}"${b.payAcct===a.id?' selected':''}>💳 ${esc(a.name)}</option>`).join('')}</optgroup>`:''}</select>${_tag}</div>`:'';
     const dispPay=tf==='month'?Math.round(b.pay):(b.pay*factor).toFixed(tf==='day'?2:0);
     // Auto/other loans arrive from Plaid with a balance but no APR/payment/due — prompt to fill
     // them in (once entered via the account editor, they persist and this disappears).
