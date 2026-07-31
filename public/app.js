@@ -3535,7 +3535,19 @@ function xpToLevel(xp){ let lv=1; for(let i=0;i<LEVEL_XP.length;i++){ if((xp||0)
    the deeper breakdown, L4 = full data (L5 is L4 + every widget unlocked). Pro Mode always shows full
    detail. This is SEPARATE from minLevel, which gates whether a widget can be ADDED at all.
    Use _atL(n) inside a widget body to gate a section: `${_atL(2)?notesHtml:''}`. */
-function _detailLevel(){ return APP.proMode ? 5 : Math.max(1, Math.min(5, APP.level||xpToLevel(APP.xp||0))); }
+// ── Level override (dev/testing preview; future monetization hook) ──
+// Single seam: flip LEVEL_OVERRIDE_ENABLED to false to remove the feature entirely, or later swap
+// _levelToggleOn() to check a purchase/entitlement instead of a const. APP.levelOverride (null | 1..5)
+// forces the EFFECTIVE level used for both detail tiers and widget availability, without touching the
+// real earned APP.level/xp.
+const LEVEL_OVERRIDE_ENABLED=true;
+function _levelToggleOn(){ return LEVEL_OVERRIDE_ENABLED; }
+function _effLevel(){
+  if(_levelToggleOn() && APP.levelOverride!=null) return Math.max(1,Math.min(5,APP.levelOverride|0));
+  if(APP.proMode) return 5;   // legacy Pro Mode = everything (kept for back-compat)
+  return Math.max(1, Math.min(5, APP.level||xpToLevel(APP.xp||0)));
+}
+function _detailLevel(){ return _effLevel(); }
 function _atL(n){ return _detailLevel() >= n; }
 // Which levels each widget reveals MORE detail at — drives the "more unlocks at Level N" footer hint.
 // Keep in sync with the _atL(n) gates inside each widget body.
@@ -3791,7 +3803,7 @@ function goalWidgetsUnion(chosenGoals){
 }
 
 /* ═══════════════ STATE ═══════════════ */
-let APP={ household:'My Finance World', profiles:[{name:'Me',avatar:'💰'}], persona:'coach', level:1, xp:0, proMode:false, pages:[], activePage:null };
+let APP={ household:'My Finance World', profiles:[{name:'Me',avatar:'💰'}], persona:'coach', level:1, xp:0, proMode:false, levelOverride:null, pages:[], activePage:null };
 let sbRichie=null, fabChar=null, rpChar=null;
 const ICON_CHOICES=['💰','🎯','📈','🌊','🧮','🔥','🏖️','🚨','📋','🧯','🏠','💵','💳','🏦','📊','🪙','💡','⭐','🎨','🛒'];
 const COLOR_CHOICES=['#2ecc8a','#f0a540','#5b8def','#38bdf8','#a78bfa','#f05c5c','#e8584f','#7be0b4'];
@@ -4329,7 +4341,7 @@ const WIDGET_CATALOG=[
   // respectively — see FIRE_TABS / DEBT_TABS. Kept out of the catalog; existing widgets migrate below.
 ];
 const WIDGET_BY_ID=Object.fromEntries(WIDGET_CATALOG.map(w=>[w.id,w]));
-function widgetUnlocked(w){ return APP.proMode || w.minLevel<=APP.level; }
+function widgetUnlocked(w){ return w.minLevel<=_effLevel(); }
 
 /* ── Widget Wizard (step-by-step add/edit) ── */
 let _ww={step:1, cat:null, widgetId:null, span:null, editUid:null};
@@ -7990,15 +8002,15 @@ function renderSettings(){
           <button class="btn primary" onclick="exportToExcel()">Download .xlsx</button>
         </div>
       </div>
-      <div class="set-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
-          <div>
-            <div class="set-card-label" style="margin:0">🔓 Pro Mode — unlock everything</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Ignore level gating and show every feature & advanced widget right now.</div>
-          </div>
-          <button class="toggle${APP.proMode?' on':''}" id="proToggle" onclick="toggleProMode()" aria-label="Toggle Pro Mode"><span class="toggle-knob"></span></button>
+      ${_levelToggleOn()?`<div class="set-card">
+        <div class="set-card-label" style="margin:0">🎚️ Level preview <span style="color:var(--muted);font-weight:400;font-size:11px">— test each tier</span></div>
+        <div style="font-size:12px;color:var(--muted);margin:4px 0 10px;line-height:1.5">Force the app to a level to preview its widgets &amp; detail. <b>Auto</b> follows your real earned level; <b>5</b> unlocks everything (the old Pro Mode). This is a testing override — it doesn't change your real XP or level.</div>
+        <div class="lvl-seg">
+          <button class="lvl-seg-btn${APP.levelOverride==null?' on':''}" onclick="setLevelOverride(null)">Auto</button>
+          ${[1,2,3,4,5].map(n=>{const l=LEVELS.find(x=>x.n===n)||{};return `<button class="lvl-seg-btn${APP.levelOverride===n?' on':''}" onclick="setLevelOverride(${n})" title="${esc(l.name||('Level '+n))} — ${esc(l.desc||'')}">${l.icon||''} ${n}</button>`;}).join('')}
         </div>
-      </div>
+        ${APP.levelOverride!=null?`<div class="ws-hint" style="margin-top:8px;color:var(--amber)">Previewing <b>Level ${APP.levelOverride} · ${esc((LEVELS.find(l=>l.n===APP.levelOverride)||{}).name||'')}</b> (your real level is ${APP.level||xpToLevel(APP.xp||0)}). Tap Auto to return.</div>`:''}
+      </div>`:''}
 
       <div class="set-section">🔒 Security</div>
       <div class="set-card">
@@ -8058,7 +8070,7 @@ function renderSettings(){
   gg('setLevelBadge').textContent=lv.icon+' Lv '+lv.n+' · '+lv.name;
   const pct=APP.proMode?100:levelProgress().pct;
   gg('setXpFill').style.width=pct+'%';
-  gg('setXpText').textContent=APP.proMode?'Pro Mode active — all features unlocked':(APP.xp.toLocaleString()+' XP'+(levelProgress().next!=null?(' · '+levelProgress().toNext.toLocaleString()+' to next level'):' · max level'));
+  gg('setXpText').textContent=(APP.levelOverride!=null)?('🎚️ Previewing Level '+APP.levelOverride+' (test override) · '+APP.xp.toLocaleString()+' XP real'):(APP.proMode?'Pro Mode active — all features unlocked':(APP.xp.toLocaleString()+' XP'+(levelProgress().next!=null?(' · '+levelProgress().toNext.toLocaleString()+' to next level'):' · max level')));
   try{ renderConnectedData(); }catch(e){}
   try{ renderAppearance(); }catch(e){}
   try{ renderRulesManager(); }catch(e){}
@@ -8160,7 +8172,18 @@ function removeImport(id){
 }
 
 function setPersona(key){ APP.persona=key; saveState(); applyAccent(); renderShell(); renderSettings(); if(sbRichie)sbRichie.do('bounce'); richieSay(RICHIE_PERSONAS[key].quips[0]); }
-function toggleProMode(){ APP.proMode=!APP.proMode; saveState(); gg('proToggle').classList.toggle('on',APP.proMode); renderSettings(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg&&APP.activePage!=='__settings__')renderCanvas(pg); richieSay(APP.proMode?"Pro Mode ON. Everything's unlocked — full detail on every widget.":"Pro Mode off. Widget detail follows your level again."); }
+// Level preview override (replaces the old Pro Mode toggle). v=null → Auto (real level); 1..5 → force.
+function setLevelOverride(v){
+  APP.levelOverride=(v==null)?null:Math.max(1,Math.min(5,v|0));
+  APP.proMode=false;   // the level toggle supersedes the legacy Pro Mode flag
+  saveState(); renderSettings();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg&&APP.activePage!=='__settings__')renderCanvas(pg);
+  if(typeof richieSay==='function') richieSay(APP.levelOverride==null
+    ? "Back to your real level — widgets and detail follow your XP again."
+    : `Previewing Level ${APP.levelOverride} (${(LEVELS.find(l=>l.n===APP.levelOverride)||{}).name||''}). Widgets & detail now show as that tier — a test override, not your real level.`);
+}
+// Back-compat shim: anything still calling toggleProMode now clears any override / enables full preview.
+function toggleProMode(){ setLevelOverride(APP.levelOverride===5?null:5); }
 function togglePeriodBasis(){
   APP.periodBasis=(_periodBasis()==='calendar')?'rolling':'calendar';
   saveState();
