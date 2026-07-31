@@ -1156,6 +1156,7 @@ body.fx-slime .canvas-widget-card::after{content:'';position:absolute;left:-2%;r
 .add-widget-fab:hover{background:rgba(46,204,138,0.16);border-style:solid;}
 .wph{padding:6px 2px;}
 .wph-stat{font-size:26px;font-weight:700;color:var(--text);}
+.wph-stat[title],.sb-header[title],.ds-budget-top[title]{cursor:help;}
 /* ── Financial health score ── */
 .hs-wrap{padding:2px;}
 .hs-head{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
