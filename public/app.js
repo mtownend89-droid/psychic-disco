@@ -4118,7 +4118,7 @@ const THEME_PRESETS=[
   {id:'galaxy',name:'Galaxy',bg:'#12152a',sidebar:'#171c38',surface:'#1d2342',surface2:'#262d52',surface3:'#333c68',text:'#e6e9f7',muted:'#9096bd',border:'rgba(130,160,255,0.10)',border2:'rgba(130,160,255,0.18)',accent:'#37e0a0',pattern:_PAT.stars},   // a galaxy far, far away — starfield + saber-green
   {id:'afterlife',name:'Afterlife',bg:'#141a0f',sidebar:'#192113',surface:'#202b16',surface2:'#29371c',surface3:'#354627',text:'#eaf6d8',muted:'#93a97b',border:'rgba(154,230,48,0.12)',border2:'rgba(154,230,48,0.20)',accent:'#9ae62e',pattern:_PAT.stripes},   // ghost-with-the-most black & venom green
   {id:'neon',name:'Neon City',bg:'#150f26',sidebar:'#1a1330',surface:'#21193c',surface2:'#2a2149',surface3:'#372c5c',text:'#f3e9ff',muted:'#9d8dbd',border:'rgba(255,79,216,0.12)',border2:'rgba(79,225,255,0.20)',accent:'#ff2bd6',pattern:_PAT.neon},   // teen cyberpunk
-  {id:'slime',name:'Slime',bg:'#151a10',sidebar:'#1a2115',surface:'#212b18',surface2:'#2a361f',surface3:'#37472a',text:'#e9f5df',muted:'#92a884',border:'rgba(163,255,18,0.11)',border2:'rgba(163,255,18,0.18)',accent:'#a3ff12',pattern:_PAT.grid},   // teen gamer neon
+  {id:'slime',name:'Betelgeuse',bg:'#141410',sidebar:'#1a1a13',surface:'#20211a',surface2:'#2a2c21',surface3:'#38392a',text:'#eaf5df',muted:'#9aa488',border:'rgba(163,255,18,0.11)',border2:'rgba(163,255,18,0.18)',accent:'#a3ff12',pattern:_PAT.stripes},   // ghoulish toxic-green — skulls, bugs & ooze
   {id:'espresso',name:'Espresso',bg:'#211a13',sidebar:'#28201a',surface:'#312820',surface2:'#3d3228',surface3:'#4b3e30',text:'#f2e8dc',muted:'#b09d86',border:'rgba(201,162,103,0.10)',border2:'rgba(201,162,103,0.18)',accent:'#c9a267'},   // mature, warm & refined
   {id:'merlot',name:'Merlot',bg:'#241419',sidebar:'#2c1921',surface:'#361f28',surface2:'#442833',surface3:'#553341',text:'#f2e3e8',muted:'#b08b97',border:'rgba(200,90,120,0.10)',border2:'rgba(200,90,120,0.18)',accent:'#c04d6a'},   // mature, deep wine
   // ── Bright ──
@@ -4176,8 +4176,8 @@ function applyAccent(){ applyAppearance(); }   // persona/appearance both flow t
    Off automatically under prefers-reduced-motion; toggle in Settings → Appearance. */
 const THEME_FX={
   galaxy:   {emojis:['🚀','🛸','🌟','✨'], anim:'drift', count:7, size:[13,24], op:0.55, dur:[16,34]},
-  slime:    {emojis:['🫧','💚','🟢'],       anim:'float', count:5, size:[13,22], op:0.40, dur:[8,15]},
-  princess: {emojis:['👑','💖','✨','🌸'], anim:'float', count:8, size:[14,24], op:0.60, dur:[9,18]},
+  slime:    {emojis:['💀','🪲','🐛','🕷️'], anim:'float', count:6, size:[14,24], op:0.42, dur:[8,15]},   // Betelgeuse
+  princess: {emojis:['👑','🌷','✨','🌸'], anim:'float', count:8, size:[14,24], op:0.60, dur:[9,18]},
   forest:   {emojis:['🍃','🍂','🌿'],       anim:'fall',  count:9, size:[14,22], op:0.70, dur:[8,16]},
   ocean:    {emojis:['🫧','🐠','🐚'],       anim:'rise',  count:8, size:[12,22], op:0.50, dur:[9,18]},
   afterlife:{emojis:['👻','🪲','🕸️'],       anim:'float', count:6, size:[15,26], op:0.45, dur:[10,20]},
@@ -4186,6 +4186,12 @@ const THEME_FX={
   gold:     {emojis:['🪙','✨','💰'],       anim:'fall',  count:6, size:[14,22], op:0.50, dur:[9,16]},
   grape:    {emojis:['🍇','🔮','✨'],       anim:'float', count:6, size:[14,22], op:0.45, dur:[10,18]},
   merlot:   {emojis:['🍷','🍇'],             anim:'float', count:5, size:[15,24], op:0.40, dur:[12,22]},
+  espresso: {emojis:['☕','🫘'],             anim:'rise',  count:5, size:[13,20], op:0.35, dur:[10,18]},
+  bubblegum:{emojis:['🫧','🍬','🎈'],       anim:'float', count:7, size:[13,22], op:0.45, dur:[9,17]},
+  mint:     {emojis:['🌿','🍃','✨'],       anim:'float', count:6, size:[13,21], op:0.40, dur:[9,17]},
+  sky:      {emojis:['☁️','🌤️','✨'],       anim:'drift', count:6, size:[16,26], op:0.45, dur:[20,38]},
+  sunrise:  {emojis:['🌅','☀️','✨'],       anim:'float', count:5, size:[14,22], op:0.40, dur:[10,18]},
+  midnight: {emojis:['🌙','✦','·'],         anim:'float', count:5, size:[12,20], op:0.30, dur:[12,22]},
 };
 let _fxLayer=null;
 function _ensureFxLayer(){
@@ -4202,8 +4208,9 @@ function applyThemeFx(presetId){
   const a=_appearance();
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const fx=THEME_FX[presetId];
-  if(a.fx===false || reduce || !fx) return;
-  document.body.classList.add('fx-'+presetId);      // enables per-widget CSS effects (slime drip, etc.)
+  if(a.fx===false || reduce) return;                // opt-out or reduced motion → no flourishes, no ambient
+  document.body.classList.add('fx-'+presetId);      // enables the per-widget CSS flourish for EVERY theme
+  if(!fx) return;                                    // this theme has a flourish but no drifting ambient layer
   layer.className='fx-'+fx.anim;
   const rnd=(lo,hi)=>lo+Math.random()*(hi-lo);
   let html='';
@@ -7937,7 +7944,7 @@ function renderSettings(){
         <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
           <div>
             <div class="set-card-label" style="margin:0">✨ Theme animations &amp; flourishes</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Ambient motion <b>and</b> per-widget edging for fun themes — a saucer &amp; warp line for Galaxy, slime drip for Slime, leafy vines for Forest, grapevines for Merlot &amp; Grape, flowers for Princess, bubbles for Ocean, an electric glow for Neon, a cobweb for Afterlife. Off automatically under reduce motion.</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Ambient motion <b>and</b> per-widget edging on every theme — dripping ooze &amp; skulls for Betelgeuse, a saucer &amp; warp line for Galaxy, leafy vines for Forest, grapevines for Merlot &amp; Grape, flowers for Princess, bubbles for Ocean, an electric glow for Neon, a cobweb for Afterlife, plus subtle touches for Sunset, Espresso, Sky, Mint, Sunrise, Midnight, Carbon, Linen &amp; Paper. Off automatically under reduce motion.</div>
           </div>
           <button class="toggle${_appearance().fx!==false?' on':''}" id="animToggle" onclick="setThemeAnim(_appearance().fx===false)" aria-label="Toggle theme animations"><span class="toggle-knob"></span></button>
         </div>
