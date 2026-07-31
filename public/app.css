@@ -526,6 +526,38 @@ body.fx-slime .canvas-widget-card::after{content:'';position:absolute;left:-2%;r
   background:radial-gradient(11px 15px at 16% -3px,var(--green) 62%,transparent 64%),radial-gradient(9px 20px at 40% -3px,var(--green) 62%,transparent 64%),radial-gradient(13px 13px at 66% -3px,var(--green) 62%,transparent 64%),radial-gradient(8px 18px at 88% -3px,var(--green) 62%,transparent 64%);
   opacity:.5;transform-origin:top center;animation:fx-ooze 5.5s ease-in-out infinite;}
 @keyframes fx-ooze{0%,100%{transform:scaleY(1)}50%{transform:scaleY(1.5)}}
+
+/* ── Per-theme widget "edging" flourishes ──
+   Enabled by the same body.fx-<theme> class as the ambient layer (opt-out via Settings → Appearance,
+   auto-off under OS reduced motion because applyThemeFx never adds the class then). Decorations live
+   INSIDE the card (cards are overflow:hidden) and are pointer-events:none so they never block taps. */
+@keyframes fx-hover{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes fx-sway{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(9deg)}}
+@keyframes fx-twinkle{0%,100%{opacity:.25;transform:scale(.9)}50%{opacity:.65;transform:scale(1.15)}}
+@keyframes fx-dangle{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(6deg)}}
+@keyframes fx-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+/* Galaxy — a saucer parked in the corner + a warp line along the top */
+body.fx-galaxy .canvas-widget-card::before{content:'';position:absolute;left:0;right:0;top:0;height:2px;pointer-events:none;z-index:2;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:.55;}
+body.fx-galaxy .canvas-widget-card::after{content:'🛸';position:absolute;right:9px;bottom:5px;font-size:15px;opacity:.4;pointer-events:none;z-index:3;animation:fx-hover 6s ease-in-out infinite;}
+/* Forest — a leafy vine trailing the bottom edge */
+body.fx-forest .canvas-widget-card::after{content:'🍃🌿🍃';position:absolute;left:8px;bottom:3px;font-size:11px;letter-spacing:6px;opacity:.34;pointer-events:none;z-index:3;transform-origin:left bottom;animation:fx-sway 7s ease-in-out infinite;}
+/* Princess — flowers along the base + a twinkle */
+body.fx-princess .canvas-widget-card::after{content:'🌸🌷🌸';position:absolute;left:8px;bottom:3px;font-size:11px;letter-spacing:6px;opacity:.42;pointer-events:none;z-index:3;}
+body.fx-princess .canvas-widget-card::before{content:'✨';position:absolute;right:9px;bottom:6px;font-size:12px;opacity:.55;pointer-events:none;z-index:3;animation:fx-twinkle 3.5s ease-in-out infinite;}
+/* Merlot & Grape — a grape cluster on the vine + a dotted vine line */
+body.fx-merlot .canvas-widget-card::after,body.fx-grape .canvas-widget-card::after{content:'🍇🍃';position:absolute;left:7px;bottom:3px;font-size:13px;letter-spacing:1px;opacity:.44;pointer-events:none;z-index:3;transform-origin:left top;animation:fx-dangle 6.5s ease-in-out infinite;}
+body.fx-merlot .canvas-widget-card::before,body.fx-grape .canvas-widget-card::before{content:'';position:absolute;left:0;right:0;bottom:0;height:2px;pointer-events:none;z-index:2;background:repeating-linear-gradient(90deg,var(--accent) 0 6px,transparent 6px 14px);opacity:.32;}
+/* Ocean — a row of bubbles off the bottom edge */
+body.fx-ocean .canvas-widget-card::after{content:'';position:absolute;left:0;right:0;bottom:0;height:9px;pointer-events:none;z-index:3;background:radial-gradient(5px 7px at 18% 2px,var(--accent) 60%,transparent 62%),radial-gradient(4px 6px at 52% 3px,var(--accent) 60%,transparent 62%),radial-gradient(6px 8px at 84% 1px,var(--accent) 60%,transparent 62%);opacity:.32;animation:fx-bob 4.5s ease-in-out infinite;}
+/* Neon City — an electric glow ring + a corner spark */
+body.fx-neon .canvas-widget-card::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;border-radius:inherit;box-shadow:inset 0 0 14px -7px var(--accent),inset 0 0 0 1px var(--accent);opacity:.6;}
+body.fx-neon .canvas-widget-card::after{content:'⚡';position:absolute;right:8px;bottom:5px;font-size:13px;opacity:.42;pointer-events:none;z-index:3;animation:fx-twinkle 2.6s ease-in-out infinite;}
+/* Afterlife — a cobweb in the corner */
+body.fx-afterlife .canvas-widget-card::before{content:'🕸️';position:absolute;left:3px;top:2px;font-size:16px;opacity:.26;pointer-events:none;z-index:1;}
+/* Midas — a drifting sparkle */
+body.fx-gold .canvas-widget-card::after{content:'✨';position:absolute;right:9px;bottom:6px;font-size:13px;opacity:.5;pointer-events:none;z-index:3;animation:fx-twinkle 3s ease-in-out infinite;}
+/* Manual Reduce-motion toggle: keep the decoration, drop the movement */
+body.reduce-motion .canvas-widget-card::before,body.reduce-motion .canvas-widget-card::after{animation:none!important;}
 @media(prefers-reduced-motion:reduce){#themeFx{display:none!important;}body.fx-slime .canvas-widget-card::after{display:none!important;}}
 .ap-theme{display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:none;cursor:pointer;padding:4px 2px;border-radius:9px;font-family:var(--font);}
 .ap-theme.on{background:var(--surface2);}
