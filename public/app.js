@@ -3537,6 +3537,18 @@ function xpToLevel(xp){ let lv=1; for(let i=0;i<LEVEL_XP.length;i++){ if((xp||0)
    Use _atL(n) inside a widget body to gate a section: `${_atL(2)?notesHtml:''}`. */
 function _detailLevel(){ return APP.proMode ? 5 : Math.max(1, Math.min(5, APP.level||xpToLevel(APP.xp||0))); }
 function _atL(n){ return _detailLevel() >= n; }
+// Which levels each widget reveals MORE detail at — drives the "more unlocks at Level N" footer hint.
+// Keep in sync with the _atL(n) gates inside each widget body.
+const WIDGET_DETAIL_TIERS={
+  safe_spend:[2,3], cash_summary:[2,3], net_worth_summary:[2], spending_month:[2,3],
+  income_month:[2], health_score:[2,3], debt_summary:[2,3], debt_hub:[2,3], savings_buckets:[2]
+};
+function _nextDetailTier(type){ const arr=WIDGET_DETAIL_TIERS[type]; if(!arr) return 0; const lvl=_detailLevel(); for(let i=0;i<arr.length;i++){ if(arr[i]>lvl) return arr[i]; } return 0; }
+function _moreUnlocksHint(type){
+  const n=_nextDetailTier(type); if(!n) return '';
+  const lv=LEVELS.find(l=>l.n===n);
+  return `<div class="wph-more" title="Level up (or turn on Pro Mode in Settings) to reveal more detail in this widget">🔒 More unlocks at Level ${n}${lv?` · ${lv.icon} ${esc(lv.name)}`:''}</div>`;
+}
 function levelProgress(){
   const lv=APP.level||xpToLevel(APP.xp||0);
   const cur=LEVEL_XP[lv-1]||0; const next=(LEVEL_XP[lv]!=null)?LEVEL_XP[lv]:null;
@@ -4697,7 +4709,7 @@ function renderCanvas(pg){
         </div>
       </div>
       ${tfRow}
-      <div class="canvas-widget-body${_bodyCls}"${bodyClick}>${body}</div>
+      <div class="canvas-widget-body${_bodyCls}"${bodyClick}>${body}${_moreUnlocksHint(w.type)}</div>
     </div>`;
   }).join('');
   content.innerHTML=`<div class="canvas-page">
