@@ -1920,10 +1920,9 @@ function safeToSpendBody(w){
   const sub = s.nextIncomeDay!=null
     ? `safe to spend · ≈ ${fmtK(perDay)}/day until payday (${s.horizon}d)`
     : `safe to spend over the next ${s.horizon} days`;
-  return `<div class="wph">
-    <div class="wph-stat" style="color:${col}">${fmtK(s.pool)}</div>
-    <div class="wph-sub">${sub}</div>
-    <div class="sts-break">
+  // L1: headline + per-day only. L2: the full breakdown. L3+: the coaching hint. (shortfall is
+  // safety-critical, so it surfaces from L2.)
+  const breakdown = _atL(2) ? `<div class="sts-break">
       <div><span>Cash on hand</span><b>${fmtK(s.grossCash!=null?s.grossCash:s.cash)}</b></div>
       ${s.bankPending>0.5?`<div><span>− Pending (bank)</span><b style="color:var(--amber)" title="Transactions your bank is already holding against your available balance (same pending shown in Cash on Hand)">${fmtK(s.bankPending)}</b></div>`:''}
       ${s.paidPending>0.5?`<div><span>− Paid bills (not posted)</span><b style="color:var(--amber)" title="Bills you marked paid whose debit hasn't hit your account yet — already spent, so held out of safe-to-spend until they post">${fmtK(s.paidPending)}</b></div>`:''}
@@ -1931,14 +1930,19 @@ function safeToSpendBody(w){
       ${s.goalPortion>0.5?`<div><span>− Goal set-aside</span><b style="color:var(--amber)">${fmtK(s.goalPortion)}</b></div>`:''}
       <div><span>− Safety buffer</span><b style="color:var(--muted)">${fmtK(s.buffer)}</b></div>
       ${s.constrainedBy90?`<div><span>${s.shortfall?'⚠️ 90-day shortfall':'Held for 90-day low'}</span><b style="color:${s.shortfall?'var(--red)':'var(--amber)'}">${s.low90<0?'−':''}${fmtK(Math.abs(s.low90))}</b></div>`:''}
-    </div>
-    ${s.shortfall
+    </div>` : '';
+  const hint = (_atL(3)||s.shortfall) ? (s.shortfall
       ? `<div class="ws-hint" style="margin-top:8px;color:var(--red)">Heads up — your balance is projected to dip to ${fmtK(s.low90)} ${s.lowDay!=null?`around ${_projDate(s.lowDay).toLocaleDateString('en-US',{month:'short',day:'numeric'})}`:'within 90 days'}. Safe-to-spend is held at ${fmtK(s.pool)} so you don't spend into it — trim a bill or add income.</div>`
-      : s.constrainedBy90
+      : (_atL(3) && s.constrainedBy90)
         ? `<div class="ws-hint" style="margin-top:8px;color:var(--amber)">Held back to your 90-day low (${fmtK(s.low90)}${s.lowDay!=null?` around ${_projDate(s.lowDay).toLocaleDateString('en-US',{month:'short',day:'numeric'})}`:''}) — spending more risks a crunch later this quarter.</div>`
-        : s.pool<=0
+        : (_atL(3) && s.pool<=0)
           ? `<div class="ws-hint" style="margin-top:8px;color:var(--amber)">Tight until payday — bills &amp; set-asides cover your cash. Ease a goal contribution or move a bill.</div>`
-          : ''}
+          : '') : '';
+  return `<div class="wph">
+    <div class="wph-stat" style="color:${col}">${fmtK(s.pool)}</div>
+    <div class="wph-sub">${sub}</div>
+    ${breakdown}
+    ${hint}
   </div>`;
 }
 function engBillsDebt(){ return engBills().reduce((s,b)=>s+Math.abs(b.bal||0),0); }
@@ -3526,6 +3530,13 @@ const LEVELS=[
 // Exponential XP ladder — cumulative XP needed to REACH each level (Mogul at 5,000)
 const LEVEL_XP=[0, 500, 1250, 2500, 5000];
 function xpToLevel(xp){ let lv=1; for(let i=0;i<LEVEL_XP.length;i++){ if((xp||0)>=LEVEL_XP[i]) lv=i+1; } return Math.min(5,lv); }
+/* ── Progressive detail tiers ──
+   Widgets reveal more as you level up: L1 = the barest headline, L2 adds explanatory notes, L3 adds
+   the deeper breakdown, L4 = full data (L5 is L4 + every widget unlocked). Pro Mode always shows full
+   detail. This is SEPARATE from minLevel, which gates whether a widget can be ADDED at all.
+   Use _atL(n) inside a widget body to gate a section: `${_atL(2)?notesHtml:''}`. */
+function _detailLevel(){ return APP.proMode ? 5 : Math.max(1, Math.min(5, APP.level||xpToLevel(APP.xp||0))); }
+function _atL(n){ return _detailLevel() >= n; }
 function levelProgress(){
   const lv=APP.level||xpToLevel(APP.xp||0);
   const cur=LEVEL_XP[lv-1]||0; const next=(LEVEL_XP[lv]!=null)?LEVEL_XP[lv]:null;
@@ -5620,7 +5631,10 @@ function cashSummaryBody(w){
   const mp=accts.reduce((o,a)=>{const m=_mpAll.byAcct[a.id]||{sum:0,count:0};o.count+=m.count;o.sum+=m.sum;return o;},{count:0,sum:0});
   const pendBits=[]; if(pend.count) pendBits.push(`${pend.count} pending`); if(mp.count) pendBits.push(`${mp.count} paid bill${mp.count!==1?'s':''}`);
   const pendLine=pendBits.length?`<div class="wph-sub" style="color:var(--amber)">⏳ ${pendBits.join(' · ')} → ${fmtK(total-pend.sum-mp.sum)} expected</div>`:'';
-  return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(total)}">${fmtK(total)}</div><div class="wph-sub">cash on hand · ${accts.length} ${esc(label)} account${accts.length!==1?'s':''}${dataLoaded?'':' · sample'} ${gear}</div>${pendLine}<div class="cash-list">${rows}</div></div>`;
+  // L1: headline only. L2: per-account bars. L3+: the pending/expected line.
+  const pline=_atL(3)?pendLine:'';
+  const bars=_atL(2)?`<div class="cash-list">${rows}</div>`:'';
+  return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(total)}">${fmtK(total)}</div><div class="wph-sub">cash on hand · ${accts.length} ${esc(label)} account${accts.length!==1?'s':''}${dataLoaded?'':' · sample'} ${gear}</div>${pline}${bars}</div>`;
 }
 /* Per-widget picker: which ACCOUNT CATEGORIES this widget counts */
 let _acctPick={uid:null, sel:[]};
@@ -6159,7 +6173,7 @@ function discretionarySpendBody(w){
   return `<div class="wph">
     <div class="wph-stat" style="color:${(budget>0&&spend>budget)?'var(--red)':'var(--pos)'}">${fmtK(spend)}</div>
     <div class="wph-sub">${sub}${dataLoaded?'':' · sample'}${hidden.length?` · ${hidden.length} hidden`:''} ${filterBtn}</div>
-    <div class="ds-budget">
+    ${_atL(2)?`<div class="ds-budget">
       <div class="ds-budget-top">
         <span style="color:${color};font-weight:700">${Math.round(pct)}% of ${fmtK(budget)} budget</span>
         <span style="color:${over?'var(--red)':'var(--muted)'}">${over?fmtK(-remaining)+' over':fmtK(remaining)+' left'}</span>
@@ -6169,14 +6183,14 @@ function discretionarySpendBody(w){
         <span style="color:var(--muted)">Total spending · all categories</span>
         <span style="font-weight:700">${fmtK(totalSpend)}</span>
       </div>
-    </div>
-    <div class="ds-foot">
+    </div>`:''}
+    ${_atL(3)?`<div class="ds-foot">
       <div class="ds-trend">${_sparkline(vals, trendColor, 92, 26)}</div>
       <div class="ds-trend-meta">
         <div class="ds-trend-label" style="color:${trendColor}">${trendUp?'▲':'▼'} ${Math.abs(trendPct)}% vs last mo</div>
         ${top?`<div class="ds-top"><span class="wph-dot" style="background:${top.color}"></span>Top: ${esc(top.label)} ${fmtK(top.value)}</div>`:''}
       </div>
-    </div>
+    </div>`:''}
   </div>`;
 }
 
@@ -7547,12 +7561,12 @@ function renderWidgetBody(w){
   const bars=n=>`<div class="wph-bars">${Array.from({length:n}).map(()=>`<div class="wph-bar" style="height:${30+Math.random()*70}%"></div>`).join('')}</div>`;
   switch(w.type){
     case 'journey': return journeyBody(w);
-    case 'net_worth_summary': { const a=engNWAssets(), l=engNWLiab(); const nw=dataLoaded?(engNetBalance()+a-l):(a-l); const nwGoalG=(APP.goals||[]).filter(x=>x.metric==='networth'&&x.target>0).sort((x,y)=>y.target-x.target)[0]; const goalNW=nwGoalG?nwGoalG.target:(nw>0?Math.max(100000,Math.ceil((nw+1)/100000)*100000):100000); const gPct=goalNW>0?Math.max(0,Math.min(100,Math.round(nw/goalNW*100))):0; return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(nw)}">${fmtK(nw)}</div><div class="wph-sub">net worth · ${gPct}% to goal</div><div class="ds-budget"><div class="ds-budget-top"><span style="color:${moneyCol(nw)};font-weight:700">Now ${fmtK(nw)}</span><span style="color:var(--muted)">Goal ${fmtK(goalNW)}</span></div><div class="ds-bar" style="background:var(--surface3)"><div class="ds-bar-fill" style="width:${gPct}%;background:var(--pos)"></div></div></div><button class="nw-manage" onclick="event.stopPropagation();openNetWorthEditor()">🏠 Add home, car & other assets</button></div>`; }
+    case 'net_worth_summary': { const a=engNWAssets(), l=engNWLiab(); const nw=dataLoaded?(engNetBalance()+a-l):(a-l); const nwGoalG=(APP.goals||[]).filter(x=>x.metric==='networth'&&x.target>0).sort((x,y)=>y.target-x.target)[0]; const goalNW=nwGoalG?nwGoalG.target:(nw>0?Math.max(100000,Math.ceil((nw+1)/100000)*100000):100000); const gPct=goalNW>0?Math.max(0,Math.min(100,Math.round(nw/goalNW*100))):0; return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(nw)}">${fmtK(nw)}</div><div class="wph-sub">net worth · ${gPct}% to goal</div>${_atL(2)?`<div class="ds-budget"><div class="ds-budget-top"><span style="color:${moneyCol(nw)};font-weight:700">Now ${fmtK(nw)}</span><span style="color:var(--muted)">Goal ${fmtK(goalNW)}</span></div><div class="ds-bar" style="background:var(--surface3)"><div class="ds-bar-fill" style="width:${gPct}%;background:var(--pos)"></div></div></div><button class="nw-manage" onclick="event.stopPropagation();openNetWorthEditor()">🏠 Add home, car & other assets</button>`:''}</div>`; }
     case 'cash_summary': return cashSummaryBody(w);
     case 'health_score': return healthScoreBody(w);
     case 'spending_hub': return spendingHubBody(w);
     case 'spending_month': return discretionarySpendBody(w);
-    case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); const now=Date.now(), ps=new Date(now-2*days*86400000), pe=new Date(now-days*86400000); const prev=allTxns.filter(t=>{const d=new Date(t.date);return d>=ps&&d<pe&&_isIncomeTxn(t);}).reduce((s,t)=>s+Math.abs(t.amount),0); const dl=prev>0?Math.round((inc-prev)/prev*100):null; const up=dl!==null&&dl>=0; const trend=dl===null?'':`<div class="ds-trend-label" style="color:${up?'var(--green)':'var(--amber)'};margin-top:9px">${up?'▲':'▼'} ${Math.abs(dl)}% vs prior ${tfLabel(w.tf||'30d')}</div>`; const rec=engRecent(days).filter(_isIncomeTxn); const byC={}; rec.forEach(t=>{const c=getTxnCategory(t);byC[c]=(byC[c]||0)+Math.abs(t.amount);}); const top=Object.entries(byC).sort((a,b)=>b[1]-a[1])[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--pos)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${trend}${top?`<div class="wph-inline"><span>Top source: ${esc(top[0])}</span><b style="color:var(--pos)">${fmtK(top[1])}</b></div>`:''}</div>`; } const top=incomeSources.slice().sort((a,b)=>b.amt*(FREQ_TO_MONTHLY[b.freq]||1)-a.amt*(FREQ_TO_MONTHLY[a.freq]||1))[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--pos)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">${incomeSources.length} sources \u00b7 sample</div><div class="ds-trend-label" style="color:var(--green);margin-top:9px">▲ 6% vs prior 30d</div><div class="wph-inline"><span>Top source: ${top.name}</span><b style="color:var(--green)">${fmtK(Math.round(top.amt*(FREQ_TO_MONTHLY[top.freq]||1)))}/mo</b></div></div>`; }
+    case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); const now=Date.now(), ps=new Date(now-2*days*86400000), pe=new Date(now-days*86400000); const prev=allTxns.filter(t=>{const d=new Date(t.date);return d>=ps&&d<pe&&_isIncomeTxn(t);}).reduce((s,t)=>s+Math.abs(t.amount),0); const dl=prev>0?Math.round((inc-prev)/prev*100):null; const up=dl!==null&&dl>=0; const trend=dl===null?'':`<div class="ds-trend-label" style="color:${up?'var(--green)':'var(--amber)'};margin-top:9px">${up?'▲':'▼'} ${Math.abs(dl)}% vs prior ${tfLabel(w.tf||'30d')}</div>`; const rec=engRecent(days).filter(_isIncomeTxn); const byC={}; rec.forEach(t=>{const c=getTxnCategory(t);byC[c]=(byC[c]||0)+Math.abs(t.amount);}); const top=Object.entries(byC).sort((a,b)=>b[1]-a[1])[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--pos)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${_atL(2)?trend:''}${_atL(2)&&top?`<div class="wph-inline"><span>Top source: ${esc(top[0])}</span><b style="color:var(--pos)">${fmtK(top[1])}</b></div>`:''}</div>`; } const top=incomeSources.slice().sort((a,b)=>b.amt*(FREQ_TO_MONTHLY[b.freq]||1)-a.amt*(FREQ_TO_MONTHLY[a.freq]||1))[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--pos)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">${incomeSources.length} sources \u00b7 sample</div><div class="ds-trend-label" style="color:var(--green);margin-top:9px">▲ 6% vs prior 30d</div><div class="wph-inline"><span>Top source: ${top.name}</span><b style="color:var(--green)">${fmtK(Math.round(top.amt*(FREQ_TO_MONTHLY[top.freq]||1)))}/mo</b></div></div>`; }
     case 'debt_summary': return debtSummaryBody(w);
     case 'category_heatmap': return categoryHeatmapBody(w);
     case 'spending_trends': return spendTrendsBody(w);
@@ -8134,7 +8148,7 @@ function removeImport(id){
 }
 
 function setPersona(key){ APP.persona=key; saveState(); applyAccent(); renderShell(); renderSettings(); if(sbRichie)sbRichie.do('bounce'); richieSay(RICHIE_PERSONAS[key].quips[0]); }
-function toggleProMode(){ APP.proMode=!APP.proMode; saveState(); gg('proToggle').classList.toggle('on',APP.proMode); renderSettings(); richieSay(APP.proMode?"Pro Mode ON. Everything's unlocked — go wild.":"Pro Mode off. Back to leveling up the fun way."); }
+function toggleProMode(){ APP.proMode=!APP.proMode; saveState(); gg('proToggle').classList.toggle('on',APP.proMode); renderSettings(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg&&APP.activePage!=='__settings__')renderCanvas(pg); richieSay(APP.proMode?"Pro Mode ON. Everything's unlocked — full detail on every widget.":"Pro Mode off. Widget detail follows your level again."); }
 function togglePeriodBasis(){
   APP.periodBasis=(_periodBasis()==='calendar')?'rolling':'calendar';
   saveState();
