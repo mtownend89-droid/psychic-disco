@@ -3199,8 +3199,8 @@ function healthScoreBody(w){
       const line=parts.length?parts.join(' · '):`Across ${h.comps.length} pillar${h.comps.length!==1?'s':''} — savings, safety, and debt.`;
       return `<div class="hs-headsub">${line}</div>`;
     })()}</div></div>
-    <div class="hs-rows">${rows}</div>
-    ${tip}
+    ${_atL(2)?`<div class="hs-rows">${rows}</div>`:''}
+    ${_atL(3)?tip:''}
   </div>`;
 }
 function _ft(){ APP.fundTriage=APP.fundTriage||{extra:null, alloc:{}}; if(!APP.fundTriage.alloc) APP.fundTriage.alloc={}; return APP.fundTriage; }
@@ -4285,23 +4285,23 @@ const WIDGET_CATALOG=[
   {id:'safe_spend',name:'Safe to Spend',icon:'👛',cat:'Overview',span:1,minLevel:1,desc:'The big one — how much you can safely spend today after upcoming bills, goal set-asides & a buffer.'},
   {id:'spending_month',name:"Current Spending",icon:'🛒',cat:'Overview',span:1,minLevel:1,desc:'Discretionary spending vs budget — your quick "how are we doing" marker (bills & savings excluded).'},
   {id:'income_month',name:"This Month's Income",icon:'💰',cat:'Overview',span:1,minLevel:1,desc:'Money in this month.'},
-  {id:'budget_doughnut',name:'Budget by Category',icon:'🍩',cat:'Budget',span:2,minLevel:1,desc:'Two donuts side by side — spending by group and by category (stacked on mobile).'},
+  {id:'budget_doughnut',name:'Budget by Category',icon:'🍩',cat:'Budget',span:2,minLevel:2,desc:'Two donuts side by side — spending by group and by category (stacked on mobile).'},
   {id:'bills_list',name:'Upcoming Bills',icon:'📋',cat:'Budget',span:1,minLevel:1,desc:"What's due and when."},
-  {id:'bill_calendar',name:'Bill Calendar',icon:'🗓️',cat:'Budget',span:2,minLevel:1,desc:'A month view of upcoming bills & income by due date — spot heavy weeks, tap a day for detail.'},
+  {id:'bill_calendar',name:'Bill Calendar',icon:'🗓️',cat:'Budget',span:2,minLevel:2,desc:'A month view of upcoming bills & income by due date — spot heavy weeks, tap a day for detail.'},
   {id:'zero_budget',name:'Every-Dollar Budget',icon:'🧮',cat:'Budget',span:2,minLevel:2,desc:'Give every dollar a job — with live actual-vs-budgeted spending per envelope (zero-based budgeting).'},
   {id:'savings_buckets',name:'Savings Buckets',icon:'🪣',cat:'Overview',span:2,minLevel:1,desc:'Sinking funds — Reserve, Home, Family, Medical — each with its own goal and progress.'},
   // Cash Flow (read-only chart) folded into the Cash Flow Planner — same projection line, plus
   // editing. Kept out of the catalog; existing widgets migrate via WIDGET_MIGRATE above.
-  {id:'pl_panel',name:'Profit & Loss',icon:'💹',cat:'Cash Flow',span:2,minLevel:1,desc:'Income, spending, net & savings rate by day/week/month.'},
-  {id:'cashflow_planner',name:'Cash Flow',icon:'📅',cat:'Cash Flow',span:2,minLevel:1,desc:'Your projected running balance — see your low point before it hits, and edit bills to fix it.'},
-  {id:'fund_triage',name:'Where Extra Money Goes',icon:'💸',cat:'Cash Flow',span:2,minLevel:1,desc:'Delegate your monthly surplus by priority — high-interest debt, then savings, then investing.'},
+  {id:'pl_panel',name:'Profit & Loss',icon:'💹',cat:'Cash Flow',span:2,minLevel:3,desc:'Income, spending, net & savings rate by day/week/month.'},
+  {id:'cashflow_planner',name:'Cash Flow',icon:'📅',cat:'Cash Flow',span:2,minLevel:3,desc:'Your projected running balance — see your low point before it hits, and edit bills to fix it.'},
+  {id:'fund_triage',name:'Where Extra Money Goes',icon:'💸',cat:'Cash Flow',span:2,minLevel:3,desc:'Delegate your monthly surplus by priority — high-interest debt, then savings, then investing.'},
   {id:'goals',name:'Financial Goals',icon:'🎯',cat:'Overview',span:2,minLevel:1,desc:'Set goals, track progress automatically, and let Richie coach you to the finish.'},
   {id:'health_score',name:'Financial Health Score',icon:'🩺',cat:'Overview',span:2,minLevel:1,desc:'A single 0–100 score across savings rate, emergency fund, debt-to-income, credit use & high-interest debt — with Richie\'s top fix.'},
   {id:'accounts_list',name:'All Accounts',icon:'🏦',cat:'Overview',span:2,minLevel:1,desc:'Every account with balances — tap to see transactions.'},
-  {id:'all_transactions',name:'All Transactions',icon:'🧾',cat:'Cash Flow',span:2,minLevel:1,desc:'Every transaction — search, categorize, and tag (paycheck, transfer, business…).'},
-  {id:'recurring',name:'Subscriptions & Renewals',icon:'🔁',cat:'Cash Flow',span:2,minLevel:1,desc:'Auto-detected subscriptions & recurring bills — next renewal, price-hike alerts, flag any to cancel, monthly & yearly totals.'},
-  {id:'sankey',name:'Money Flow',icon:'🔀',cat:'Cash Flow',span:2,minLevel:2,desc:'Income → category group → category, flowing left to right through your category tree.'},
-  {id:'spending_hub',name:'Spending',icon:'🛍️',cat:'Cash Flow',span:2,minLevel:1,desc:'All your spending in one place — this month vs budget, the trend, top categories, and seasonal patterns, in tabs.'},
+  {id:'all_transactions',name:'All Transactions',icon:'🧾',cat:'Cash Flow',span:2,minLevel:2,desc:'Every transaction — search, categorize, and tag (paycheck, transfer, business…).'},
+  {id:'recurring',name:'Subscriptions & Renewals',icon:'🔁',cat:'Cash Flow',span:2,minLevel:2,desc:'Auto-detected subscriptions & recurring bills — next renewal, price-hike alerts, flag any to cancel, monthly & yearly totals.'},
+  {id:'sankey',name:'Money Flow',icon:'🔀',cat:'Cash Flow',span:2,minLevel:3,desc:'Income → category group → category, flowing left to right through your category tree.'},
+  {id:'spending_hub',name:'Spending',icon:'🛍️',cat:'Cash Flow',span:2,minLevel:3,desc:'All your spending in one place — this month vs budget, the trend, top categories, and seasonal patterns, in tabs.'},
   // Top Categories, Spending Trends and Seasonal Spending are now tabs inside the Spending hub
   // (SPEND_TABS). Kept registered but hidden:true so they don't show in the picker (existing
   // standalone widgets still migrate to spending_hub via WIDGET_MIGRATE) — the hub renders each
@@ -4309,10 +4309,10 @@ const WIDGET_CATALOG=[
   {id:'top_categories',name:'Top Categories',icon:'📊',cat:'Cash Flow',span:1,minLevel:1,hidden:true,desc:'Where your money goes most.'},
   {id:'spending_trends',name:'Spending Trends',icon:'🆚',cat:'Cash Flow',span:2,minLevel:1,hidden:true,desc:'This month vs last — biggest movers, projected total, pacing.'},
   {id:'category_heatmap',name:'Seasonal Spending',icon:'🌡️',cat:'Cash Flow',span:2,minLevel:1,hidden:true,desc:'Spending by category across months.'},
-  {id:'net_worth_chart',name:'Net Worth Trend',icon:'📈',cat:'Wealth',span:2,minLevel:2,desc:'Net worth over months.'},
+  {id:'net_worth_chart',name:'Net Worth Trend',icon:'📈',cat:'Wealth',span:2,minLevel:4,desc:'Net worth over months.'},
   {id:'investments',name:'Investments',icon:'💼',cat:'Wealth',span:2,minLevel:5,desc:'Your portfolio — positions pulled from statements, allocation, and one-tap research. (Mogul)'},
-  {id:'fire_hub',name:'Wealth & FIRE',icon:'🔥',cat:'Wealth',span:2,minLevel:3,desc:'Financial-independence progress, long-term projection, and an interactive calculator — in tabs.'},
-  {id:'debt_hub',name:'Debt',icon:'💳',cat:'Debt',span:2,minLevel:1,desc:'Everything you owe in one place — balances, payoff timeline, credit utilization, credit-score monitor, and 0% promos, in tabs.'},
+  {id:'fire_hub',name:'Wealth & FIRE',icon:'🔥',cat:'Wealth',span:2,minLevel:4,desc:'Financial-independence progress, long-term projection, and an interactive calculator — in tabs.'},
+  {id:'debt_hub',name:'Debt',icon:'💳',cat:'Debt',span:2,minLevel:2,desc:'Everything you owe in one place — balances, payoff timeline, credit utilization, credit-score monitor, and 0% promos, in tabs.'},
   // Fire Drill (stress test) and Debt Payoff Lab now live as tabs inside Wealth & FIRE and Debt
   // respectively — see FIRE_TABS / DEBT_TABS. Kept out of the catalog; existing widgets migrate below.
 ];
@@ -5758,10 +5758,9 @@ function debtSummaryBody(w){
       <div class="wph-stat" style="color:var(--red)">${fmtK(g.focusTotal)}</div>
       <div class="wph-sub">across ${g.focusItems.length} balance${g.focusItems.length!==1?'s':''}${hi&&hi.apr?` · top APR ${hi.apr.toFixed(1)}%`:''}</div>
     </div>
-    <div class="dbt-list">${focusRows}</div>
-    ${goalBtn}
-    ${g.rest.length?`<div class="dbt-longhead"><span>Long-term · ${fmtK(g.restTotal)}</span><i>mortgage · auto · HELOC — the marathon</i></div><div class="dbt-list dbt-dim">${restRows}</div>`:''}
-    <div class="dbt-foot">All debt combined · ${fmtK(g.total)}</div>
+    ${_atL(2)?`<div class="dbt-list">${focusRows}</div>${goalBtn}`:''}
+    ${_atL(3)&&g.rest.length?`<div class="dbt-longhead"><span>Long-term · ${fmtK(g.restTotal)}</span><i>mortgage · auto · HELOC — the marathon</i></div><div class="dbt-list dbt-dim">${restRows}</div>`:''}
+    ${_atL(3)?`<div class="dbt-foot">All debt combined · ${fmtK(g.total)}</div>`:''}
   </div>`;
 }
 function toggleDebtFocus(uid,key){
@@ -5989,7 +5988,7 @@ function savingsBucketsBody(w){
   }).join('');
   return `<div class="sb-wrap">
     <div class="sb-header"><span>${buckets.length} fund${buckets.length!==1?'s':''}</span><b style="color:var(--green)">${fmtK(total)} saved</b></div>
-    ${rows}
+    ${_atL(2)?rows:''}
     <div class="sb-foot-actions">${linkBtn}<button class="manual-add-btn" style="width:auto;flex:1" onclick="event.stopPropagation();editBucket(-1)">➕ Add a bucket</button></div>
   </div>`;
 }
@@ -7557,7 +7556,8 @@ function _celeConfetti(){
 
 function renderWidgetBody(w){
   const def=WIDGET_BY_ID[w.type]; if(!def) return '';
-  if(!widgetUnlocked(def)) return `<div class="wph-lock"><div class="wph-lock-icon">🔒</div><div style="font-size:12.5px">Unlocks at level ${def.minLevel}</div></div>`;
+  // minLevel gates ADDING a widget (the picker). A widget already placed on a page always renders —
+  // re-tiering must never lock a widget a user already has. (Detail scales instead, via _atL.)
   const bars=n=>`<div class="wph-bars">${Array.from({length:n}).map(()=>`<div class="wph-bar" style="height:${30+Math.random()*70}%"></div>`).join('')}</div>`;
   switch(w.type){
     case 'journey': return journeyBody(w);
