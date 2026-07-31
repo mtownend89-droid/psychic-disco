@@ -7936,8 +7936,8 @@ function renderSettings(){
       <div class="set-card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
           <div>
-            <div class="set-card-label" style="margin:0">✨ Theme animations</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Playful ambient motion for fun themes — spaceships for Galaxy, sparkles for Princess, falling leaves for Forest, slime drip for Slime. Off automatically under reduce motion.</div>
+            <div class="set-card-label" style="margin:0">✨ Theme animations &amp; flourishes</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Ambient motion <b>and</b> per-widget edging for fun themes — a saucer &amp; warp line for Galaxy, slime drip for Slime, leafy vines for Forest, grapevines for Merlot &amp; Grape, flowers for Princess, bubbles for Ocean, an electric glow for Neon, a cobweb for Afterlife. Off automatically under reduce motion.</div>
           </div>
           <button class="toggle${_appearance().fx!==false?' on':''}" id="animToggle" onclick="setThemeAnim(_appearance().fx===false)" aria-label="Toggle theme animations"><span class="toggle-knob"></span></button>
         </div>
