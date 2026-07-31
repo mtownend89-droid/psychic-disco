@@ -634,8 +634,22 @@ function setBillPayAcct(key,val){
    which point the bank's own data reflects the debit and the manual deduction must stop so nothing
    double-counts. Match = an outflow on that account near the bill's amount, on/after the occurrence's
    due date (or when it was marked paid). Keyed by occurrence so July's payment doesn't shadow August's. */
+// A transaction the user manually linked to a bill counts as that bill's payment for the month the
+// transaction falls in — for payments the auto-matcher can't catch (odd amount, different account,
+// weird merchant name). Keyed billKey|YYYY-MM. Persisted in APP.txnBillLinks (txnKey -> billKey).
+function _linkedBillMonthSet(){
+  return _memoFrame('linkBillMonths', ()=>{
+    const set=new Set(); const links=APP.txnBillLinks||{}; if(!Object.keys(links).length) return set;
+    const dateByKey={}; (allTxns||[]).forEach(t=>{ dateByKey[_txnKey(t)]=(t.date||''); });
+    Object.keys(links).forEach(k=>{ const d=dateByKey[k]; if(d) set.add(links[k]+'|'+d.slice(0,7)); });
+    return set;
+  });
+}
+function _billOccHasLink(bk, dueStr){ return _linkedBillMonthSet().has(bk+'|'+(dueStr||'').slice(0,7)); }
 function _billOccMatched(b, dueStr, paidAt){
-  if(!dataLoaded || !b || !b.payAcct || !(b.pay>0)) return false;
+  if(!dataLoaded || !b || !(b.pay>0)) return false;
+  if(_billOccHasLink(billKey(b), dueStr)) return true;   // an explicitly-linked transaction settles this occurrence
+  if(!b.payAcct) return false;
   const tol=Math.max(2, b.pay*0.04);
   const dueTs=dueStr?new Date(dueStr+'T12:00:00').getTime():NaN;
   const since = paidAt ? paidAt-4*86400000 : (isFinite(dueTs)? dueTs-4*86400000 : Date.now()-25*86400000);
@@ -6896,6 +6910,10 @@ function txnFeedRender(w){
   const cats=getUserCategories().filter(c=>!c.group).map(c=>c.label);
   const keys=[]; const capped=list.slice(0,300); _txnFeedRows[w.uid]=capped;
   const _exSet=_excludedAcctIds();
+  // Bills available to link a payment to (computed once for all rows).
+  const _billList=(()=>{ try{ return engBills().filter(b=>b.name).map(b=>({bk:billKey(b), nm:b.name})); }catch(e){ return []; } })();
+  const _bkName={}; _billList.forEach(x=>{ _bkName[x.bk]=x.nm; });
+  const _txnLinks=APP.txnBillLinks||{};
   el.innerHTML=capped.map((t,i)=>{
     const key=_txnKey(t); keys[i]=key;
     const pos=t.amount>0, col=pos?'var(--red)':'var(--pos)', amt=(pos?'-':'+')+fmt2(Math.abs(t.amount));
@@ -6910,12 +6928,17 @@ function txnFeedRender(w){
     const ruleChip = hasRule?`<span class="txf-tag" style="color:var(--blue,#5b8def);background:rgba(91,141,239,.14)">＝ rule</span>`:'';
     const exclChip = acctExcl?`<span class="txf-tag" style="color:var(--muted);background:var(--surface3)">excluded acct</span>`:'';
     const pendChip = t.pending?`<span class="txf-tag" style="color:var(--amber);background:var(--amber-dim)">⏳ pending</span>`:'';
+    const linkedBK=_txnLinks[key]||'';
+    const billChip = (linkedBK&&_bkName[linkedBK])?`<span class="txf-tag" style="color:var(--blue,#5b8def);background:rgba(91,141,239,.14)">🔗 ${esc(_bkName[linkedBK])}</span>`:'';
+    // "Link to bill" selector — mark a payment the auto-matcher missed as a specific bill's payment.
+    const billSel = (pos&&_billList.length)?`<select class="txn-cat-sel txf-billsel" onclick="event.stopPropagation()" onchange="txnFeedLinkBill('${w.uid}',${i},this.value)" title="Link this payment to a bill"><option value="">🔗 link bill…</option>${_billList.map(x=>`<option value="${esc(x.bk)}"${linkedBK===x.bk?' selected':''}>${esc(x.nm)}</option>`).join('')}${linkedBK?'<option value="__unlink__">✕ unlink</option>':''}</select>`:'';
     return `<div class="txf-row"${acctExcl?' style="opacity:.55"':''}>
       <div class="txf-main">
-        <div class="txf-nm">${esc(name)} ${pendChip}${tagChip}${ruleChip}${exclChip}</div>
+        <div class="txf-nm">${esc(name)} ${pendChip}${tagChip}${ruleChip}${billChip}${exclChip}</div>
         <div class="txf-edit">
           <select class="txn-cat-sel" onclick="event.stopPropagation()" onchange="txnFeedSetCat('${w.uid}',${i},this.value)" title="Category">${opts}</select>
           <select class="txn-cat-sel txf-tagsel" onclick="event.stopPropagation()" onchange="txnFeedSetTag('${w.uid}',${i},this.value)" title="Tag">${tagOpts}</select>
+          ${billSel}
           <button class="txf-rulebtn${hasRule?' on':''}" onclick="event.stopPropagation();txnFeedRule('${w.uid}',${i})" title="Always categorize this merchant this way">＝</button>
           <input class="txn-note-in" type="text" placeholder="📝 note…" value="${esc(note)}" onclick="event.stopPropagation()" onchange="txnFeedSetNote('${w.uid}',${i},this.value)" onkeydown="if(event.key==='Enter')this.blur()">
         </div>
@@ -6932,6 +6955,20 @@ function txnFeedSetCat(uid,idx,cat){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k
 function txnFeedSetNote(uid,idx,note){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; if(note&&note.trim())_txnNotes[k]=note.trim(); else delete _txnNotes[k]; try{LS.setItem('mdf_txn_notes',JSON.stringify(_txnNotes));}catch(e){} }
 function txnFeedSetTag(uid,idx,tag){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; setTxnTag(k,tag); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function txnFeedRule(uid,idx){ const t=(_txnFeedRows[uid]||[])[idx]; if(!t)return; const mk=_merchKey(t); if(!mk)return; if(_catRules[mk]){ setCatRule(mk,''); } else { setCatRule(mk, getTxnCategory(t)); } const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+// Link this transaction to a bill (value = billKey), or '__unlink__' to remove. Marks that bill's
+// occurrence (for the transaction's month) paid, and _billOccMatched then treats it as settled.
+function txnFeedLinkBill(uid,idx,value){
+  const k=(_txnFeedKeys[uid]||[])[idx], t=(_txnFeedRows[uid]||[])[idx]; if(!k||!t) return;
+  APP.txnBillLinks=APP.txnBillLinks||{};
+  if(value==='') return;                                   // placeholder chosen
+  if(value==='__unlink__'){ delete APP.txnBillLinks[k]; }
+  else {
+    APP.txnBillLinks[k]=value;
+    try{ const b=engBills().find(x=>billKey(x)===value); if(b){ const d=new Date((t.date||'')+'T12:00:00'); const okey=billKey(b)+'|'+_dk(_dueDateInMonth(d.getFullYear(), d.getMonth(), b.due||1)); const m=_billPaidOcc(); if(!m[okey]) m[okey]=Date.now(); } }catch(e){}
+  }
+  saveState(); try{ _memoInvalidate&&_memoInvalidate(); }catch(e){}
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+}
 
 function fdWidgetBody(w){
   if(!_fd.scenario) _fd.scenario='job';
