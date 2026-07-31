@@ -349,9 +349,19 @@ async function loadLiabilities(){
   const d=await _fetchJSON('/api/liabilities'); if(!d) return false;
   plaidLiabilities=d; return true;
 }
+// Promises for the current live-data load. The SWOT and the post-SWOT briefing wait on these so they
+// read real, fully-loaded numbers (accounts + transactions + liabilities) instead of partial/sample.
+let _engineReady=null, _liabReady=null;
+function whenAppReady(timeoutMs){
+  const parts=[];
+  if(_engineReady) parts.push(Promise.resolve(_engineReady).catch(()=>null));
+  if(_liabReady)   parts.push(Promise.resolve(_liabReady).catch(()=>null));
+  const all=parts.length?Promise.all(parts):Promise.resolve();
+  return timeoutMs? Promise.race([all, new Promise(r=>setTimeout(r, timeoutMs))]) : all;   // timeout = safety cap
+}
 async function loadEngineData(){
+  _liabReady = loadLiabilities().catch(()=>false);   // in parallel; SWOT/briefing wait on it so bills (APR/min/CC) are complete
   const [a,b]=await Promise.all([loadAccounts(),loadTransactions()]);
-  loadLiabilities(); // fire-and-forget; enriches SWOT/debt when available
   _rebuildTxns();
   try{ _memoInvalidate(); }catch(e){}   // fresh bank data → drop any memoized derivations
   dataLoaded=((a||b)&&(allAccts.length>0||allTxns.length>0)) || ((APP.importedTxns||[]).length>0);
@@ -9579,7 +9589,7 @@ function _afterAuthedEnter(){
   ['loginPass','loginPass2','loginRecovery'].forEach(id=>{ const el=gg(id); if(el) el.value=''; });
   setToken(1);
   showLoader('Loading your money world…');
-  loadEngineData().then(()=>runWelcomeBack());
+  loadEngineData().then(()=>whenAppReady(15000)).then(()=>runWelcomeBack());   // wait for liabilities too so the SWOT's debt/bills are accurate
 }
 function _showRecovery(code,contLabel){
   const rb=gg('loginRecoveryBox'); if(!rb) return;
@@ -9640,6 +9650,7 @@ async function doLogin(){
     // seeding the generic default dashboard (which also skipped Richie's first build).
     if(!LS.getItem('richie_app') && !LS.getItem('richie_setup')){ hideLoader(); runIntro(); return; }
     await loadEngineData();
+    try{ await whenAppReady(15000); }catch(e){}   // include liabilities so the SWOT's debt/bills are accurate
     runWelcomeBack();
   }catch(e){
     err.textContent='Could not reach the server. Try again.';
@@ -9794,7 +9805,12 @@ function wbEnter(){
   richieStopAllSpeech();              // stop the SWOT greeting/voice the moment you move on
   _raSnoozeUntil=0; _raLastPop=0;     // the first app screen greets right away (no fixed hold)
   gg('welcomeBack').style.display='none';
-  Promise.resolve(enterApp()).then(()=>{ setTimeout(()=>{ try{ updateReviewBadge(); }catch(e){} try{ maybeShowBriefing(); }catch(e){} }, 550); });
+  // Hold the briefing until accounts + transactions + liabilities have loaded, so the bills to pay,
+  // transactions to review and cash-flow it surfaces reflect your real, live numbers (not partial
+  // data). whenAppReady resolves when the load settles; the timeout is just a safety cap.
+  Promise.resolve(enterApp())
+    .then(()=>whenAppReady(20000))
+    .then(()=>{ try{ updateReviewBadge(); }catch(e){} try{ maybeShowBriefing(); }catch(e){} });
 }
 
 /* ═══════════════ MONEY TO-DO BRIEFING (post-SWOT pop-out) ═══════════════
@@ -10269,7 +10285,8 @@ async function enterApp(){
   setTimeout(()=>{ if(sbRichie)sbRichie.do('wiggle'); },600);
   // attempt live data load; re-render active page when it arrives
   updateConnectBtn();
-  loadEngineData().then(ok=>{
+  _engineReady = loadEngineData();
+  _engineReady.then(ok=>{
     updateConnectBtn();
     // FIRST WIN with banks ALREADY connected (e.g. after a full reset — Plaid tokens live on
     // the server and survive it): data arriving IS the win. Without this, richieBuildApp only
