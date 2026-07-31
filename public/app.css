@@ -2093,6 +2093,10 @@ select.mf-in{appearance:none;cursor:pointer;}
 .level-badge{font-size:13px;font-weight:700;padding:8px 14px;border-radius:20px;background:var(--green-dim);color:var(--green);white-space:nowrap;}
 .xp-bar{height:10px;background:var(--surface3,#232734);border-radius:6px;overflow:hidden;}
 .xp-fill{height:100%;background:linear-gradient(90deg,var(--green),#7be0b4);width:0;border-radius:6px;transition:width .7s cubic-bezier(.4,0,.2,1);}
+.lvl-seg{display:flex;gap:6px;flex-wrap:wrap;}
+.lvl-seg-btn{flex:1 1 0;min-width:52px;padding:8px 6px;border-radius:9px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;transition:all .14s;}
+.lvl-seg-btn:hover{border-color:var(--accent,#8b5cf6);}
+.lvl-seg-btn.on{background:var(--accent,#8b5cf6);border-color:var(--accent,#8b5cf6);color:#fff;}
 .toggle{width:46px;height:26px;border-radius:20px;background:var(--surface3,#232734);border:1px solid var(--border2,rgba(255,255,255,0.1));cursor:pointer;position:relative;flex-shrink:0;transition:background .18s;padding:0;}
 .toggle.on{background:var(--green);}
 .toggle-knob{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .18s;}
