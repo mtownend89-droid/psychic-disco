@@ -1939,7 +1939,7 @@ function safeToSpendBody(w){
           ? `<div class="ws-hint" style="margin-top:8px;color:var(--amber)">Tight until payday — bills &amp; set-asides cover your cash. Ease a goal contribution or move a bill.</div>`
           : '') : '';
   return `<div class="wph">
-    <div class="wph-stat" style="color:${col}">${fmtK(s.pool)}</div>
+    <div class="wph-stat" title="Cash on hand${s.bankPending>0.5?' minus bank-pending':''}${s.paidPending>0.5?', minus bills you marked paid but not posted':''}, minus bills due before payday${s.goalPortion>0.5?', minus a prorated goal set-aside':''} and a ${fmtK(s.buffer)} buffer${s.constrainedBy90?' — then capped at your projected 90-day low so a coming crunch stays covered':''}." style="color:${col}">${fmtK(s.pool)}</div>
     <div class="wph-sub">${sub}</div>
     ${breakdown}
     ${hint}
@@ -5658,7 +5658,8 @@ function cashSummaryBody(w){
   // L1: headline only. L2: per-account bars. L3+: the pending/expected line.
   const pline=_atL(3)?pendLine:'';
   const bars=_atL(2)?`<div class="cash-list">${rows}</div>`:'';
-  return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(total)}">${fmtK(total)}</div><div class="wph-sub">cash on hand · ${accts.length} ${esc(label)} account${accts.length!==1?'s':''}${dataLoaded?'':' · sample'} ${gear}</div>${pline}${bars}</div>`;
+  const cohTitle=`Sum of current balances across your ${accts.length} ${esc(label)} account${accts.length!==1?'s':''} (excluded accounts left out).${(pend.count||mp.count)?` Hover the ⏳ line for pending & paid-bill adjustments.`:''}`;
+  return `<div class="wph"><div class="wph-stat" title="${esc(cohTitle)}" style="color:${moneyCol(total)}">${fmtK(total)}</div><div class="wph-sub">cash on hand · ${accts.length} ${esc(label)} account${accts.length!==1?'s':''}${dataLoaded?'':' · sample'} ${gear}</div>${pline}${bars}</div>`;
 }
 /* Per-widget picker: which ACCOUNT CATEGORIES this widget counts */
 let _acctPick={uid:null, sel:[]};
@@ -5779,7 +5780,7 @@ function debtSummaryBody(w){
   return `<div class="dbt-wrap">
     <div class="wph" style="padding-bottom:4px">
       <div class="wph-sub">${focusLabel} · your priority</div>
-      <div class="wph-stat" style="color:var(--red)">${fmtK(g.focusTotal)}</div>
+      <div class="wph-stat" title="Sum of the balances you've starred into your focus set${focusIsCC?' (defaults to all credit cards)':''} — ${g.focusItems.length} balance${g.focusItems.length!==1?'s':''}. Long-term loans are tracked separately below." style="color:var(--red)">${fmtK(g.focusTotal)}</div>
       <div class="wph-sub">across ${g.focusItems.length} balance${g.focusItems.length!==1?'s':''}${hi&&hi.apr?` · top APR ${hi.apr.toFixed(1)}%`:''}</div>
     </div>
     ${_atL(2)?`<div class="dbt-list">${focusRows}</div>${goalBtn}`:''}
@@ -6011,7 +6012,7 @@ function savingsBucketsBody(w){
     </div>`;
   }).join('');
   return `<div class="sb-wrap">
-    <div class="sb-header"><span>${buckets.length} fund${buckets.length!==1?'s':''}</span><b style="color:var(--green)">${fmtK(total)} saved</b></div>
+    <div class="sb-header" title="Combined balance across your ${buckets.length} savings bucket${buckets.length!==1?'s':''} — linked accounts pull live balances; manual buckets use the amount you entered."><span>${buckets.length} fund${buckets.length!==1?'s':''}</span><b style="color:var(--green)">${fmtK(total)} saved</b></div>
     ${_atL(2)?rows:''}
     <div class="sb-foot-actions">${linkBtn}<button class="manual-add-btn" style="width:auto;flex:1" onclick="event.stopPropagation();editBucket(-1)">➕ Add a bucket</button></div>
   </div>`;
@@ -6193,8 +6194,11 @@ function discretionarySpendBody(w){
   const scope = linked?'in budget':'discretionary';
   const sub = `${scope} · ${engRangeLabel(tfDays(w.tf||'30d'))}`;
   const filterBtn=`<button class="cash-pick" onclick="event.stopPropagation();openSpendCatPicker('${w.uid}')" title="Choose which categories to include">⚙︎</button>`;
+  const spendTitle = linked
+    ? `Total from your Every-Dollar Budget categories (${disc.length} categor${disc.length!==1?'ies':'y'}) over ${engRangeLabel(tfDays(w.tf||'30d'))}${hidden.length?`, minus ${hidden.length} you hid`:''} — bills & savings excluded.`
+    : `Total discretionary spending over ${engRangeLabel(tfDays(w.tf||'30d'))} — bills, savings & transfers excluded.`;
   return `<div class="wph">
-    <div class="wph-stat" style="color:${(budget>0&&spend>budget)?'var(--red)':'var(--pos)'}">${fmtK(spend)}</div>
+    <div class="wph-stat" title="${esc(spendTitle)}" style="color:${(budget>0&&spend>budget)?'var(--red)':'var(--pos)'}">${fmtK(spend)}</div>
     <div class="wph-sub">${sub}${dataLoaded?'':' · sample'}${hidden.length?` · ${hidden.length} hidden`:''} ${filterBtn}</div>
     ${_atL(2)?`<div class="ds-budget">
       <div class="ds-budget-top">
@@ -6202,7 +6206,7 @@ function discretionarySpendBody(w){
         <span style="color:${over?'var(--red)':'var(--muted)'}">${over?fmtK(-remaining)+' over':fmtK(remaining)+' left'}</span>
       </div>
       <div class="ds-bar"><div class="ds-bar-fill" style="width:${Math.min(100,pct)}%;background:${color}"></div></div>
-      <div class="ds-budget-top" style="margin-top:7px">
+      <div class="ds-budget-top" style="margin-top:7px" title="Every outflow over ${esc(engRangeLabel(tfDays(w.tf||'30d')))} across ALL categories — including bills, savings & the categories not in your budget.">
         <span style="color:var(--muted)">Total spending · all categories</span>
         <span style="font-weight:700">${fmtK(totalSpend)}</span>
       </div>
@@ -7585,12 +7589,12 @@ function renderWidgetBody(w){
   const bars=n=>`<div class="wph-bars">${Array.from({length:n}).map(()=>`<div class="wph-bar" style="height:${30+Math.random()*70}%"></div>`).join('')}</div>`;
   switch(w.type){
     case 'journey': return journeyBody(w);
-    case 'net_worth_summary': { const a=engNWAssets(), l=engNWLiab(); const nw=dataLoaded?(engNetBalance()+a-l):(a-l); const nwGoalG=(APP.goals||[]).filter(x=>x.metric==='networth'&&x.target>0).sort((x,y)=>y.target-x.target)[0]; const goalNW=nwGoalG?nwGoalG.target:(nw>0?Math.max(100000,Math.ceil((nw+1)/100000)*100000):100000); const gPct=goalNW>0?Math.max(0,Math.min(100,Math.round(nw/goalNW*100))):0; return `<div class="wph"><div class="wph-stat" style="color:${moneyCol(nw)}">${fmtK(nw)}</div><div class="wph-sub">net worth · ${gPct}% to goal</div>${_atL(2)?`<div class="ds-budget"><div class="ds-budget-top"><span style="color:${moneyCol(nw)};font-weight:700">Now ${fmtK(nw)}</span><span style="color:var(--muted)">Goal ${fmtK(goalNW)}</span></div><div class="ds-bar" style="background:var(--surface3)"><div class="ds-bar-fill" style="width:${gPct}%;background:var(--pos)"></div></div></div><button class="nw-manage" onclick="event.stopPropagation();openNetWorthEditor()">🏠 Add home, car & other assets</button>`:''}</div>`; }
+    case 'net_worth_summary': { const a=engNWAssets(), l=engNWLiab(); const nw=dataLoaded?(engNetBalance()+a-l):(a-l); const nwGoalG=(APP.goals||[]).filter(x=>x.metric==='networth'&&x.target>0).sort((x,y)=>y.target-x.target)[0]; const goalNW=nwGoalG?nwGoalG.target:(nw>0?Math.max(100000,Math.ceil((nw+1)/100000)*100000):100000); const gPct=goalNW>0?Math.max(0,Math.min(100,Math.round(nw/goalNW*100))):0; return `<div class="wph"><div class="wph-stat" title="Everything you own minus everything you owe — bank & investment balances plus any manual assets (home, car), minus credit cards, loans & manual liabilities." style="color:${moneyCol(nw)}">${fmtK(nw)}</div><div class="wph-sub">net worth · ${gPct}% to goal</div>${_atL(2)?`<div class="ds-budget"><div class="ds-budget-top"><span style="color:${moneyCol(nw)};font-weight:700">Now ${fmtK(nw)}</span><span style="color:var(--muted)">Goal ${fmtK(goalNW)}</span></div><div class="ds-bar" style="background:var(--surface3)"><div class="ds-bar-fill" style="width:${gPct}%;background:var(--pos)"></div></div></div><button class="nw-manage" onclick="event.stopPropagation();openNetWorthEditor()">🏠 Add home, car & other assets</button>`:''}</div>`; }
     case 'cash_summary': return cashSummaryBody(w);
     case 'health_score': return healthScoreBody(w);
     case 'spending_hub': return spendingHubBody(w);
     case 'spending_month': return discretionarySpendBody(w);
-    case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); const now=Date.now(), ps=new Date(now-2*days*86400000), pe=new Date(now-days*86400000); const prev=allTxns.filter(t=>{const d=new Date(t.date);return d>=ps&&d<pe&&_isIncomeTxn(t);}).reduce((s,t)=>s+Math.abs(t.amount),0); const dl=prev>0?Math.round((inc-prev)/prev*100):null; const up=dl!==null&&dl>=0; const trend=dl===null?'':`<div class="ds-trend-label" style="color:${up?'var(--green)':'var(--amber)'};margin-top:9px">${up?'▲':'▼'} ${Math.abs(dl)}% vs prior ${tfLabel(w.tf||'30d')}</div>`; const rec=engRecent(days).filter(_isIncomeTxn); const byC={}; rec.forEach(t=>{const c=getTxnCategory(t);byC[c]=(byC[c]||0)+Math.abs(t.amount);}); const top=Object.entries(byC).sort((a,b)=>b[1]-a[1])[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--pos)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${_atL(2)?trend:''}${_atL(2)&&top?`<div class="wph-inline"><span>Top source: ${esc(top[0])}</span><b style="color:var(--pos)">${fmtK(top[1])}</b></div>`:''}</div>`; } const top=incomeSources.slice().sort((a,b)=>b.amt*(FREQ_TO_MONTHLY[b.freq]||1)-a.amt*(FREQ_TO_MONTHLY[a.freq]||1))[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--pos)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">${incomeSources.length} sources \u00b7 sample</div><div class="ds-trend-label" style="color:var(--green);margin-top:9px">▲ 6% vs prior 30d</div><div class="wph-inline"><span>Top source: ${top.name}</span><b style="color:var(--green)">${fmtK(Math.round(top.amt*(FREQ_TO_MONTHLY[top.freq]||1)))}/mo</b></div></div>`; }
+    case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); const now=Date.now(), ps=new Date(now-2*days*86400000), pe=new Date(now-days*86400000); const prev=allTxns.filter(t=>{const d=new Date(t.date);return d>=ps&&d<pe&&_isIncomeTxn(t);}).reduce((s,t)=>s+Math.abs(t.amount),0); const dl=prev>0?Math.round((inc-prev)/prev*100):null; const up=dl!==null&&dl>=0; const trend=dl===null?'':`<div class="ds-trend-label" style="color:${up?'var(--green)':'var(--amber)'};margin-top:9px">${up?'▲':'▼'} ${Math.abs(dl)}% vs prior ${tfLabel(w.tf||'30d')}</div>`; const rec=engRecent(days).filter(_isIncomeTxn); const byC={}; rec.forEach(t=>{const c=getTxnCategory(t);byC[c]=(byC[c]||0)+Math.abs(t.amount);}); const top=Object.entries(byC).sort((a,b)=>b[1]-a[1])[0]; return `<div class="wph"><div class="wph-stat" title="Sum of income transactions received over ${esc(tfLabel(w.tf||'30d'))} — deposits/paychecks only; transfers, refunds & credit-card payments excluded." style="color:var(--pos)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${_atL(2)?trend:''}${_atL(2)&&top?`<div class="wph-inline"><span>Top source: ${esc(top[0])}</span><b style="color:var(--pos)">${fmtK(top[1])}</b></div>`:''}</div>`; } const top=incomeSources.slice().sort((a,b)=>b.amt*(FREQ_TO_MONTHLY[b.freq]||1)-a.amt*(FREQ_TO_MONTHLY[a.freq]||1))[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--pos)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">${incomeSources.length} sources \u00b7 sample</div><div class="ds-trend-label" style="color:var(--green);margin-top:9px">▲ 6% vs prior 30d</div><div class="wph-inline"><span>Top source: ${top.name}</span><b style="color:var(--green)">${fmtK(Math.round(top.amt*(FREQ_TO_MONTHLY[top.freq]||1)))}/mo</b></div></div>`; }
     case 'debt_summary': return debtSummaryBody(w);
     case 'category_heatmap': return categoryHeatmapBody(w);
     case 'spending_trends': return spendTrendsBody(w);
