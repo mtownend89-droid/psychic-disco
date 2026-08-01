@@ -4233,8 +4233,8 @@ function _applyThemeSkin(themeId){
   if(U('tabActive'))   css+=p+'.pl-gbtn.active{'+bg(U('tabActive'))+';color:var(--text)!important;}';
   // small badge chips (.txf-tag)
   if(U('badge')) css+=p+'.txf-tag{'+bg(U('badge'))+';color:#183200!important;border:none!important;}';
-  // panel → the reusable modal card (art provides the fill + frame; content sits in its padding)
-  if(U('panel')) css+=p+'.modal{'+bg(U('panel'))+';border:none!important;border-radius:0!important;box-shadow:none!important;}';
+  // panel → the reusable modal card + the specialized modal cards (art gives the fill + frame)
+  if(U('panel')){ const ps=['.modal','.doc-card','.wdt-card','.ce-card','.txs-card'].map(x=>p+x).join(','); css+=ps+'{'+bg(U('panel'))+';border:none!important;border-radius:0!important;box-shadow:none!important;}'; }
   el.textContent=css;
 }
 let _fxLayer=null;
