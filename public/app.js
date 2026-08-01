@@ -7944,7 +7944,7 @@ function renderSettings(){
         <div style="display:flex;align-items:center;justify-content:space-between;gap:14px">
           <div>
             <div class="set-card-label" style="margin:0">✨ Theme animations &amp; flourishes</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Ambient motion <b>and</b> per-widget edging on every theme — dripping ooze &amp; skulls for Betelgeuse, a saucer &amp; warp line for Galaxy, leafy vines for Forest, grapevines for Merlot &amp; Grape, flowers for Princess, bubbles for Ocean, an electric glow for Neon, a cobweb for Afterlife, plus subtle touches for Sunset, Espresso, Sky, Mint, Sunrise, Midnight, Carbon, Linen &amp; Paper. Off automatically under reduce motion.</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">Ambient motion <b>plus</b> a themed look on each widget — full <b>borders</b> for Betelgeuse (goo), Galaxy (HUD), Forest (autumn leaves), Merlot &amp; Grape (grapevine) and Princess (ornate + crown); lighter edging for Ocean, Neon, Afterlife, Sunset, Espresso, Sky, Mint, Sunrise, Midnight, Carbon, Linen &amp; Paper. Off automatically under reduce motion.</div>
           </div>
           <button class="toggle${_appearance().fx!==false?' on':''}" id="animToggle" onclick="setThemeAnim(_appearance().fx===false)" aria-label="Toggle theme animations"><span class="toggle-knob"></span></button>
         </div>
