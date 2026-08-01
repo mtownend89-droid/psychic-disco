@@ -50,8 +50,11 @@ try {
     return 'data:image/svg+xml,'+[uri]::EscapeDataString($svg)
   }
 
+  # frame/panel symbols are theme-prefixed (e.g. fall-frame, frozen-panel); fall back to any *-frame/*-panel
+  $frameId = if($s.Contains('<symbol id="'+$ThemeId+'-frame"')){ $ThemeId+'-frame' } else { [regex]::Match($s,'<symbol id="([a-z0-9]+-frame)"').Groups[1].Value }
+  $panelId = if($s.Contains('<symbol id="'+$ThemeId+'-panel"')){ $ThemeId+'-panel' } else { [regex]::Match($s,'<symbol id="([a-z0-9]+-panel)"').Groups[1].Value }
   $parts = New-Object System.Collections.Generic.List[string]
-  $fu = SymUri 'slime-frame'
+  $fu = if($frameId){ SymUri $frameId } else { $null }
   if($fu){ $parts.Add('frame:{url:"'+$fu+'",slice:160,repeat:"stretch",width:22,outset:6}') }
 
   $ctl = New-Object System.Collections.Generic.List[string]
@@ -68,7 +71,7 @@ try {
   AddCtl 'tabInactive'    'tab-inactive'     ''
   AddCtl 'tabActive'      'tab-active'       ''
   AddCtl 'badge'          'badge'            ''
-  AddCtl 'panel'          'slime-panel'      ''
+  AddCtl 'panel'          $panelId           ''
   if($ctl.Count){ $parts.Add('controls:{'+($ctl -join ',')+'}') }
 
   $entry = 'THEME_SKINS.'+$ThemeId+'={'+($parts -join ',')+'};'
