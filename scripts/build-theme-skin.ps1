@@ -22,7 +22,7 @@
 param(
   [Parameter(Mandatory=$true)][string]$Zip,
   [Parameter(Mandatory=$true)][string]$ThemeId,
-  [string]$App = (Join-Path $PSScriptRoot '..\public\app.js')
+  [string]$App = (Join-Path $PSScriptRoot '..\public\theme-skins.js')
 )
 $ErrorActionPreference='Stop'
 $tmp = Join-Path $env:TEMP ('themeskin_'+[guid]::NewGuid().ToString('N'))
@@ -72,6 +72,9 @@ try {
   AddCtl 'tabActive'      'tab-active'       ''
   AddCtl 'badge'          'badge'            ''
   AddCtl 'panel'          $panelId           ''
+  AddCtl 'chatRichie'     'chat-richie'      (',text:"'+$tokens.text+'"')
+  AddCtl 'chatUser'       'chat-user'        (',text:"'+$tokens.text+'"')
+  AddCtl 'avatarRing'     'avatar-ring'      ''
   if($ctl.Count){ $parts.Add('controls:{'+($ctl -join ',')+'}') }
 
   $entry = 'THEME_SKINS.'+$ThemeId+'={'+($parts -join ',')+'};'

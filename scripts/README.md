@@ -35,7 +35,10 @@ tab-inactive tab-active         badge            slime-panel
 
 The script converts each symbol into a self-contained `data:` URI (its markup + the
 library's shared `<defs>`) and writes `THEME_SKINS.<themeId> = { frame:…, controls:… };`
-into `public/app.js` at the `/*__THEME_SKINS__*/` marker.
+into `public/theme-skins.js` at the `/*__THEME_SKINS__*/` marker. That file is loaded
+before `app.js` (via a `<script>` tag in `index.html`) and defines the global
+`THEME_SKINS` the app reads. Frame/panel symbols are theme-prefixed (`<id>-frame`,
+`<id>-panel`); control ids are generic.
 
 At runtime `_applyThemeSkin(themeId)` (called from `applyThemeFx`) reads that entry and
 injects scoped CSS (`body.fx-<theme> …`) — filled controls use stretched background art,
