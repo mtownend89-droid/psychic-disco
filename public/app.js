@@ -4215,7 +4215,10 @@ function _applyThemeSkin(themeId){
   const U=r=>c[r]&&c[r].url, bg=u=>'background:url("'+u+'") center/100% 100% no-repeat!important';
   let css='';
   const f=sk.frame;
-  if(f) css+=p+'.canvas-widget-card{border:'+(f.width||18)+'px solid transparent;border-radius:0;overflow:visible;border-image:url("'+f.url+'") '+f.slice+' '+(f.repeat||'stretch')+';border-image-outset:'+(f.outset||0)+'px;}';
+  if(f){
+    css+=p+'.canvas-widget-card{border:'+(f.width||18)+'px solid transparent;border-radius:0;overflow:visible;border-image:url("'+f.url+'") '+f.slice+' '+(f.repeat||'stretch')+';border-image-outset:'+(f.outset||0)+'px;}';
+    css+=p+'.canvas-grid{gap:'+((f.outset||0)*2+22)+'px!important;}';   // clear the outset overlap (2x) + breathing room so neighbouring frames don't collide
+  }
   // filled controls → stretched background art
   const fill=(sel,r)=>{ const ctl=c[r]; if(!ctl) return; css+=p+sel+'{'+bg(ctl.url)+';border:none!important;box-shadow:none!important;'+(ctl.text?'color:'+ctl.text+'!important;':'')+'}'; };
   fill('.btn','btn'); fill('.manual-add-btn','btn'); fill('.btn.primary','btnPrimary'); fill('.btn.danger-btn','btnDanger');
