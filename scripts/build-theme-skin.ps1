@@ -52,7 +52,7 @@ try {
     $ss = $s.IndexOf('<symbol id="'+$id+'"'); if($ss -lt 0){ return $null }
     $vbS = $s.IndexOf('viewBox="',$ss)+9; $vbE = $s.IndexOf('"',$vbS); $vb = $s.Substring($vbS,$vbE-$vbS)
     $cs = $s.IndexOf('>',$ss)+1; $ce = $s.IndexOf('</symbol>',$cs); $inner = $s.Substring($cs,$ce-$cs)
-    $svg = "<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' viewBox='$vb'><defs>$shared</defs>$inner</svg>"
+    $svg = "<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' xmlns:inkscape='http://www.inkscape.org/namespaces/inkscape' xmlns:sodipodi='http://sodipodi.sourceforge.net/DTD/sodipodi-0.0.dtd' viewBox='$vb'><defs>$shared</defs>$inner</svg>"
     $svg = ($svg -replace '\s+',' ').Trim()
     return 'data:image/svg+xml,'+(EncU $svg)
   }
