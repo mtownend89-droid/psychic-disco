@@ -62,7 +62,18 @@ try {
   $panelId = if($s.Contains('<symbol id="'+$ThemeId+'-panel"')){ $ThemeId+'-panel' } else { [regex]::Match($s,'<symbol id="([a-z0-9]+-panel)"').Groups[1].Value }
   $parts = New-Object System.Collections.Generic.List[string]
   $fu = if($frameId){ SymUri $frameId } else { $null }
-  if($fu){ $parts.Add('frame:{url:"'+$fu+'",slice:300,repeat:"stretch",width:40,outset:22}') }
+  if($fu){
+    # Derive the 9-slice from the frame's own viewBox. A fixed slice bigger than half the
+    # frame's width/height collapses the middle (edge) bands, so the sides vanish and the
+    # frame reads as a detached top + bottom — pick a slice that always leaves a middle to stretch.
+    $fw=280.0; $fh=280.0
+    $fi=$s.IndexOf('<symbol id="'+$frameId+'"')
+    if($fi -ge 0){ $vs=$s.IndexOf('viewBox="',$fi)+9; $ve=$s.IndexOf('"',$vs); $vp=($s.Substring($vs,$ve-$vs) -split '\s+'); if($vp.Count -ge 4){ $fw=[double]$vp[2]; $fh=[double]$vp[3] } }
+    $slice=[int][Math]::Max(24,[Math]::Min(160,[Math]::Round([Math]::Min($fw,$fh)*0.26)))
+    $width=[int][Math]::Max(16,[Math]::Min(40,[Math]::Round($slice*0.42)))
+    $outset=[int][Math]::Round($width*0.4)
+    $parts.Add('frame:{url:"'+$fu+'",slice:'+$slice+',repeat:"round",width:'+$width+',outset:'+$outset+'}')
+  }
 
   $ctl = New-Object System.Collections.Generic.List[string]
   function AddCtl([string]$role,[string]$id,[string]$extra){ $u = SymUri $id; if($u){ $ctl.Add($role+':{url:"'+$u+'"'+$extra+'}') } }
