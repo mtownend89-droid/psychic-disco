@@ -4216,12 +4216,19 @@ function _applyThemeSkin(themeId){
   let css='';
   const f=sk.frame;
   if(f){
-    css+=p+'.canvas-widget-card{border:'+(f.width||18)+'px solid transparent;border-radius:0;overflow:visible;border-image:url("'+f.url+'") '+f.slice+' '+(f.repeat||'stretch')+';border-image-outset:'+(f.outset||0)+'px;}';
-    css+=p+'.canvas-grid{gap:'+((f.outset||0)*2+22)+'px!important;}';   // clear the outset overlap (2x) + breathing room so neighbouring frames don't collide
+    const os=(f.outset||0);
+    // overflow:hidden clips the widget's own CONTENT (stops wide widgets — e.g. the Budget table — spilling past the viewport)
+    // while the border-image frame + its outset are unaffected (a box's own border-image is never clipped by its own overflow).
+    css+=p+'.canvas-widget-card{border:'+(f.width||18)+'px solid transparent;border-radius:0;overflow:hidden;border-image:url("'+f.url+'") '+f.slice+' '+(f.repeat||'stretch')+';border-image-outset:'+os+'px;}';
+    // gap clears the 2× outset overlap between neighbours; padding keeps the outer widgets' outsets from being clipped by the canvas wrap.
+    css+=p+'.canvas-grid{gap:'+(os*2+16)+'px!important;padding:'+(os+4)+'px!important;box-sizing:border-box;}';
   }
   // filled controls → stretched background art
   const fill=(sel,r)=>{ const ctl=c[r]; if(!ctl) return; css+=p+sel+'{'+bg(ctl.url)+';border:none!important;box-shadow:none!important;'+(ctl.text?'color:'+ctl.text+'!important;':'')+'}'; };
   fill('.btn','btn'); fill('.manual-add-btn','btn'); fill('.btn.primary','btnPrimary'); fill('.btn.danger-btn','btnDanger');
+  // period / widget-settings chips reuse the button art (inactive = secondary, selected = primary)
+  if(c.btn){ css+=p+'.cwt-chip,'+p+'.ws-chip{'+bg(c.btn.url)+';border:none!important;box-shadow:none!important;'+(c.btn.text?'color:'+c.btn.text+'!important;':'')+'}'; }
+  if(c.btnPrimary){ css+=p+'.cwt-chip.active,'+p+'.ws-chip.active{'+bg(c.btnPrimary.url)+';'+(c.btnPrimary.text?'color:'+c.btnPrimary.text+'!important;':'')+'}'; }
   if(U('toggleOff')) css+=p+'.toggle{'+bg(U('toggleOff'))+';border:none!important;}';
   if(U('toggleOn'))  css+=p+'.toggle.on{'+bg(U('toggleOn'))+';}';
   if(U('toggleOff')||U('toggleOn')) css+=p+'.toggle .toggle-knob{display:none!important;}';
