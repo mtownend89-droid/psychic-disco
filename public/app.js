@@ -4261,8 +4261,10 @@ function _applyThemeSkin(themeId){
   const fill=(sel,r)=>{ const ctl=c[r]; if(!ctl) return; css+=p+sel+'{'+bg(ctl.url)+';border:none!important;box-shadow:none!important;'+legible+(ctl.text?'color:'+ctl.text+'!important;':'')+(ctl.filter?'filter:'+ctl.filter+';':'')+'}'; };
   fill('.btn','btn'); fill('.manual-add-btn','btn'); fill('.btn.primary','btnPrimary'); fill('.btn.danger-btn','btnDanger');
   // period / widget-settings chips reuse the button art (inactive = secondary, selected = primary)
-  if(c.btn){ css+=p+'.cwt-chip,'+p+'.ws-chip{'+bg(c.btn.url)+';border:none!important;box-shadow:none!important;'+legible+(c.btn.text?'color:'+c.btn.text+'!important;':'')+'}'; }
-  if(c.btnPrimary){ css+=p+'.cwt-chip.active,'+p+'.ws-chip.active{'+bg(c.btnPrimary.url)+';'+legible+(c.btnPrimary.text?'color:'+c.btnPrimary.text+'!important;':'')+'}'; }
+  // give chips extra padding + height so the button art fully encompasses the label (the art's face is inset from its box)
+  const chipbox='padding:5px 16px!important;min-height:26px;border-radius:0!important;';
+  if(c.btn){ css+=p+'.cwt-chip,'+p+'.ws-chip{'+bg(c.btn.url)+';border:none!important;box-shadow:none!important;'+legible+chipbox+(c.btn.text?'color:'+c.btn.text+'!important;':'')+'}'; }
+  if(c.btnPrimary){ css+=p+'.cwt-chip.active,'+p+'.ws-chip.active{'+bg(c.btnPrimary.url)+';'+legible+chipbox+(c.btnPrimary.text?'color:'+c.btnPrimary.text+'!important;':'')+'}'; }
   if(U('toggleOff')) css+=p+'.toggle{'+bg(U('toggleOff'))+';border:none!important;}';
   if(U('toggleOn'))  css+=p+'.toggle.on{'+bg(U('toggleOn'))+';}';
   if(U('toggleOff')||U('toggleOn')) css+=p+'.toggle .toggle-knob{display:none!important;}';
