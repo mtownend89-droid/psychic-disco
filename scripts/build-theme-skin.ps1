@@ -42,13 +42,19 @@ try {
   $defsOpen = $s.IndexOf('<defs>'); $firstSym = $s.IndexOf('<symbol')
   $shared = if($defsOpen -ge 0 -and $firstSym -gt $defsOpen){ $s.Substring($defsOpen+6, $firstSym-($defsOpen+6)) } else { '' }
 
+  # EscapeDataString caps at ~65k chars; chunk so large/detailed symbols still encode.
+  function EncU([string]$str){
+    $sb = New-Object System.Text.StringBuilder
+    for($k=0; $k -lt $str.Length; $k += 30000){ $len=[Math]::Min(30000, $str.Length-$k); [void]$sb.Append([uri]::EscapeDataString($str.Substring($k,$len))) }
+    return $sb.ToString()
+  }
   function SymUri([string]$id){
     $ss = $s.IndexOf('<symbol id="'+$id+'"'); if($ss -lt 0){ return $null }
     $vbS = $s.IndexOf('viewBox="',$ss)+9; $vbE = $s.IndexOf('"',$vbS); $vb = $s.Substring($vbS,$vbE-$vbS)
     $cs = $s.IndexOf('>',$ss)+1; $ce = $s.IndexOf('</symbol>',$cs); $inner = $s.Substring($cs,$ce-$cs)
     $svg = "<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' viewBox='$vb'><defs>$shared</defs>$inner</svg>"
     $svg = ($svg -replace '\s+',' ').Trim()
-    return 'data:image/svg+xml,'+[uri]::EscapeDataString($svg)
+    return 'data:image/svg+xml,'+(EncU $svg)
   }
 
   # frame/panel symbols are theme-prefixed (e.g. fall-frame, frozen-panel); fall back to any *-frame/*-panel
