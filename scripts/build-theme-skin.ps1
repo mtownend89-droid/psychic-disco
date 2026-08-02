@@ -56,7 +56,7 @@ try {
   $panelId = if($s.Contains('<symbol id="'+$ThemeId+'-panel"')){ $ThemeId+'-panel' } else { [regex]::Match($s,'<symbol id="([a-z0-9]+-panel)"').Groups[1].Value }
   $parts = New-Object System.Collections.Generic.List[string]
   $fu = if($frameId){ SymUri $frameId } else { $null }
-  if($fu){ $parts.Add('frame:{url:"'+$fu+'",slice:270,repeat:"stretch",width:36,outset:10}') }
+  if($fu){ $parts.Add('frame:{url:"'+$fu+'",slice:300,repeat:"stretch",width:40,outset:22}') }
 
   $ctl = New-Object System.Collections.Generic.List[string]
   function AddCtl([string]$role,[string]$id,[string]$extra){ $u = SymUri $id; if($u){ $ctl.Add($role+':{url:"'+$u+'"'+$extra+'}') } }
