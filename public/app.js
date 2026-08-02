@@ -4232,6 +4232,12 @@ function _applyThemeSkin(themeId){
   // widgets, corner-drip pieces on the top corners of the rest. Rendered as ::before/::after so they never resize the card.
   const _u=r=>(sk.controls&&sk.controls[r]&&sk.controls[r].url)||null;
   const td=_u('topDrip'), cl=_u('cornerLeft'), cr=_u('cornerRight');
+  // page-header art (e.g. the steampunk pipe header) → the app's top bar, stretched full-width
+  const ph=_u('pageHeader');
+  if(ph){
+    css+=p+'#topbar{background:url("'+ph+'") center/100% 100% no-repeat!important;border-bottom:none!important;}';
+    css+=p+'#topbar .topbar-title,'+p+'#topbar .topbar-page-icon{color:#F3E7CC!important;text-shadow:0 1px 3px rgba(0,0,0,.75);}';
+  }
   // drip mode (top/corner decorations, no wrapping frame) → clear any hardcoded border-image frame (e.g. the CSS galaxy HUD)
   if((td||cl||cr) && !sk.frame && !sk.frameHalf){
     css+=p+'.canvas-widget-card{border-image:none!important;border:1.5px solid var(--border)!important;border-radius:var(--radius)!important;}';
