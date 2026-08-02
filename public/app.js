@@ -4214,15 +4214,18 @@ function _applyThemeSkin(themeId){
   const p='body.fx-'+themeId+' ', c=sk.controls||{};
   const U=r=>c[r]&&c[r].url, bg=u=>'background:url("'+u+'") center/100% 100% no-repeat!important';
   let css='';
-  const f=sk.frame;
-  if(f){
-    const os=(f.outset||0), bw=(f.width||18), iw=bw+(f.bleed||0);
-    // overflow:hidden clips the widget's own CONTENT (stops wide widgets — e.g. the Budget table — spilling past the viewport)
-    // while the border-image frame + its outset are unaffected (a box's own border-image is never clipped by its own overflow).
-    // border-image-width > border-width lets the frame bleed INWARD over the content (sit on top of the widget) without
-    // moving the layout — that inward overhang is what "shrinks the view window a touch".
-    css+=p+'.canvas-widget-card{border:'+bw+'px solid transparent;border-radius:0;overflow:hidden;border-image:url("'+f.url+'") '+f.slice+' '+(f.repeat||'stretch')+';border-image-width:'+iw+'px;border-image-outset:'+os+'px;}';
-    // gap clears the 2× outset overlap between neighbours; padding keeps the outer widgets' outsets from being clipped by the canvas wrap.
+  // A frame is a 9-slice border-image. overflow:hidden clips the widget's own CONTENT (stops wide widgets — e.g. the
+  // Budget table — spilling past the viewport) while the border-image itself is never clipped by its own overflow.
+  // border-image-width > border-width lets the frame bleed INWARD over the content (sit on top of the widget) without
+  // moving the layout — that inward overhang is what "shrinks the view window a touch".
+  const frameCss=(sel,fr)=>{ if(!fr) return; const bw=(fr.width||18), iw=bw+(fr.bleed||0), os=(fr.outset||0);
+    css+=p+sel+'{border:'+bw+'px solid transparent;border-radius:0;overflow:hidden;border-image:url("'+fr.url+'") '+fr.slice+' '+(fr.repeat||'stretch')+';border-image-width:'+iw+'px;border-image-outset:'+os+'px;}'; };
+  const f=sk.frame, fh=sk.frameHalf;
+  if(f||fh){
+    // full-width (span-2) widgets get the dashboard frame; half-width widgets get the modal-window frame (each falls back to the other)
+    frameCss('.canvas-widget-card.span-2', f||fh);
+    frameCss('.canvas-widget-card:not(.span-2)', fh||f);
+    const os=Math.max((f&&f.outset)||0,(fh&&fh.outset)||0);
     css+=p+'.canvas-grid{gap:'+(os*2+16)+'px!important;padding:'+(os+4)+'px!important;box-sizing:border-box;}';
   }
   // keep labels on one line, centred, and readable over the busy art (was wrapping into overlapping lines on narrow buttons)
@@ -4230,8 +4233,6 @@ function _applyThemeSkin(themeId){
   // filled controls → stretched background art
   const fill=(sel,r)=>{ const ctl=c[r]; if(!ctl) return; css+=p+sel+'{'+bg(ctl.url)+';border:none!important;box-shadow:none!important;'+legible+(ctl.text?'color:'+ctl.text+'!important;':'')+'}'; };
   fill('.btn','btn'); fill('.manual-add-btn','btn'); fill('.btn.primary','btnPrimary'); fill('.btn.danger-btn','btnDanger');
-  // buttons share one blank pill art, so shift the danger button toward red to keep it reading as destructive
-  if(c.btnDanger) css+=p+'.btn.danger-btn,'+p+'.btn.danger{filter:hue-rotate(255deg) saturate(1.4);}';
   // period / widget-settings chips reuse the button art (inactive = secondary, selected = primary)
   if(c.btn){ css+=p+'.cwt-chip,'+p+'.ws-chip{'+bg(c.btn.url)+';border:none!important;box-shadow:none!important;'+legible+(c.btn.text?'color:'+c.btn.text+'!important;':'')+'}'; }
   if(c.btnPrimary){ css+=p+'.cwt-chip.active,'+p+'.ws-chip.active{'+bg(c.btnPrimary.url)+';'+legible+(c.btnPrimary.text?'color:'+c.btnPrimary.text+'!important;':'')+'}'; }
@@ -4247,6 +4248,20 @@ function _applyThemeSkin(themeId){
   if(U('radioSelected')){
     css+=p+'input[type=radio]{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;vertical-align:middle;cursor:pointer;border:2px solid var(--accent)!important;background:transparent;}';
     css+=p+'input[type=radio]:checked{'+bg(U('radioSelected'))+';border:none!important;}';
+  }
+  // range slider → art track + a movable art thumb
+  if(U('sliderTrack')||U('sliderThumb')){
+    css+=p+'input[type=range]{-webkit-appearance:none;appearance:none;background:transparent!important;height:22px;cursor:pointer;}';
+    if(U('sliderTrack')){
+      const tk='height:14px;border-radius:8px;background:url("'+U('sliderTrack')+'") center/100% 100% no-repeat;';
+      css+=p+'input[type=range]::-webkit-slider-runnable-track{'+tk+'}';
+      css+=p+'input[type=range]::-moz-range-track{'+tk+'}';
+    }
+    if(U('sliderThumb')){
+      const th='width:22px;height:22px;border:none;background:url("'+U('sliderThumb')+'") center/contain no-repeat;cursor:pointer;';
+      css+=p+'input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;margin-top:-4px;'+th+'}';
+      css+=p+'input[type=range]::-moz-range-thumb{'+th+'}';
+    }
   }
   // segmented tabs (.pl-gbtn)
   if(U('tabInactive')) css+=p+'.pl-gbtn{'+bg(U('tabInactive'))+';border:none!important;color:var(--muted)!important;}';
