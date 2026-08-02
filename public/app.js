@@ -4237,9 +4237,11 @@ function _applyThemeSkin(themeId){
     css+=p+'.canvas-widget-card{border-image:none!important;border:1.5px solid var(--border)!important;border-radius:var(--radius)!important;}';
   }
   if(td){
-    // stretched full-width across the top (the served art has preserveAspectRatio='none', so 100% 100% fills the whole width)
-    css+=p+'.canvas-widget-card.span-2::before{content:"";position:absolute;top:0;left:0;right:0;height:44px;background:url("'+td+'") left top/100% 100% no-repeat;pointer-events:none;z-index:5;}';
-    css+=p+'.canvas-widget-card.span-2 .canvas-widget-header{padding-top:46px;}';
+    // stretched full-width across the top (the served art has preserveAspectRatio='none', so 100% 100% fills the whole width).
+    // If the theme also has corner pieces, the top drip is reserved for full-width widgets; otherwise it goes on every widget.
+    const dsel = (cl||cr) ? '.canvas-widget-card.span-2' : '.canvas-widget-card';
+    css+=p+dsel+'::before{content:"";position:absolute;top:0;left:0;right:0;height:44px;background:url("'+td+'") left top/100% 100% no-repeat;pointer-events:none;z-index:5;}';
+    css+=p+dsel+' .canvas-widget-header{padding-top:46px;}';
   }
   if(cl||cr){
     const sel = td ? '.canvas-widget-card:not(.span-2)' : '.canvas-widget-card';   // if there's no top drip, corners go on every widget
