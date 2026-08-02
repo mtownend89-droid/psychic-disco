@@ -4233,8 +4233,9 @@ function _applyThemeSkin(themeId){
   const _u=r=>(sk.controls&&sk.controls[r]&&sk.controls[r].url)||null;
   const td=_u('topDrip'), cl=_u('cornerLeft'), cr=_u('cornerRight');
   if(td){
-    css+=p+'.canvas-widget-card.span-2::before{content:"";position:absolute;top:0;left:0;right:0;height:24px;background:url("'+td+'") center top/100% 100% no-repeat;pointer-events:none;z-index:5;}';
-    css+=p+'.canvas-widget-card.span-2 .canvas-widget-header{padding-top:26px;}';
+    // tiled across the top so the drip covers the FULL widget width (a small divider ornament repeated, not one stretched blob)
+    css+=p+'.canvas-widget-card.span-2::before{content:"";position:absolute;top:0;left:0;right:0;height:22px;background:url("'+td+'") left top/auto 100% repeat-x;pointer-events:none;z-index:5;}';
+    css+=p+'.canvas-widget-card.span-2 .canvas-widget-header{padding-top:24px;}';
   }
   if(cl||cr){
     const sel = td ? '.canvas-widget-card:not(.span-2)' : '.canvas-widget-card';   // if there's no top drip, corners go on every widget
@@ -4263,19 +4264,17 @@ function _applyThemeSkin(themeId){
     css+=p+'input[type=radio]{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;vertical-align:middle;cursor:pointer;border:2px solid var(--accent)!important;background:transparent;}';
     css+=p+'input[type=radio]:checked{'+bg(U('radioSelected'))+';border:none!important;}';
   }
-  // range slider → art track + a movable art thumb
-  if(U('sliderTrack')||U('sliderThumb')){
-    css+=p+'input[type=range]{-webkit-appearance:none;appearance:none;background:transparent!important;height:22px;cursor:pointer;}';
-    if(U('sliderTrack')){
-      const tk='height:14px;border-radius:8px;background:url("'+U('sliderTrack')+'") center/100% 100% no-repeat;';
-      css+=p+'input[type=range]::-webkit-slider-runnable-track{'+tk+'}';
-      css+=p+'input[type=range]::-moz-range-track{'+tk+'}';
-    }
-    if(U('sliderThumb')){
-      const th='width:22px;height:22px;border:none;background:url("'+U('sliderThumb')+'") center/contain no-repeat;cursor:pointer;';
-      css+=p+'input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;margin-top:-4px;'+th+'}';
-      css+=p+'input[type=range]::-moz-range-thumb{'+th+'}';
-    }
+  // range slider → a clean themed track with the slime-eye as the movable thumb (targets .zb-slider explicitly so its
+  // native track can't show through as a default-accent bar)
+  if(U('sliderThumb')){
+    const rng=[p+'input[type=range]',p+'.zb-slider'].join(','), pe=x=>[p+'input[type=range]'+x,p+'.zb-slider'+x].join(',');
+    const trk='height:8px;border-radius:6px;background:linear-gradient(180deg,var(--accent),rgba(0,0,0,.28))!important;box-shadow:inset 0 1px 2px rgba(0,0,0,.4);border:none;';
+    const th='width:20px;height:20px;border:none;background:url("'+U('sliderThumb')+'") center/contain no-repeat!important;box-shadow:none;cursor:pointer;';
+    css+=rng+'{-webkit-appearance:none!important;appearance:none!important;background:transparent!important;height:20px;width:100%;cursor:pointer;}';
+    css+=pe('::-webkit-slider-runnable-track')+'{'+trk+'}';
+    css+=pe('::-moz-range-track')+'{'+trk+'}';
+    css+=pe('::-webkit-slider-thumb')+'{-webkit-appearance:none!important;appearance:none!important;margin-top:-6px;'+th+'}';
+    css+=pe('::-moz-range-thumb')+'{'+th+'}';
   }
   // segmented tabs (.pl-gbtn)
   if(U('tabInactive')) css+=p+'.pl-gbtn{'+bg(U('tabInactive'))+';border:none!important;color:var(--muted)!important;}';
