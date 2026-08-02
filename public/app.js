@@ -4233,9 +4233,9 @@ function _applyThemeSkin(themeId){
   const _u=r=>(sk.controls&&sk.controls[r]&&sk.controls[r].url)||null;
   const td=_u('topDrip'), cl=_u('cornerLeft'), cr=_u('cornerRight');
   if(td){
-    // tiled across the top so the drip covers the FULL widget width (a small divider ornament repeated, not one stretched blob)
-    css+=p+'.canvas-widget-card.span-2::before{content:"";position:absolute;top:0;left:0;right:0;height:22px;background:url("'+td+'") left top/auto 100% repeat-x;pointer-events:none;z-index:5;}';
-    css+=p+'.canvas-widget-card.span-2 .canvas-widget-header{padding-top:24px;}';
+    // stretched full-width across the top (the served art has preserveAspectRatio='none', so 100% 100% fills the whole width)
+    css+=p+'.canvas-widget-card.span-2::before{content:"";position:absolute;top:0;left:0;right:0;height:44px;background:url("'+td+'") left top/100% 100% no-repeat;pointer-events:none;z-index:5;}';
+    css+=p+'.canvas-widget-card.span-2 .canvas-widget-header{padding-top:46px;}';
   }
   if(cl||cr){
     const sel = td ? '.canvas-widget-card:not(.span-2)' : '.canvas-widget-card';   // if there's no top drip, corners go on every widget
@@ -4276,6 +4276,10 @@ function _applyThemeSkin(themeId){
     css+=pe('::-webkit-slider-thumb')+'{-webkit-appearance:none!important;appearance:none!important;margin-top:-6px;'+th+'}';
     css+=pe('::-moz-range-thumb')+'{'+th+'}';
   }
+  // glossy "wet slime" sheen on the spent / goal progress-bar fills — layered over each bar's own state colour,
+  // plus a recessed track for depth. (The fills set their colour inline, so only the image layer is overridden.)
+  css+=p+'.zb-actual-fill,'+p+'.goal-bar-fill{background-image:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.14) 45%,rgba(0,0,0,.22))!important;box-shadow:inset 0 1px 1px rgba(255,255,255,.6),inset 0 -2px 3px rgba(0,0,0,.3);border-radius:6px!important;}';
+  css+=p+'.zb-actual-bar,'+p+'.goal-bar{box-shadow:inset 0 1px 2px rgba(0,0,0,.5);}';
   // segmented tabs (.pl-gbtn)
   if(U('tabInactive')) css+=p+'.pl-gbtn{'+bg(U('tabInactive'))+';border:none!important;color:var(--muted)!important;}';
   if(U('tabActive'))   css+=p+'.pl-gbtn.active{'+bg(U('tabActive'))+';color:var(--text)!important;}';
