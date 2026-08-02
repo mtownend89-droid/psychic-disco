@@ -4228,6 +4228,20 @@ function _applyThemeSkin(themeId){
     const os=Math.max((f&&f.outset)||0,(fh&&fh.outset)||0);
     css+=p+'.canvas-grid{gap:'+(os*2+16)+'px!important;padding:'+(os+4)+'px!important;box-sizing:border-box;}';
   }
+  // Top-edge drip decorations (an alternative to a full wrapping frame): a drip border across the top of full-width
+  // widgets, corner-drip pieces on the top corners of the rest. Rendered as ::before/::after so they never resize the card.
+  const _u=r=>(sk.controls&&sk.controls[r]&&sk.controls[r].url)||null;
+  const td=_u('topDrip'), cl=_u('cornerLeft'), cr=_u('cornerRight');
+  if(td){
+    css+=p+'.canvas-widget-card.span-2::before{content:"";position:absolute;top:0;left:0;right:0;height:24px;background:url("'+td+'") center top/100% 100% no-repeat;pointer-events:none;z-index:5;}';
+    css+=p+'.canvas-widget-card.span-2 .canvas-widget-header{padding-top:26px;}';
+  }
+  if(cl||cr){
+    const sel = td ? '.canvas-widget-card:not(.span-2)' : '.canvas-widget-card';   // if there's no top drip, corners go on every widget
+    if(cl) css+=p+sel+'::before{content:"";position:absolute;top:0;left:0;width:46px;height:40px;background:url("'+cl+'") left top/contain no-repeat;pointer-events:none;z-index:5;}';
+    if(cr) css+=p+sel+'::after{content:"";position:absolute;top:0;right:0;width:48px;height:40px;background:url("'+cr+'") right top/contain no-repeat;pointer-events:none;z-index:5;}';
+    css+=p+sel+' .canvas-widget-header{padding-top:16px;}';
+  }
   // keep labels on one line, centred, and readable over the busy art (was wrapping into overlapping lines on narrow buttons)
   const legible='white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-flex;align-items:center;justify-content:center;line-height:1.1;text-shadow:0 1px 2px rgba(0,0,0,.5);';
   // filled controls → stretched background art
