@@ -4232,6 +4232,10 @@ function _applyThemeSkin(themeId){
   // widgets, corner-drip pieces on the top corners of the rest. Rendered as ::before/::after so they never resize the card.
   const _u=r=>(sk.controls&&sk.controls[r]&&sk.controls[r].url)||null;
   const td=_u('topDrip'), cl=_u('cornerLeft'), cr=_u('cornerRight');
+  // drip mode (top/corner decorations, no wrapping frame) → clear any hardcoded border-image frame (e.g. the CSS galaxy HUD)
+  if((td||cl||cr) && !sk.frame && !sk.frameHalf){
+    css+=p+'.canvas-widget-card{border-image:none!important;border:1.5px solid var(--border)!important;border-radius:var(--radius)!important;}';
+  }
   if(td){
     // stretched full-width across the top (the served art has preserveAspectRatio='none', so 100% 100% fills the whole width)
     css+=p+'.canvas-widget-card.span-2::before{content:"";position:absolute;top:0;left:0;right:0;height:44px;background:url("'+td+'") left top/100% 100% no-repeat;pointer-events:none;z-index:5;}';
@@ -4246,7 +4250,7 @@ function _applyThemeSkin(themeId){
   // keep labels on one line, centred, and readable over the busy art (was wrapping into overlapping lines on narrow buttons)
   const legible='white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-flex;align-items:center;justify-content:center;line-height:1.1;text-shadow:0 1px 2px rgba(0,0,0,.5);';
   // filled controls → stretched background art
-  const fill=(sel,r)=>{ const ctl=c[r]; if(!ctl) return; css+=p+sel+'{'+bg(ctl.url)+';border:none!important;box-shadow:none!important;'+legible+(ctl.text?'color:'+ctl.text+'!important;':'')+'}'; };
+  const fill=(sel,r)=>{ const ctl=c[r]; if(!ctl) return; css+=p+sel+'{'+bg(ctl.url)+';border:none!important;box-shadow:none!important;'+legible+(ctl.text?'color:'+ctl.text+'!important;':'')+(ctl.filter?'filter:'+ctl.filter+';':'')+'}'; };
   fill('.btn','btn'); fill('.manual-add-btn','btn'); fill('.btn.primary','btnPrimary'); fill('.btn.danger-btn','btnDanger');
   // period / widget-settings chips reuse the button art (inactive = secondary, selected = primary)
   if(c.btn){ css+=p+'.cwt-chip,'+p+'.ws-chip{'+bg(c.btn.url)+';border:none!important;box-shadow:none!important;'+legible+(c.btn.text?'color:'+c.btn.text+'!important;':'')+'}'; }
