@@ -12,9 +12,10 @@
     badge, slime-panel
 
   Each symbol is turned into a self-contained data-URI SVG (its inner markup + the library's
-  shared <defs>) and written into public/app.js as:  THEME_SKINS.<themeId> = { ... };
-  at the /*__THEME_SKINS__*/ marker (replacing any existing entry for that id).
-  _applyThemeSkin() in the app then generates + injects the scoped CSS automatically.
+  shared <defs>) and written into public/theme-skins.js as:  THEME_SKINS.<themeId> = { ... };
+  at the /*__THEME_SKINS__*/ marker (replacing any existing entry for that id). Also pulls
+  chat-richie/chat-user/avatar-ring controls and any emoji-* symbols (the theme's ambient art).
+  _applyThemeSkin() + applyThemeFx() in the app then generate + inject everything automatically.
 
   Usage:
     pwsh scripts/build-theme-skin.ps1 -Zip "C:\path\my-theme.zip" -ThemeId slime
@@ -76,6 +77,11 @@ try {
   AddCtl 'chatUser'       'chat-user'        (',text:"'+$tokens.text+'"')
   AddCtl 'avatarRing'     'avatar-ring'      ''
   if($ctl.Count){ $parts.Add('controls:{'+($ctl -join ',')+'}') }
+
+  # custom emoji symbols (id starts with "emoji-") → the theme's ambient FX art
+  $emo = New-Object System.Collections.Generic.List[string]
+  foreach($mm in [regex]::Matches($s,'<symbol id="(emoji-[^"]+)"')){ $eu = SymUri $mm.Groups[1].Value; if($eu){ $emo.Add('"'+$eu+'"') } }
+  if($emo.Count){ $parts.Add('emoji:['+($emo -join ',')+']') }
 
   $entry = 'THEME_SKINS.'+$ThemeId+'={'+($parts -join ',')+'};'
 
