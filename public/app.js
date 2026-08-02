@@ -4230,6 +4230,8 @@ function _applyThemeSkin(themeId){
   // filled controls → stretched background art
   const fill=(sel,r)=>{ const ctl=c[r]; if(!ctl) return; css+=p+sel+'{'+bg(ctl.url)+';border:none!important;box-shadow:none!important;'+legible+(ctl.text?'color:'+ctl.text+'!important;':'')+'}'; };
   fill('.btn','btn'); fill('.manual-add-btn','btn'); fill('.btn.primary','btnPrimary'); fill('.btn.danger-btn','btnDanger');
+  // buttons share one blank pill art, so shift the danger button toward red to keep it reading as destructive
+  if(c.btnDanger) css+=p+'.btn.danger-btn,'+p+'.btn.danger{filter:hue-rotate(255deg) saturate(1.4);}';
   // period / widget-settings chips reuse the button art (inactive = secondary, selected = primary)
   if(c.btn){ css+=p+'.cwt-chip,'+p+'.ws-chip{'+bg(c.btn.url)+';border:none!important;box-shadow:none!important;'+legible+(c.btn.text?'color:'+c.btn.text+'!important;':'')+'}'; }
   if(c.btnPrimary){ css+=p+'.cwt-chip.active,'+p+'.ws-chip.active{'+bg(c.btnPrimary.url)+';'+legible+(c.btnPrimary.text?'color:'+c.btnPrimary.text+'!important;':'')+'}'; }
