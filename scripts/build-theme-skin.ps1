@@ -71,8 +71,9 @@ try {
     if($fi -ge 0){ $vs=$s.IndexOf('viewBox="',$fi)+9; $ve=$s.IndexOf('"',$vs); $vp=($s.Substring($vs,$ve-$vs) -split '\s+'); if($vp.Count -ge 4){ $fw=[double]$vp[2]; $fh=[double]$vp[3] } }
     $slice=[int][Math]::Max(24,[Math]::Min(160,[Math]::Round([Math]::Min($fw,$fh)*0.26)))
     $width=[int][Math]::Max(16,[Math]::Min(40,[Math]::Round($slice*0.42)))
-    $outset=[int][Math]::Round($width*0.4)
-    $parts.Add('frame:{url:"'+$fu+'",slice:'+$slice+',repeat:"round",width:'+$width+',outset:'+$outset+'}')
+    $outset=[int][Math]::Max(2,[Math]::Round($width*0.15))
+    $bleed=[int][Math]::Round($width*0.45)   # inward overhang: frame sits on top of the widget
+    $parts.Add('frame:{url:"'+$fu+'",slice:'+$slice+',repeat:"round",width:'+$width+',outset:'+$outset+',bleed:'+$bleed+'}')
   }
 
   $ctl = New-Object System.Collections.Generic.List[string]
