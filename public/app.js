@@ -4266,11 +4266,15 @@ function applyThemeFx(presetId){
   if(!fx) return;                                    // this theme has a flourish but no drifting ambient layer
   layer.className='fx-'+fx.anim;
   const rnd=(lo,hi)=>lo+Math.random()*(hi-lo);
+  // Prefer the theme library's own custom emoji art (THEME_SKINS[id].emoji) as image bits;
+  // fall back to the THEME_FX text emoji for themes without a library.
+  const imgs=(typeof THEME_SKINS!=='undefined' && THEME_SKINS[presetId] && THEME_SKINS[presetId].emoji) || null;
   let html='';
   for(let i=0;i<fx.count;i++){
-    const em=fx.emojis[i%fx.emojis.length];
     const dur=rnd(fx.dur[0],fx.dur[1]);
-    html+=`<span class="fx-bit" style="--x:${rnd(3,95).toFixed(1)}%;--y:${rnd(4,92).toFixed(1)}%;--sz:${rnd(fx.size[0],fx.size[1]).toFixed(0)}px;--dur:${dur.toFixed(1)}s;--delay:${(-rnd(0,dur)).toFixed(1)}s;--op:${(fx.op*rnd(0.7,1)).toFixed(2)};--drift:${rnd(-45,45).toFixed(0)}px">${em}</span>`;
+    const st=`--x:${rnd(3,95).toFixed(1)}%;--y:${rnd(4,92).toFixed(1)}%;--sz:${rnd(fx.size[0],fx.size[1]).toFixed(0)}px;--dur:${dur.toFixed(1)}s;--delay:${(-rnd(0,dur)).toFixed(1)}s;--op:${(fx.op*rnd(0.7,1)).toFixed(2)};--drift:${rnd(-45,45).toFixed(0)}px`;
+    if(imgs&&imgs.length){ const u=imgs[Math.floor(Math.random()*imgs.length)]; html+=`<span class="fx-bit fx-img" style="${st};background-image:url('${u}')"></span>`; }
+    else { const em=fx.emojis[i%fx.emojis.length]; html+=`<span class="fx-bit" style="${st}">${em}</span>`; }
   }
   layer.innerHTML=html;
 }

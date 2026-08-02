@@ -513,6 +513,7 @@ body.reduce-motion .ra-focus{animation:none!important;}
 /* ── Theme ambient animations ── */
 #themeFx{position:fixed;inset:0;pointer-events:none;z-index:35;overflow:hidden;}
 .fx-bit{position:absolute;font-size:var(--sz);opacity:var(--op);line-height:1;will-change:transform;}
+.fx-bit.fx-img{width:var(--sz);height:var(--sz);background-position:center;background-repeat:no-repeat;background-size:contain;}
 .fx-drift .fx-bit{top:var(--y);left:0;animation:fx-drift var(--dur) linear var(--delay) infinite;}
 .fx-fall  .fx-bit{left:var(--x);top:0;animation:fx-fall var(--dur) linear var(--delay) infinite;}
 .fx-rise  .fx-bit{left:var(--x);bottom:0;animation:fx-rise var(--dur) linear var(--delay) infinite;}
