@@ -3,7 +3,7 @@
 <filter id="glow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="6"/></filter>
 <linearGradient id="sheetBg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#090909"/><stop offset="1" stop-color="#000"/></linearGradient>
 <style>.hit-area{fill:#00ffff;fill-opacity:.001}.asset-outline{fill:none;stroke:#f5b84b;stroke-opacity:.08;stroke-width:1}</style>
-</defs>
+<filter id='dropblk' color-interpolation-filters='sRGB'><feColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.6 0.75 0.5 0 0' result='l'/><feComponentTransfer in='l' result='m'><feFuncA type='discrete' tableValues='0 1 1 1 1 1 1 1 1 1'/></feComponentTransfer><feComposite in='SourceGraphic' in2='m' operator='in'/></filter></defs><g filter='url(#dropblk)'>
 <g id="richie-bulb" data-asset="richie-bulb" data-resizable="false" inkscape:groupmode="layer" inkscape:label="Richie Lightbulb">
  <g id="richie-bulb-glow" inkscape:groupmode="layer" inkscape:label="Glow"><rect x="8" y="8" width="160" height="179" rx="12" fill="#18d5d5" opacity=".06" filter="url(#glow)"/></g>
  <g id="richie-bulb-shadow" inkscape:groupmode="layer" inkscape:label="Shadow"><rect x="10" y="12" width="156" height="177" rx="12" fill="#000" opacity=".5" filter="url(#shadow)"/></g>
@@ -14,4 +14,4 @@
  <g id="richie-bulb-reflection" inkscape:groupmode="layer" inkscape:label="Reflection"><path d="M8 8H168" stroke="#fff" stroke-opacity=".035" stroke-width="2"/></g>
  <g id="richie-bulb-hit" inkscape:groupmode="layer" inkscape:label="Hit Area"><rect class="hit-area" width="176" height="195"/></g>
 </g>
-</svg>
+</g></svg>
