@@ -4258,6 +4258,12 @@ function _applyThemeSkin(themeId){
   if(sk.dividers){
     css+=p+'.canvas-widget-body [class*="-head"],'+p+'.canvas-widget-body [class$="sec-h"]{border-bottom:1px solid var(--accent)!important;padding-bottom:3px;background:linear-gradient(90deg,rgba(52,231,255,.10),transparent);}';
   }
+  // a single centred ornament straddling the top of the frame (e.g. the steampunk gauge on the top pipe). Needs the
+  // frame to leave overflow visible (frameFront does) so it can sit above the card.
+  if(sk.topOrnament){
+    const o=sk.topOrnament, sz=o.size||58, top=(o.top!=null?o.top:Math.round(sz*0.72));
+    css+=p+'.canvas-widget-card::before{content:"";position:absolute;top:-'+top+'px;left:50%;transform:translateX(-50%);width:'+sz+'px;height:'+sz+'px;background:url("'+o.url+'") center/contain no-repeat;pointer-events:none;z-index:9;}';
+  }
   // centre the widget title (e.g. so it sits under the dashboard frame's top cartouche); drag handle + actions go absolute
   if(sk.centerTitle){
     css+=p+'.canvas-widget-header{justify-content:center!important;position:relative;}';
