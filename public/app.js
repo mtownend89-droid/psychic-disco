@@ -4231,12 +4231,31 @@ function _applyThemeSkin(themeId){
        +'border-image-source:url("'+fr.url+'");border-image-slice:'+sliceCss+';border-image-repeat:'+(fr.repeat||'stretch')+';'
        +'border-image-width:'+imgWidthCss+';border-image-outset:'+os+'px;}'; };
   const f=sk.frame, fh=sk.frameHalf;
-  if(f||fh){
+  if(sk.frameFront && (f||fh)){
+    // Frame drawn ON TOP of the widget via ::after, so its corners + glow are never clipped by the widget's own view.
+    // The card reserves the border space and goes overflow:visible; the body keeps overflow:hidden so content can't spill.
+    const fr=f||fh, bw=(fr.width||18), os=(fr.outset||0), gl=fr.glow||0, gc=fr.glowColor||'var(--accent)';
+    css+=p+'.canvas-widget-card{border:'+bw+'px solid transparent;border-radius:0;overflow:visible;position:relative;}';
+    css+=p+'.canvas-widget-body{overflow:hidden;}';
+    css+=p+'.canvas-widget-card::after{content:"";position:absolute;inset:-'+os+'px;border:'+(bw+os)+'px solid transparent;'
+       +'border-image:url("'+fr.url+'") '+fr.slice+' '+(fr.repeat||'stretch')+';border-image-width:'+(bw+os)+'px;'
+       +'pointer-events:none;z-index:8;'+(gl?'filter:drop-shadow(0 0 '+gl+'px '+gc+');':'')+'}';
+    css+=p+'.canvas-grid{gap:'+(os*2+18)+'px!important;padding:'+(os+6)+'px!important;box-sizing:border-box;}';
+  } else if(f||fh){
     // full-width (span-2) widgets get the dashboard frame; half-width widgets get the modal-window frame (each falls back to the other)
     frameCss('.canvas-widget-card.span-2', f||fh);
     frameCss('.canvas-widget-card:not(.span-2)', fh||f);
     const os=Math.max((f&&f.outset)||0,(fh&&fh.outset)||0);
     css+=p+'.canvas-grid{gap:'+(os*2+16)+'px!important;padding:'+(os+4)+'px!important;box-sizing:border-box;}';
+  }
+  // angular title bar (clipped corner + accent underline + faint cyan→magenta wash)
+  if(sk.titleBar){
+    css+=p+'.canvas-widget-header{background:linear-gradient(90deg,rgba(52,231,255,.14),rgba(255,77,216,.05))!important;border-bottom:1.5px solid var(--accent)!important;clip-path:polygon(0 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%);}';
+    css+=p+'.cwh-title{letter-spacing:.5px;}';
+  }
+  // thin angular accent rule under in-widget section headers
+  if(sk.dividers){
+    css+=p+'.canvas-widget-body [class*="-head"],'+p+'.canvas-widget-body [class$="sec-h"]{border-bottom:1px solid var(--accent)!important;padding-bottom:3px;background:linear-gradient(90deg,rgba(52,231,255,.10),transparent);}';
   }
   // centre the widget title (e.g. so it sits under the dashboard frame's top cartouche); drag handle + actions go absolute
   if(sk.centerTitle){
