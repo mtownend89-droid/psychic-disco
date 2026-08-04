@@ -4183,7 +4183,7 @@ const THEME_FX={
   galaxy:   {emojis:['🚀','🛸','🌟','✨'], anim:'drift', count:7, size:[13,24], op:0.55, dur:[16,34]},
   tron:     {emojis:['◈','▹','△','⬡'],   anim:'drift', count:6, size:[12,22], op:0.5,  dur:[14,30]},   // ambient uses the hand-built cyan geometrics (THEME_SKINS.tron.emoji)
   slime:    {emojis:['🫧','🟢','💧','☣️'], anim:'float', count:6, size:[13,23], op:0.42, dur:[8,15]},   // TOXIC slime
-  princess: {emojis:['👑','🌷','✨','🌸'], anim:'float', count:8, size:[14,24], op:0.60, dur:[9,18]},
+  princess: {emojis:['👑','💎','🎀','✨','🌹','🦄'], anim:'float', count:8, size:[14,24], op:0.60, dur:[9,18]},
   forest:   {emojis:['🍃','🍂','🌿'],       anim:'fall',  count:9, size:[14,22], op:0.70, dur:[8,16]},
   ocean:    {emojis:['🫧','🐠','🐚'],       anim:'rise',  count:8, size:[12,22], op:0.50, dur:[9,18]},
   afterlife:{emojis:['👻','🪲','🕸️'],       anim:'float', count:6, size:[15,26], op:0.45, dur:[10,20]},
@@ -4262,7 +4262,8 @@ function _applyThemeSkin(themeId){
   // frame to leave overflow visible (frameFront does) so it can sit above the card.
   if(sk.topOrnament){
     const o=sk.topOrnament, sz=o.size||58, top=(o.top!=null?o.top:Math.round(sz*0.72));
-    css+=p+'.canvas-widget-card::before{content:"";position:absolute;top:-'+top+'px;left:50%;transform:translateX(-50%);width:'+sz+'px;height:'+sz+'px;background:url("'+o.url+'") center/contain no-repeat;pointer-events:none;z-index:9;}';
+    if(o.emoji){ css+=p+'.canvas-widget-card::before{content:"'+o.emoji+'";position:absolute;top:-'+top+'px;left:50%;transform:translateX(-50%);font-size:'+sz+'px;line-height:1;pointer-events:none;z-index:9;filter:drop-shadow(0 2px 2px rgba(0,0,0,.28));}'; }
+    else { css+=p+'.canvas-widget-card::before{content:"";position:absolute;top:-'+top+'px;left:50%;transform:translateX(-50%);width:'+sz+'px;height:'+sz+'px;background:url("'+o.url+'") center/contain no-repeat;pointer-events:none;z-index:9;}'; }
   }
   // centre the widget title (e.g. so it sits under the dashboard frame's top cartouche); drag handle + actions go absolute
   if(sk.centerTitle){
