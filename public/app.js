@@ -4243,6 +4243,18 @@ function _applyThemeSkin(themeId){
     css+=p+'.cwh-drag{position:absolute;left:8px;top:50%;transform:translateY(-50%);opacity:.5;}';
     css+=p+'.cwh-actions{position:absolute;right:8px;top:50%;transform:translateY(-50%);}';
   }
+  // lift the centred title UP into the frame's top cartouche (px = how far up). The card goes overflow:visible so the title
+  // can sit in the top border; the body keeps its own overflow:hidden so wide content still can't spill past the frame.
+  if(sk.titleInFrame!=null){
+    const up=sk.titleInFrame;
+    css+=p+'.canvas-widget-card{overflow:visible;}';
+    css+=p+'.canvas-widget-body{overflow:hidden;}';
+    css+=p+'.canvas-widget-header{position:relative;height:10px;min-height:0;padding:0;background:transparent!important;border-bottom:none!important;z-index:6;}';
+    css+=p+'.cwh-left{position:absolute;left:0;right:0;top:-'+up+'px;display:flex;justify-content:center;align-items:center;gap:6px;}';
+    css+=p+'.cwh-title{text-align:center;font-weight:800;}';
+    css+=p+'.cwh-drag{position:absolute;left:8px;top:2px;opacity:.4;z-index:7;}';
+    css+=p+'.cwh-actions{position:absolute;right:8px;top:2px;z-index:7;}';
+  }
   // Top-edge drip decorations (an alternative to a full wrapping frame): a drip border across the top of full-width
   // widgets, corner-drip pieces on the top corners of the rest. Rendered as ::before/::after so they never resize the card.
   const _u=r=>(sk.controls&&sk.controls[r]&&sk.controls[r].url)||null;
