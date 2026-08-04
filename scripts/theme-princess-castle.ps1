@@ -17,13 +17,13 @@ function Heart($cx,$cy,$s,$fill,$stroke){ $k=$s/24; return "<g transform='transl
 function Gem($cx,$cy,$s){ $k=$s/24; return "<g transform='translate($(N $cx) $(N $cy)) scale($(N $k)) translate(-12 -12)'><path d='M12 2 L21 11 L12 22 L3 11 Z' fill='url(#gem)' stroke='#a01f5e' stroke-width='1'/><path d='M12 2 L12 22 M3 11 L21 11' stroke='#ffdcef' stroke-width='.8' opacity='.7'/></g>" }
 # ── CASTLE FRAME (9-slice): turret towers on L/R, battlement walls top & bottom (merlons up), banner flags ──
 function Merlons($x0,$x1,$y,$h,$fill){ $s=''; $x=$x0; while($x -lt $x1){ $s+="<rect x='$(N $x)' y='$(N $y)' width='8' height='$(N $h)' fill='$fill' stroke='#b09a78' stroke-width='.6'/>"; $x+=14 }; return $s }
-function Banner($cx){ return "<line x1='$(N $cx)' y1='7' x2='$(N $cx)' y2='1' stroke='#8a5a12' stroke-width='1.6'/><circle cx='$(N $cx)' cy='1' r='1.7' fill='#e6b23f'/><path d='M$(N $cx) 2 H$(N ($cx+15)) L$(N ($cx+10)) 6.5 L$(N ($cx+15)) 11 H$(N $cx) Z' fill='url(#pv)' stroke='#b3437e' stroke-width='.7'/><line x1='$(N $cx)' y1='6.5' x2='$(N ($cx+11))' y2='6.5' stroke='#e6b23f' stroke-width='1.1'/>" }
+function Banner($cx){ return "<circle cx='$(N $cx)' cy='2' r='1.6' fill='#e6b23f'/><path d='M$(N $cx) 2.5 H$(N ($cx+15)) L$(N ($cx+10)) 6.5 L$(N ($cx+15)) 10.5 H$(N $cx) Z' fill='url(#pv)' stroke='#b3437e' stroke-width='.7'/><line x1='$(N $cx)' y1='6.5' x2='$(N ($cx+11))' y2='6.5' stroke='#e6b23f' stroke-width='1.1'/>" }
 function Tower($cx){
   $t="<rect x='$(N ($cx-18))' y='34' width='36' height='112' fill='url(#sv)' stroke='#b09a78' stroke-width='1'/>"           # body
   $t+="<rect x='$(N ($cx-3))' y='74' width='6' height='22' rx='3' fill='#4a3a52'/>"                                          # arrow slit (mid)
   $t+="<rect x='$(N ($cx-21))' y='132' width='42' height='14' fill='url(#sh)' stroke='#b09a78' stroke-width='1'/>"          # base
   $t+=(Merlons ($cx-17) ($cx+16) 27 9 'url(#sv)')                                                                            # parapet crenellations
-  $t+="<path d='M$(N ($cx-16)) 30 L$(N $cx) 6 L$(N ($cx+16)) 30 Z' fill='url(#roof)' stroke='#3f6fa8' stroke-width='1.4' stroke-linejoin='round'/>"  # cone roof
+  $t+="<path d='M$(N ($cx-11)) 33 L$(N $cx) 2 L$(N ($cx+11)) 33 Z' fill='url(#roof)' stroke='#3f6fa8' stroke-width='1.4' stroke-linejoin='round'/>"  # steeple (tall + pointy)
   $t+=(Banner $cx)                                                                                                           # banner flag
   return $t
 }
