@@ -4234,11 +4234,12 @@ function _applyThemeSkin(themeId){
   if(sk.frameFront && (f||fh)){
     // Frame drawn ON TOP of the widget via ::after, so its corners + glow are never clipped by the widget's own view.
     // The card reserves the border space and goes overflow:visible; the body keeps overflow:hidden so content can't spill.
-    const fr=f||fh, bw=(fr.width||18), os=(fr.outset||0), gl=fr.glow||0, gc=fr.glowColor||'var(--accent)';
+    const fr=f||fh, bw=(fr.width||18), os=(fr.outset||0), gl=fr.glow||0, gc=fr.glowColor||'var(--accent)', band=bw+os;
     css+=p+'.canvas-widget-card{border:'+bw+'px solid transparent;border-radius:0;overflow:visible;position:relative;}';
     css+=p+'.canvas-widget-body{overflow:hidden;}';
-    css+=p+'.canvas-widget-card::after{content:"";position:absolute;inset:-'+os+'px;border:'+(bw+os)+'px solid transparent;'
-       +'border-image:url("'+fr.url+'") '+fr.slice+' '+(fr.repeat||'stretch')+';border-image-width:'+(bw+os)+'px;'
+    // inset is measured from the padding box, so -band reaches the border-box outer edge + the outset; longhand border-image (matches the other frames)
+    css+=p+'.canvas-widget-card::after{content:"";position:absolute;inset:-'+band+'px;border:'+band+'px solid transparent;'
+       +'border-image-source:url("'+fr.url+'");border-image-slice:'+fr.slice+';border-image-repeat:'+(fr.repeat||'stretch')+';border-image-width:'+band+'px;'
        +'pointer-events:none;z-index:8;'+(gl?'filter:drop-shadow(0 0 '+gl+'px '+gc+');':'')+'}';
     css+=p+'.canvas-grid{gap:'+(os*2+18)+'px!important;padding:'+(os+6)+'px!important;box-sizing:border-box;}';
   } else if(f||fh){
