@@ -4183,7 +4183,7 @@ const THEME_FX={
   galaxy:   {emojis:['🚀','🛸','🌟','✨'], anim:'drift', count:7, size:[13,24], op:0.55, dur:[16,34]},
   tron:     {emojis:['◈','▹','△','⬡'],   anim:'drift', count:6, size:[12,22], op:0.5,  dur:[14,30]},   // ambient uses the hand-built cyan geometrics (THEME_SKINS.tron.emoji)
   slime:    {emojis:['🫧','🟢','💧','☣️'], anim:'float', count:6, size:[13,23], op:0.42, dur:[8,15]},   // TOXIC slime
-  princess: {emojis:['👑','🌷','✨','🌸'], anim:'float', count:8, size:[14,24], op:0.60, dur:[9,18]},
+  princess: {emojis:['👑','💎','🎀','✨','🌹','🦄'], anim:'float', count:8, size:[14,24], op:0.60, dur:[9,18]},
   forest:   {emojis:['🍃','🍂','🌿'],       anim:'fall',  count:9, size:[14,22], op:0.70, dur:[8,16]},
   ocean:    {emojis:['🫧','🐠','🐚'],       anim:'rise',  count:8, size:[12,22], op:0.50, dur:[9,18]},
   afterlife:{emojis:['👻','🪲','🕸️'],       anim:'float', count:6, size:[15,26], op:0.45, dur:[10,20]},
@@ -4234,12 +4234,19 @@ function _applyThemeSkin(themeId){
   if(sk.frameFront && (f||fh)){
     // Frame drawn ON TOP of the widget via ::after, so its corners + glow are never clipped by the widget's own view.
     // The card reserves the border space and goes overflow:visible; the body keeps overflow:hidden so content can't spill.
-    const fr=f||fh, bw=(fr.width||18), os=(fr.outset||0), gl=fr.glow||0, gc=fr.glowColor||'var(--accent)', band=bw+os;
-    css+=p+'.canvas-widget-card{border:'+bw+'px solid transparent;border-radius:0;overflow:visible;position:relative;}';
+    const fr=f||fh, os=(fr.outset||0), gl=fr.glow||0, gc=fr.glowColor||'var(--accent)', perSide=(typeof fr.width==='string');
+    // card reserves the border space (per-side "T R B L" px or a single number)
+    const cardW=perSide ? fr.width.split(/\s+/).map(v=>v+'px').join(' ') : ((fr.width||18)+'px');
+    css+=p+'.canvas-widget-card{border-style:solid;border-color:transparent;border-width:'+cardW+';border-radius:0;overflow:visible;position:relative;}';
     css+=p+'.canvas-widget-body{overflow:hidden;}';
-    // inset is measured from the padding box, so -band reaches the border-box outer edge + the outset; longhand border-image (matches the other frames)
-    css+=p+'.canvas-widget-card::after{content:"";position:absolute;inset:-'+band+'px;border:'+band+'px solid transparent;'
-       +'border-image-source:url("'+fr.url+'");border-image-slice:'+fr.slice+';border-image-repeat:'+(fr.repeat||'stretch')+';border-image-width:'+band+'px;'
+    // ::after draws the frame ON TOP. Its band per side = width+outset; inset (from the padding box) = -band reaches the
+    // border-box outer edge + the outset. Longhand border-image (matches the other frames).
+    let insetCss, bandCss;
+    if(perSide){ const w=fr.width.split(/\s+/).map(Number), b=w.map(v=>v+os); // T R B L
+      insetCss='top:-'+b[0]+'px;right:-'+b[1]+'px;bottom:-'+b[2]+'px;left:-'+b[3]+'px'; bandCss=b.map(v=>v+'px').join(' '); }
+    else { const band=(fr.width||18)+os; insetCss='inset:-'+band+'px'; bandCss=band+'px'; }
+    css+=p+'.canvas-widget-card::after{content:"";position:absolute;'+insetCss+';border-style:solid;border-color:transparent;border-width:'+bandCss+';'
+       +'border-image-source:url("'+fr.url+'");border-image-slice:'+fr.slice+';border-image-repeat:'+(fr.repeat||'stretch')+';border-image-width:'+bandCss+';'
        +'pointer-events:none;z-index:8;'+(gl?'filter:drop-shadow(0 0 '+gl+'px '+gc+');':'')+'}';
     css+=p+'.canvas-grid{gap:'+(os*2+18)+'px!important;padding:'+(os+6)+'px!important;box-sizing:border-box;}';
   } else if(f||fh){
@@ -4262,7 +4269,8 @@ function _applyThemeSkin(themeId){
   // frame to leave overflow visible (frameFront does) so it can sit above the card.
   if(sk.topOrnament){
     const o=sk.topOrnament, sz=o.size||58, top=(o.top!=null?o.top:Math.round(sz*0.72));
-    css+=p+'.canvas-widget-card::before{content:"";position:absolute;top:-'+top+'px;left:50%;transform:translateX(-50%);width:'+sz+'px;height:'+sz+'px;background:url("'+o.url+'") center/contain no-repeat;pointer-events:none;z-index:9;}';
+    if(o.emoji){ css+=p+'.canvas-widget-card::before{content:"'+o.emoji+'";position:absolute;top:-'+top+'px;left:50%;transform:translateX(-50%);font-size:'+sz+'px;line-height:1;pointer-events:none;z-index:9;filter:drop-shadow(0 2px 2px rgba(0,0,0,.28));}'; }
+    else { css+=p+'.canvas-widget-card::before{content:"";position:absolute;top:-'+top+'px;left:50%;transform:translateX(-50%);width:'+sz+'px;height:'+sz+'px;background:url("'+o.url+'") center/contain no-repeat;pointer-events:none;z-index:9;}'; }
   }
   // centre the widget title (e.g. so it sits under the dashboard frame's top cartouche); drag handle + actions go absolute
   if(sk.centerTitle){
