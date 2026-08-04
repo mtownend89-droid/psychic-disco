@@ -4118,6 +4118,7 @@ const THEME_PRESETS=[
   {id:'galaxy',name:'Galaxy',bg:'#060a1a',sidebar:'#0a1122',surface:'#0e1830',surface2:'#152142',surface3:'#1f2f55',text:'#dffaff',muted:'#8ca5c6',border:'rgba(56,217,255,0.12)',border2:'rgba(56,217,255,0.20)',accent:'#38d9ff',pattern:_PAT.stars},   // deep-space HUD — cyan on near-black (Ask Richie Galaxy library)
   {id:'afterlife',name:'Afterlife',bg:'#141a0f',sidebar:'#192113',surface:'#202b16',surface2:'#29371c',surface3:'#354627',text:'#eaf6d8',muted:'#93a97b',border:'rgba(154,230,48,0.12)',border2:'rgba(154,230,48,0.20)',accent:'#9ae62e',pattern:_PAT.stripes},   // ghost-with-the-most black & venom green
   {id:'neon',name:'Neon City',bg:'#150f26',sidebar:'#1a1330',surface:'#21193c',surface2:'#2a2149',surface3:'#372c5c',text:'#f3e9ff',muted:'#9d8dbd',border:'rgba(255,79,216,0.12)',border2:'rgba(79,225,255,0.20)',accent:'#ff2bd6',pattern:_PAT.neon},   // teen cyberpunk
+  {id:'tron',name:'Tron',bg:'#03080f',sidebar:'#050e18',surface:'#081420',surface2:'#0b1c2b',surface3:'#0f2536',text:'#cbf5ff',muted:'#6f97ab',border:'rgba(52,231,255,0.16)',border2:'rgba(52,231,255,0.30)',accent:'#34e7ff'},   // geometric HUD — cyan on near-black (hand-built SVG frame + controls)
   {id:'slime',name:'TOXIC',bg:'#0b0f08',sidebar:'#0f150a',surface:'#141b0e',surface2:'#1d2814',surface3:'#28371c',text:'#eaf5df',muted:'#9aa488',border:'rgba(135,244,0,0.12)',border2:'rgba(135,244,0,0.20)',accent:'#87f400'},   // glossy neon slime — goo frame + skinned controls (Ask Richie Slime library)
   {id:'espresso',name:'Espresso',bg:'#211a13',sidebar:'#28201a',surface:'#312820',surface2:'#3d3228',surface3:'#4b3e30',text:'#f2e8dc',muted:'#b09d86',border:'rgba(201,162,103,0.10)',border2:'rgba(201,162,103,0.18)',accent:'#c9a267'},   // mature, warm & refined
   {id:'merlot',name:'Merlot',bg:'#241419',sidebar:'#2c1921',surface:'#361f28',surface2:'#442833',surface3:'#553341',text:'#f2e3e8',muted:'#b08b97',border:'rgba(200,90,120,0.10)',border2:'rgba(200,90,120,0.18)',accent:'#c04d6a'},   // mature, deep wine
@@ -4180,6 +4181,7 @@ function applyAccent(){ applyAppearance(); }   // persona/appearance both flow t
    Off automatically under prefers-reduced-motion; toggle in Settings → Appearance. */
 const THEME_FX={
   galaxy:   {emojis:['🚀','🛸','🌟','✨'], anim:'drift', count:7, size:[13,24], op:0.55, dur:[16,34]},
+  tron:     {emojis:['◈','▹','△','⬡'],   anim:'drift', count:6, size:[12,22], op:0.5,  dur:[14,30]},   // ambient uses the hand-built cyan geometrics (THEME_SKINS.tron.emoji)
   slime:    {emojis:['🫧','🟢','💧','☣️'], anim:'float', count:6, size:[13,23], op:0.42, dur:[8,15]},   // TOXIC slime
   princess: {emojis:['👑','🌷','✨','🌸'], anim:'float', count:8, size:[14,24], op:0.60, dur:[9,18]},
   forest:   {emojis:['🍃','🍂','🌿'],       anim:'fall',  count:9, size:[14,22], op:0.70, dur:[8,16]},
