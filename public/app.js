@@ -4218,8 +4218,16 @@ function _applyThemeSkin(themeId){
   // Budget table — spilling past the viewport) while the border-image itself is never clipped by its own overflow.
   // border-image-width > border-width lets the frame bleed INWARD over the content (sit on top of the widget) without
   // moving the layout — that inward overhang is what "shrinks the view window a touch".
-  const frameCss=(sel,fr)=>{ if(!fr) return; const bw=(fr.width||18), iw=bw+(fr.bleed||0), os=(fr.outset||0);
-    css+=p+sel+'{border:'+bw+'px solid transparent;border-radius:0;overflow:hidden;border-image:url("'+fr.url+'") '+fr.slice+' '+(fr.repeat||'stretch')+';border-image-width:'+iw+'px;border-image-outset:'+os+'px;}'; };
+  // slice/width may be a single number (uniform) OR a "top right bottom left" string so the ornate top & bottom can be
+  // sliced separately from the thin sides — that stops a thin side drape being stretched into a fat blurry column, and
+  // keeps the tall top ornament from squashing.
+  const frameCss=(sel,fr)=>{ if(!fr) return; const os=(fr.outset||0);
+    const sliceCss=(''+fr.slice), perSide=(typeof fr.width==='string');
+    const widthCss=perSide ? fr.width.split(/\s+/).map(v=>v+'px').join(' ') : ((fr.width||18)+(fr.bleed?'':'')+'px');
+    const imgWidthCss=perSide ? widthCss : (((fr.width||18)+(fr.bleed||0))+'px');
+    css+=p+sel+'{border-style:solid;border-color:transparent;border-width:'+widthCss+';border-radius:0;overflow:hidden;'
+       +'border-image-source:url("'+fr.url+'");border-image-slice:'+sliceCss+';border-image-repeat:'+(fr.repeat||'stretch')+';'
+       +'border-image-width:'+imgWidthCss+';border-image-outset:'+os+'px;}'; };
   const f=sk.frame, fh=sk.frameHalf;
   if(f||fh){
     // full-width (span-2) widgets get the dashboard frame; half-width widgets get the modal-window frame (each falls back to the other)
@@ -4227,6 +4235,13 @@ function _applyThemeSkin(themeId){
     frameCss('.canvas-widget-card:not(.span-2)', fh||f);
     const os=Math.max((f&&f.outset)||0,(fh&&fh.outset)||0);
     css+=p+'.canvas-grid{gap:'+(os*2+16)+'px!important;padding:'+(os+4)+'px!important;box-sizing:border-box;}';
+  }
+  // centre the widget title (e.g. so it sits under the dashboard frame's top cartouche); drag handle + actions go absolute
+  if(sk.centerTitle){
+    css+=p+'.canvas-widget-header{justify-content:center!important;position:relative;}';
+    css+=p+'.cwh-left{justify-content:center;flex:0 1 auto;}';
+    css+=p+'.cwh-drag{position:absolute;left:8px;top:50%;transform:translateY(-50%);opacity:.5;}';
+    css+=p+'.cwh-actions{position:absolute;right:8px;top:50%;transform:translateY(-50%);}';
   }
   // Top-edge drip decorations (an alternative to a full wrapping frame): a drip border across the top of full-width
   // widgets, corner-drip pieces on the top corners of the rest. Rendered as ::before/::after so they never resize the card.
