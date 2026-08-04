@@ -44,10 +44,10 @@ $files=@{ 'frame.svg'=$frame; 'toggle-off.svg'=(Toggle $false); 'toggle-on.svg'=
 foreach($kv in $files.GetEnumerator()){ [System.IO.File]::WriteAllText((Join-Path $out $kv.Key), $kv.Value, (New-Object System.Text.UTF8Encoding($false))) }
 # ── wire THEME_SKINS.princess (per-side castle frame; crown emoji over the gatehouse; ambient = THEME_FX royal set) ──
 $ub='theme-assets/princess/'
-$crown=[char]::ConvertFromUtf32(0x1F451)
-$entry='THEME_SKINS.princess={frameFront:true,centerTitle:true,'+
+$castle=[char]::ConvertFromUtf32(0x1F3F0)
+$entry='THEME_SKINS.princess={frameFront:true,'+
  'frame:{url:"'+$ub+'frame.svg",slice:"40 54 40 54",repeat:"round stretch",width:"28 40 28 40",outset:6},'+
- 'topOrnament:{emoji:"'+$crown+'",size:30,top:6},'+
+ 'topOrnament:{emoji:"'+$castle+'",size:40,top:40},'+
  'controls:{btn:{url:"'+$ub+'button.svg",text:"#5c123f"},btnPrimary:{url:"'+$ub+'button-primary.svg",text:"#fff6fb"},'+
  'btnDanger:{url:"'+$ub+'button-danger.svg",text:"#fff6fb"},toggleOff:{url:"'+$ub+'toggle-off.svg"},toggleOn:{url:"'+$ub+'toggle-on.svg"},'+
  'input:{url:"'+$ub+'input.svg"},checkboxEmpty:{url:"'+$ub+'checkbox-empty.svg"},checkboxChecked:{url:"'+$ub+'checkbox-checked.svg"},'+
