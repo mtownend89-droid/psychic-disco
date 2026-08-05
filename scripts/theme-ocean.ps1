@@ -25,8 +25,7 @@ function Lib([string]$id,[bool]$stretch){
   $svg="<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' xmlns:inkscape='http://www.inkscape.org/namespaces/inkscape' xmlns:sodipodi='http://sodipodi.sourceforge.net/DTD/sodipodi-0.0.dtd' viewBox='$vb'$par><defs>$shared</defs>$inner</svg>"
   [System.IO.File]::WriteAllText((Join-Path $out ($id+'.svg')), $svg, (New-Object System.Text.UTF8Encoding($false)))
 }
-Lib 'assembled-bottom-edge' $true
-Lib 'left-end-curl' $false; Lib 'right-end-curl' $false; Lib 'right-curl-accent-large' $false
+Lib 'assembled-bottom-edge' $true   # top wave only (corner curls removed)
 # ── hand-authored controls (aqua glass + bubbles) ──
 $defs="<defs>"+
  "<linearGradient id='av' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#8ff3ff'/><stop offset='.5' stop-color='#31c2dd'/><stop offset='1' stop-color='#127390'/></linearGradient>"+
@@ -49,7 +48,7 @@ foreach($k in $files.Keys){ [System.IO.File]::WriteAllText((Join-Path $out $k), 
 # ── entry ──
 $ub='theme-assets/ocean/'
 $entry='THEME_SKINS.ocean={'+
- 'edges:{top:{url:"'+$ub+'assembled-bottom-edge.svg",h:52,over:28},cornerL:{url:"'+$ub+'left-end-curl.svg",w:130},cornerR:{url:"'+$ub+'right-end-curl.svg",w:85},cornerA:{url:"'+$ub+'right-curl-accent-large.svg",w:100,x:"70%"},side:{url:"'+$ub+'side.svg",w:26,tile:72,dur:5},pad:"14px 22px 30px"},'+
+ 'edges:{top:{url:"'+$ub+'assembled-bottom-edge.svg",h:52,over:28},side:{url:"'+$ub+'side.svg",w:26,tile:72,dur:5},pad:"14px 22px 18px"},'+
  'controls:{btn:{url:"'+$ub+'button.svg",text:"#eafcff"},btnPrimary:{url:"'+$ub+'button-primary.svg",text:"#06303c"},btnDanger:{url:"'+$ub+'button-danger.svg",text:"#fff0f2"},toggleOff:{url:"'+$ub+'toggle-off.svg"},toggleOn:{url:"'+$ub+'toggle-on.svg"},input:{url:"'+$ub+'input.svg"},checkboxEmpty:{url:"'+$ub+'checkbox-empty.svg"},checkboxChecked:{url:"'+$ub+'checkbox-checked.svg"},badge:{url:"'+$ub+'badge.svg",text:"#06303c"},panel:{url:"'+$ub+'panel.svg"},sliderThumb:{url:"'+$ub+'thumb.svg"}},'+
  'emoji:["'+$ub+'fx-bubble-a.svg","'+$ub+'fx-bubble-b.svg","'+$ub+'fx-bubble-c.svg"]};'
 $tsPath=Join-Path $repo 'public\theme-skins.js'
