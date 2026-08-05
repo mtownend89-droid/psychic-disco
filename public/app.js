@@ -4237,7 +4237,9 @@ function _applyThemeSkin(themeId){
     const fr=f||fh, os=(fr.outset||0), gl=fr.glow||0, gc=fr.glowColor||'var(--accent)', perSide=(typeof fr.width==='string');
     // card reserves the border space (per-side "T R B L" px or a single number)
     const cardW=perSide ? fr.width.split(/\s+/).map(v=>v+'px').join(' ') : ((fr.width||18)+'px');
-    css+=p+'.canvas-widget-card{border-style:solid;border-color:transparent;border-width:'+cardW+';border-radius:0;overflow:visible;position:relative;}';
+    // min-width:0 is REQUIRED: overflow:visible makes a grid item's auto-min-size = content min-content, so a wide widget
+    // would force its grid track wider and run the whole dashboard off-screen. min-width:0 lets the card shrink to its track.
+    css+=p+'.canvas-widget-card{border-style:solid;border-color:transparent;border-width:'+cardW+';border-radius:0;overflow:visible;min-width:0;position:relative;}';
     css+=p+'.canvas-widget-body{overflow:hidden;}';
     // ::after draws the frame ON TOP. Its band per side = width+outset; inset (from the padding box) = -band reaches the
     // border-box outer edge + the outset. Longhand border-image (matches the other frames).
@@ -4283,7 +4285,7 @@ function _applyThemeSkin(themeId){
   // can sit in the top border; the body keeps its own overflow:hidden so wide content still can't spill past the frame.
   if(sk.titleInFrame!=null){
     const up=sk.titleInFrame;
-    css+=p+'.canvas-widget-card{overflow:visible;}';
+    css+=p+'.canvas-widget-card{overflow:visible;min-width:0;}';
     css+=p+'.canvas-widget-body{overflow:hidden;}';
     css+=p+'.canvas-widget-header{position:relative;height:10px;min-height:0;padding:0;background:transparent!important;border-bottom:none!important;z-index:6;}';
     css+=p+'.cwh-left{position:absolute;left:0;right:0;top:-'+up+'px;display:flex;justify-content:center;align-items:center;gap:6px;}';
