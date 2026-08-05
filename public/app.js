@@ -4274,6 +4274,25 @@ function _applyThemeSkin(themeId){
     if(o.emoji){ css+=p+'.canvas-widget-card::before{content:"'+o.emoji+'";position:absolute;top:-'+top+'px;left:50%;transform:translateX(-50%);font-size:'+sz+'px;line-height:1;pointer-events:none;z-index:9;filter:drop-shadow(0 2px 2px rgba(0,0,0,.28));}'; }
     else { css+=p+'.canvas-widget-card::before{content:"";position:absolute;top:-'+top+'px;left:50%;transform:translateX(-50%);width:'+sz+'px;height:'+sz+'px;background:url("'+o.url+'") center/contain no-repeat;pointer-events:none;z-index:9;}'; }
   }
+  // Edge decorations (e.g. ocean): a top bar + static corner pieces on ::before, and animated side strips on ::after.
+  // ::after backgrounds scroll (background-position) for an upward flow; min-width:0 keeps wide widgets on-screen.
+  if(sk.edges){
+    const e=sk.edges;
+    css+=p+'.canvas-widget-card{overflow:visible;min-width:0;position:relative;border:none!important;'+(e.pad?'padding:'+e.pad+';':'')+'}';
+    css+=p+'.canvas-widget-body{overflow:hidden;}';
+    const bg=[];
+    if(e.top)     bg.push('url("'+e.top.url+'") left top/100% '+(e.top.h||52)+'px no-repeat');
+    if(e.cornerL) bg.push('url("'+e.cornerL.url+'") left bottom/'+(e.cornerL.w||120)+'px auto no-repeat');
+    if(e.cornerR) bg.push('url("'+e.cornerR.url+'") right bottom/'+(e.cornerR.w||80)+'px auto no-repeat');
+    if(e.cornerA) bg.push('url("'+e.cornerA.url+'") '+(e.cornerA.x||'70%')+' bottom/'+(e.cornerA.w||100)+'px auto no-repeat');
+    if(bg.length) css+=p+'.canvas-widget-card::before{content:"";position:absolute;top:-'+((e.top&&e.top.over)||24)+'px;left:0;right:0;bottom:0;z-index:6;pointer-events:none;background:'+bg.join(',')+';}';
+    if(e.side){
+      const s=e.side, kf='ocEdge_'+themeId, w=(s.w||26), tile=(s.tile||72);
+      css+=p+'.canvas-widget-card::after{content:"";position:absolute;top:6px;left:0;right:0;bottom:34px;z-index:5;pointer-events:none;background:url("'+s.url+'") left top/'+w+'px auto repeat-y,url("'+s.url+'") right top/'+w+'px auto repeat-y;animation:'+kf+' '+(s.dur||5)+'s linear infinite;}';
+      css+='@keyframes '+kf+'{from{background-position:left 0,right 0}to{background-position:left -'+tile+'px,right -'+tile+'px}}';
+      css+='@media(prefers-reduced-motion:reduce){'+p+'.canvas-widget-card::after{animation:none;}}';
+    }
+  }
   // centre the widget title (e.g. so it sits under the dashboard frame's top cartouche); drag handle + actions go absolute
   if(sk.centerTitle){
     css+=p+'.canvas-widget-header{justify-content:center!important;position:relative;}';
