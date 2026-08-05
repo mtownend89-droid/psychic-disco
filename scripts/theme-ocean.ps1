@@ -21,7 +21,8 @@ function Lib([string]$id,[bool]$stretch){
   $vbS=$s.IndexOf('viewBox="',$ss)+9; $vbE=$s.IndexOf('"',$vbS); $vb=$s.Substring($vbS,$vbE-$vbS)
   $cs=$s.IndexOf('>',$ss)+1; $ce=$s.IndexOf('</symbol>',$cs); $inner=$s.Substring($cs,$ce-$cs)
   $par= if($stretch){ " preserveAspectRatio='none'" } else { '' }  # none only for the stretched top wave; curls keep aspect
-  $svg="<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' viewBox='$vb'$par><defs>$shared</defs>$inner</svg>"
+  # xmlns:inkscape/sodipodi MUST be declared or the library's inkscape:* attrs make the SVG not well-formed -> won't render
+  $svg="<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' xmlns:inkscape='http://www.inkscape.org/namespaces/inkscape' xmlns:sodipodi='http://sodipodi.sourceforge.net/DTD/sodipodi-0.0.dtd' viewBox='$vb'$par><defs>$shared</defs>$inner</svg>"
   [System.IO.File]::WriteAllText((Join-Path $out ($id+'.svg')), $svg, (New-Object System.Text.UTF8Encoding($false)))
 }
 Lib 'assembled-bottom-edge' $true
