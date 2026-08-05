@@ -17,18 +17,23 @@ function Heart($cx,$cy,$s,$fill,$stroke){ $k=$s/24; return "<g transform='transl
 function Gem($cx,$cy,$s){ $k=$s/24; return "<g transform='translate($(N $cx) $(N $cy)) scale($(N $k)) translate(-12 -12)'><path d='M12 2 L21 11 L12 22 L3 11 Z' fill='url(#gem)' stroke='#a01f5e' stroke-width='1'/><path d='M12 2 L12 22 M3 11 L21 11' stroke='#ffdcef' stroke-width='.8' opacity='.7'/></g>" }
 # ── CASTLE FRAME (9-slice): turret towers on L/R, battlement walls top & bottom (merlons up), banner flags ──
 function Merlons($x0,$x1,$y,$h,$fill){ $s=''; $x=$x0; while($x -lt $x1){ $s+="<rect x='$(N $x)' y='$(N $y)' width='8' height='$(N $h)' fill='$fill' stroke='#b09a78' stroke-width='.6'/>"; $x+=14 }; return $s }
+# brick mortar (running bond). Course lines at y=y0,y0+10,... align on the 40/120 slice boundaries so `round` tiles seamlessly.
+function TowerBrick($cx,$y0,$y1){ $b=''; $c=0; for($y=$y0; $y -le $y1; $y+=10){ $b+="<line x1='$(N ($cx-18))' y1='$(N $y)' x2='$(N ($cx+18))' y2='$(N $y)' stroke='#c9b083' stroke-width='1'/>"; $xs= if($c % 2 -eq 0){ @(-12,0,12) } else { @(-6,6) }; foreach($dx in $xs){ $b+="<line x1='$(N ($cx+$dx))' y1='$(N $y)' x2='$(N ($cx+$dx))' y2='$(N ($y+10))' stroke='#c9b083' stroke-width='1'/>" }; $c++ }; return $b }
+function WallBrick($x0,$x1,$yc){ $b="<line x1='$(N $x0)' y1='$(N $yc)' x2='$(N $x1)' y2='$(N $yc)' stroke='#c9b083' stroke-width='1'/>"; $x=42; while($x -lt $x1){ if($x -gt $x0){ $b+="<line x1='$(N $x)' y1='$(N ($yc-6))' x2='$(N $x)' y2='$(N ($yc+6))' stroke='#c9b083' stroke-width='1'/>" }; $x+=12 }; return $b }
 function Banner($cx){ return "<circle cx='$(N $cx)' cy='2' r='1.6' fill='#e6b23f'/><path d='M$(N $cx) 2.5 H$(N ($cx+15)) L$(N ($cx+10)) 6.5 L$(N ($cx+15)) 10.5 H$(N $cx) Z' fill='url(#pv)' stroke='#b3437e' stroke-width='.7'/><line x1='$(N $cx)' y1='6.5' x2='$(N ($cx+11))' y2='6.5' stroke='#e6b23f' stroke-width='1.1'/>" }
 function Tower($cx){
   $t="<rect x='$(N ($cx-18))' y='34' width='36' height='112' fill='url(#sv)' stroke='#b09a78' stroke-width='1'/>"           # body
+  $t+=(TowerBrick $cx 40 120)                                                                                                # brick courses (mid, tiles with round)
   $t+="<rect x='$(N ($cx-3))' y='74' width='6' height='22' rx='3' fill='#4a3a52'/>"                                          # arrow slit (mid)
   $t+="<rect x='$(N ($cx-21))' y='132' width='42' height='14' fill='url(#sh)' stroke='#b09a78' stroke-width='1'/>"          # base
+  $t+=(WallBrick ($cx-20) ($cx+20) 139)                                                                                      # base course
   $t+=(Merlons ($cx-17) ($cx+16) 27 9 'url(#sv)')                                                                            # parapet crenellations
   $t+="<path d='M$(N ($cx-11)) 33 L$(N $cx) 2 L$(N ($cx+11)) 33 Z' fill='url(#roof)' stroke='#3f6fa8' stroke-width='1.4' stroke-linejoin='round'/>"  # steeple (tall + pointy)
   $t+=(Banner $cx)                                                                                                           # banner flag
   return $t
 }
-$topWall="<rect x='34' y='27' width='92' height='13' fill='url(#sh)' stroke='#b09a78' stroke-width='1'/>"+(Merlons 38 122 16 11 'url(#sh)')
-$botWall="<rect x='34' y='132' width='92' height='12' fill='url(#sh)' stroke='#b09a78' stroke-width='1'/>"+(Merlons 38 122 121 11 'url(#sh)')   # merlons flipped to the top
+$topWall="<rect x='34' y='27' width='92' height='13' fill='url(#sh)' stroke='#b09a78' stroke-width='1'/>"+(WallBrick 34 126 33)+(Merlons 38 122 16 11 'url(#sh)')
+$botWall="<rect x='34' y='132' width='92' height='12' fill='url(#sh)' stroke='#b09a78' stroke-width='1'/>"+(WallBrick 34 126 138)+(Merlons 38 122 121 11 'url(#sh)')   # merlons flipped to the top
 $frame="<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'>$defs"+$topWall+$botWall+(Tower 27)+(Tower 133)+"</svg>"
 # ── controls (same jewelled set as the ornate princess) ──
 function Toggle($on){ $kx= if($on){48}else{16}; $fill= if($on){'url(#pv)'}else{'#f4cfe3'}
@@ -46,7 +51,7 @@ foreach($kv in $files.GetEnumerator()){ [System.IO.File]::WriteAllText((Join-Pat
 $ub='theme-assets/princess/'
 $castle=[char]::ConvertFromUtf32(0x1F3F0)
 $entry='THEME_SKINS.princess={frameFront:true,'+
- 'frame:{url:"'+$ub+'frame.svg",slice:"40 54 40 54",repeat:"round stretch",width:"28 40 28 40",outset:6},'+
+ 'frame:{url:"'+$ub+'frame.svg",slice:"40 54 40 54",repeat:"round",width:"28 40 28 40",outset:6},'+
  'topOrnament:{emoji:"'+$castle+'",size:40,top:40},'+
  'controls:{btn:{url:"'+$ub+'button.svg",text:"#5c123f"},btnPrimary:{url:"'+$ub+'button-primary.svg",text:"#fff6fb"},'+
  'btnDanger:{url:"'+$ub+'button-danger.svg",text:"#fff6fb"},toggleOff:{url:"'+$ub+'toggle-off.svg"},toggleOn:{url:"'+$ub+'toggle-on.svg"},'+
