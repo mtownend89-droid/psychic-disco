@@ -1426,6 +1426,10 @@ body.reduce-motion .canvas-widget-card::before,body.reduce-motion .canvas-widget
 .sts-break div{display:flex;justify-content:space-between;font-size:12px;}
 .sts-break span{color:var(--muted);}
 .sts-break b{font-variant-numeric:tabular-nums;}
+.sts-buf{width:52px;background:var(--surface3);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:12px;font-family:var(--font);text-align:right;padding:1px 5px;font-variant-numeric:tabular-nums;-moz-appearance:textfield;}
+.sts-buf::-webkit-outer-spin-button,.sts-buf::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.sts-buf:focus{outline:none;border-color:var(--green);}
+.sts-buf-hint{font-size:10px;opacity:.6;cursor:default;}
 .nw-manage{width:100%;margin-top:11px;padding:9px;border:1px dashed var(--green);background:var(--green-dim);color:var(--green);border-radius:9px;font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer;}
 .nw-manage:hover{background:var(--surface3);}
 .nw-sec-h{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700;color:var(--text);margin-bottom:7px;}
