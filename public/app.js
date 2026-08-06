@@ -1488,7 +1488,10 @@ function cfpToggleBillPaid(okey, uid){
   if(nowPaid){ try{ gamiMarkEngaged('billpaid'); }catch(e){} try{ emojiBurst('coin',{particle:'coin',count:8,life:1600}); }catch(e){} }
   try{ if(sbRichie)sbRichie.do('nod'); }catch(e){}
 }
-function engCashFlowProjection(days, cats, startAdjust){
+// Frame-memoized: the 90-day projection is called by ~10 widgets/engines per render pass; the frame-memo
+// (auto-cleared each microtask, invalidated by saveState) computes it once per unique arg set — no staleness risk.
+function engCashFlowProjection(days, cats, startAdjust){ return _memoFrame('cfp:'+days+':'+(cats!=null?JSON.stringify(cats):'-')+':'+(startAdjust||0), function(){ return _engCashFlowProjRaw(days, cats, startAdjust); }); }
+function _engCashFlowProjRaw(days, cats, startAdjust){
   const start=engStartCash(cats)-(startAdjust||0);   // startAdjust: money already committed (e.g. bills marked paid, not yet posted)
   const today=new Date(); today.setHours(0,0,0,0);
   // Shift each source to real banking days BEFORE combining: deposits land the prior business
