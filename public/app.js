@@ -1754,6 +1754,9 @@ function setCardData(name, fields){
   saveState();
 }
 function engMonthlyBills(){ return engBills().reduce((s,b)=>s+(b.pay||0),0); }
+// The "never touch" safety buffer subtracted from safe-to-spend. User-adjustable (default $50), persisted in APP.
+function _safeBuffer(){ const v=(APP&&APP.safeBuffer); return (v!=null && isFinite(v)) ? Math.max(0,v) : 50; }
+function setSafeBuffer(v){ APP.safeBuffer=Math.max(0, Math.round(parseFloat(v)||0)); saveState(); try{ _memoInvalidate&&_memoInvalidate(); }catch(e){} const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 // How much is safe to spend today: liquid cash, minus bills due before the next paycheck,
 // minus a prorated slice of goal contributions and a small buffer, spread over the days until pay.
 function engSafeToSpend(){
@@ -1772,7 +1775,7 @@ function engSafeToSpend(){
   const billsDue=(proj.events||[]).filter(e=>e.type==='bill'&&e.day<=horizon&&!e.off).reduce((s,e)=>s+Math.abs(e.amt),0);  // !e.off: a bill already marked paid is committed via paidPending — don't subtract it here too. savings handled via goalPortion below.
   const goalMonthly=(typeof engSavingsBuckets==='function')?engSavingsBuckets().reduce((s,b)=>s+(b.monthly||0),0):0;
   const goalPortion=goalMonthly*(horizon/30.44);
-  const buffer=50;
+  const buffer=_safeBuffer();
   const nearPool=Math.max(0,cash-billsDue-goalPortion-buffer);   // spendable before the next paycheck
   // 90-day floor: spending $X today lowers EVERY future balance by $X, so the projected low point
   // caps what's truly safe. If cash flow trends down (or dips below 0), this binds and safe-to-spend
@@ -1945,7 +1948,7 @@ function safeToSpendBody(w){
       ${s.paidPending>0.5?`<div><span>− Paid bills (not posted)</span><b style="color:var(--amber)" title="Bills you marked paid whose debit hasn't hit your account yet — already spent, so held out of safe-to-spend until they post">${fmtK(s.paidPending)}</b></div>`:''}
       <div><span>− Bills before payday</span><b style="color:var(--red)">${fmtK(s.billsDue)}</b></div>
       ${s.goalPortion>0.5?`<div><span>− Goal set-aside</span><b style="color:var(--amber)">${fmtK(s.goalPortion)}</b></div>`:''}
-      <div><span>− Safety buffer</span><b style="color:var(--muted)">${fmtK(s.buffer)}</b></div>
+      <div><span>− Safety buffer <span class="sts-buf-hint" title="A cushion always held back from safe-to-spend. Tap the amount to change it.">✎</span></span><b style="color:var(--muted)">$<input class="sts-buf" type="number" min="0" step="10" value="${Math.round(s.buffer)}" onclick="event.stopPropagation()" onchange="setSafeBuffer(this.value)" aria-label="Safety buffer amount"></b></div>
       ${s.constrainedBy90?`<div><span>${s.shortfall?'⚠️ 90-day shortfall':'Held for 90-day low'}</span><b style="color:${s.shortfall?'var(--red)':'var(--amber)'}">${s.low90<0?'−':''}${fmtK(Math.abs(s.low90))}</b></div>`:''}
     </div>` : '';
   const hint = (_atL(3)||s.shortfall) ? (s.shortfall
