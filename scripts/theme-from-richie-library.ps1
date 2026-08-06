@@ -18,7 +18,7 @@ $repo='C:\Users\mtown\OneDrive\Documents\GitHub\psychic-disco'
 $theme='princess'                                                                                          # <-- theme id
 $tokens=@{text='#FFF0F7';outline='#5c123f'}                                                                # <-- button text / outline (default below)
 $outDir=Join-Path $repo ("public\theme-assets\"+$theme)
-$richieDir=Join-Path $repo ("public\theme-assets\"+$theme+"-richie")
+$richieDir=Join-Path $repo ("assets-parked\"+$theme+"-richie")   # parked OUTSIDE public/ so the heavy unwired poses aren't served/deployed
 $tmp=Join-Path $env:TEMP ('sp_'+[guid]::NewGuid().ToString('N'))
 Expand-Archive -LiteralPath $zip $tmp -Force
 $sym=Get-ChildItem $tmp -Recurse -Filter *-symbols.svg | Select-Object -First 1
