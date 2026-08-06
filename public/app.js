@@ -734,13 +734,25 @@ function manualRender(){
       </div>`;
   } else {
     const a=editing?(APP.manualAccounts||[])[_manualEdit.idx]:{name:'',bal:'',type:'depository',subtype:'checking',institution:''};
+    const cc=(APP.cardData||{})[_cardKey(a.name||'')]||{};   // shared CC/loan metadata (same store the live-card editor + engines use)
     body.innerHTML=`
       <label class="mf-label">Account name</label><input class="mf-in" id="mfName" value="${esc(a.name||'')}" placeholder="e.g. Cash envelope, Crypto wallet">
       <div class="mf-row">
         <div><label class="mf-label">Balance</label><input class="mf-in" id="mfBal" type="number" value="${a.bal||''}" placeholder="0"></div>
-        <div><label class="mf-label">Type</label><select class="mf-in" id="mfType" onchange="document.getElementById('mfNeg').style.display=this.value==='credit'?'block':'none';document.getElementById('mfContribWrap').style.display=this.value==='investment'?'block':'none'">${[['depository','Cash / Bank'],['investment','Investment'],['credit','Credit / Debt'],['other','Other asset']].map(t=>`<option value="${t[0]}"${a.type===t[0]?' selected':''}>${t[1]}</option>`).join('')}</select></div>
+        <div><label class="mf-label">Type</label><select class="mf-in" id="mfType" onchange="var cr=(this.value==='credit'||this.value==='loan');document.getElementById('mfNeg').style.display=cr?'block':'none';document.getElementById('mfCCWrap').style.display=cr?'block':'none';document.getElementById('mfContribWrap').style.display=this.value==='investment'?'block':'none'">${[['depository','Cash / Bank'],['investment','Investment'],['credit','Credit / Debt'],['loan','Loan'],['other','Other asset']].map(t=>`<option value="${t[0]}"${a.type===t[0]?' selected':''}>${t[1]}</option>`).join('')}</select></div>
       </div>
-      <div id="mfNeg" style="display:${a.type==='credit'?'block':'none'};font-size:11.5px;color:var(--muted);margin-bottom:8px">Credit/debt balances are counted as money owed.</div>
+      <div id="mfNeg" style="display:${(a.type==='credit'||a.type==='loan')?'block':'none'};font-size:11.5px;color:var(--muted);margin-bottom:8px">Credit/debt balances are counted as money owed.</div>
+      <div id="mfCCWrap" style="display:${(a.type==='credit'||a.type==='loan')?'block':'none'}">
+        <div class="mf-row">
+          <div><label class="mf-label">APR %</label><input class="mf-in" id="mfApr" type="number" inputmode="decimal" value="${cc.apr||''}" placeholder="e.g. 24.99"></div>
+          <div><label class="mf-label">Minimum payment</label><input class="mf-in" id="mfMin" type="number" inputmode="decimal" value="${cc.minPay||''}" placeholder="monthly minimum"></div>
+        </div>
+        <div class="mf-row">
+          <div><label class="mf-label">Statement due day (1–31)</label><input class="mf-in" id="mfDue" type="number" min="1" max="31" value="${cc.dueDay||''}" placeholder="e.g. 15"></div>
+          <div><label class="mf-label">Credit limit</label><input class="mf-in" id="mfLimit" type="number" inputmode="decimal" value="${cc.limit||''}" placeholder="e.g. 5000 — for utilization"></div>
+        </div>
+        <label class="mf-label">0% promo ends (optional)</label><input class="mf-in" id="mfPromoEnd" type="date" value="${cc.promoEnd||''}">
+      </div>
       <div id="mfContribWrap" style="display:${a.type==='investment'?'block':'none'}"><label class="mf-label">Planned contribution / mo</label><input class="mf-in" id="mfContrib" type="number" inputmode="decimal" value="${a.contrib||''}" placeholder="e.g. 500 — feeds the retirement calculator"></div>
       <label class="mf-label">Institution (optional)</label><input class="mf-in" id="mfInst" value="${esc(a.institution||'')}" placeholder="e.g. Local Credit Union">
       <div class="mf-actions">
@@ -964,12 +976,17 @@ function deleteManualBill(idx){ if(!confirm('Delete this bill?'))return; APP.man
 function saveManualAccount(){
   const name=(gg('mfName').value||'').trim(); if(!name){ gg('mfName').focus(); return; }
   const type=gg('mfType').value; let bal=_num('mfBal');
-  if(type==='credit') bal=-Math.abs(bal);
+  if(type==='credit'||type==='loan') bal=-Math.abs(bal);
   const subtype={depository:'checking',investment:'investment',credit:'credit card',other:'other'}[type];
-  const item={name, bal, type, subtype, institution:(gg('mfInst').value||'').trim(), id:'m'+Date.now()};
+  const subtype2={depository:'checking',investment:'investment',credit:'credit card',loan:'loan',other:'other'}[type]||subtype;
+  const item={name, bal, type, subtype:subtype2, institution:(gg('mfInst').value||'').trim(), id:(_manualEdit.idx!=null&&(APP.manualAccounts||[])[_manualEdit.idx]&&(APP.manualAccounts[_manualEdit.idx].id))||('m'+Date.now())};
   if(type==='investment'&&gg('mfContrib')) item.contrib=_num('mfContrib');
   APP.manualAccounts=APP.manualAccounts||[];
   if(_manualEdit.idx!=null) APP.manualAccounts[_manualEdit.idx]=item; else APP.manualAccounts.push(item);
+  // credit/loan accounts get the same CC/loan slots as live cards, stored in the shared cardData store the engines read
+  if((type==='credit'||type==='loan') && gg('mfApr')){
+    setCardData(name, {apr:_num('mfApr'), minPay:_num('mfMin'), dueDay:_num('mfDue'), limit:_num('mfLimit'), promoEnd:(gg('mfPromoEnd')&&gg('mfPromoEnd').value)||''});
+  }
   saveState(); closeManual(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
   if(sbRichie)sbRichie.do('nod');
 }
@@ -10100,7 +10117,11 @@ function _confSet(){ if(_confirmedTxns) return _confirmedTxns; _confirmedTxns=ne
 function _confSave(){ try{ LS.setItem('mdf_txn_confirmed', JSON.stringify(Array.from(_confSet()))); }catch(e){} }
 function _reviewTxns(){ const conf=_confSet(); return _newTxns().filter(t=>!conf.has(_txnKey(t))).slice(0,25); }
 function _billsDueSoon(){ const today=new Date().getDate();
-  return (engUpcomingBills()||[]).filter(b=>!b.paid && b.pay>0).map(b=>{ let d=(b.due||1)-today; if(d<0) d+=30; return Object.assign({}, b, {inDays:d}); }).filter(b=>b.inDays<=7).sort((a,b)=>a.inDays-b.inDays); }
+  // Filter on the per-month occurrence paid state (billPaidOcc) the Bills widget/calendar use — the old global
+  // b.paid flag is dead post-migration, so it never dropped paid bills. Attach the occurrence key so the briefing
+  // can mark THIS occurrence paid (and reflect it everywhere). A bill whose due date already passed this month
+  // wraps to next month's occurrence (offset 1).
+  return (engUpcomingBills()||[]).filter(b=>b.pay>0).map(b=>{ let d=(b.due||1)-today; const off=d<0?1:0; if(d<0) d+=30; return Object.assign({}, b, {inDays:d, okey:_billOkeyForMonth(b,off)}); }).filter(b=>b.inDays<=7 && !_billOccPaid(b.okey)).sort((a,b)=>a.inDays-b.inDays); }
 function _scoreStale(){ const h=(typeof _ccScores==='function')?_ccScores():[]; if(!h.length) return {stale:true, days:null};
   const last=h.slice().sort((a,b)=>a.d<b.d?1:-1)[0]; const days=Math.round((Date.now()-new Date(last.d+'T12:00:00'))/86400000); return {stale:days>30, days}; }
 
@@ -10166,12 +10187,13 @@ function _briefBillsStepBody(){
   if(!bds.length) return `<div class="brief-allclear">✅ Nothing due in the next 7 days — you're ahead of it.</div>`;
   const rows=bds.map((b)=>{
     const key=billKey(b).replace(/'/g,"\\'");
+    const okey=String(b.okey||'').replace(/'/g,"\\'");
     const due=b.inDays===0?'due today':'in '+b.inDays+'d';
-    return `<div class="brief-txn"><div class="brief-txn-main"><div class="brief-txn-nm">${esc(b.name)}</div><div class="brief-txn-meta">${due}${b.apr?' · '+b.apr.toFixed(1)+'%':''}</div></div><div class="brief-pay"><span>$</span><input type="number" min="0" step="10" value="${Math.round(b.pay||0)}" onclick="event.stopPropagation()" oninput="setBillPay('${key}',this.value)"></div><button class="brief-confirm" onclick="event.stopPropagation();briefPayBill('${key}')">Mark paid ✓</button></div>`;
+    return `<div class="brief-txn"><div class="brief-txn-main"><div class="brief-txn-nm">${esc(b.name)}</div><div class="brief-txn-meta">${due}${b.apr?' · '+b.apr.toFixed(1)+'%':''}</div></div><div class="brief-pay"><span>$</span><input type="number" min="0" step="10" value="${Math.round(b.pay||0)}" onclick="event.stopPropagation()" oninput="setBillPay('${key}',this.value)"></div><button class="brief-confirm" onclick="event.stopPropagation();briefPayBill('${okey}')">Mark paid ✓</button></div>`;
   }).join('');
   return `<div class="brief-txns-hd"><span>${bds.length} due · ${fmtK(bds.reduce((s,b)=>s+(b.pay||0),0))} total</span></div><div class="brief-txns">${rows}</div><button class="brief-goto brief-goto-sm" onclick="event.stopPropagation();briefGoto('bills_list')">Open the full Bills widget →</button>`;
 }
-function briefPayBill(key){ const ov=_billOverrides(); ov[key]=ov[key]||{}; ov[key].paid=true; saveState(); try{ _memoInvalidate(); }catch(e){} if(_briefChar)_briefChar.do('nod'); _briefRefreshBody(); }
+function briefPayBill(okey){ if(!okey) return; _billPaidOcc()[okey]=Date.now(); saveState(); try{ _memoInvalidate(); }catch(e){} try{ gamiMarkEngaged('billpaid'); }catch(e){} if(_briefChar)_briefChar.do('nod'); _briefRefreshBody(); }
 
 // ── Credit-score step (log it inline) ──
 function _briefScoreStepBody(){
