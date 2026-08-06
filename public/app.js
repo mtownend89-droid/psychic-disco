@@ -4288,7 +4288,7 @@ function _applyThemeSkin(themeId){
     if(bg.length) css+=p+'.canvas-widget-card::before{content:"";position:absolute;top:-'+((e.top&&e.top.over)||24)+'px;left:0;right:0;bottom:0;z-index:6;pointer-events:none;background:'+bg.join(',')+';}';
     if(e.side){
       const s=e.side, kf='ocEdge_'+themeId, w=(s.w||26), tile=(s.tile||72);
-      css+=p+'.canvas-widget-card::after{content:"";position:absolute;top:6px;left:0;right:0;bottom:34px;z-index:5;pointer-events:none;background:url("'+s.url+'") left top/'+w+'px auto repeat-y,url("'+s.url+'") right top/'+w+'px auto repeat-y;animation:'+kf+' '+(s.dur||5)+'s linear infinite;}';
+      css+=p+'.canvas-widget-card::after{content:"";position:absolute;top:6px;left:0;right:0;bottom:12px;height:auto!important;opacity:1!important;z-index:5;pointer-events:none;background:url("'+s.url+'") left top/'+w+'px auto repeat-y,url("'+s.url+'") right top/'+w+'px auto repeat-y;animation:'+kf+' '+(s.dur||5)+'s linear infinite;}';
       css+='@keyframes '+kf+'{from{background-position:left 0,right 0}to{background-position:left -'+tile+'px,right -'+tile+'px}}';
       css+='@media(prefers-reduced-motion:reduce){'+p+'.canvas-widget-card::after{animation:none;}}';
     }
@@ -4384,7 +4384,12 @@ function _applyThemeSkin(themeId){
   // small badge chips (.txf-tag)
   if(U('badge')) css+=p+'.txf-tag{'+bg(U('badge'))+';color:#183200!important;border:none!important;}';
   // panel → the reusable modal card + the specialized modal cards (art gives the fill + frame)
-  if(U('panel')){ const ps=['.modal','.doc-card','.wdt-card','.ce-card','.txs-card'].map(x=>p+x).join(','); css+=ps+'{'+bg(U('panel'))+';border:none!important;border-radius:0!important;box-shadow:none!important;}'; }
+  if(U('panel')){ const pc=c.panel, ps=['.modal','.doc-card','.wdt-card','.ce-card','.txs-card'].map(x=>p+x).join(',');
+    // a `slice` makes the panel a 9-slice border-image (border stays a consistent thickness + round corners at any modal size);
+    // otherwise it's a stretched background fill.
+    if(pc.slice!=null){ css+=ps+'{border:'+(pc.width||14)+'px solid transparent!important;border-image:url("'+pc.url+'") '+pc.slice+' fill!important;border-radius:0!important;box-shadow:none!important;}'; }
+    else { css+=ps+'{'+bg(pc.url)+';border:none!important;border-radius:0!important;box-shadow:none!important;}'; }
+  }
   // Richie's speech bubble
   if(U('chatRichie')){ const ct=c.chatRichie, col=ct.text||'var(--text)'; css+=p+'.ra-bubble{'+bg(ct.url)+';border-radius:0!important;box-shadow:none!important;color:'+col+'!important;}'; css+=p+'.ra-bubble .ra-msg,'+p+'.ra-bubble .ra-title{color:'+col+'!important;}'; }
   // avatar ring around the profile avatar
