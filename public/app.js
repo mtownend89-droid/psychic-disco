@@ -6450,10 +6450,13 @@ function discretionarySpendBody(w){
   const over = spend>budget;
   const color = pct<85?'var(--green)' : pct<=100?'var(--amber)' : 'var(--red)';
   const remaining = budget-spend;
+  // Trend + sparkline use COMPLETED months only. The month-grid's last bucket is the current, partial
+  // (month-to-date) month, so comparing it to last month's full total showed a false drop early in the
+  // month. Drop the in-progress month so the ▲▼ reflects the most recent full month-over-month change.
   const series=engDiscretionaryMonthly(6, linked?bcats:null);
-  const vals=series.map(s=>s.value);
+  const vals=series.slice(0,-1).map(s=>s.value);
   const prev=vals.length>1?vals[vals.length-2]:0;
-  const cur=vals[vals.length-1]||spend;
+  const cur=vals.length?vals[vals.length-1]:spend;
   const trendUp = cur>prev;
   const trendPct = prev>0?Math.round((cur-prev)/prev*100):0;
   const trendColor = trendUp?'var(--red)':'var(--pos)';  // spending up = bad
@@ -6480,7 +6483,7 @@ function discretionarySpendBody(w){
     ${_atL(3)?`<div class="ds-foot">
       <div class="ds-trend">${_sparkline(vals, trendColor, 92, 26)}</div>
       <div class="ds-trend-meta">
-        <div class="ds-trend-label" style="color:${trendColor}">${trendUp?'▲':'▼'} ${Math.abs(trendPct)}% vs last mo</div>
+        <div class="ds-trend-label" style="color:${trendColor}" title="Last full month vs the month before — the current month is still in progress, so it isn't counted in this trend.">${trendUp?'▲':'▼'} ${Math.abs(trendPct)}% MoM</div>
         ${top?`<div class="ds-top"><span class="wph-dot" style="background:${top.color}"></span>Top: ${esc(top.label)} ${fmtK(top.value)}</div>`:''}
       </div>
     </div>`:''}
