@@ -8100,16 +8100,53 @@ function closeWidgetDetail(){ gg('widgetDetailModal').style.display='none'; }
 
 function wireDragDrop(){
   const grid=gg('canvasGrid'); if(!grid) return;
+  // ── Touch drag-reorder state (iOS/Android don't fire HTML5 drag events for touch, so the grip drives a manual
+  //    reorder). Shared across cards — only one gesture runs at a time; desktop still uses native DnD + dragUid. ──
+  let tDragging=false,tFromUid=null,tToUid=null,tAfter=false,tX=0,tY=0,tRAF=0,tScroller=null;
+  const tClear=()=>grid.querySelectorAll('.canvas-widget-card').forEach(c=>c.classList.remove('drag-over-top','drag-over-bottom'));
+  const tUpdate=()=>{                                    // mark the card under the finger with a top/bottom insertion line
+    const el=document.elementFromPoint(tX,tY), over=el&&el.closest('.canvas-widget-card'); tClear();
+    if(over&&grid.contains(over)&&over.dataset.uid!==tFromUid){
+      const r=over.getBoundingClientRect(); tAfter=(tY-r.top)>r.height/2;
+      over.classList.add(tAfter?'drag-over-bottom':'drag-over-top'); tToUid=over.dataset.uid;
+    } else tToUid=null;
+  };
+  const tAuto=()=>{                                      // edge auto-scroll so far targets are reachable without lifting
+    if(!tDragging){ tRAF=0; return; }
+    if(tScroller){ const r=tScroller.getBoundingClientRect(),Z=64,S=12;
+      if(tY<r.top+Z) tScroller.scrollTop-=S; else if(tY>r.bottom-Z) tScroller.scrollTop+=S; }
+    tUpdate(); tRAF=requestAnimationFrame(tAuto);
+  };
   grid.querySelectorAll('.canvas-widget-card').forEach(card=>{
     card.draggable=false;  // not draggable by default — only via the grip handle
     const handle=card.querySelector('.cwh-drag');
     if(handle){
-      const enable=()=>{ card.draggable=true; };
-      const disable=()=>{ setTimeout(()=>{ card.draggable=false; },0); };
-      handle.addEventListener('mousedown',enable);
-      handle.addEventListener('touchstart',enable,{passive:true});
-      handle.addEventListener('mouseup',disable);
-      handle.addEventListener('touchend',disable);
+      // Desktop: enable native HTML5 drag only while the grip is held.
+      handle.addEventListener('mousedown',()=>{ card.draggable=true; });
+      handle.addEventListener('mouseup',()=>{ setTimeout(()=>{ card.draggable=false; },0); });
+      // Touch (iOS/Android): manual reorder — native DnD doesn't fire for touch.
+      handle.addEventListener('touchstart',e=>{
+        if(e.touches.length!==1) return;
+        e.stopPropagation();                              // keep swipe-nav / page scroll from hijacking the drag
+        const t=e.touches[0]; tX=t.clientX; tY=t.clientY;
+        tDragging=true; tFromUid=card.dataset.uid; tToUid=null;
+        card.classList.add('dragging'); tScroller=gg('page-content');
+        if(!tRAF) tRAF=requestAnimationFrame(tAuto);
+      },{passive:true});
+      handle.addEventListener('touchmove',e=>{
+        if(!tDragging) return;
+        e.preventDefault();                               // block native scroll; edges auto-scroll instead
+        const t=e.touches[0]; tX=t.clientX; tY=t.clientY; tUpdate();
+      },{passive:false});
+      const tEnd=()=>{
+        if(!tDragging) return;
+        tDragging=false; if(tRAF){ cancelAnimationFrame(tRAF); tRAF=0; }
+        card.classList.remove('dragging'); tClear();
+        if(tToUid&&tFromUid&&tToUid!==tFromUid) reorderWidget(tFromUid,tToUid,tAfter);
+        tFromUid=null; tToUid=null;
+      };
+      handle.addEventListener('touchend',tEnd);
+      handle.addEventListener('touchcancel',tEnd);
     }
     card.addEventListener('dragstart',e=>{ if(!card.draggable){ e.preventDefault(); return; } dragUid=card.dataset.uid; card.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; });
     card.addEventListener('dragend',()=>{ dragUid=null; card.draggable=false; card.classList.remove('dragging'); grid.querySelectorAll('.canvas-widget-card').forEach(c=>c.classList.remove('drag-over-before','drag-over-after')); });
@@ -9116,7 +9153,7 @@ function initSwipeNav(){
     if(e.touches.length!==1) return;
     // ignore swipes that start on interactive/scrollable controls
     const t=e.target;
-    if(t.closest('input,textarea,select,canvas,.zb-slider,.ws-input,.bill-pay,.cfp-ev-edit,.pl-toggle,.bills-tf,#sidebar,.modal,.wdt-modal,#widgetStudio')) return;
+    if(t.closest('input,textarea,select,canvas,.zb-slider,.ws-input,.bill-pay,.cfp-ev-edit,.pl-toggle,.bills-tf,.cwh-drag,#sidebar,.modal,.wdt-modal,#widgetStudio')) return;
     const tt=e.touches[0]; x0=tt.clientX; y0=tt.clientY; t0=Date.now(); tracking=true;
     fromEdge = x0<=24;                            // left-edge swipe opens sidebar
   },{passive:true});
