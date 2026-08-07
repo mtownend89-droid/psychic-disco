@@ -1252,7 +1252,7 @@ function engMonthlyIncome(){ return _effectiveIncomeSources().reduce((s,i)=>s+i.
 // a reimbursement account, etc.). Single source of truth so cash never counts money you've hidden.
 function _liquidCash(){
   if(dataLoaded){ const ex=(typeof _excludedAcctIds==='function')?_excludedAcctIds():new Set(); return allAccts.filter(a=>a.type==='depository' && !ex.has(a.account_id)).reduce((s,a)=>s+((a.balances&&(a.balances.available??a.balances.current))||0),0); }
-  return nwAssets.filter(a=>a.cat==='Cash & Bank').reduce((s,a)=>s+(a.value||0),0);
+  return engAccounts().filter(a=>!a.manual && !a.excluded && a.type==='depository').reduce((s,a)=>s+(a.bal||0),0);   // sample: example depository accounts (matches live semantics), so Safe-to-Spend/cash-flow don't read $0 in preview
 }
 function engStartCash(cats){
   if(cats && cats.length){ return engAccounts().filter(a=>!a.excluded && cats.includes(getAccountCategory(a))).reduce((s,a)=>s+(a.bal||0),0); }
