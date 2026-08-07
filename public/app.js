@@ -424,7 +424,8 @@ function engRangeLabel(days){
   }
   return 'last '+days+' days';
 }
-function engRecent(days, forceRolling){ const r=engRange(days, forceRolling); const ex=_excludedAcctIds(); return allTxns.filter(t=>new Date(t.date).getTime()>=r.start && !ex.has(t.account_id)); }
+// Frame-memoized (9 call sites/render): all callers consume it read-only (.filter()/.forEach()) — verified none sort/push/splice it in place.
+function engRecent(days, forceRolling){ return _memoFrame('recent:'+days+':'+(forceRolling?1:0), function(){ const r=engRange(days, forceRolling); const ex=_excludedAcctIds(); return allTxns.filter(t=>new Date(t.date).getTime()>=r.start && !ex.has(t.account_id)); }); }
 
 /* ── P&L engine: group income vs spending by day/week/month with full stats ── */
 function engPLBuckets(days, group){
