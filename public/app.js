@@ -1252,7 +1252,7 @@ function engMonthlyIncome(){ return _effectiveIncomeSources().reduce((s,i)=>s+i.
 // a reimbursement account, etc.). Single source of truth so cash never counts money you've hidden.
 function _liquidCash(){
   if(dataLoaded){ const ex=(typeof _excludedAcctIds==='function')?_excludedAcctIds():new Set(); return allAccts.filter(a=>a.type==='depository' && !ex.has(a.account_id)).reduce((s,a)=>s+((a.balances&&(a.balances.available??a.balances.current))||0),0); }
-  return nwAssets.filter(a=>a.cat==='Cash & Bank').reduce((s,a)=>s+(a.value||0),0);
+  return engAccounts().filter(a=>!a.manual && !a.excluded && a.type==='depository').reduce((s,a)=>s+(a.bal||0),0);   // sample: example depository accounts (matches live semantics), so Safe-to-Spend/cash-flow don't read $0 in preview
 }
 function engStartCash(cats){
   if(cats && cats.length){ return engAccounts().filter(a=>!a.excluded && cats.includes(getAccountCategory(a))).reduce((s,a)=>s+(a.bal||0),0); }
@@ -6450,10 +6450,18 @@ function discretionarySpendBody(w){
   const over = spend>budget;
   const color = pct<85?'var(--green)' : pct<=100?'var(--amber)' : 'var(--red)';
   const remaining = budget-spend;
+  // Sparkline: completed months only (the month-grid's last bucket is the partial current month).
   const series=engDiscretionaryMonthly(6, linked?bcats:null);
-  const vals=series.map(s=>s.value);
-  const prev=vals.length>1?vals[vals.length-2]:0;
-  const cur=vals[vals.length-1]||spend;
+  const vals=series.slice(0,-1).map(s=>s.value);
+  // Trend: this month-to-date vs the SAME day-span of last month — an apples-to-apples pace check
+  // (not partial-MTD vs a full prior month, which showed a false drop early in the month). Same spend
+  // predicate as the month-grid (amount>0, spend tags only) over the categories this widget tracks.
+  const _now=new Date(), _dom=_now.getDate();
+  const _inSet=l=>(linked?bcats.has(l):isDiscretionary(l)) && !hidden.includes(l);
+  const _spendSpan=mOff=>{ const y=_now.getFullYear(), mo=_now.getMonth()+mOff, a=new Date(y,mo,1), er=new Date(y,mo,1+_dom), me=new Date(y,mo+1,1), b=er<me?er:me;   // clamp each span to its own month (handles day 31 vs a short month)
+    return allTxns.reduce((s,t)=>{ if(t.amount<=0||_txnExcludedFromSpend(t))return s; const d=new Date(t.date); if(d<a||d>=b)return s; return _inSet(getTxnCategory(t))?s+t.amount:s; },0); };
+  const cur = dataLoaded ? _spendSpan(0)  : (vals.length?vals[vals.length-1]:spend);
+  const prev= dataLoaded ? _spendSpan(-1) : (vals.length>1?vals[vals.length-2]:0);
   const trendUp = cur>prev;
   const trendPct = prev>0?Math.round((cur-prev)/prev*100):0;
   const trendColor = trendUp?'var(--red)':'var(--pos)';  // spending up = bad
@@ -6480,7 +6488,7 @@ function discretionarySpendBody(w){
     ${_atL(3)?`<div class="ds-foot">
       <div class="ds-trend">${_sparkline(vals, trendColor, 92, 26)}</div>
       <div class="ds-trend-meta">
-        <div class="ds-trend-label" style="color:${trendColor}">${trendUp?'▲':'▼'} ${Math.abs(trendPct)}% vs last mo</div>
+        <div class="ds-trend-label" style="color:${trendColor}" title="This month so far vs the same number of days into last month — an apples-to-apples pace comparison.">${trendUp?'▲':'▼'} ${Math.abs(trendPct)}% vs last mo</div>
         ${top?`<div class="ds-top"><span class="wph-dot" style="background:${top.color}"></span>Top: ${esc(top.label)} ${fmtK(top.value)}</div>`:''}
       </div>
     </div>`:''}
