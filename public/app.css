@@ -18,7 +18,9 @@
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;overflow:hidden;}
-html{font-size:14px;}
+/* Stop iOS Safari from auto-inflating text when rotated to landscape (it boosts font sizes and doesn't fully
+   revert on rotate back). 100% keeps text at the author-specified size in every orientation; pinch-zoom still works. */
+html{font-size:14px;-webkit-text-size-adjust:100%;text-size-adjust:100%;}
 body{font-family:var(--font);background-color:var(--bg);background-image:var(--bg-pattern,none);background-attachment:fixed;color:var(--text);-webkit-font-smoothing:antialiased;}
 
 /* ── Accessibility: visible keyboard focus ring (mouse clicks stay clean via :focus-visible) ── */
@@ -414,7 +416,7 @@ body.reduce-motion .ra-focus{animation:none!important;}
 }
 .sb-utility-btn:hover{color:var(--text);background:rgba(255,255,255,0.04);}
 .sb-utility-btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
-.sb-footer{padding:10px 10px;border-top:1px solid var(--border);position:relative;}
+.sb-footer{padding:10px 10px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--border);position:relative;}
 .sb-user:hover{background:rgba(255,255,255,0.04);}
 .sb-user-caret{font-size:13px;color:var(--muted);flex-shrink:0;}
 .user-menu{position:absolute;left:8px;right:8px;bottom:62px;background:var(--surface1,var(--surface2));border:1px solid var(--border);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.4);padding:6px;z-index:60;}
