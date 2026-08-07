@@ -1209,6 +1209,9 @@ body.reduce-motion .canvas-widget-card::before,body.reduce-motion .canvas-widget
 .canvas-widget-card.dragging{opacity:0.4;}
 .canvas-widget-card.drag-over-before{box-shadow:-3px 0 0 var(--green);}
 .canvas-widget-card.drag-over-after{box-shadow:3px 0 0 var(--green);}
+/* Touch reorder inserts vertically (single-column mobile stack), so mark top/bottom instead of left/right */
+.canvas-widget-card.drag-over-top{box-shadow:0 -3px 0 var(--green);}
+.canvas-widget-card.drag-over-bottom{box-shadow:0 3px 0 var(--green);}
 .add-widget-fab{display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 18px;border-radius:10px;background:var(--green-dim);border:1.5px dashed rgba(46,204,138,0.4);color:var(--green);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .14s;}
 .add-widget-fab:hover{background:rgba(46,204,138,0.16);border-style:solid;}
 .wph{padding:6px 2px;}
