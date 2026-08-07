@@ -2492,6 +2492,8 @@ canvas.chart-interactive{cursor:crosshair;}
 .jrn-win-dt{font-size:10.5px;color:var(--muted);}
 .jrn-empty{font-size:11.5px;color:var(--muted);padding:4px 0;}
 .jrn-badges{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
+.jrn-showall{width:100%;margin-top:2px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:inherit;font-size:11.5px;font-weight:600;padding:7px;border-radius:8px;cursor:pointer;transition:color .12s,border-color .12s;}
+.jrn-showall:hover{color:var(--text);border-color:var(--border2);}
 .jrn-badge{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 5px;border-radius:9px;border:1px solid var(--border);text-align:center;}
 .jrn-badge.on{background:rgba(46,204,138,.08);border-color:rgba(46,204,138,.32);}
 .jrn-badge.on.t-major{background:rgba(96,165,245,.08);border-color:rgba(96,165,245,.32);}
