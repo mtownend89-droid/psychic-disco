@@ -4983,6 +4983,7 @@ function mountWidgetCharts(pg){
   // Initialize interactive (non-Chart) widgets first
   (pg.widgets||[]).forEach(w=>{
     try{
+      if(w.type==='journey'){ journeyHubMount(w); }
       if(w.type==='fire_drill'){ fdSetScenario(_fd.scenario||'job'); }
       if(w.type==='debt_planner'){ dpRecalc(); dpRenderOrder(); }
       if(w.type==='pl_panel'){ plMount(w); }
@@ -7680,50 +7681,84 @@ function _householdChallenge(){
       </div>`;
   }catch(e){ return ''; }
 }
-function journeyBody(w){
-  try{ gamiCheckin(); gamiEvaluate(); }catch(e){}
-  const s=gamiLoad(); const m=gamiMetrics();
+/* Your Journey is a hub (like Wealth/Debt): a persistent level+streak header, then Progress / Quests /
+   Badges tabs. Only the active tab renders. Evaluation (gamiEvaluate) is intentionally NOT called from
+   these render functions — it runs on boot, data load, and real actions (which re-render this widget),
+   so the view stays fresh without the render-time side effects (XP awards, celebrations, state writes)
+   the old single-body version had. */
+const JOURNEY_TABS=[{id:'progress',label:'Progress',fn:'journeyProgressBody'},{id:'quests',label:'Quests',fn:'journeyQuestsBody'},{id:'badges',label:'Badges',fn:'journeyBadgesBody'}];
+let _journeyHub={}, _journeyShowAll={};
+function journeyBody(w){   // hub shell: persistent header + tab bar + empty body (filled by journeyHubMount)
+  const s=gamiLoad();
   const lv=LEVELS.find(l=>l.n===APP.level)||LEVELS[0];
   const lp=levelProgress();
   const nextLv=LEVELS.find(l=>l.n===APP.level+1);
+  const cur=_journeyHub[w.uid]||'progress';
+  const streak=(function(){
+    const st=s.streak||0, today=_streakDay(), doneToday=(s.lastAction!=null && s.lastAction===today);
+    const nm=streakNextMilestone(st), freezeOn=(s.freeze==null?1:s.freeze)>0;
+    const sub=doneToday ? (nm?`${nm-st} to your ${nm}-day badge`:'every day counts') : 'do one thing today to keep it';
+    return `<div class="jrn-streak ${doneToday?'lit':'dim'}" title="${doneToday?'Checked in today ✓':'Take one action today to keep your streak alive'}">
+      <span class="jrn-flame">${st>0?'🔥':'🕯️'}</span>
+      <div class="jrn-streak-txt"><div class="jrn-streak-n"><b>${st}</b> day${st===1?'':'s'}${freezeOn?' <span class="jrn-freeze" title="Grace day — one miss is forgiven">❄️</span>':''}</div><div class="jrn-streak-sub">${sub}</div></div>
+    </div>`;
+  })();
+  const header=`<div class="jrn-head">
+      <div class="jrn-lvl"><span class="jrn-lvl-ic">${lv.icon}</span><div><div class="jrn-lvl-nm">Level ${lv.n} · ${esc(lv.name)}</div><div class="jrn-lvl-sub">${APP.proMode?'Pro Mode — maxed out':(nextLv?(lp.toNext.toLocaleString()+' XP to '+esc(nextLv.name)):'Top level reached')}</div></div></div>
+      ${streak}
+    </div>`;
+  const tabs=JOURNEY_TABS.map(t=>`<button class="hub-tab${cur===t.id?' on':''}" onclick="event.stopPropagation();journeyHubTab('${w.uid}','${t.id}')">${esc(t.label)}</button>`).join('');
+  return `<div class="jrn"><div class="hub-wrap">${header}<div class="hub-tabs">${tabs}</div><div class="hub-body" id="jhub_${w.uid}"></div></div></div>`;
+}
+function journeyHubTab(uid,tab){ _journeyHub[uid]=tab; const w=_findWidget(uid); if(w) journeyHubMount(w); }
+function journeyToggleBadges(uid){ _journeyShowAll[uid]=!_journeyShowAll[uid]; const w=_findWidget(uid); if(w) journeyHubMount(w); }
+function journeyHubMount(w){
+  const cur=_journeyHub[w.uid]||'progress';
+  const wrap=gg('jhub_'+w.uid); if(!wrap) return;
+  const t=JOURNEY_TABS.find(x=>x.id===cur)||JOURNEY_TABS[0];
+  try{ wrap.innerHTML=window[t.fn](w); }catch(e){ wrap.innerHTML='<div class="jrn-empty">—</div>'; }
+  const btns=wrap.parentElement.querySelectorAll('.hub-tab');
+  JOURNEY_TABS.forEach((x,i)=>{ if(btns[i]) btns[i].classList.toggle('on', x.id===cur); });
+}
+function journeyProgressBody(w){
+  const s=gamiLoad(); const m=gamiMetrics(); const lp=levelProgress();
+  const unlockedCount=Object.keys(s.unlocked).length, totalCount=ACHIEVEMENTS.length;
+  return `<div class="jrn">
+    <div class="jrn-xp"><i style="width:${APP.proMode?100:lp.pct}%"></i></div>
+    <div class="jrn-stats"><span><b>${APP.xp}</b> XP</span><span><b>${unlockedCount}/${totalCount}</b> badges</span><span><b>${m.completedGoals}</b> goals done</span><span><b>${s.bestStreak||s.streak||0}</b> best 🔥</span></div>
+  </div>`;
+}
+function journeyQuestsBody(w){
+  const q=_questState();
+  const row=def=>{ const done=(def.scope==='daily'?q.d:q.w).done[def.id]; return `<div class="jrn-quest${done?' done':''}"><span class="jrn-q-ic">${done?'✅':def.icon}</span><span class="jrn-q-lbl">${esc(def.label)}</span><span class="jrn-q-xp">+${def.xp} XP</span></div>`; };
+  const daily=QUESTS.filter(x=>x.scope==='daily'), weekly=QUESTS.filter(x=>x.scope==='weekly');
+  const dDone=daily.filter(x=>q.d.done[x.id]).length, wDone=weekly.filter(x=>q.w.done[x.id]).length;
+  return `<div class="jrn">
+    <div class="jrn-sec">Daily quests <span class="jrn-sec-ct">${dDone}/${daily.length}</span></div><div class="jrn-quests">${daily.map(row).join('')}</div>
+    <div class="jrn-sec">Weekly quests <span class="jrn-sec-ct">${wDone}/${weekly.length}</span></div><div class="jrn-quests">${weekly.map(row).join('')}</div>
+    ${_householdChallenge()}
+  </div>`;
+}
+function journeyBadgesBody(w){
+  const s=gamiLoad(); const m=gamiMetrics();
   const locked=ACHIEVEMENTS.filter(a=>!s.unlocked[a.id]);
   const withProg=locked.filter(a=>a.prog).map(a=>{ const p=a.prog(m); const pct=Math.max(0,Math.min(100,Math.round((p.cur/(p.target||1))*100))); return {a,p,pct}; }).sort((x,y)=>y.pct-x.pct);
   const nextThree=withProg.slice(0,3);
-  const unlockedCount=Object.keys(s.unlocked).length, totalCount=ACHIEVEMENTS.length;
   const milestones = nextThree.length ? nextThree.map(o=>`<div class="jrn-ms"><div class="jrn-ms-top"><span>${o.a.icon} ${esc(o.a.name)}</span><b>${_gProgLabel(o.p)}</b></div><div class="jrn-ms-bar"><i style="width:${o.pct}%"></i></div><div class="jrn-ms-desc">${esc(o.a.desc)}</div></div>`).join('') : `<div class="jrn-empty">🎉 You've cleared every tracked milestone — grand work!</div>`;
-  const wins=(s.wins||[]).slice(0,4).map(wn=>`<div class="jrn-win"><span class="jrn-win-ic">${wn.icon}</span><span class="jrn-win-nm">${esc(wn.name)}</span><span class="jrn-win-dt">${_gRelDate(wn.ts)}</span></div>`).join('') || `<div class="jrn-empty">Your wins will show up here as you hit milestones.</div>`;
-  const badges=ACHIEVEMENTS.map(a=>{ const on=!!s.unlocked[a.id]; return `<div class="jrn-badge ${on?'on':'off'} t-${a.tier}" title="${esc(a.name)} — ${esc(a.desc)}"><span class="jrn-badge-ic">${on?a.icon:'🔒'}</span><span class="jrn-badge-nm">${esc(a.name)}</span></div>`; }).join('');
+  const wins=(s.wins||[]).slice(0,3).map(wn=>`<div class="jrn-win"><span class="jrn-win-ic">${wn.icon}</span><span class="jrn-win-nm">${esc(wn.name)}</span><span class="jrn-win-dt">${_gRelDate(wn.ts)}</span></div>`).join('') || `<div class="jrn-empty">Your wins will show up here as you hit milestones.</div>`;
+  const unlockedCount=Object.keys(s.unlocked).length, totalCount=ACHIEVEMENTS.length;
+  const showAll=!!_journeyShowAll[w.uid];
+  const shown = showAll ? ACHIEVEMENTS : ACHIEVEMENTS.filter(a=>!!s.unlocked[a.id]);
+  const badges = shown.length ? shown.map(a=>{ const on=!!s.unlocked[a.id]; return `<div class="jrn-badge ${on?'on':'off'} t-${a.tier}" title="${esc(a.name)} — ${esc(a.desc)}"><span class="jrn-badge-ic">${on?a.icon:'🔒'}</span><span class="jrn-badge-nm">${esc(a.name)}</span></div>`; }).join('') : `<div class="jrn-empty">No badges yet — complete a milestone to earn your first.</div>`;
+  const toggle = totalCount>unlockedCount ? `<button class="jrn-showall" onclick="event.stopPropagation();journeyToggleBadges('${w.uid}')">${showAll?'Show fewer':('Show all '+totalCount+' badges')}</button>` : '';
   return `<div class="jrn">
-    <div class="jrn-head">
-      <div class="jrn-lvl"><span class="jrn-lvl-ic">${lv.icon}</span><div><div class="jrn-lvl-nm">Level ${lv.n} · ${esc(lv.name)}</div><div class="jrn-lvl-sub">${APP.proMode?'Pro Mode — maxed out':(nextLv?(lp.toNext.toLocaleString()+' XP to '+esc(nextLv.name)):'Top level reached')}</div></div></div>
-      ${(function(){
-        const st=s.streak||0, today=_streakDay(), doneToday=(s.lastAction!=null && s.lastAction===today);
-        const nm=streakNextMilestone(st), freezeOn=(s.freeze==null?1:s.freeze)>0;
-        const sub=doneToday ? (nm?`${nm-st} to your ${nm}-day badge`:'every day counts') : 'do one thing today to keep it';
-        return `<div class="jrn-streak ${doneToday?'lit':'dim'}" title="${doneToday?'Checked in today ✓':'Take one action today to keep your streak alive'}">
-          <span class="jrn-flame">${st>0?'🔥':'🕯️'}</span>
-          <div class="jrn-streak-txt"><div class="jrn-streak-n"><b>${st}</b> day${st===1?'':'s'}${freezeOn?' <span class="jrn-freeze" title="Grace day — one miss is forgiven">❄️</span>':''}</div><div class="jrn-streak-sub">${sub}</div></div>
-        </div>`;
-      })()}
-    </div>
-    <div class="jrn-xp"><i style="width:${APP.proMode?100:lp.pct}%"></i></div>
-    <div class="jrn-stats"><span><b>${APP.xp}</b> XP</span><span><b>${unlockedCount}/${totalCount}</b> badges</span><span><b>${m.completedGoals}</b> goals done</span><span><b>${s.bestStreak||s.streak||0}</b> best 🔥</span></div>
-    ${(function(){ try{
-      const q=_questState();
-      const row=def=>{ const done=(def.scope==='daily'?q.d:q.w).done[def.id]; return `<div class="jrn-quest${done?' done':''}"><span class="jrn-q-ic">${done?'✅':def.icon}</span><span class="jrn-q-lbl">${esc(def.label)}</span><span class="jrn-q-xp">+${def.xp} XP</span></div>`; };
-      const daily=QUESTS.filter(x=>x.scope==='daily'), weekly=QUESTS.filter(x=>x.scope==='weekly');
-      const dDone=daily.filter(x=>q.d.done[x.id]).length, wDone=weekly.filter(x=>q.w.done[x.id]).length;
-      return `<div class="jrn-sec">Daily quests <span class="jrn-sec-ct">${dDone}/${daily.length}</span></div><div class="jrn-quests">${daily.map(row).join('')}</div>`
-        + `<div class="jrn-sec">Weekly quests <span class="jrn-sec-ct">${wDone}/${weekly.length}</span></div><div class="jrn-quests">${weekly.map(row).join('')}</div>`;
-    }catch(e){ return ''; } })()}
-    ${(function(){ try{ const h=nwHistMonthly(6); if(h&&h.length>=2){ const vals=h.map(x=>x.v); const diff=vals[vals.length-1]-vals[0]; const up=diff>=0; return `<div class="jrn-sec">Net worth trend <span class="jrn-trend-lbl ${up?'up':'down'}">${up?'▲':'▼'} ${fmtK(Math.abs(diff))} · ${h.length}mo</span></div><div class="jrn-trend">${_sparkline(vals, up?'#2ecc8a':'#e85d75', 260, 42)}</div>`; } }catch(e){} return ''; })()}
-    ${_householdChallenge()}
     <div class="jrn-sec">Next milestones</div>
     ${milestones}
     <div class="jrn-sec">Recent wins</div>
     <div class="jrn-wins">${wins}</div>
     <div class="jrn-sec">Badges <span class="jrn-sec-ct">${unlockedCount}/${totalCount}</span></div>
     <div class="jrn-badges">${badges}</div>
+    ${toggle}
   </div>`;
 }
 
