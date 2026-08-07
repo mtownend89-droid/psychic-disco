@@ -80,6 +80,6 @@ Single global mutable state object `APP` (defined ~line 4584: household, profile
 
 Because it's one large file, use `Grep` to jump to relevant sections rather than reading top-to-bottom — search for the specific `eng*` function, `/api/...` fetch call, or `function render...` you need. Line numbers shift easily; re-grep rather than trusting stale line numbers across edits.
 
-### Stray files
+### Deploy config
 
-A top-level `download` file and [render.yaml](render.yaml) both look like Render deploy configs but differ from each other (different env var sets, different start commands) — `render.yaml` is the one referenced by the README's deploy instructions; treat `download` as legacy/unused unless told otherwise.
+[render.yaml](render.yaml) is the canonical Render deploy config (referenced by the README). A legacy stray `download` file — an older browser-downloaded copy with a deprecated schema and a self-rotating `SESSION_SECRET` (`generateValue: true`) that would invalidate saved logins/tokens on every deploy — was removed; don't reintroduce it.
