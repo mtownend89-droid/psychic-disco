@@ -6450,13 +6450,18 @@ function discretionarySpendBody(w){
   const over = spend>budget;
   const color = pct<85?'var(--green)' : pct<=100?'var(--amber)' : 'var(--red)';
   const remaining = budget-spend;
-  // Trend + sparkline use COMPLETED months only. The month-grid's last bucket is the current, partial
-  // (month-to-date) month, so comparing it to last month's full total showed a false drop early in the
-  // month. Drop the in-progress month so the ▲▼ reflects the most recent full month-over-month change.
+  // Sparkline: completed months only (the month-grid's last bucket is the partial current month).
   const series=engDiscretionaryMonthly(6, linked?bcats:null);
   const vals=series.slice(0,-1).map(s=>s.value);
-  const prev=vals.length>1?vals[vals.length-2]:0;
-  const cur=vals.length?vals[vals.length-1]:spend;
+  // Trend: this month-to-date vs the SAME day-span of last month — an apples-to-apples pace check
+  // (not partial-MTD vs a full prior month, which showed a false drop early in the month). Same spend
+  // predicate as the month-grid (amount>0, spend tags only) over the categories this widget tracks.
+  const _now=new Date(), _dom=_now.getDate();
+  const _inSet=l=>(linked?bcats.has(l):isDiscretionary(l)) && !hidden.includes(l);
+  const _spendSpan=mOff=>{ const y=_now.getFullYear(), mo=_now.getMonth()+mOff, a=new Date(y,mo,1), er=new Date(y,mo,1+_dom), me=new Date(y,mo+1,1), b=er<me?er:me;   // clamp each span to its own month (handles day 31 vs a short month)
+    return allTxns.reduce((s,t)=>{ if(t.amount<=0||_txnExcludedFromSpend(t))return s; const d=new Date(t.date); if(d<a||d>=b)return s; return _inSet(getTxnCategory(t))?s+t.amount:s; },0); };
+  const cur = dataLoaded ? _spendSpan(0)  : (vals.length?vals[vals.length-1]:spend);
+  const prev= dataLoaded ? _spendSpan(-1) : (vals.length>1?vals[vals.length-2]:0);
   const trendUp = cur>prev;
   const trendPct = prev>0?Math.round((cur-prev)/prev*100):0;
   const trendColor = trendUp?'var(--red)':'var(--pos)';  // spending up = bad
@@ -6483,7 +6488,7 @@ function discretionarySpendBody(w){
     ${_atL(3)?`<div class="ds-foot">
       <div class="ds-trend">${_sparkline(vals, trendColor, 92, 26)}</div>
       <div class="ds-trend-meta">
-        <div class="ds-trend-label" style="color:${trendColor}" title="Last full month vs the month before — the current month is still in progress, so it isn't counted in this trend.">${trendUp?'▲':'▼'} ${Math.abs(trendPct)}% MoM</div>
+        <div class="ds-trend-label" style="color:${trendColor}" title="This month so far vs the same number of days into last month — an apples-to-apples pace comparison.">${trendUp?'▲':'▼'} ${Math.abs(trendPct)}% vs last mo</div>
         ${top?`<div class="ds-top"><span class="wph-dot" style="background:${top.color}"></span>Top: ${esc(top.label)} ${fmtK(top.value)}</div>`:''}
       </div>
     </div>`:''}
