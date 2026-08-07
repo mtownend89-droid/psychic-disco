@@ -5002,6 +5002,27 @@ function mountWidgetCharts(pg){
     try{ buildWidgetChart(w, cid); }catch(e){ /* ignore individual chart errors */ }
   });
 }
+
+/* Redraw the active page's canvas widgets after an orientation/width change. The Sankey (and any other hand-drawn
+   canvas) bakes its bitmap at the container width it was rendered at; CSS then stretches that fixed bitmap to fill a
+   wider container on rotation, so it must be re-drawn. We re-run only the canvas-builder loop (not the interactive
+   mounts) so hub/planner state isn't reset. Chart.js widgets self-resize, but re-running their builder is safe
+   (buildChartWidget destroys the prior instance) and keeps them crisp. Each call is try/caught, and buildWidgetChart
+   handles the Sankey before touching Chart, so a redraw still works when Chart.js is unavailable. */
+let _lastCanvasW=(typeof window!=='undefined')?window.innerWidth:0, _canvasRedrawT=null;
+function redrawActiveCanvases(){
+  const pg=(APP.pages||[]).find(p=>p.id===APP.activePage); if(!pg) return;
+  (pg.widgets||[]).forEach(w=>{ const cid='cv_'+w.uid; if(!gg(cid)) return; try{ buildWidgetChart(w, cid); }catch(e){} });
+}
+function scheduleCanvasRedraw(){
+  clearTimeout(_canvasRedrawT);
+  _canvasRedrawT=setTimeout(()=>{
+    const w=window.innerWidth;
+    if(w===_lastCanvasW) return;   // width unchanged (e.g. iOS toolbar show/hide fires resize on height only) → nothing to redraw
+    _lastCanvasW=w;
+    redrawActiveCanvases();
+  }, 180);   // debounce so a rotation / drag-resize only redraws once, after dimensions settle
+}
 function buildWidgetChart(w, cid){
   const live=dataLoaded;
   if(w.type==='sankey'){ buildSankey(cid, wDays(w)); return; }
@@ -10583,6 +10604,8 @@ async function enterApp(){
   else if(APP.pages[0]) switchPage(APP.pages[0].id);
   handleResize();
   window.addEventListener('resize',handleResize);
+  window.addEventListener('resize',scheduleCanvasRedraw);           // redraw hand-drawn canvases (Sankey) on width change
+  window.addEventListener('orientationchange',scheduleCanvasRedraw); // iOS sometimes fires this without a clean resize
   initSwipeNav();
   setTimeout(()=>{ if(sbRichie)sbRichie.do('wiggle'); },600);
   // attempt live data load; re-render active page when it arrives
