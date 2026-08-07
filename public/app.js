@@ -1016,6 +1016,14 @@ const NON_INCOME_CATEGORIES=new Set(['Loan Payments','Auto Payments','Mortgage',
 // isn't a payment landing on a liability account, and isn't in a liability/transfer category.
 function _isIncomeTxn(t){ return t.amount<0 && !_txnExcludedFromIncome(t) && !_txnIsToDebtAcct(t) && !NON_INCOME_CATEGORIES.has(getTxnCategory(t)); }
 function engIncome(days){ return engRecent(days).filter(_isIncomeTxn).reduce((s,t)=>s+Math.abs(t.amount),0); }
+// MTD-vs-same-span pace helper: sum abs(amount) of txns from the 1st through the same day-of-month, for
+// the calendar month `mOff` from today (0=this month, -1=last month), matching pred. Each span is clamped
+// to its own month, so day-31 vs a short February compares full-month-to-date instead of overflowing.
+function _mtdSpanSum(mOff, pred){
+  const now=new Date(), dom=now.getDate(), y=now.getFullYear(), mo=now.getMonth()+mOff;
+  const a=new Date(y,mo,1), er=new Date(y,mo,1+dom), me=new Date(y,mo+1,1), b=er<me?er:me;
+  return (allTxns||[]).reduce((s,t)=>{ if(!pred(t))return s; const d=new Date(t.date); return (d>=a&&d<b)?s+Math.abs(t.amount):s; },0);
+}
 // Timeframe options: label, days, and a noun for "per period"
 const TIMEFRAMES=[{key:'1w',label:'1 wk',days:7},{key:'30d',label:'30 days',days:30},{key:'3m',label:'3 mo',days:90},{key:'1y',label:'1 yr',days:365}];
 function tfDays(key){ const t=TIMEFRAMES.find(x=>x.key===key); return t?t.days:30; }
@@ -6453,15 +6461,12 @@ function discretionarySpendBody(w){
   // Sparkline: completed months only (the month-grid's last bucket is the partial current month).
   const series=engDiscretionaryMonthly(6, linked?bcats:null);
   const vals=series.slice(0,-1).map(s=>s.value);
-  // Trend: this month-to-date vs the SAME day-span of last month — an apples-to-apples pace check
-  // (not partial-MTD vs a full prior month, which showed a false drop early in the month). Same spend
-  // predicate as the month-grid (amount>0, spend tags only) over the categories this widget tracks.
-  const _now=new Date(), _dom=_now.getDate();
+  // Trend: this month-to-date vs the SAME day-span of last month — an apples-to-apples pace check (not
+  // partial-MTD vs a full prior month). Same spend predicate as the month-grid, over tracked categories.
   const _inSet=l=>(linked?bcats.has(l):isDiscretionary(l)) && !hidden.includes(l);
-  const _spendSpan=mOff=>{ const y=_now.getFullYear(), mo=_now.getMonth()+mOff, a=new Date(y,mo,1), er=new Date(y,mo,1+_dom), me=new Date(y,mo+1,1), b=er<me?er:me;   // clamp each span to its own month (handles day 31 vs a short month)
-    return allTxns.reduce((s,t)=>{ if(t.amount<=0||_txnExcludedFromSpend(t))return s; const d=new Date(t.date); if(d<a||d>=b)return s; return _inSet(getTxnCategory(t))?s+t.amount:s; },0); };
-  const cur = dataLoaded ? _spendSpan(0)  : (vals.length?vals[vals.length-1]:spend);
-  const prev= dataLoaded ? _spendSpan(-1) : (vals.length>1?vals[vals.length-2]:0);
+  const _spendPred=t=> t.amount>0 && !_txnExcludedFromSpend(t) && _inSet(getTxnCategory(t));
+  const cur = dataLoaded ? _mtdSpanSum(0,_spendPred)  : (vals.length?vals[vals.length-1]:spend);
+  const prev= dataLoaded ? _mtdSpanSum(-1,_spendPred) : (vals.length>1?vals[vals.length-2]:0);
   const trendUp = cur>prev;
   const trendPct = prev>0?Math.round((cur-prev)/prev*100):0;
   const trendColor = trendUp?'var(--red)':'var(--pos)';  // spending up = bad
@@ -7902,7 +7907,7 @@ function renderWidgetBody(w){
     case 'health_score': return healthScoreBody(w);
     case 'spending_hub': return spendingHubBody(w);
     case 'spending_month': return discretionarySpendBody(w);
-    case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); const now=Date.now(), ps=new Date(now-2*days*86400000), pe=new Date(now-days*86400000); const prev=allTxns.filter(t=>{const d=new Date(t.date);return d>=ps&&d<pe&&_isIncomeTxn(t);}).reduce((s,t)=>s+Math.abs(t.amount),0); const dl=prev>0?Math.round((inc-prev)/prev*100):null; const up=dl!==null&&dl>=0; const trend=dl===null?'':`<div class="ds-trend-label" style="color:${up?'var(--green)':'var(--amber)'};margin-top:9px">${up?'▲':'▼'} ${Math.abs(dl)}% vs prior ${tfLabel(w.tf||'30d')}</div>`; const rec=engRecent(days).filter(_isIncomeTxn); const byC={}; rec.forEach(t=>{const c=getTxnCategory(t);byC[c]=(byC[c]||0)+Math.abs(t.amount);}); const top=Object.entries(byC).sort((a,b)=>b[1]-a[1])[0]; return `<div class="wph"><div class="wph-stat" title="Sum of income transactions received over ${esc(tfLabel(w.tf||'30d'))} — deposits/paychecks only; transfers, refunds & credit-card payments excluded." style="color:var(--pos)">${fmtK(inc)}</div><div class="wph-sub">last ${tfLabel(w.tf||'30d')}</div>${_atL(2)?trend:''}${_atL(2)&&top?`<div class="wph-inline"><span>Top source: ${esc(top[0])}</span><b style="color:var(--pos)">${fmtK(top[1])}</b></div>`:''}</div>`; } const top=incomeSources.slice().sort((a,b)=>b.amt*(FREQ_TO_MONTHLY[b.freq]||1)-a.amt*(FREQ_TO_MONTHLY[a.freq]||1))[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--pos)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">${incomeSources.length} sources \u00b7 sample</div><div class="ds-trend-label" style="color:var(--green);margin-top:9px">▲ 6% vs prior 30d</div><div class="wph-inline"><span>Top source: ${top.name}</span><b style="color:var(--green)">${fmtK(Math.round(top.amt*(FREQ_TO_MONTHLY[top.freq]||1)))}/mo</b></div></div>`; }
+    case 'income_month': { const days=wDays(w); if(dataLoaded){ const inc=engIncome(days); const curI=_mtdSpanSum(0,_isIncomeTxn), prevI=_mtdSpanSum(-1,_isIncomeTxn); const dl=prevI>0?Math.round((curI-prevI)/prevI*100):null; const up=dl!==null&&dl>=0; const trend=dl===null?'':`<div class="ds-trend-label" style="color:${up?'var(--green)':'var(--amber)'};margin-top:9px" title="This month so far vs the same number of days into last month — an apples-to-apples pace comparison.">${up?'▲':'▼'} ${Math.abs(dl)}% vs last mo</div>`; const rec=engRecent(days).filter(_isIncomeTxn); const byC={}; rec.forEach(t=>{const c=getTxnCategory(t);byC[c]=(byC[c]||0)+Math.abs(t.amount);}); const top=Object.entries(byC).sort((a,b)=>b[1]-a[1])[0]; return `<div class="wph"><div class="wph-stat" title="Sum of income received ${esc(engRangeLabel(wDays(w)))} — deposits/paychecks only; transfers, refunds & credit-card payments excluded." style="color:var(--pos)">${fmtK(inc)}</div><div class="wph-sub">${esc(engRangeLabel(wDays(w)))}</div>${_atL(2)?trend:''}${_atL(2)&&top?`<div class="wph-inline"><span>Top source: ${esc(top[0])}</span><b style="color:var(--pos)">${fmtK(top[1])}</b></div>`:''}</div>`; } const top=incomeSources.slice().sort((a,b)=>b.amt*(FREQ_TO_MONTHLY[b.freq]||1)-a.amt*(FREQ_TO_MONTHLY[a.freq]||1))[0]; return `<div class="wph"><div class="wph-stat" style="color:var(--pos)">${fmtK(Math.round(5400*days/30))}</div><div class="wph-sub">${incomeSources.length} sources \u00b7 sample</div><div class="ds-trend-label" style="color:var(--green);margin-top:9px">▲ 6% vs prior 30d</div><div class="wph-inline"><span>Top source: ${top.name}</span><b style="color:var(--green)">${fmtK(Math.round(top.amt*(FREQ_TO_MONTHLY[top.freq]||1)))}/mo</b></div></div>`; }
     case 'debt_summary': return debtSummaryBody(w);
     case 'category_heatmap': return categoryHeatmapBody(w);
     case 'spending_trends': return spendTrendsBody(w);
