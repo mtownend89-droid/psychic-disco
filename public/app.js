@@ -1022,7 +1022,9 @@ function tfDays(key){ const t=TIMEFRAMES.find(x=>x.key===key); return t?t.days:3
 const _CAL_TF_LABEL={7:'This week',30:'This month',90:'This quarter',365:'This year'};
 function tfLabel(key){ const t=TIMEFRAMES.find(x=>x.key===key); if(!t) return _periodBasis()==='calendar'?'This month':'30 days'; return _periodBasis()==='calendar'?(_CAL_TF_LABEL[t.days]||t.label):t.label; }
 function engTotalDebt(){ return allAccts.filter(a=>_isDebtAcct(a)).reduce((s,a)=>s+Math.abs((a.balances&&a.balances.current)||0),0); }
-function engCategoryBreakdown(days, forceRolling){
+// Frame-memoized (14 call sites/render): pure, and callers only read/reassign the array (never mutate in place).
+function engCategoryBreakdown(days, forceRolling){ return _memoFrame('catbrk:'+days+':'+(forceRolling?1:0), function(){ return _engCategoryBreakdownRaw(days, forceRolling); }); }
+function _engCategoryBreakdownRaw(days, forceRolling){
   const rec=engRecent(days, forceRolling).filter(t=>t.amount>0 && !_txnExcludedFromSpend(t)); const byCat={};
   rec.forEach(t=>{ const c=getTxnCategory(t); byCat[c]=(byCat[c]||0)+t.amount; });
   return Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([label,value])=>({label,value,color:getCatColor(label)}));
@@ -2582,7 +2584,9 @@ function _nwManA(){
 }
 function _nwManL(){ return (APP.nwManualLiab||[]).filter(x=>+x.value>0).map(x=>({label:x.name||x.cat,value:+x.value,note:x.cat||'manual'})); }
 function engNetWorth(){ return engNWAssets()-engNWLiab(); }
-function engUpcomingBills(){
+// Frame-memoized (9 call sites/render): pure (sorts a .filter() copy, not engBills' shared array); callers read-only.
+function engUpcomingBills(){ return _memoFrame('upbills', function(){ return _engUpcomingBillsRaw(); }); }
+function _engUpcomingBillsRaw(){
   const today=new Date().getDate();
   return engBills().filter(b=>b.pay>0).sort((a,b)=>{
     const da=a.due<today?a.due+31:a.due, db=b.due<today?b.due+31:b.due; return da-db;
