@@ -4412,11 +4412,12 @@ function _applyThemeSkin(themeId){
   // small badge chips (.txf-tag)
   if(U('badge')) css+=p+'.txf-tag{'+bg(U('badge'))+';color:#183200!important;border:none!important;}';
   // panel → the reusable modal card + the specialized modal cards (art gives the fill + frame)
-  if(U('panel')){ const pc=c.panel, ps=['.modal','.doc-card','.wdt-card','.ce-card','.txs-card'].map(x=>p+x).join(',');
-    // a `slice` makes the panel a 9-slice border-image (border stays a consistent thickness + round corners at any modal size);
-    // otherwise it's a stretched background fill.
-    if(pc.slice!=null){ css+=ps+'{border:'+(pc.width||14)+'px solid transparent!important;border-image:url("'+pc.url+'") '+pc.slice+' fill!important;border-radius:0!important;box-shadow:none!important;}'; }
-    else { css+=ps+'{'+bg(pc.url)+';border:none!important;border-radius:0!important;box-shadow:none!important;}'; }
+  if(U('panel')){ const ps=['.modal','.doc-card','.wdt-card','.ce-card','.txs-card'].map(x=>p+x).join(',');
+    // SIMPLE pop-out: a clean solid themed surface with an accent border + subtle glow. We deliberately no longer
+    // stretch the library modal-window art over the panel — on the raster themes (slime/galaxy) it distorted and
+    // showed the baked "Modal Window" placeholder label. var(--accent) is each active theme's signature color, so
+    // this one rule gives every skinned theme a consistent, legible frame at any modal size.
+    css+=ps+'{background:var(--surface)!important;border:2px solid var(--accent)!important;border-radius:16px!important;box-shadow:0 12px 48px rgba(0,0,0,.55),0 0 24px -8px var(--accent)!important;}';
   }
   // Richie's speech bubble
   if(U('chatRichie')){ const ct=c.chatRichie, col=ct.text||'var(--text)'; css+=p+'.ra-bubble{'+bg(ct.url)+';border-radius:0!important;box-shadow:none!important;color:'+col+'!important;}'; css+=p+'.ra-bubble .ra-msg,'+p+'.ra-bubble .ra-title{color:'+col+'!important;}'; }
