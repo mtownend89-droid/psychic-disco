@@ -88,11 +88,12 @@ const SYSTEM_CATEGORIES=[
 ];
 const SYS_CAT_BY_LABEL={}; SYSTEM_CATEGORIES.forEach(c=>SYS_CAT_BY_LABEL[c.label]=c);
 function catFlags(label){ return SYS_CAT_BY_LABEL[label]||{}; }
+function _sysCatParents(){ try{ return JSON.parse(LS.getItem('mdf_syscat_parents')||'{}')||{}; }catch(e){ return {}; } }
 function getUserCategories(){
   let base; try{ const s=JSON.parse(LS.getItem('mdf_categories')); base=(s&&s.length)?s:DEFAULT_CATEGORIES.map(c=>({...c})); }catch(e){ base=DEFAULT_CATEGORIES.map(c=>({...c})); }
-  base=base.filter(c=>!c.sys);                                              // sys cats are canonical from code, never persisted
-  const have=new Set(base.map(c=>c.id));
-  return base.concat(SYSTEM_CATEGORIES.filter(c=>!have.has(c.id)).map(c=>({...c})));
+  base=base.filter(c=>!c.sys);                                              // sys cats' flags/labels are canonical from code, never persisted
+  const have=new Set(base.map(c=>c.id)), par=_sysCatParents();             // ...but which GROUP a sys cat lives in IS user-editable (for future group-based graphs)
+  return base.concat(SYSTEM_CATEGORIES.filter(c=>!have.has(c.id)).map(c=>({...c, parent:(c.id in par)?par[c.id]:c.parent})));
 }
 
 /* ══ ACCOUNT CATEGORY TREE — a taxonomy for ACCOUNTS, separate from spending categories.
@@ -4023,7 +4024,7 @@ window.addEventListener('visibilitychange', ()=>{ if(document.visibilityState===
 let _persistTimer=null;
 function _persistSoon(){ clearTimeout(_persistTimer); _persistTimer=setTimeout(()=>{ try{ saveState(); }catch(e){} }, 400); }
 /* ── Cross-device state sync: push edits to the server, pull newer edits from other devices ── */
-const SYNC_KEYS=['mdf_categories','mdf_cat_overrides','mdf_cat_rules','mdf_txn_notes','mdf_txn_tags','mdf_txn_confirmed','mdf_acct_cats','mdf_nw_history','mdf_health_history','mdf_health_grade','mdf_fire','mdf_gami','richie_setup','richie_lastvisit','richie_proactive','richie_audio','richie_voice'];
+const SYNC_KEYS=['mdf_categories','mdf_syscat_parents','mdf_cat_overrides','mdf_cat_rules','mdf_txn_notes','mdf_txn_tags','mdf_txn_confirmed','mdf_acct_cats','mdf_nw_history','mdf_health_history','mdf_health_grade','mdf_fire','mdf_gami','richie_setup','richie_lastvisit','richie_proactive','richie_audio','richie_voice'];
 function syncCollect(){ try{ _saveActiveLayout(); }catch(e){}   /* fold live pages into layouts before EVERY push (immediate/flush/heartbeat), else a push can ship stale layouts */
   const stores={}; SYNC_KEYS.forEach(k=>{ const v=LS.getItem(k); if(v!=null) stores[k]=v; }); return { app:APP, stores, _ts:Date.now() }; }
 function _widgetCount(pages){ return (pages||[]).reduce((s,p)=>s+((p&&p.widgets||[]).length),0); }
@@ -5159,11 +5160,11 @@ function renderCatEditor(){
   const rowHtml=(c,kind)=>{ // kind: 'group' | 'child' | 'free'
     const i=_catEdit.indexOf(c);
     const draggable = kind!=='group' && !c.sys;
-    if(c.sys) return `<div class="ce-row ce-child ce-sys" data-i="${i}" data-id="${esc(c.id)}" data-grp="0">
-      <span class="ce-grip ce-grip-lock" title="System category — locked">🔒</span>
+    if(c.sys) return `<div class="ce-row ce-child ce-sys" data-i="${i}" data-id="${esc(c.id)}" data-grp="0" draggable="true">
+      <span class="ce-grip" title="Drag into a group">⠿</span>
       <span class="ce-color ce-color-lock" style="background:${c.color||'#888'}"></span>
-      <span class="ce-label ce-label-lock">${esc(c.label)}</span>
-      <span class="ce-sys-badge" title="Keeps these transactions out of spending/income where relevant">system</span>
+      <span class="ce-label ce-label-lock">🔒 ${esc(c.label)}</span>
+      <span class="ce-sys-badge" title="Locked — can be grouped, but not renamed or deleted">system</span>
     </div>`;
     return `<div class="ce-row${kind==='group'?' ce-grouprow':''}${kind==='child'?' ce-child':''}" data-i="${i}" data-id="${esc(c.id)}" data-grp="${kind==='group'?1:0}"${draggable?' draggable="true"':''}>
       ${draggable?'<span class="ce-grip" title="Drag to move">\u283F</span>':'<span class="ce-grip ce-grip-folder">\uD83D\uDCC1</span>'}
@@ -5213,7 +5214,9 @@ function catEditDelete(i){ if(_catEdit[i]&&_catEdit[i].sys) return;   // system 
 function catEditAdd(){ _catEdit.push({id:'custom_'+Date.now(),label:'New Category',color:'#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0'),plaid:[]}); renderCatEditor(); }
 function catEditAddGroup(){ _catEdit.push({id:'grp_'+Date.now(),label:'New Group',color:'#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0'),group:true}); renderCatEditor(); }
 function catEditSave(){
-  saveUserCategories(_catEdit.filter(c=>!c.sys));   // sys cats are always re-merged by getUserCategories — never persist them
+  const sysPar={}; _catEdit.forEach(c=>{ if(c.sys) sysPar[c.id]=c.parent||null; });   // persist which group each locked sys cat was dropped into
+  try{ LS.setItem('mdf_syscat_parents', JSON.stringify(sysPar)); }catch(e){}
+  saveUserCategories(_catEdit.filter(c=>!c.sys));   // sys cats' flags are re-merged by getUserCategories — never persist the cats themselves
   closeCatEditor();
   showToast('Categories saved','success');
   // re-render active page so category colors/labels update everywhere
