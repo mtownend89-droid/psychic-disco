@@ -1869,7 +1869,9 @@ function engLumpSumPlan(amount){
   amount=Math.max(0, Math.round(amount||0));
   let debts=[];
   try{ const g=engDebtGroups(); debts=[...g.revolving, ...g.installment]; }catch(e){}
-  debts=debts.map(b=>({name:b.name, apr:+b.apr||0, bal:Math.abs(b.bal||0), cat:b.cat}))
+  debts=debts
+    .filter(b=>{ try{ return !_billOccPaid(_billOkeyForMonth(b, 0)); }catch(e){ return true; } })   // skip cards already checked off paid this cycle — the lump can't ride an already-paid occurrence, and bumping it would skew Safe to Spend
+    .map(b=>({name:b.name, apr:+b.apr||0, bal:Math.abs(b.bal||0), cat:b.cat}))
     .filter(d=>d.bal>0 && (d.cat==='CC' || d.apr>=8))
     .sort((a,b)=> (b.apr-a.apr) || (b.bal-a.bal));
   let rem=amount; const alloc=[];
@@ -7067,7 +7069,7 @@ function openLumpSumModal(){
 // balance), then jump to Bills so the next unpaid occurrence reflects the extra payment.
 function lumpSetupPayments(){
   try{ const rw=engCashRunway(); if(rw && rw.kind==='opportunity'){ const plan=engLumpSumPlan(rw.deploy);
-    plan.alloc.forEach(a=>{ try{ const b=engBills().find(x=>x.name===a.name); if(b){ const bal=Math.abs(b.bal||0); let np=(b.pay||0)+a.pay; if(bal>0) np=Math.min(np,bal); setBillPay(billKey(b), Math.round(np)); } }catch(e){} });
+    plan.alloc.forEach(a=>{ try{ const b=engBills().find(x=>x.name===a.name); if(b && !_billOccPaid(_billOkeyForMonth(b,0))){ const bal=Math.abs(b.bal||0); let np=(b.pay||0)+a.pay; if(bal>0) np=Math.min(np,bal); setBillPay(billKey(b), Math.round(np)); } }catch(e){} });
   } }catch(e){}
   try{ closeManual(); }catch(e){}
   try{ _ensureWidgetOnPage('bills_list'); }catch(e){}
