@@ -1634,6 +1634,9 @@ body.reduce-motion .canvas-widget-card::before,body.reduce-motion .canvas-widget
 .cfp-lowflag.danger{background:rgba(240,92,92,0.12);color:#f6a6a6;border:1px solid rgba(240,92,92,0.25);}
 .cfp-lowflag.warn{background:rgba(240,165,64,0.12);color:#f0c674;border:1px solid rgba(240,165,64,0.25);}
 .cfp-lowflag.ok{background:rgba(46,204,138,0.1);color:#7fe0b0;border:1px solid rgba(46,204,138,0.22);}
+.cfp-lowflag.opp{background:rgba(46,204,138,0.16);color:#a7f3cf;border:1px solid rgba(46,204,138,0.4);box-shadow:0 0 0 1px rgba(46,204,138,0.12) inset;}
+.cfp-flag-act{margin-left:6px;display:inline-block;background:rgba(255,255,255,0.06);border:1px solid currentColor;color:inherit;font-family:inherit;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;cursor:pointer;white-space:nowrap;}
+.cfp-flag-act:hover{background:rgba(255,255,255,0.12);}
 .cfp-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:4px 0 9px;}
 .cfp-events{display:flex;flex-direction:column;gap:5px;max-height:280px;overflow-y:auto;}
 /* Topbar Review button (re-opens the Money To-Do wizard) */
