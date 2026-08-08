@@ -1100,7 +1100,7 @@ function _sparkline(vals, color, w, h){
   const lastX=w, lastY=h-((vals[vals.length-1]-min)/rng)*(h-4)-2;
   return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="2.5" fill="${color}"/></svg>`;
 }
-// SVG donut chart (used by Budget by Category two-tier view)
+// SVG donut chart (used by Category Breakdown two-tier view)
 function _arcPath(cx,cy,r,ir,a0,a1){
   const x0=cx+r*Math.cos(a0), y0=cy+r*Math.sin(a0);
   const x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
@@ -1558,7 +1558,7 @@ function engBillCalendar(monthOffset){
   (engUpcomingBills()||[]).filter(b=>b.pay>0).forEach(b=>{
     const due=_dueDateInMonth(first.getFullYear(), first.getMonth(), b.due||1);
     const k=_dk(due), okey=billKey(b)+'|'+k;
-    pushEv(k,{name:b.name, amt:-(b.pay||0), type:'bill', off:_billOccPaid(okey), okey});
+    pushEv(k,{name:b.name, amt:-(b.pay||0), type:'bill', off:_billOccPaid(okey), okey, bill:b, dueStr:k});
   });
   const gridStart=new Date(first); gridStart.setDate(first.getDate()-first.getDay());   // Sunday on/before the 1st
   const weeks=[]; let cur=new Date(gridStart); let monthIn=0, monthOut=0, monthPaid=0;
@@ -1586,7 +1586,18 @@ function _billCalList(days, uid){
       // Bills with an occurrence key get a tap-to-toggle checkbox tied to the SAME per-month paid
       // state as the Bills widget (billPaidOcc), so paying here reflects everywhere and vice-versa.
       const chk=(isBill&&e.okey)?`<button class="bcal-li-chk${paid?' on':''}" onclick="event.stopPropagation();billsToggleOcc('${String(e.okey).replace(/'/g,"\\'")}','${uid}')" title="${paid?'Mark unpaid':'Mark paid'}">${paid?'✓':''}</button>`:'<span class="bcal-li-chk sp"></span>';
-      return `<div class="bcal-li${paid?' paid':''}">${chk}<span class="bcal-li-dot ${e.amt>=0?'in':'out'}"></span><span class="bcal-li-nm">${esc(e.name)}</span><b style="color:${paid?'var(--muted)':(e.amt>=0?'var(--pos)':'var(--red)')}">${e.amt>=0?'+':'−'}${fmtK(e.amt)}</b></div>`;
+      // Same posted/expected/on-card refinement the Bills widget shows on a PAID bill, so the two agree.
+      let ptag='';
+      if(isBill && paid && e.bill){
+        const _pv=_billPaidOcc()[e.okey]; const paidAt=(typeof _pv==='number' && _pv>1e12)?_pv:null;
+        const pa=e.bill.payAcct?engAccounts().find(a=>a.id===e.bill.payAcct):null;
+        if(pa) ptag = pa.type==='credit'
+          ? ' <span class="bill-oncard" title="Paid with this card — lands on the card, doesn\'t reduce cash">💳 on card</span>'
+          : (_billOccMatched(e.bill, e.dueStr, paidAt)
+              ? ' <span class="bill-posted" title="A matching transaction has posted or is pending — counted from the bank, not double-counted">✓ posted</span>'
+              : ' <span class="bill-pend" title="Held out of Cash on Hand / Safe to Spend as expected-spent until it clears">⏳ expected</span>');
+      }
+      return `<div class="bcal-li${paid?' paid':''}">${chk}<span class="bcal-li-dot ${e.amt>=0?'in':'out'}"></span><span class="bcal-li-nm">${esc(e.name)}${ptag}</span><b style="color:${paid?'var(--muted)':(e.amt>=0?'var(--pos)':'var(--red)')}">${e.amt>=0?'+':'−'}${fmtK(e.amt)}</b></div>`;
     }).join('');
     return `<div class="bcal-li-day"><div class="bcal-li-date">${_billCalDayLabel(d.key)}</div>${rows}</div>`;
   }).join('');
@@ -4561,7 +4572,7 @@ const WIDGET_CATALOG=[
   {id:'safe_spend',name:'Safe to Spend',icon:'👛',cat:'Overview',span:1,minLevel:1,desc:'The big one — how much you can safely spend today after upcoming bills, goal set-asides & a buffer.'},
   {id:'spending_month',name:"Current Spending",icon:'🛒',cat:'Overview',span:1,minLevel:1,desc:'Discretionary spending vs budget — your quick "how are we doing" marker (bills & savings excluded).'},
   {id:'income_month',name:"This Month's Income",icon:'💰',cat:'Overview',span:1,minLevel:1,desc:'Money in this month.'},
-  {id:'budget_doughnut',name:'Budget by Category',icon:'🍩',cat:'Budget',span:2,minLevel:2,desc:'Two donuts side by side — spending by group and by category (stacked on mobile).'},
+  {id:'budget_doughnut',name:'Category Breakdown',icon:'🍩',cat:'Budget',span:2,minLevel:2,desc:'Two donuts side by side — spending by group and by category (stacked on mobile).'},
   {id:'bills_list',name:'Upcoming Bills',icon:'📋',cat:'Budget',span:1,minLevel:1,desc:"What's due and when."},
   {id:'bill_calendar',name:'Bill Calendar',icon:'🗓️',cat:'Budget',span:2,minLevel:2,desc:'A month view of upcoming bills & income by due date — spot heavy weeks, tap a day for detail.'},
   {id:'zero_budget',name:'Every-Dollar Budget',icon:'🧮',cat:'Budget',span:2,minLevel:2,desc:'Give every dollar a job — with live actual-vs-budgeted spending per envelope (zero-based budgeting).'},
@@ -5619,7 +5630,7 @@ function billsWidgetBody(w){
         <div class="bill-sub">${b.dueEst?'<span style="color:var(--muted)">due date not set</span>':'due '+ord(b.due)}${b.apr?` · ${b.apr.toFixed(1)}%`:''}${b.promo?` · ${esc(b.promo)}`:''}${_billPayoffLabel(b)}</div>
         <div class="bill-amts">
           <span class="bill-min">Min <b>${fmtK(b.min)}</b>${b.estMin?' · <span style="color:var(--amber)" title="No minimum reported by the bank — estimated at ~2% of balance. Tap the pencil to set the real one.">est.</span>':(live&&!b.manual?' · Plaid':'')}</span>
-          ${Math.abs(diff)>=1?`<span class="bill-diff" style="color:${diff>0?'var(--amber)':'var(--green)'}">${diff>0?'+':''}${fmtK(diff)} vs min</span>`:''}
+          ${Math.abs(diff)>=1?`<span class="bill-diff" style="color:${diff>0?'var(--green)':'var(--amber)'}">${diff>0?'+':''}${fmtK(diff)} vs min</span>`:''}
         </div>
         ${fillPrompt}
         ${acctSel}
@@ -6398,7 +6409,7 @@ function budgetTiersBody(w){
     </div>
     <div class="bd2-col">
       <div class="bd2-title">By category</div>
-      <div class="bd2-chart">${_donutSVG(cats2,128,String(kids.length),'categories')}</div>
+      <div class="bd2-chart">${_donutSVG(cats2,128,fmtK(total),'total')}</div>
       <div class="bd2-legend">${legend(cats2)}</div>
     </div>
   </div>${dataLoaded?'':'<div class="ws-hint" style="margin-top:8px;text-align:center">sample data — connect a bank for live spending</div>'}`;
