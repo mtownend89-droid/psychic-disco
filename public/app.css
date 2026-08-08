@@ -1638,6 +1638,21 @@ body.reduce-motion .canvas-widget-card::before,body.reduce-motion .canvas-widget
 .cfp-lowflag.opp{background:#5fd9a3;color:#111;border:1px solid #2ecc8a;box-shadow:0 0 0 1px rgba(46,204,138,0.35) inset;}
 .cfp-flag-act{margin-left:6px;display:inline-block;background:rgba(255,255,255,0.45);border:1px solid rgba(0,0,0,0.32);color:#111;font-family:inherit;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;cursor:pointer;white-space:nowrap;}
 .cfp-flag-act:hover{background:rgba(255,255,255,0.72);}
+/* 💵 lump-sum payoff breakdown modal */
+.lump-list{display:flex;flex-direction:column;gap:10px;margin-bottom:14px;}
+.lump-row{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 11px;}
+.lump-row.cleared{border-color:rgba(46,204,138,0.4);}
+.lump-row-top{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700;color:var(--text);gap:8px;}
+.lump-apr{font-size:11px;font-weight:600;color:var(--muted);}
+.lump-bar{height:6px;background:var(--surface3);border-radius:4px;overflow:hidden;margin:6px 0 4px;}
+.lump-bar-fill{height:100%;background:var(--green);border-radius:4px;}
+.lump-row-sub{font-size:11px;color:var(--muted);}
+.lump-summary{font-size:12px;color:var(--text);text-align:center;padding:5px 0 0;}
+.lump-choose{border-top:1px solid var(--border);padding-top:12px;}
+.lump-richie{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;line-height:1.5;color:var(--text);margin-bottom:11px;}
+.lump-richie-ic{font-size:20px;flex-shrink:0;line-height:1.2;}
+.lump-actions{display:flex;gap:9px;}
+.lump-actions .btn{flex:1;}
 .cfp-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:4px 0 9px;}
 .cfp-events{display:flex;flex-direction:column;gap:5px;max-height:280px;overflow-y:auto;}
 /* Topbar Review button (re-opens the Money To-Do wizard) */

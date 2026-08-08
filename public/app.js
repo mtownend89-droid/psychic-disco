@@ -1835,6 +1835,25 @@ function engCashRunway(){
   }
   return {kind:'ok', low, buf, lowDay};
 }
+// Avalanche allocation of a one-time lump sum across debts worth attacking (credit cards + anything
+// APR>=8): highest-APR first, pay min(remaining, balance) on each, marking cleared vs partial. Lets a
+// lump larger than one card cascade across several instead of overpaying a single balance.
+function engLumpSumPlan(amount){
+  amount=Math.max(0, Math.round(amount||0));
+  let debts=[];
+  try{ const g=engDebtGroups(); debts=[...g.revolving, ...g.installment]; }catch(e){}
+  debts=debts.map(b=>({name:b.name, apr:+b.apr||0, bal:Math.abs(b.bal||0), cat:b.cat}))
+    .filter(d=>d.bal>0 && (d.cat==='CC' || d.apr>=8))
+    .sort((a,b)=> (b.apr-a.apr) || (b.bal-a.bal));
+  let rem=amount; const alloc=[];
+  for(const d of debts){
+    if(rem<=0.5) break;
+    const pay=Math.min(rem, d.bal);
+    alloc.push({name:d.name, apr:d.apr, bal:Math.round(d.bal), pay:Math.round(pay), cleared:pay>=d.bal-0.5, after:Math.max(0,Math.round(d.bal-pay))});
+    rem-=pay;
+  }
+  return {amount, alloc, clearedCount:alloc.filter(a=>a.cleared).length, applied:Math.round(amount-Math.max(0,rem)), leftover:Math.round(Math.max(0,rem)), totalDebt:Math.round(debts.reduce((s,d)=>s+d.bal,0)), debtCount:debts.length};
+}
 // Detect recurring charges / subscriptions — groups outflows by merchant, keeps those
 // that repeat at a regular cadence with consistent amounts.
 // Normalize a raw merchant name → the key rules/recurring group on (used for both live
@@ -6926,7 +6945,7 @@ function _cfpRunwayFlag(rw, uid){
     const tgtStr=tgt?`<b>${esc(tgt.name)}</b>${tgt.apr>0?` (${tgt.apr.toFixed(1)}% APR)`:''}`:'your highest-rate debt';
     const line=tgt?`A <b>${fmtK(rw.deploy)}</b> lump sum toward ${tgtStr} would save real interest without risking a crunch.`
                   :`You could put <b>${fmtK(rw.deploy)}</b> toward a savings bucket or your emergency fund.`;
-    return {cls:'opp', html:`💵 <b>You've got room</b> — even at your 90-day low on <b>${when(rw.lowDay)}</b>, you'd stay <b>${fmtK(rw.headroom)}</b> above your buffer. ${line} <button class="cfp-flag-act" onclick="event.stopPropagation();ftSeedFromRunway()">Put it to work →</button>`};
+    return {cls:'opp', html:`💵 <b>You've got room</b> — even at your 90-day low on <b>${when(rw.lowDay)}</b>, you'd stay <b>${fmtK(rw.headroom)}</b> above your buffer. ${line} <button class="cfp-flag-act" onclick="event.stopPropagation();openLumpSumModal()">Put it to work →</button>`};
   }
   return {cls:'ok', html:`✅ <b>On track</b> — your balance stays above your <b>${fmtK(rw.buf)}</b> buffer through the next 90 days (low <b>${fmtK(rw.low)}</b> on <b>${when(rw.lowDay)}</b>).`};
 }
@@ -6981,15 +7000,52 @@ function ftSetAlloc(key,v){ const ft=_ft(); ft.alloc=ft.alloc||{}; const n=parse
 function ftAuto(uid){ const ft=_ft(); ft.alloc={}; saveState(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); if(sbRichie)sbRichie.do('nod'); }
 function ftReset(uid){ const ft=_ft(); ft.extra=null; ft.alloc={}; saveState(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function ftCommit(uid){ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
-// Closes the loop from the Cash Flow 💵 opportunity flag: seed this widget's "extra to delegate" with
-// the runway's suggested lump sum (waterfall re-splits it debt-first via cleared alloc), then navigate
-// to the widget and spotlight it. Renders the active page so a same-page widget shows the seeded value
-// (richieSpotlightAt only re-renders when it has to switch pages).
-function ftSeedFromRunway(){
-  try{ const rw=engCashRunway(); if(rw && rw.kind==='opportunity' && rw.deploy>0){ const ft=_ft(); ft.extra=rw.deploy; ft.alloc={}; saveState(); } }catch(e){}
-  try{ _ensureWidgetOnPage('fund_triage'); }catch(e){}
+// The 💵 opportunity flow: show an avalanche breakdown of the lump sum across cards, then let Richie ask
+// whether to set the extra payments up in Bills or bank the surplus as a bigger safety buffer.
+function openLumpSumModal(){
+  let rw; try{ rw=engCashRunway(); }catch(e){}
+  if(!rw || rw.kind!=='opportunity' || !(rw.deploy>0)) return;
+  const plan=engLumpSumPlan(rw.deploy);
+  if(!gg('manualModal')) return;
+  gg('manualModal').style.display='flex';
+  gg('manualTitle').textContent=`Put ${fmtK(plan.amount)} to work`;
+  gg('manualSub').textContent = plan.alloc.length ? 'Highest-APR first — here’s what this lump sum clears.' : 'No high-interest debt to target.';
+  const rows = plan.alloc.length ? plan.alloc.map(a=>`
+    <div class="lump-row${a.cleared?' cleared':''}">
+      <div class="lump-row-top"><span class="lump-nm">${a.cleared?'✅ ':''}${esc(a.name)}${a.apr>0?` <span class="lump-apr">${a.apr.toFixed(1)}%</span>`:''}</span><b>${fmtK(a.pay)}</b></div>
+      <div class="lump-bar"><div class="lump-bar-fill" style="width:${a.bal>0?Math.min(100,Math.round(a.pay/a.bal*100)):100}%"></div></div>
+      <div class="lump-row-sub">${a.cleared?'cleared ✓':`${fmtK(a.bal)} → ${fmtK(a.after)}`}</div>
+    </div>`).join('') : `<div class="ws-hint">You have no credit-card or high-APR debt — nice. Keeping it as a buffer (or investing) is your best move.</div>`;
+  const summary = plan.alloc.length ? `<div class="lump-summary"><b>${plan.clearedCount}</b> card${plan.clearedCount!==1?'s':''} cleared${plan.leftover>0?` · ${fmtK(plan.leftover)} left over`:''}</div>` : '';
+  gg('manualBody').innerHTML=`
+    <div class="lump-list">${rows}${summary}</div>
+    <div class="lump-choose">
+      <div class="lump-richie"><span class="lump-richie-ic">💰</span><span>Want me to set up these extra payments in your Bills, or keep the ${fmtK(plan.amount)} as a bigger safety buffer?</span></div>
+      <div class="lump-actions">
+        ${plan.applied>0?`<button class="btn primary" onclick="lumpSetupPayments()">Set up payments →</button>`:''}
+        <button class="btn" onclick="lumpKeepAsBuffer()">Keep as buffer →</button>
+      </div>
+    </div>`;
+}
+// "Set up payments": bump each targeted bill's "You pay" by its share of the lump (capped at the
+// balance), then jump to Bills so the next unpaid occurrence reflects the extra payment.
+function lumpSetupPayments(){
+  try{ const rw=engCashRunway(); if(rw && rw.kind==='opportunity'){ const plan=engLumpSumPlan(rw.deploy);
+    plan.alloc.forEach(a=>{ try{ const b=engBills().find(x=>x.name===a.name); if(b){ const bal=Math.abs(b.bal||0); let np=(b.pay||0)+a.pay; if(bal>0) np=Math.min(np,bal); setBillPay(billKey(b), Math.round(np)); } }catch(e){} });
+  } }catch(e){}
+  try{ closeManual(); }catch(e){}
+  try{ _ensureWidgetOnPage('bills_list'); }catch(e){}
   try{ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg) renderCanvas(pg); }catch(e){}
-  try{ richieSpotlightAt(Object.assign({widgetType:'fund_triage'}, (typeof RICHIE_SPOTS!=='undefined'&&RICHIE_SPOTS.fund_triage)||{})); }catch(e){}
+  try{ richieSpotlightAt(Object.assign({widgetType:'bills_list', message:'Done — I bumped "You pay" on those cards for this cycle. Mark them paid once the payment lands.'}, (typeof RICHIE_SPOTS!=='undefined'&&RICHIE_SPOTS.bills_list)||{})); }catch(e){}
+}
+// "Keep as buffer": add the lump to the Safe-to-Spend safety buffer so the surplus stays reserved
+// (not shown as spendable), then jump to Safe to Spend and spotlight the buffer field.
+function lumpKeepAsBuffer(){
+  try{ const rw=engCashRunway(); if(rw && rw.kind==='opportunity' && rw.deploy>0){ const cur=(typeof _safeBuffer==='function')?_safeBuffer():0; setSafeBuffer(cur+rw.deploy); } }catch(e){}
+  try{ closeManual(); }catch(e){}
+  try{ _ensureWidgetOnPage('safe_spend'); }catch(e){}
+  try{ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg) renderCanvas(pg); }catch(e){}
+  try{ richieSpotlightAt(Object.assign({widgetType:'safe_spend', focusSel:'.sts-buf', message:'Done — I raised your safety buffer so that surplus stays reserved, not spent.'}, (typeof RICHIE_SPOTS!=='undefined'&&RICHIE_SPOTS.safe_spend)||{})); }catch(e){}
 }
 
 /* ═══ PROFIT & LOSS WIDGET ═══ */
@@ -10419,7 +10475,7 @@ function _briefActionItems(){
   try{ const hi=engHighInterestDebt(); if(hi>0){ items.push({ id:'hidebt', icon:'🔥', title:'High-interest debt to attack', say:`You're carrying ${fmtK(hi)} in high-interest debt. Sending your extra funds here first is a guaranteed return — want to plan it?`, sub:'The Extra Funds Triage delegates your surplus by priority.', action:{label:'Open triage', go:'fund_triage'} }); } }catch(e){}
   try{ const ef=engEmergencyFund(); if(ef<1000){ items.push({ id:'emergency', icon:'🛟', title:'Build your safety net', say:`Your starter emergency fund is at ${fmtK(ef)} of $1,000. That buffer keeps a surprise off your cards — let's grow it.`, sub:'Fund it in Savings Buckets.', action:{label:'Open buckets', go:'savings_buckets'} }); } }catch(e){}
   try{ const rw=engCashRunway(); if(rw.kind==='opportunity'){ const when=rw.lowDay===0?'today':_projDate(rw.lowDay).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); const tgt=rw.target;
-    items.push({ id:'surplus', icon:'💵', title:'Room for a lump-sum payment', say:`Nice cushion — even at your 90-day low on ${when} you'd stay ${fmtK(rw.headroom)} above your buffer. ${tgt?`A ${fmtK(rw.deploy)} lump sum on ${tgt.name}${tgt.apr>0?` (${tgt.apr.toFixed(1)}%)`:''} would save real interest.`:`You could send ${fmtK(rw.deploy)} to savings or your emergency fund.`}`, sub:'Extra Funds Triage delegates your surplus by priority.', action:{label:'Put it to work', open:'ftSeedFromRunway'} }); } }catch(e){}
+    items.push({ id:'surplus', icon:'💵', title:'Room for a lump-sum payment', say:`Nice cushion — even at your 90-day low on ${when} you'd stay ${fmtK(rw.headroom)} above your buffer. ${tgt?`A ${fmtK(rw.deploy)} lump sum on ${tgt.name}${tgt.apr>0?` (${tgt.apr.toFixed(1)}%)`:''} would save real interest.`:`You could send ${fmtK(rw.deploy)} to savings or your emergency fund.`}`, sub:'See the payoff breakdown, then set up the payments or bank it as buffer.', action:{label:'Put it to work', open:'openLumpSumModal'} }); } }catch(e){}
   try{ const rec=engRecurring(); const hikes=rec.filter(r=>r.priceUp); const cancel=_cancelSubs(); const flagged=rec.filter(r=>cancel[r.merchKey]);
     if(hikes.length){ items.push({ id:'subhike', icon:'🔁', title:'A subscription price went up', say:`${hikes.length===1?esc(hikes[0].merchant)+' raised its price':hikes.length+' subscriptions raised their prices'} — worth a look before the next charge?`, sub:hikes.slice(0,3).map(r=>esc(r.merchant)+' · '+fmtK(r.prior)+'→'+fmtK(r.recent)).join('<br>'), action:{label:'Review subscriptions', go:'recurring'} }); }
     else if(flagged.length){ items.push({ id:'subcancel', icon:'⊘', title:'Subscriptions to cancel', say:`You flagged ${flagged.length} subscription${flagged.length>1?'s':''} to cancel — done it yet? That's ${fmtK(flagged.reduce((s,r)=>s+r.monthly,0))}/mo back in your pocket.`, sub:flagged.slice(0,4).map(r=>esc(r.merchant)).join(', '), action:{label:'Review subscriptions', go:'recurring'} }); }
