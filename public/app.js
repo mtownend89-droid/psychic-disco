@@ -1423,6 +1423,20 @@ function _dueDateInMonth(y,m,dom){ const last=new Date(y,m+1,0).getDate(); retur
 function _projDate(off){ const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()+(off||0)); return d; }
 // bill events: place each unpaid bill on its REAL due date each calendar month within the window
 // (not a rough 30-day step, which drifts off the actual statement date over time).
+// One-time, per-occurrence pay bumps (e.g. a surplus lump sum applied to the next unpaid occurrence).
+// Keyed by okey (billKey|date) so exactly ONE occurrence carries the extra and every later month reverts
+// to normal pay — which keeps the cash-flow projection from inflating future months.
+function _billBump(){ APP.billBump=APP.billBump||{}; return APP.billBump; }
+function _billOccPay(b, okey){ return (b.pay||0) + (+(_billBump()[okey])||0); }
+// First UPCOMING unpaid occurrence for a bill — walks the same occurrences _billEvents emits (starting at
+// the next due date, not a passed one) so a bump always lands on an occurrence the projection will show.
+function _nextUnpaidBillOkey(b){
+  const today=new Date(); today.setHours(0,0,0,0);
+  let cur=_dueDateInMonth(today.getFullYear(), today.getMonth(), b.due);
+  if(cur<today) cur=_dueDateInMonth(today.getFullYear(), today.getMonth()+1, b.due);
+  for(let m=0;m<12;m++){ const ok=billKey(b)+'|'+_dk(cur); if(!_billOccPaid(ok)) return ok; cur=_dueDateInMonth(cur.getFullYear(), cur.getMonth()+1, b.due); }
+  return null;
+}
 function _billEvents(days){
   const out=[]; const today=new Date(); today.setHours(0,0,0,0);
   const horizon=new Date(today); horizon.setDate(horizon.getDate()+days);
@@ -1431,7 +1445,7 @@ function _billEvents(days){
     if(cur<today) cur=_dueDateInMonth(today.getFullYear(), today.getMonth()+1, b.due);
     while(cur<=horizon){
       const off=Math.round((cur-today)/86400000);
-      if(off>=0 && off<=days) out.push({day:off, amt:-(b.pay), name:b.name, type:'bill', key:billKey(b), okey:billKey(b)+'|'+_dk(cur), due:b.due});
+      if(off>=0 && off<=days){ const okey=billKey(b)+'|'+_dk(cur); out.push({day:off, amt:-(_billOccPay(b, okey)), name:b.name, type:'bill', key:billKey(b), okey, due:b.due}); }
       cur=_dueDateInMonth(cur.getFullYear(), cur.getMonth()+1, b.due);
     }
   });
@@ -1514,6 +1528,8 @@ function billsToggleOcc(okey, uid){
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
   if(nowPaid){ try{ gamiMarkEngaged('billpaid'); }catch(e){} try{ emojiBurst('coin',{particle:'coin',count:8,life:1600}); }catch(e){} const nm=(okey.split('|')[0]||'that').trim(); try{ richieCelebrate(`Boom — ${nm} marked paid! ✅ One less thing this month.`); }catch(e){} }
 }
+// Remove a one-time per-occurrence pay bump (the surplus lump extra) for a specific occurrence.
+function billClearBump(okey, uid){ const m=_billBump(); if(okey && (okey in m)){ delete m[okey]; saveState(); try{ _memoInvalidate&&_memoInvalidate(); }catch(e){} const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); } }
 // One-time migration: fold the old global per-bill paid flag into THIS month's occurrence so
 // existing "paid" marks aren't lost when the widget moves to per-month tracking.
 function _migrateBillPaid(){
@@ -1869,9 +1885,7 @@ function engLumpSumPlan(amount){
   amount=Math.max(0, Math.round(amount||0));
   let debts=[];
   try{ const g=engDebtGroups(); debts=[...g.revolving, ...g.installment]; }catch(e){}
-  debts=debts
-    .filter(b=>{ try{ return !_billOccPaid(_billOkeyForMonth(b, 0)); }catch(e){ return true; } })   // skip cards already checked off paid this cycle — the lump can't ride an already-paid occurrence, and bumping it would skew Safe to Spend
-    .map(b=>({name:b.name, apr:+b.apr||0, bal:Math.abs(b.bal||0), cat:b.cat}))
+  debts=debts.map(b=>({name:b.name, apr:+b.apr||0, bal:Math.abs(b.bal||0), cat:b.cat}))   // paid-this-cycle cards stay in — the bump targets their next UNPAID occurrence (see lumpSetupPayments)
     .filter(d=>d.bal>0 && (d.cat==='CC' || d.apr>=8))
     .sort((a,b)=> (b.apr-a.apr) || (b.bal-a.bal));
   let rem=amount; const alloc=[];
@@ -5685,7 +5699,7 @@ function billsWidgetBody(w){
   const withOcc=all.map(b=>{ const okey=_billOkeyForMonth(b, mo); return { b, okey, paid:_billOccPaid(okey), dueStr:_dk(_dueDateInMonthFor(b, mo)) }; });
   const sorted=withOcc.sort((x,y)=>{ if(!!x.paid!==!!y.paid) return x.paid?1:-1; return (x.b.due||99)-(y.b.due||99); });   // unpaid first, paid sink to bottom
   const totMin=withOcc.filter(x=>!x.paid).reduce((s,x)=>s+(x.b.min||0),0);
-  const totPay=withOcc.filter(x=>!x.paid).reduce((s,x)=>s+(x.b.pay||0),0);
+  const totPay=withOcc.filter(x=>!x.paid).reduce((s,x)=>s+_billOccPay(x.b, x.okey),0);   // includes any one-time per-occurrence bump for the viewed month
   const paidCount=withOcc.filter(x=>x.paid).length;
   // Accounts a bill can be paid from: live OR manual cash/savings, plus credit cards.
   const payAccts=(dataLoaded?engAccounts():[]).filter(a=>!a.excluded && (a.type==='depository'||a.type==='credit'));
@@ -5717,6 +5731,7 @@ function billsWidgetBody(w){
       <div class="bill-paywrap">
         <label class="bill-paylabel">You pay</label>
         <div class="bill-pay"><span>$</span><input type="number" value="${Math.round(b.pay)}" min="0" step="10" onclick="event.stopPropagation()" oninput="setBillPay('${key}',this.value)" onblur="setBillPayCommit()"></div>
+        ${(!paid && (+(_billBump()[okey])||0)>0)?`<div class="bill-bump" title="One-time extra from your surplus — reverts to normal pay next cycle">+${fmtK(+_billBump()[okey])} one-time <span class="bill-bump-x" onclick="event.stopPropagation();billClearBump('${okeyEsc}','${w.uid}')" title="Remove this one-time extra">✕</span></div>`:''}
       </div>
     </div>`; }).join('');
   return `<div class="bills-mgr">
@@ -7068,13 +7083,17 @@ function openLumpSumModal(){
 // "Set up payments": bump each targeted bill's "You pay" by its share of the lump (capped at the
 // balance), then jump to Bills so the next unpaid occurrence reflects the extra payment.
 function lumpSetupPayments(){
-  try{ const rw=engCashRunway(); if(rw && rw.kind==='opportunity'){ const plan=engLumpSumPlan(rw.deploy);
-    plan.alloc.forEach(a=>{ try{ const b=engBills().find(x=>x.name===a.name); if(b && !_billOccPaid(_billOkeyForMonth(b,0))){ const bal=Math.abs(b.bal||0); let np=(b.pay||0)+a.pay; if(bal>0) np=Math.min(np,bal); setBillPay(billKey(b), Math.round(np)); } }catch(e){} });
+  try{ const rw=engCashRunway(); if(rw && rw.kind==='opportunity'){ const plan=engLumpSumPlan(rw.deploy); const bump=_billBump();
+    plan.alloc.forEach(a=>{ try{ const b=engBills().find(x=>x.name===a.name); if(!b) return;
+      const okey=_nextUnpaidBillOkey(b);   // first upcoming UNPAID occurrence (this cycle if unpaid, else next…)
+      if(okey) bump[okey]=Math.round(a.pay);   // one-time, per-occurrence — SET once per trigger (never accumulated); later months revert to normal pay
+    }catch(e){} });
+    try{ saveState(); }catch(e){}
   } }catch(e){}
   try{ closeManual(); }catch(e){}
   try{ _ensureWidgetOnPage('bills_list'); }catch(e){}
   try{ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg) renderCanvas(pg); }catch(e){}
-  try{ richieSpotlightAt(Object.assign({widgetType:'bills_list', message:'Done — I bumped "You pay" on those cards for this cycle. Mark them paid once the payment lands.'}, (typeof RICHIE_SPOTS!=='undefined'&&RICHIE_SPOTS.bills_list)||{})); }catch(e){}
+  try{ richieSpotlightAt(Object.assign({widgetType:'bills_list', message:'Done — added a one-time extra payment to the next unpaid occurrence of those cards. It reverts to normal pay the month after.'}, (typeof RICHIE_SPOTS!=='undefined'&&RICHIE_SPOTS.bills_list)||{})); }catch(e){}
 }
 // "Keep as buffer": add the lump to the Safe-to-Spend safety buffer so the surplus stays reserved
 // (not shown as spendable), then jump to Safe to Spend and spotlight the buffer field.
