@@ -1558,7 +1558,7 @@ function engBillCalendar(monthOffset){
   (engUpcomingBills()||[]).filter(b=>b.pay>0).forEach(b=>{
     const due=_dueDateInMonth(first.getFullYear(), first.getMonth(), b.due||1);
     const k=_dk(due), okey=billKey(b)+'|'+k;
-    pushEv(k,{name:b.name, amt:-(b.pay||0), type:'bill', off:_billOccPaid(okey), okey});
+    pushEv(k,{name:b.name, amt:-(b.pay||0), type:'bill', off:_billOccPaid(okey), okey, bill:b, dueStr:k});
   });
   const gridStart=new Date(first); gridStart.setDate(first.getDate()-first.getDay());   // Sunday on/before the 1st
   const weeks=[]; let cur=new Date(gridStart); let monthIn=0, monthOut=0, monthPaid=0;
@@ -1586,7 +1586,18 @@ function _billCalList(days, uid){
       // Bills with an occurrence key get a tap-to-toggle checkbox tied to the SAME per-month paid
       // state as the Bills widget (billPaidOcc), so paying here reflects everywhere and vice-versa.
       const chk=(isBill&&e.okey)?`<button class="bcal-li-chk${paid?' on':''}" onclick="event.stopPropagation();billsToggleOcc('${String(e.okey).replace(/'/g,"\\'")}','${uid}')" title="${paid?'Mark unpaid':'Mark paid'}">${paid?'✓':''}</button>`:'<span class="bcal-li-chk sp"></span>';
-      return `<div class="bcal-li${paid?' paid':''}">${chk}<span class="bcal-li-dot ${e.amt>=0?'in':'out'}"></span><span class="bcal-li-nm">${esc(e.name)}</span><b style="color:${paid?'var(--muted)':(e.amt>=0?'var(--pos)':'var(--red)')}">${e.amt>=0?'+':'−'}${fmtK(e.amt)}</b></div>`;
+      // Same posted/expected/on-card refinement the Bills widget shows on a PAID bill, so the two agree.
+      let ptag='';
+      if(isBill && paid && e.bill){
+        const _pv=_billPaidOcc()[e.okey]; const paidAt=(typeof _pv==='number' && _pv>1e12)?_pv:null;
+        const pa=e.bill.payAcct?engAccounts().find(a=>a.id===e.bill.payAcct):null;
+        if(pa) ptag = pa.type==='credit'
+          ? ' <span class="bill-oncard" title="Paid with this card — lands on the card, doesn\'t reduce cash">💳 on card</span>'
+          : (_billOccMatched(e.bill, e.dueStr, paidAt)
+              ? ' <span class="bill-posted" title="A matching transaction has posted or is pending — counted from the bank, not double-counted">✓ posted</span>'
+              : ' <span class="bill-pend" title="Held out of Cash on Hand / Safe to Spend as expected-spent until it clears">⏳ expected</span>');
+      }
+      return `<div class="bcal-li${paid?' paid':''}">${chk}<span class="bcal-li-dot ${e.amt>=0?'in':'out'}"></span><span class="bcal-li-nm">${esc(e.name)}${ptag}</span><b style="color:${paid?'var(--muted)':(e.amt>=0?'var(--pos)':'var(--red)')}">${e.amt>=0?'+':'−'}${fmtK(e.amt)}</b></div>`;
     }).join('');
     return `<div class="bcal-li-day"><div class="bcal-li-date">${_billCalDayLabel(d.key)}</div>${rows}</div>`;
   }).join('');
