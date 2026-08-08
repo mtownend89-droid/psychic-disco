@@ -74,7 +74,26 @@ const DEFAULT_CATEGORIES=[
   {id:'income',label:'Income',color:'#3dda91',plaid:['TRANSFER_IN','INCOME','PAYROLL'],parent:'financial'},
   {id:'other',label:'Other',color:'#94a3b8',plaid:[]},
 ];
-function getUserCategories(){ try{ const s=JSON.parse(LS.getItem('mdf_categories')); return (s&&s.length)?s:DEFAULT_CATEGORIES.map(c=>({...c})); }catch(e){ return DEFAULT_CATEGORIES.map(c=>({...c})); } }
+// Locked "system" categories that carry exclusion/identification semantics (the old transaction tags,
+// folded into the one category system). plaid:[] so they never auto-capture — they're set only by a
+// user override/rule. Always merged into getUserCategories() and never persisted, so their flags stay
+// authoritative in code and can't be renamed/deleted away. sys:true hides them from budgetable pickers.
+const SYSTEM_CATEGORIES=[
+  {id:'sys_paycheck', label:'Paycheck',            color:'#3dda91', plaid:[], parent:'financial', sys:true, income:true},
+  {id:'sys_transfer', label:'Transfer',            color:'#8b93a7', plaid:[], parent:'financial', sys:true, exSpend:true, exIncome:true},
+  {id:'sys_ccpay',    label:'Credit Card Payment', color:'#8b93a7', plaid:[], parent:'financial', sys:true, exSpend:true},
+  {id:'sys_reimburse',label:'Reimbursement',       color:'#8b93a7', plaid:[], parent:'financial', sys:true, exSpend:true, exIncome:true},
+  {id:'sys_refund',   label:'Refund',              color:'#8b93a7', plaid:[], parent:'financial', sys:true, exIncome:true},
+  {id:'sys_excluded', label:'Excluded',            color:'#8b93a7', plaid:[], parent:'financial', sys:true, exSpend:true, exIncome:true},
+];
+const SYS_CAT_BY_LABEL={}; SYSTEM_CATEGORIES.forEach(c=>SYS_CAT_BY_LABEL[c.label]=c);
+function catFlags(label){ return SYS_CAT_BY_LABEL[label]||{}; }
+function getUserCategories(){
+  let base; try{ const s=JSON.parse(LS.getItem('mdf_categories')); base=(s&&s.length)?s:DEFAULT_CATEGORIES.map(c=>({...c})); }catch(e){ base=DEFAULT_CATEGORIES.map(c=>({...c})); }
+  base=base.filter(c=>!c.sys);                                              // sys cats are canonical from code, never persisted
+  const have=new Set(base.map(c=>c.id));
+  return base.concat(SYSTEM_CATEGORIES.filter(c=>!have.has(c.id)).map(c=>({...c})));
+}
 
 /* ══ ACCOUNT CATEGORY TREE — a taxonomy for ACCOUNTS, separate from spending categories.
    Auto-detected from Plaid type/subtype; user can override per-account in Settings.
@@ -152,9 +171,28 @@ function _isCCPaymentTxn(t){
   if(/(credit ?crd|credit ?card|amex|american express|discover|barclays?|citi ?card|card ?(pmt|payment|autopay|e-?pay))/.test(nm) && /(pmt|payment|autopay|e-?pay|ach)/.test(nm)) return true;
   return false;
 }
-function _txnExcludedFromSpend(t){ const g=getTxnTag(t); return g==='transfer'||g==='ignore'||g==='reimburse'||g==='ccpayment'||_isCCPaymentTxn(t); }
-// Tags that mean "not real income" (a transfer in, a refund, etc.) — excluded from income totals.
-function _txnExcludedFromIncome(t){ const g=getTxnTag(t); return g==='transfer'||g==='ignore'||g==='refund'||g==='reimburse'; }
+// A transaction's system-category flags come only from an explicit override or merchant rule (system
+// categories have plaid:[], so Plaid mapping never yields one) — cheaper than a full getTxnCategory on
+// this hot path. During Phase 1 both the legacy tag AND the folded-in category are honored.
+function _catSysFlags(t){ const ov=_catOverrides[_txnKey(t)]; if(ov&&SYS_CAT_BY_LABEL[ov]) return SYS_CAT_BY_LABEL[ov];
+  const mk=(typeof _merchKey==='function')?_merchKey(t):''; const r=mk&&_catRules[mk]; return (r&&SYS_CAT_BY_LABEL[r])||{}; }
+function _txnExcludedFromSpend(t){ const g=getTxnTag(t); if(g==='transfer'||g==='ignore'||g==='reimburse'||g==='ccpayment') return true; return !!_catSysFlags(t).exSpend || _isCCPaymentTxn(t); }
+// Tags/categories that mean "not real income" (a transfer in, a refund, etc.) — excluded from income totals.
+function _txnExcludedFromIncome(t){ const g=getTxnTag(t); if(g==='transfer'||g==='ignore'||g==='refund'||g==='reimburse') return true; return !!_catSysFlags(t).exIncome; }
+// One-time migration: fold existing transaction tags into category overrides so the two systems unify.
+// Idempotent (only sets an override where none exists, so user categorizations and the still-active tag
+// exclusion are preserved). Tags stay in place as a Phase-1 fallback; guarded by an LS flag.
+function _migrateTagsToCats(){
+  try{ if(LS.getItem('mdf_tags_migrated')==='1') return; }catch(e){ return; }
+  try{
+    const map={transfer:'Transfer', ccpayment:'Credit Card Payment', reimburse:'Reimbursement', refund:'Refund', ignore:'Excluded', paycheck:'Paycheck'};
+    let touched=false;
+    Object.keys(_txnTags||{}).forEach(k=>{ const lbl=map[_txnTags[k]]; if(lbl && !_catOverrides[k]){ _catOverrides[k]=lbl; touched=true; } });
+    if(touched){ try{ LS.setItem('mdf_cat_overrides', JSON.stringify(_catOverrides)); }catch(e){} }
+    LS.setItem('mdf_tags_migrated','1');
+  }catch(e){}
+}
+_migrateTagsToCats();
 function _txnKey(t){ return t.transaction_id || t.id || ((t.date||'')+'|'+(t.merchant_name||t.name||'')+'|'+t.amount); }
 let _catRules=JSON.parse(LS.getItem('mdf_cat_rules')||'{}');   // merchant key → category (auto-apply)
 function setCatRule(mk, cat){ if(!mk) return; if(cat) _catRules[mk]=cat; else delete _catRules[mk]; try{ LS.setItem('mdf_cat_rules', JSON.stringify(_catRules)); }catch(e){} }
@@ -1283,7 +1321,7 @@ function engStartCash(cats){
 // stops a stream — e.g. an earner loses their job, so future income ends on a set date.
 function _incomeOverrides(){ APP.incomeOverrides=APP.incomeOverrides||{}; return APP.incomeOverrides; }
 function _paycheckSources(){
-  const pcs=(dataLoaded?allTxns:[]).filter(t=>getTxnTag(t)==='paycheck' && t.amount<0)
+  const pcs=(dataLoaded?allTxns:[]).filter(t=>(getTxnTag(t)==='paycheck' || getTxnCategory(t)==='Paycheck') && t.amount<0)
                                     .sort((a,b)=>new Date(a.date)-new Date(b.date));
   if(!pcs.length) return [];
   const groups={};
@@ -5120,7 +5158,13 @@ function renderCatEditor(){
   let html='';
   const rowHtml=(c,kind)=>{ // kind: 'group' | 'child' | 'free'
     const i=_catEdit.indexOf(c);
-    const draggable = kind!=='group';
+    const draggable = kind!=='group' && !c.sys;
+    if(c.sys) return `<div class="ce-row ce-child ce-sys" data-i="${i}" data-id="${esc(c.id)}" data-grp="0">
+      <span class="ce-grip ce-grip-lock" title="System category — locked">🔒</span>
+      <span class="ce-color ce-color-lock" style="background:${c.color||'#888'}"></span>
+      <span class="ce-label ce-label-lock">${esc(c.label)}</span>
+      <span class="ce-sys-badge" title="Keeps these transactions out of spending/income where relevant">system</span>
+    </div>`;
     return `<div class="ce-row${kind==='group'?' ce-grouprow':''}${kind==='child'?' ce-child':''}" data-i="${i}" data-id="${esc(c.id)}" data-grp="${kind==='group'?1:0}"${draggable?' draggable="true"':''}>
       ${draggable?'<span class="ce-grip" title="Drag to move">\u283F</span>':'<span class="ce-grip ce-grip-folder">\uD83D\uDCC1</span>'}
       <input type="color" value="${c.color||'#888888'}" onchange="catEditField(${i},'color',this.value)" class="ce-color">
@@ -5161,21 +5205,22 @@ function wireCatDrag(){
     });
   });
 }
-function catEditField(i,field,val){ if(_catEdit[i]){ _catEdit[i][field]=val; } }
-function catEditDelete(i){ if(_catEdit[i]&&!confirm('Delete "'+_catEdit[i].label+'"?'))return;
+function catEditField(i,field,val){ if(_catEdit[i]&&!_catEdit[i].sys){ _catEdit[i][field]=val; } }
+function catEditDelete(i){ if(_catEdit[i]&&_catEdit[i].sys) return;   // system categories are locked
+  if(_catEdit[i]&&!confirm('Delete "'+_catEdit[i].label+'"?'))return;
   const removed=_catEdit[i]; if(removed&&removed.group){ _catEdit.forEach(c=>{ if(c.parent===removed.id) delete c.parent; }); }
   _catEdit.splice(i,1); renderCatEditor(); }
 function catEditAdd(){ _catEdit.push({id:'custom_'+Date.now(),label:'New Category',color:'#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0'),plaid:[]}); renderCatEditor(); }
 function catEditAddGroup(){ _catEdit.push({id:'grp_'+Date.now(),label:'New Group',color:'#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0'),group:true}); renderCatEditor(); }
 function catEditSave(){
-  saveUserCategories(_catEdit);
+  saveUserCategories(_catEdit.filter(c=>!c.sys));   // sys cats are always re-merged by getUserCategories — never persist them
   closeCatEditor();
   showToast('Categories saved','success');
   // re-render active page so category colors/labels update everywhere
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg&&APP.activePage!=='__settings__') renderCanvas(pg);
   if(sbRichie)sbRichie.do('bounce');
 }
-function catEditReset(){ if(!confirm('Reset all categories to defaults?'))return; _catEdit=DEFAULT_CATEGORIES.map(c=>({...c})); renderCatEditor(); }
+function catEditReset(){ if(!confirm('Reset all categories to defaults?'))return; _catEdit=DEFAULT_CATEGORIES.map(c=>({...c})).concat(SYSTEM_CATEGORIES.map(c=>({...c}))); renderCatEditor(); }
 
 /* ── FIRE / retirement model + interactive calculator widget ── */
 const FIRE_DEFAULTS={age:42,ret:65,saved:45000,contrib:1200,rate:7,inf:3};
@@ -5343,7 +5388,7 @@ function fdSetScenario(id){
 function _zbBudgetableCats(){
   // Every spendable category the user actually has — leaf categories, custom top-level
   // categories, and "Other". Excludes group headers (group:true) and Income.
-  return getUserCategories().filter(c=>!c.group && c.id!=='income');
+  return getUserCategories().filter(c=>!c.group && c.id!=='income' && !c.sys);
 }
 function _zbBuckets(){
   if(!APP.zeroBuckets){ APP.zeroBuckets=zeroBuckets.map(b=>({...b})); }

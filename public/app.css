@@ -2099,6 +2099,11 @@ select.mf-in{appearance:none;cursor:pointer;}
 .ce-arrow{color:var(--hint);flex-shrink:0;}
 .ce-del{background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;flex-shrink:0;opacity:0.6;}
 .ce-del:hover{opacity:1;}
+.ce-sys{opacity:.85;}
+.ce-grip-lock{cursor:default;}
+.ce-color-lock{width:26px;height:22px;border-radius:5px;flex-shrink:0;border:1px solid var(--border);}
+.ce-label-lock{flex:1;font-size:13px;color:var(--muted);padding:0 3px;}
+.ce-sys-badge{flex-shrink:0;font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);background:var(--surface3);border-radius:5px;padding:2px 6px;}
 .ce-foot{display:flex;align-items:center;gap:8px;padding:14px 20px;border-top:1px solid var(--border);}
 .wph-sub{font-size:11.5px;color:var(--muted);margin-top:2px;}
 .wph-more{margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);font-size:10.5px;color:var(--muted);opacity:.8;text-align:center;letter-spacing:.02em;}
