@@ -428,13 +428,14 @@ function engRangeLabel(days){
 function engRecent(days, forceRolling){ return _memoFrame('recent:'+days+':'+(forceRolling?1:0), function(){ const r=engRange(days, forceRolling); const ex=_excludedAcctIds(); return allTxns.filter(t=>new Date(t.date).getTime()>=r.start && !ex.has(t.account_id)); }); }
 
 /* ── P&L engine: group income vs spending by day/week/month with full stats ── */
+// Lookback window (days) for a P&L grouping — weekly/monthly need enough span to show many buckets.
+// Shared by engPLBuckets and plMount's period label so the window and its label can't drift apart.
+function _plSpan(days, group){ return group==='monthly' ? Math.max(days,365) : group==='weekly' ? Math.max(days,84) : days; }
 function engPLBuckets(days, group){
-  // Weekly/monthly grouping needs a lookback that spans many buckets, and it must be a TRUE trailing
-  // window — otherwise calendar mode collapses e.g. a 30-day span to month-to-date, so early in the
-  // month "Weekly"/"Monthly" show a single flat bucket. Scale the window to the grouping and force
-  // rolling (a P&L trend is inherently trailing history, independent of the global calendar/rolling toggle).
-  const span = group==='monthly' ? Math.max(days,365) : group==='weekly' ? Math.max(days,84) : days;
-  const rec=engRecent(span, true);
+  // Must be a TRUE trailing window (forceRolling) — otherwise calendar mode collapses a short span to
+  // month-to-date, so early in the month "Weekly"/"Monthly" show a single flat bucket. A P&L trend is
+  // inherently trailing history, independent of the global calendar/rolling toggle.
+  const rec=engRecent(_plSpan(days,group), true);
   const buckets={};
   rec.forEach(t=>{
     const d=new Date(t.date+'T12:00:00'); let key;
@@ -1817,6 +1818,22 @@ function engSafeToSpend(){
   const perDay=horizon>0?pool/horizon:pool;
   return {pool,perDay,horizon,cash:displayCash,spendableCash:actualCash,grossCash:displayCash,bankPending,expectedCash:cash,paidPending,billsDue,goalPortion,buffer,nextIncomeDay:inc?inc.day:null,
     low90:Math.round(low90), lowDay:proj.low.day, constrainedBy90, shortfall:low90<0};
+}
+// 90-day runway flag for the Cash Flow widget + proactive Richie. Compares the projected 90-day low
+// balance to the Safe-to-Spend safety buffer: DEFICIT when the low dips below the buffer; OPPORTUNITY
+// when there's at least a full buffer of headroom to spare (so a lump sum wouldn't breach the buffer).
+// The opportunity threshold is the buffer amount itself, so the single buffer knob drives both sides.
+function engCashRunway(){
+  let s; try{ s=engSafeToSpend(); }catch(e){ return {kind:'ok'}; }
+  if(!s || !isFinite(s.low90) || !isFinite(s.buffer)) return {kind:'ok'};
+  const low=Math.round(s.low90), buf=Math.round(s.buffer), lowDay=s.lowDay||0, headroom=low-buf;
+  if(low < buf) return {kind:'deficit', low, buf, lowDay, shortfall:Math.max(0,buf-low), goalPortion:Math.round(s.goalPortion||0)};
+  if(buf>0 && headroom>=buf){                       // threshold linked to the Safe-to-Spend buffer number
+    const target=(typeof _topHiCard==='function')?_topHiCard():null;
+    const deploy=Math.floor(headroom/50)*50;        // round down to $50 so the low point still clears the buffer
+    if(deploy>0) return {kind:'opportunity', low, buf, lowDay, headroom, deploy, target};
+  }
+  return {kind:'ok', low, buf, lowDay};
 }
 // Detect recurring charges / subscriptions — groups outflows by merchant, keeps those
 // that repeat at a regular cadence with consistent amounts.
@@ -6848,14 +6865,10 @@ function cfpMount(w){
   // running balance line (mini SVG sparkline so it works everywhere, no Chart.js dependency)
   const chart=gg('cfpchart_'+w.uid);
   if(chart){ chart.innerHTML=cfpLineSVG(p, w.uid, 300, 80); }
-  // low-point flag
+  // 90-day runway flag: buffer-aware red deficit / 💵 green opportunity (always evaluates the full 90-day
+  // window per the Safe-to-Spend buffer, independent of the chart's range toggle).
   const low=gg('cfplow_'+w.uid);
-  if(low){
-    const lowWhen=p.low.day===0?'today':_projDate(p.low.day).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
-    if(p.low.bal<0){ low.className='cfp-lowflag danger'; low.innerHTML=`⚠️ Projected shortfall: balance dips to <b>${fmtK(p.low.bal)}</b> on <b>${lowWhen}</b>. Adjust a bill below or move income.`; }
-    else if(p.low.bal<200){ low.className='cfp-lowflag warn'; low.innerHTML=`⚡ Tight: lowest balance is <b>${fmtK(p.low.bal)}</b> around <b>${lowWhen}</b>.`; }
-    else { low.className='cfp-lowflag ok'; low.innerHTML=`✅ Safe: your balance stays above <b>${fmtK(p.low.bal)}</b> (low point <b>${lowWhen}</b>).`; }
-  }
+  if(low){ const f=_cfpRunwayFlag(engCashRunway(), w.uid); low.className='cfp-lowflag '+f.cls; low.innerHTML=f.html; }
   // editable upcoming events (bills editable, income shown)
   const ev=gg('cfpev_'+w.uid);
   if(ev){
@@ -6900,6 +6913,23 @@ function cfpMount(w){
   }
 }
 function cfpRefresh(uid){ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+function cfpScrollEvents(uid){ try{ const e=gg('cfpev_'+uid); if(e) e.scrollIntoView({behavior:'smooth',block:'center'}); }catch(_){} }
+// Buffer-aware 90-day runway flag (red deficit / 💵 green opportunity / ok) — shared shape with the
+// proactive Richie nudge via engCashRunway(). Returns {cls, html} for the .cfp-lowflag element.
+function _cfpRunwayFlag(rw, uid){
+  const when=d=>d===0?'today':_projDate(d).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  if(rw.kind==='deficit'){
+    return {cls:'danger', html:`🚩 <b>Heads up</b> — your balance is projected to dip to <b>${fmtK(rw.low)}</b> on <b>${when(rw.lowDay)}</b>, about <b>${fmtK(rw.shortfall)}</b> below your <b>${fmtK(rw.buf)}</b> safety buffer. Trim ~${fmtK(rw.shortfall)}${rw.goalPortion>0?`, pause this cycle's ${fmtK(rw.goalPortion)} set-aside,`:''} or push a bill before then. <button class="cfp-flag-act" onclick="event.stopPropagation();cfpScrollEvents('${uid}')">Adjust a bill ↓</button>`};
+  }
+  if(rw.kind==='opportunity'){
+    const tgt=rw.target;
+    const tgtStr=tgt?`<b>${esc(tgt.name)}</b>${tgt.apr>0?` (${tgt.apr.toFixed(1)}% APR)`:''}`:'your highest-rate debt';
+    const line=tgt?`A <b>${fmtK(rw.deploy)}</b> lump sum toward ${tgtStr} would save real interest without risking a crunch.`
+                  :`You could put <b>${fmtK(rw.deploy)}</b> toward a savings bucket or your emergency fund.`;
+    return {cls:'opp', html:`💵 <b>You've got room</b> — even at your 90-day low on <b>${when(rw.lowDay)}</b>, you'd stay <b>${fmtK(rw.headroom)}</b> above your buffer. ${line} <button class="cfp-flag-act" onclick="event.stopPropagation();try{healthGoto('fund_triage')}catch(e){}">Put it to work →</button>`};
+  }
+  return {cls:'ok', html:`✅ <b>On track</b> — your balance stays above your <b>${fmtK(rw.buf)}</b> buffer through the next 90 days (low <b>${fmtK(rw.low)}</b> on <b>${when(rw.lowDay)}</b>).`};
+}
 
 /* ═══ EXTRA FUNDS TRIAGE WIDGET ═══ */
 function fundTriageBody(w){
@@ -6975,7 +7005,11 @@ function plMount(w){
   const days=wDays(w);
   const s=dataLoaded?engPLStats(days,group):(function(){ const b=engPLSample(group); const ti=b.reduce((x,y)=>x+y.inc,0),ts=b.reduce((x,y)=>x+y.spend,0); const nets=b.map(x=>x.inc-x.spend); return {buckets:b,totalInc:ti,totalSpend:ts,net:ti-ts,sr:ti>0?Math.round((ti-ts)/ti*100):0,best:b[nets.indexOf(Math.max(...nets))],worst:b[nets.indexOf(Math.min(...nets))],txnCount:b.reduce((x,y)=>x+y.n,0),avgNet:Math.round((ti-ts)/b.length),periods:b.length}; })();
   const badge=gg('plnet_'+w.uid);
-  if(badge){ badge.textContent='Net '+(s.net>=0?'+':'-')+fmtK(Math.abs(s.net)); badge.style.color=s.net>=0?'var(--pos)':'var(--red)'; }
+  if(badge){
+    const wd=_plSpan(days,group), plabel=group==='monthly'?Math.round(wd/30.44)+' mo':group==='weekly'?Math.round(wd/7)+' wk':wd+' days';
+    badge.innerHTML='Net '+(s.net>=0?'+':'-')+fmtK(Math.abs(s.net))+` <span style="color:var(--muted);font-weight:600">· last ${plabel}</span>`;   // so totals' window is explicit as you switch grouping
+    badge.style.color=s.net>=0?'var(--pos)':'var(--red)';
+  }
   const strip=gg('plstrip_'+w.uid);
   if(strip){
     const stats=[
@@ -10366,14 +10400,16 @@ function _briefActionItems(){
   if(bds.length){ const tot=bds.reduce((s,b)=>s+(b.pay||0),0);
     items.push({ id:'bills', icon:'📋', title:'Bills due this week', say:`Heads up — ${bds.length} bill${bds.length>1?'s':''} (${fmtK(tot)}) ${bds.length>1?'are':'is'} due within 7 days. Want to look them over?`,
       sub:`${bds.slice(0,4).map(b=>esc(b.name)+' · '+(b.inDays===0?'today':'in '+b.inDays+'d')).join('<br>')}`, action:{label:'Review bills', go:'bills_list'} }); }
-  try{ const p=engCashFlowProjection(30); if(p.low.bal<0){ const when=p.low.day===0?'today':_projDate(p.low.day).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
-    items.push({ id:'shortfall', icon:'⚠️', title:'A shortfall is coming', say:`Careful — I'm projecting your balance dips to ${fmtK(p.low.bal)} on ${when}. Let's head it off.`, sub:`Move income earlier or trim a bill in the planner.`, action:{label:'Open planner', go:'cashflow_planner'} }); } }catch(e){}
+  try{ const rw=engCashRunway(); if(rw.kind==='deficit'){ const when=rw.lowDay===0?'today':_projDate(rw.lowDay).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    items.push({ id:'shortfall', icon:'🚩', title:'A shortfall is coming', say:`Careful — I'm projecting your balance dips to ${fmtK(rw.low)} on ${when}, about ${fmtK(rw.shortfall)} below your ${fmtK(rw.buf)} safety buffer. Let's head it off.`, sub:`Trim a bill or pause a set-aside in the planner.`, action:{label:'Open planner', go:'cashflow_planner'} }); } }catch(e){}
   let promos=[]; try{ promos=(engPromos()||[]).filter(p=>p.bal>0.5 && p.days>=0 && p.days<=45); }catch(e){}
   if(promos.length){ const soon=promos.slice().sort((a,b)=>a.days-b.days)[0];
     items.push({ id:'promo', icon:'⏰', title:'A 0% promo is ending', say:`Your 0% deal on ${esc(soon.name)} jumps to ${soon.apr?soon.apr.toFixed(1)+'%':'its rate'} in ${soon.days} day${soon.days!==1?'s':''}. Let's beat the clock.`, sub:`${promos.length} promo${promos.length>1?'s':''} within 45 days.`, action:{label:'See promos', go:'debt_hub', tab:'promo'} }); }
   const ss=_scoreStale(); if(ss.stale){ items.push({ id:'score', icon:'📊', title:'Log your credit score', say: ss.days==null?`I don't have a credit score from you yet — it takes ten seconds and I'll track the trend.`:`Your last credit score was ${ss.days} days ago. Drop in this month's so I can watch the trend.`, sub:'Free in your card app or Credit Karma — no score impact.', action:{label:'Log score', open:'openScoreEditor'} }); }
   try{ const hi=engHighInterestDebt(); if(hi>0){ items.push({ id:'hidebt', icon:'🔥', title:'High-interest debt to attack', say:`You're carrying ${fmtK(hi)} in high-interest debt. Sending your extra funds here first is a guaranteed return — want to plan it?`, sub:'The Extra Funds Triage delegates your surplus by priority.', action:{label:'Open triage', go:'fund_triage'} }); } }catch(e){}
   try{ const ef=engEmergencyFund(); if(ef<1000){ items.push({ id:'emergency', icon:'🛟', title:'Build your safety net', say:`Your starter emergency fund is at ${fmtK(ef)} of $1,000. That buffer keeps a surprise off your cards — let's grow it.`, sub:'Fund it in Savings Buckets.', action:{label:'Open buckets', go:'savings_buckets'} }); } }catch(e){}
+  try{ const rw=engCashRunway(); if(rw.kind==='opportunity'){ const when=rw.lowDay===0?'today':_projDate(rw.lowDay).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); const tgt=rw.target;
+    items.push({ id:'surplus', icon:'💵', title:'Room for a lump-sum payment', say:`Nice cushion — even at your 90-day low on ${when} you'd stay ${fmtK(rw.headroom)} above your buffer. ${tgt?`A ${fmtK(rw.deploy)} lump sum on ${tgt.name}${tgt.apr>0?` (${tgt.apr.toFixed(1)}%)`:''} would save real interest.`:`You could send ${fmtK(rw.deploy)} to savings or your emergency fund.`}`, sub:'Extra Funds Triage delegates your surplus by priority.', action:{label:'Put it to work', go:'fund_triage'} }); } }catch(e){}
   try{ const rec=engRecurring(); const hikes=rec.filter(r=>r.priceUp); const cancel=_cancelSubs(); const flagged=rec.filter(r=>cancel[r.merchKey]);
     if(hikes.length){ items.push({ id:'subhike', icon:'🔁', title:'A subscription price went up', say:`${hikes.length===1?esc(hikes[0].merchant)+' raised its price':hikes.length+' subscriptions raised their prices'} — worth a look before the next charge?`, sub:hikes.slice(0,3).map(r=>esc(r.merchant)+' · '+fmtK(r.prior)+'→'+fmtK(r.recent)).join('<br>'), action:{label:'Review subscriptions', go:'recurring'} }); }
     else if(flagged.length){ items.push({ id:'subcancel', icon:'⊘', title:'Subscriptions to cancel', say:`You flagged ${flagged.length} subscription${flagged.length>1?'s':''} to cancel — done it yet? That's ${fmtK(flagged.reduce((s,r)=>s+r.monthly,0))}/mo back in your pocket.`, sub:flagged.slice(0,4).map(r=>esc(r.merchant)).join(', '), action:{label:'Review subscriptions', go:'recurring'} }); }
