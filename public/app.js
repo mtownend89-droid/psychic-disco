@@ -6988,16 +6988,25 @@ function cfpRefresh(uid){ const pg=APP.pages.find(p=>p.id===APP.activePage); if(
 function cfpScrollEvents(uid){ try{ const e=gg('cfpev_'+uid); if(e) e.scrollIntoView({behavior:'smooth',block:'center'}); }catch(_){} }
 // Buffer-aware 90-day runway flag (red deficit / 💵 green opportunity / ok) — shared shape with the
 // proactive Richie nudge via engCashRunway(). Returns {cls, html} for the .cfp-lowflag element.
+// Short, plain-English summary of a lump-sum avalanche plan — matches the breakdown modal so the flag
+// and nudge don't misleadingly name a single card when the lump actually cascades across several.
+function _lumpSummary(plan){
+  if(!plan || !plan.alloc.length) return '';
+  const cleared=plan.alloc.filter(a=>a.cleared), partial=plan.alloc.find(a=>!a.cleared);
+  if(cleared.length===0) return partial?`put ${fmtK(partial.pay)} toward ${esc(partial.name)}`:'';
+  if(cleared.length===1) return `clear ${esc(cleared[0].name)}`+(partial?` & put ${fmtK(partial.pay)} toward ${esc(partial.name)}`:'');
+  if(cleared.length===2) return `clear ${esc(cleared[0].name)} & ${esc(cleared[1].name)}`+(partial?`, +${fmtK(partial.pay)} more`:'');
+  return `clear ${cleared.length} cards`+(partial?` + ${fmtK(partial.pay)} more`:'');
+}
 function _cfpRunwayFlag(rw, uid){
   const when=d=>d===0?'today':_projDate(d).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
   if(rw.kind==='deficit'){
     return {cls:'danger', html:`🚩 <b>Heads up</b> — your balance is projected to dip to <b>${fmtK(rw.low)}</b> on <b>${when(rw.lowDay)}</b>, about <b>${fmtK(rw.shortfall)}</b> below your <b>${fmtK(rw.buf)}</b> safety buffer. Trim ~${fmtK(rw.shortfall)}${rw.goalPortion>0?`, pause this cycle's ${fmtK(rw.goalPortion)} set-aside,`:''} or push a bill before then. <button class="cfp-flag-act" onclick="event.stopPropagation();cfpScrollEvents('${uid}')">Adjust a bill ↓</button>`};
   }
   if(rw.kind==='opportunity'){
-    const tgt=rw.target;
-    const tgtStr=tgt?`<b>${esc(tgt.name)}</b>${tgt.apr>0?` (${tgt.apr.toFixed(1)}% APR)`:''}`:'your highest-rate debt';
-    const line=tgt?`A <b>${fmtK(rw.deploy)}</b> lump sum toward ${tgtStr} would save real interest without risking a crunch.`
-                  :`You could put <b>${fmtK(rw.deploy)}</b> toward a savings bucket or your emergency fund.`;
+    const summary=_lumpSummary(engLumpSumPlan(rw.deploy));
+    const line=summary?`A <b>${fmtK(rw.deploy)}</b> lump sum could <b>${summary}</b> — real interest saved without risking a crunch.`
+                      :`You could put <b>${fmtK(rw.deploy)}</b> toward a savings bucket or your emergency fund.`;
     return {cls:'opp', html:`💵 <b>You've got room</b> — even at your 90-day low on <b>${when(rw.lowDay)}</b>, you'd stay <b>${fmtK(rw.headroom)}</b> above your buffer. ${line} <button class="cfp-flag-act" onclick="event.stopPropagation();openLumpSumModal()">Put it to work →</button>`};
   }
   return {cls:'ok', html:`✅ <b>On track</b> — your balance stays above your <b>${fmtK(rw.buf)}</b> buffer through the next 90 days (low <b>${fmtK(rw.low)}</b> on <b>${when(rw.lowDay)}</b>).`};
@@ -10523,8 +10532,8 @@ function _briefActionItems(){
   const ss=_scoreStale(); if(ss.stale){ items.push({ id:'score', icon:'📊', title:'Log your credit score', say: ss.days==null?`I don't have a credit score from you yet — it takes ten seconds and I'll track the trend.`:`Your last credit score was ${ss.days} days ago. Drop in this month's so I can watch the trend.`, sub:'Free in your card app or Credit Karma — no score impact.', action:{label:'Log score', open:'openScoreEditor'} }); }
   try{ const hi=engHighInterestDebt(); if(hi>0){ items.push({ id:'hidebt', icon:'🔥', title:'High-interest debt to attack', say:`You're carrying ${fmtK(hi)} in high-interest debt. Sending your extra funds here first is a guaranteed return — want to plan it?`, sub:'The Extra Funds Triage delegates your surplus by priority.', action:{label:'Open triage', go:'fund_triage'} }); } }catch(e){}
   try{ const ef=engEmergencyFund(); if(ef<1000){ items.push({ id:'emergency', icon:'🛟', title:'Build your safety net', say:`Your starter emergency fund is at ${fmtK(ef)} of $1,000. That buffer keeps a surprise off your cards — let's grow it.`, sub:'Fund it in Savings Buckets.', action:{label:'Open buckets', go:'savings_buckets'} }); } }catch(e){}
-  try{ const rw=engCashRunway(); if(rw.kind==='opportunity'){ const when=rw.lowDay===0?'today':_projDate(rw.lowDay).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); const tgt=rw.target;
-    items.push({ id:'surplus', icon:'💵', title:'Room for a lump-sum payment', say:`Nice cushion — even at your 90-day low on ${when} you'd stay ${fmtK(rw.headroom)} above your buffer. ${tgt?`A ${fmtK(rw.deploy)} lump sum on ${tgt.name}${tgt.apr>0?` (${tgt.apr.toFixed(1)}%)`:''} would save real interest.`:`You could send ${fmtK(rw.deploy)} to savings or your emergency fund.`}`, sub:'See the payoff breakdown, then set up the payments or bank it as buffer.', action:{label:'Put it to work', open:'openLumpSumModal'} }); } }catch(e){}
+  try{ const rw=engCashRunway(); if(rw.kind==='opportunity'){ const when=rw.lowDay===0?'today':_projDate(rw.lowDay).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); const summary=_lumpSummary(engLumpSumPlan(rw.deploy));
+    items.push({ id:'surplus', icon:'💵', title:'Room for a lump-sum payment', say:`Nice cushion — even at your 90-day low on ${when} you'd stay ${fmtK(rw.headroom)} above your buffer. ${summary?`A ${fmtK(rw.deploy)} lump sum could ${summary}.`:`You could send ${fmtK(rw.deploy)} to savings or your emergency fund.`}`, sub:'See the payoff breakdown, then set up the payments or bank it as buffer.', action:{label:'Put it to work', open:'openLumpSumModal'} }); } }catch(e){}
   try{ const rec=engRecurring(); const hikes=rec.filter(r=>r.priceUp); const cancel=_cancelSubs(); const flagged=rec.filter(r=>cancel[r.merchKey]);
     if(hikes.length){ items.push({ id:'subhike', icon:'🔁', title:'A subscription price went up', say:`${hikes.length===1?esc(hikes[0].merchant)+' raised its price':hikes.length+' subscriptions raised their prices'} — worth a look before the next charge?`, sub:hikes.slice(0,3).map(r=>esc(r.merchant)+' · '+fmtK(r.prior)+'→'+fmtK(r.recent)).join('<br>'), action:{label:'Review subscriptions', go:'recurring'} }); }
     else if(flagged.length){ items.push({ id:'subcancel', icon:'⊘', title:'Subscriptions to cancel', say:`You flagged ${flagged.length} subscription${flagged.length>1?'s':''} to cancel — done it yet? That's ${fmtK(flagged.reduce((s,r)=>s+r.monthly,0))}/mo back in your pocket.`, sub:flagged.slice(0,4).map(r=>esc(r.merchant)).join(', '), action:{label:'Review subscriptions', go:'recurring'} }); }
