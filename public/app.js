@@ -429,7 +429,12 @@ function engRecent(days, forceRolling){ return _memoFrame('recent:'+days+':'+(fo
 
 /* ── P&L engine: group income vs spending by day/week/month with full stats ── */
 function engPLBuckets(days, group){
-  const rec=engRecent(days);
+  // Weekly/monthly grouping needs a lookback that spans many buckets, and it must be a TRUE trailing
+  // window — otherwise calendar mode collapses e.g. a 30-day span to month-to-date, so early in the
+  // month "Weekly"/"Monthly" show a single flat bucket. Scale the window to the grouping and force
+  // rolling (a P&L trend is inherently trailing history, independent of the global calendar/rolling toggle).
+  const span = group==='monthly' ? Math.max(days,365) : group==='weekly' ? Math.max(days,84) : days;
+  const rec=engRecent(span, true);
   const buckets={};
   rec.forEach(t=>{
     const d=new Date(t.date+'T12:00:00'); let key;
