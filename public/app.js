@@ -6926,7 +6926,7 @@ function _cfpRunwayFlag(rw, uid){
     const tgtStr=tgt?`<b>${esc(tgt.name)}</b>${tgt.apr>0?` (${tgt.apr.toFixed(1)}% APR)`:''}`:'your highest-rate debt';
     const line=tgt?`A <b>${fmtK(rw.deploy)}</b> lump sum toward ${tgtStr} would save real interest without risking a crunch.`
                   :`You could put <b>${fmtK(rw.deploy)}</b> toward a savings bucket or your emergency fund.`;
-    return {cls:'opp', html:`💵 <b>You've got room</b> — even at your 90-day low on <b>${when(rw.lowDay)}</b>, you'd stay <b>${fmtK(rw.headroom)}</b> above your buffer. ${line} <button class="cfp-flag-act" onclick="event.stopPropagation();try{healthGoto('fund_triage')}catch(e){}">Put it to work →</button>`};
+    return {cls:'opp', html:`💵 <b>You've got room</b> — even at your 90-day low on <b>${when(rw.lowDay)}</b>, you'd stay <b>${fmtK(rw.headroom)}</b> above your buffer. ${line} <button class="cfp-flag-act" onclick="event.stopPropagation();ftSeedFromRunway()">Put it to work →</button>`};
   }
   return {cls:'ok', html:`✅ <b>On track</b> — your balance stays above your <b>${fmtK(rw.buf)}</b> buffer through the next 90 days (low <b>${fmtK(rw.low)}</b> on <b>${when(rw.lowDay)}</b>).`};
 }
@@ -6981,6 +6981,16 @@ function ftSetAlloc(key,v){ const ft=_ft(); ft.alloc=ft.alloc||{}; const n=parse
 function ftAuto(uid){ const ft=_ft(); ft.alloc={}; saveState(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); if(sbRichie)sbRichie.do('nod'); }
 function ftReset(uid){ const ft=_ft(); ft.extra=null; ft.alloc={}; saveState(); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function ftCommit(uid){ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+// Closes the loop from the Cash Flow 💵 opportunity flag: seed this widget's "extra to delegate" with
+// the runway's suggested lump sum (waterfall re-splits it debt-first via cleared alloc), then navigate
+// to the widget and spotlight it. Renders the active page so a same-page widget shows the seeded value
+// (richieSpotlightAt only re-renders when it has to switch pages).
+function ftSeedFromRunway(){
+  try{ const rw=engCashRunway(); if(rw && rw.kind==='opportunity' && rw.deploy>0){ const ft=_ft(); ft.extra=rw.deploy; ft.alloc={}; saveState(); } }catch(e){}
+  try{ _ensureWidgetOnPage('fund_triage'); }catch(e){}
+  try{ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg) renderCanvas(pg); }catch(e){}
+  try{ richieSpotlightAt(Object.assign({widgetType:'fund_triage'}, (typeof RICHIE_SPOTS!=='undefined'&&RICHIE_SPOTS.fund_triage)||{})); }catch(e){}
+}
 
 /* ═══ PROFIT & LOSS WIDGET ═══ */
 let _plGroup={};  // per-widget grouping (daily/weekly/monthly)
@@ -10409,7 +10419,7 @@ function _briefActionItems(){
   try{ const hi=engHighInterestDebt(); if(hi>0){ items.push({ id:'hidebt', icon:'🔥', title:'High-interest debt to attack', say:`You're carrying ${fmtK(hi)} in high-interest debt. Sending your extra funds here first is a guaranteed return — want to plan it?`, sub:'The Extra Funds Triage delegates your surplus by priority.', action:{label:'Open triage', go:'fund_triage'} }); } }catch(e){}
   try{ const ef=engEmergencyFund(); if(ef<1000){ items.push({ id:'emergency', icon:'🛟', title:'Build your safety net', say:`Your starter emergency fund is at ${fmtK(ef)} of $1,000. That buffer keeps a surprise off your cards — let's grow it.`, sub:'Fund it in Savings Buckets.', action:{label:'Open buckets', go:'savings_buckets'} }); } }catch(e){}
   try{ const rw=engCashRunway(); if(rw.kind==='opportunity'){ const when=rw.lowDay===0?'today':_projDate(rw.lowDay).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); const tgt=rw.target;
-    items.push({ id:'surplus', icon:'💵', title:'Room for a lump-sum payment', say:`Nice cushion — even at your 90-day low on ${when} you'd stay ${fmtK(rw.headroom)} above your buffer. ${tgt?`A ${fmtK(rw.deploy)} lump sum on ${tgt.name}${tgt.apr>0?` (${tgt.apr.toFixed(1)}%)`:''} would save real interest.`:`You could send ${fmtK(rw.deploy)} to savings or your emergency fund.`}`, sub:'Extra Funds Triage delegates your surplus by priority.', action:{label:'Put it to work', go:'fund_triage'} }); } }catch(e){}
+    items.push({ id:'surplus', icon:'💵', title:'Room for a lump-sum payment', say:`Nice cushion — even at your 90-day low on ${when} you'd stay ${fmtK(rw.headroom)} above your buffer. ${tgt?`A ${fmtK(rw.deploy)} lump sum on ${tgt.name}${tgt.apr>0?` (${tgt.apr.toFixed(1)}%)`:''} would save real interest.`:`You could send ${fmtK(rw.deploy)} to savings or your emergency fund.`}`, sub:'Extra Funds Triage delegates your surplus by priority.', action:{label:'Put it to work', open:'ftSeedFromRunway'} }); } }catch(e){}
   try{ const rec=engRecurring(); const hikes=rec.filter(r=>r.priceUp); const cancel=_cancelSubs(); const flagged=rec.filter(r=>cancel[r.merchKey]);
     if(hikes.length){ items.push({ id:'subhike', icon:'🔁', title:'A subscription price went up', say:`${hikes.length===1?esc(hikes[0].merchant)+' raised its price':hikes.length+' subscriptions raised their prices'} — worth a look before the next charge?`, sub:hikes.slice(0,3).map(r=>esc(r.merchant)+' · '+fmtK(r.prior)+'→'+fmtK(r.recent)).join('<br>'), action:{label:'Review subscriptions', go:'recurring'} }); }
     else if(flagged.length){ items.push({ id:'subcancel', icon:'⊘', title:'Subscriptions to cancel', say:`You flagged ${flagged.length} subscription${flagged.length>1?'s':''} to cancel — done it yet? That's ${fmtK(flagged.reduce((s,r)=>s+r.monthly,0))}/mo back in your pocket.`, sub:flagged.slice(0,4).map(r=>esc(r.merchant)).join(', '), action:{label:'Review subscriptions', go:'recurring'} }); }
