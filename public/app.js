@@ -428,13 +428,14 @@ function engRangeLabel(days){
 function engRecent(days, forceRolling){ return _memoFrame('recent:'+days+':'+(forceRolling?1:0), function(){ const r=engRange(days, forceRolling); const ex=_excludedAcctIds(); return allTxns.filter(t=>new Date(t.date).getTime()>=r.start && !ex.has(t.account_id)); }); }
 
 /* ── P&L engine: group income vs spending by day/week/month with full stats ── */
+// Lookback window (days) for a P&L grouping — weekly/monthly need enough span to show many buckets.
+// Shared by engPLBuckets and plMount's period label so the window and its label can't drift apart.
+function _plSpan(days, group){ return group==='monthly' ? Math.max(days,365) : group==='weekly' ? Math.max(days,84) : days; }
 function engPLBuckets(days, group){
-  // Weekly/monthly grouping needs a lookback that spans many buckets, and it must be a TRUE trailing
-  // window — otherwise calendar mode collapses e.g. a 30-day span to month-to-date, so early in the
-  // month "Weekly"/"Monthly" show a single flat bucket. Scale the window to the grouping and force
-  // rolling (a P&L trend is inherently trailing history, independent of the global calendar/rolling toggle).
-  const span = group==='monthly' ? Math.max(days,365) : group==='weekly' ? Math.max(days,84) : days;
-  const rec=engRecent(span, true);
+  // Must be a TRUE trailing window (forceRolling) — otherwise calendar mode collapses a short span to
+  // month-to-date, so early in the month "Weekly"/"Monthly" show a single flat bucket. A P&L trend is
+  // inherently trailing history, independent of the global calendar/rolling toggle.
+  const rec=engRecent(_plSpan(days,group), true);
   const buckets={};
   rec.forEach(t=>{
     const d=new Date(t.date+'T12:00:00'); let key;
@@ -6975,7 +6976,11 @@ function plMount(w){
   const days=wDays(w);
   const s=dataLoaded?engPLStats(days,group):(function(){ const b=engPLSample(group); const ti=b.reduce((x,y)=>x+y.inc,0),ts=b.reduce((x,y)=>x+y.spend,0); const nets=b.map(x=>x.inc-x.spend); return {buckets:b,totalInc:ti,totalSpend:ts,net:ti-ts,sr:ti>0?Math.round((ti-ts)/ti*100):0,best:b[nets.indexOf(Math.max(...nets))],worst:b[nets.indexOf(Math.min(...nets))],txnCount:b.reduce((x,y)=>x+y.n,0),avgNet:Math.round((ti-ts)/b.length),periods:b.length}; })();
   const badge=gg('plnet_'+w.uid);
-  if(badge){ badge.textContent='Net '+(s.net>=0?'+':'-')+fmtK(Math.abs(s.net)); badge.style.color=s.net>=0?'var(--pos)':'var(--red)'; }
+  if(badge){
+    const wd=_plSpan(days,group), plabel=group==='monthly'?Math.round(wd/30.44)+' mo':group==='weekly'?Math.round(wd/7)+' wk':wd+' days';
+    badge.innerHTML='Net '+(s.net>=0?'+':'-')+fmtK(Math.abs(s.net))+` <span style="color:var(--muted);font-weight:600">· last ${plabel}</span>`;   // so totals' window is explicit as you switch grouping
+    badge.style.color=s.net>=0?'var(--pos)':'var(--red)';
+  }
   const strip=gg('plstrip_'+w.uid);
   if(strip){
     const stats=[
