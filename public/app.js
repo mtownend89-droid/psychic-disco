@@ -142,27 +142,12 @@ function getCatParent(label){
 }
 const _catOverrides=JSON.parse(LS.getItem('mdf_cat_overrides')||'{}');
 const _txnNotes=JSON.parse(LS.getItem('mdf_txn_notes')||'{}');
-let _txnTags=JSON.parse(LS.getItem('mdf_txn_tags')||'{}');
-const TXN_TAGS=[
-  {id:'paycheck',   label:'Paycheck',      icon:'💵'},
-  {id:'transfer',   label:'Transfer',      icon:'🔁'},
-  {id:'refund',     label:'Refund',        icon:'↩️'},
-  {id:'business',   label:'Business',      icon:'💼'},
-  {id:'reimburse',  label:'Reimbursement', icon:'🧾'},
-  {id:'subscription',label:'Subscription', icon:'🔄'},
-  {id:'ccpayment',  label:'Credit Card Payment', icon:'💳'},
-  {id:'ignore',     label:'Ignore',        icon:'🚫'},
-];
-const TXN_TAG_BY_ID={}; TXN_TAGS.forEach(t=>TXN_TAG_BY_ID[t.id]=t);
-function getTxnTag(t){ return _txnTags[_txnKey(t)]||''; }
-function setTxnTag(key, tag){ if(!key) return; if(tag) _txnTags[key]=tag; else delete _txnTags[key]; try{ LS.setItem('mdf_txn_tags', JSON.stringify(_txnTags)); }catch(e){} }
-// Tags that mean "not real spending" (transfers, paybacks, ignored) — excluded from spend totals.
-/* A credit-card payment leaving a bank account is NOT spending — the card's purchases are
-   the real spending, so counting the payment too double-counts. Detected by user tag,
-   Plaid's category (CREDIT_CARD_PAYMENT), the legacy category array, or a conservative
-   payee-name pattern ("AMEX EPAYMENT", "CHASE CREDIT CRD AUTOPAY", ...). */
+/* A credit-card payment leaving a bank account is NOT spending — the card's purchases are the real
+   spending, so counting the payment too double-counts. Detected by Plaid's category
+   (CREDIT_CARD_PAYMENT), the legacy category array, or a conservative payee-name pattern
+   ("AMEX EPAYMENT", "CHASE CREDIT CRD AUTOPAY", ...). A manual "Credit Card Payment" category is
+   handled separately via _catSysFlags in _txnExcludedFromSpend. */
 function _isCCPaymentTxn(t){
-  if(getTxnTag(t)==='ccpayment') return true;
   if(!(t.amount>0)) return false;   // only outflows from a bank account can be card payments
   const det=((t.personal_finance_category&&(t.personal_finance_category.detailed||t.personal_finance_category.primary))||'').toUpperCase();
   if(det.includes('CREDIT_CARD_PAYMENT')) return true;
@@ -177,20 +162,23 @@ function _isCCPaymentTxn(t){
 // this hot path. During Phase 1 both the legacy tag AND the folded-in category are honored.
 function _catSysFlags(t){ const ov=_catOverrides[_txnKey(t)]; if(ov&&SYS_CAT_BY_LABEL[ov]) return SYS_CAT_BY_LABEL[ov];
   const mk=(typeof _merchKey==='function')?_merchKey(t):''; const r=mk&&_catRules[mk]; return (r&&SYS_CAT_BY_LABEL[r])||{}; }
-function _txnExcludedFromSpend(t){ const g=getTxnTag(t); if(g==='transfer'||g==='ignore'||g==='reimburse'||g==='ccpayment') return true; return !!_catSysFlags(t).exSpend || _isCCPaymentTxn(t); }
-// Tags/categories that mean "not real income" (a transfer in, a refund, etc.) — excluded from income totals.
-function _txnExcludedFromIncome(t){ const g=getTxnTag(t); if(g==='transfer'||g==='ignore'||g==='refund'||g==='reimburse') return true; return !!_catSysFlags(t).exIncome; }
-// One-time migration: fold existing transaction tags into category overrides so the two systems unify.
-// Idempotent (only sets an override where none exists, so user categorizations and the still-active tag
-// exclusion are preserved). Tags stay in place as a Phase-1 fallback; guarded by an LS flag.
+function _txnExcludedFromSpend(t){ return !!_catSysFlags(t).exSpend || _isCCPaymentTxn(t); }
+// Categories that mean "not real income" (a transfer in, a refund, etc.) — excluded from income totals.
+function _txnExcludedFromIncome(t){ return !!_catSysFlags(t).exIncome; }
+// One-time migration: fold any remaining transaction "tags" (a retired concept) into category overrides so
+// their spend/income exclusion carries over now that the tag path is gone. Tag intent WINS (overwrites the
+// override) so no exclusion is lost, then the tag store is dropped. Reads LS directly (the in-memory _txnTags
+// var is gone) and is guarded by a v2 flag so it runs once even for users who only half-migrated earlier.
 function _migrateTagsToCats(){
-  try{ if(LS.getItem('mdf_tags_migrated')==='1') return; }catch(e){ return; }
+  try{ if(LS.getItem('mdf_tags_migrated2')==='1') return; }catch(e){ return; }
   try{
     const map={transfer:'Transfer', ccpayment:'Credit Card Payment', reimburse:'Reimbursement', refund:'Refund', ignore:'Excluded', paycheck:'Paycheck'};
+    const tags=JSON.parse(LS.getItem('mdf_txn_tags')||'{}')||{};
     let touched=false;
-    Object.keys(_txnTags||{}).forEach(k=>{ const lbl=map[_txnTags[k]]; if(lbl && !_catOverrides[k]){ _catOverrides[k]=lbl; touched=true; } });
+    Object.keys(tags).forEach(k=>{ const lbl=map[tags[k]]; if(lbl){ _catOverrides[k]=lbl; touched=true; } });
     if(touched){ try{ LS.setItem('mdf_cat_overrides', JSON.stringify(_catOverrides)); }catch(e){} }
-    LS.setItem('mdf_tags_migrated','1');
+    try{ LS.removeItem('mdf_txn_tags'); }catch(e){}
+    LS.setItem('mdf_tags_migrated2','1');
   }catch(e){}
 }
 _migrateTagsToCats();
@@ -1322,7 +1310,7 @@ function engStartCash(cats){
 // stops a stream — e.g. an earner loses their job, so future income ends on a set date.
 function _incomeOverrides(){ APP.incomeOverrides=APP.incomeOverrides||{}; return APP.incomeOverrides; }
 function _paycheckSources(){
-  const pcs=(dataLoaded?allTxns:[]).filter(t=>(getTxnTag(t)==='paycheck' || getTxnCategory(t)==='Paycheck') && t.amount<0)
+  const pcs=(dataLoaded?allTxns:[]).filter(t=>getTxnCategory(t)==='Paycheck' && t.amount<0)
                                     .sort((a,b)=>new Date(a.date)-new Date(b.date));
   if(!pcs.length) return [];
   const groups={};
@@ -1912,7 +1900,7 @@ function engRecurring(){
   ];
   const groups={};
   const _ex=_excludedAcctIds();
-  allTxns.filter(t=>t.amount>0 && getTxnTag(t)!=='ignore' && !_ex.has(t.account_id)).forEach(t=>{ const k=_merchKey(t); if(k.length<3)return; (groups[k]=groups[k]||[]).push(t); });
+  allTxns.filter(t=>t.amount>0 && getTxnCategory(t)!=='Excluded' && !_ex.has(t.account_id)).forEach(t=>{ const k=_merchKey(t); if(k.length<3)return; (groups[k]=groups[k]||[]).push(t); });
   const out=[];
   Object.keys(groups).forEach(k=>{
     const txns=groups[k]; if(txns.length<2) return;
@@ -4024,7 +4012,7 @@ window.addEventListener('visibilitychange', ()=>{ if(document.visibilityState===
 let _persistTimer=null;
 function _persistSoon(){ clearTimeout(_persistTimer); _persistTimer=setTimeout(()=>{ try{ saveState(); }catch(e){} }, 400); }
 /* ── Cross-device state sync: push edits to the server, pull newer edits from other devices ── */
-const SYNC_KEYS=['mdf_categories','mdf_syscat_parents','mdf_cat_overrides','mdf_cat_rules','mdf_txn_notes','mdf_txn_tags','mdf_txn_confirmed','mdf_acct_cats','mdf_nw_history','mdf_health_history','mdf_health_grade','mdf_fire','mdf_gami','richie_setup','richie_lastvisit','richie_proactive','richie_audio','richie_voice'];
+const SYNC_KEYS=['mdf_categories','mdf_syscat_parents','mdf_cat_overrides','mdf_cat_rules','mdf_txn_notes','mdf_txn_confirmed','mdf_acct_cats','mdf_nw_history','mdf_health_history','mdf_health_grade','mdf_fire','mdf_gami','richie_setup','richie_lastvisit','richie_proactive','richie_audio','richie_voice'];
 function syncCollect(){ try{ _saveActiveLayout(); }catch(e){}   /* fold live pages into layouts before EVERY push (immediate/flush/heartbeat), else a push can ship stale layouts */
   const stores={}; SYNC_KEYS.forEach(k=>{ const v=LS.getItem(k); if(v!=null) stores[k]=v; }); return { app:APP, stores, _ts:Date.now() }; }
 function _widgetCount(pages){ return (pages||[]).reduce((s,p)=>s+((p&&p.widgets||[]).length),0); }
@@ -7372,7 +7360,7 @@ function _txnFeedData(w){
       case 'income':    return _isIncomeTxn(t);   // true income only — CC payments/transfers are inflows, not income
       case 'spending':  return t.amount>0 && !_txnExcludedFromSpend(t);   // real spending — CC payments/transfers excluded
       case 'pending':   return !!t.pending;
-      case 'paycheck':  return getTxnCategory(t)==='Paycheck' || getTxnTag(t)==='paycheck';   // folded into the Paycheck category (tag kept as fallback)
+      case 'paycheck':  return getTxnCategory(t)==='Paycheck';
       default:          return true;
     }
   });
