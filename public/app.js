@@ -1100,7 +1100,7 @@ function _sparkline(vals, color, w, h){
   const lastX=w, lastY=h-((vals[vals.length-1]-min)/rng)*(h-4)-2;
   return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="2.5" fill="${color}"/></svg>`;
 }
-// SVG donut chart (used by Budget by Category two-tier view)
+// SVG donut chart (used by Category Breakdown two-tier view)
 function _arcPath(cx,cy,r,ir,a0,a1){
   const x0=cx+r*Math.cos(a0), y0=cy+r*Math.sin(a0);
   const x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
@@ -4561,7 +4561,7 @@ const WIDGET_CATALOG=[
   {id:'safe_spend',name:'Safe to Spend',icon:'👛',cat:'Overview',span:1,minLevel:1,desc:'The big one — how much you can safely spend today after upcoming bills, goal set-asides & a buffer.'},
   {id:'spending_month',name:"Current Spending",icon:'🛒',cat:'Overview',span:1,minLevel:1,desc:'Discretionary spending vs budget — your quick "how are we doing" marker (bills & savings excluded).'},
   {id:'income_month',name:"This Month's Income",icon:'💰',cat:'Overview',span:1,minLevel:1,desc:'Money in this month.'},
-  {id:'budget_doughnut',name:'Budget by Category',icon:'🍩',cat:'Budget',span:2,minLevel:2,desc:'Two donuts side by side — spending by group and by category (stacked on mobile).'},
+  {id:'budget_doughnut',name:'Category Breakdown',icon:'🍩',cat:'Budget',span:2,minLevel:2,desc:'Two donuts side by side — spending by group and by category (stacked on mobile).'},
   {id:'bills_list',name:'Upcoming Bills',icon:'📋',cat:'Budget',span:1,minLevel:1,desc:"What's due and when."},
   {id:'bill_calendar',name:'Bill Calendar',icon:'🗓️',cat:'Budget',span:2,minLevel:2,desc:'A month view of upcoming bills & income by due date — spot heavy weeks, tap a day for detail.'},
   {id:'zero_budget',name:'Every-Dollar Budget',icon:'🧮',cat:'Budget',span:2,minLevel:2,desc:'Give every dollar a job — with live actual-vs-budgeted spending per envelope (zero-based budgeting).'},
@@ -6398,7 +6398,7 @@ function budgetTiersBody(w){
     </div>
     <div class="bd2-col">
       <div class="bd2-title">By category</div>
-      <div class="bd2-chart">${_donutSVG(cats2,128,String(kids.length),'categories')}</div>
+      <div class="bd2-chart">${_donutSVG(cats2,128,fmtK(total),'total')}</div>
       <div class="bd2-legend">${legend(cats2)}</div>
     </div>
   </div>${dataLoaded?'':'<div class="ws-hint" style="margin-top:8px;text-align:center">sample data — connect a bank for live spending</div>'}`;
