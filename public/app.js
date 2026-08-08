@@ -5619,7 +5619,7 @@ function billsWidgetBody(w){
         <div class="bill-sub">${b.dueEst?'<span style="color:var(--muted)">due date not set</span>':'due '+ord(b.due)}${b.apr?` · ${b.apr.toFixed(1)}%`:''}${b.promo?` · ${esc(b.promo)}`:''}${_billPayoffLabel(b)}</div>
         <div class="bill-amts">
           <span class="bill-min">Min <b>${fmtK(b.min)}</b>${b.estMin?' · <span style="color:var(--amber)" title="No minimum reported by the bank — estimated at ~2% of balance. Tap the pencil to set the real one.">est.</span>':(live&&!b.manual?' · Plaid':'')}</span>
-          ${Math.abs(diff)>=1?`<span class="bill-diff" style="color:${diff>0?'var(--amber)':'var(--green)'}">${diff>0?'+':''}${fmtK(diff)} vs min</span>`:''}
+          ${Math.abs(diff)>=1?`<span class="bill-diff" style="color:${diff>0?'var(--green)':'var(--amber)'}">${diff>0?'+':''}${fmtK(diff)} vs min</span>`:''}
         </div>
         ${fillPrompt}
         ${acctSel}
