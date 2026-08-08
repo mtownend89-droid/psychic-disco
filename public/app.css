@@ -1631,12 +1631,13 @@ body.reduce-motion .canvas-widget-card::before,body.reduce-motion .canvas-widget
 .cfp-stat-v{font-size:14px;font-weight:800;margin-top:2px;font-variant-numeric:tabular-nums;}
 .cfp-chart{background:var(--surface2);border-radius:10px;padding:8px;margin-bottom:10px;}
 .cfp-lowflag{font-size:12px;line-height:1.5;padding:10px 12px;border-radius:9px;margin-bottom:14px;}
-.cfp-lowflag.danger{background:rgba(240,92,92,0.12);color:#f6a6a6;border:1px solid rgba(240,92,92,0.25);}
-.cfp-lowflag.warn{background:rgba(240,165,64,0.12);color:#f0c674;border:1px solid rgba(240,165,64,0.25);}
-.cfp-lowflag.ok{background:rgba(46,204,138,0.1);color:#7fe0b0;border:1px solid rgba(46,204,138,0.22);}
-.cfp-lowflag.opp{background:rgba(46,204,138,0.16);color:#a7f3cf;border:1px solid rgba(46,204,138,0.4);box-shadow:0 0 0 1px rgba(46,204,138,0.12) inset;}
-.cfp-flag-act{margin-left:6px;display:inline-block;background:rgba(255,255,255,0.06);border:1px solid currentColor;color:inherit;font-family:inherit;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;cursor:pointer;white-space:nowrap;}
-.cfp-flag-act:hover{background:rgba(255,255,255,0.12);}
+/* Opaque fills + black text so the flag is readable on both light and dark themes: red = negative, green = positive */
+.cfp-lowflag.danger{background:#f4a6a6;color:#111;border:1px solid #e56b6b;}
+.cfp-lowflag.warn{background:#f4d49c;color:#111;border:1px solid #e0b25a;}
+.cfp-lowflag.ok{background:#a9e8ca;color:#111;border:1px solid #5fd9a3;}
+.cfp-lowflag.opp{background:#5fd9a3;color:#111;border:1px solid #2ecc8a;box-shadow:0 0 0 1px rgba(46,204,138,0.35) inset;}
+.cfp-flag-act{margin-left:6px;display:inline-block;background:rgba(255,255,255,0.45);border:1px solid rgba(0,0,0,0.32);color:#111;font-family:inherit;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;cursor:pointer;white-space:nowrap;}
+.cfp-flag-act:hover{background:rgba(255,255,255,0.72);}
 .cfp-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:4px 0 9px;}
 .cfp-events{display:flex;flex-direction:column;gap:5px;max-height:280px;overflow-y:auto;}
 /* Topbar Review button (re-opens the Money To-Do wizard) */
