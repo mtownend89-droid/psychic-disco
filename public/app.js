@@ -7307,17 +7307,16 @@ function acctMount(w){
   let html=`<div class="acct-txn-head">${info.count} txns · ${engRangeLabel(30)} · net <b style="color:${net>=0?'var(--pos)':'var(--red)'}">${net>=0?'+':'-'}${fmt2(Math.abs(net))}</b></div>`;
   if(!info.txns.length){ html+=`<div class="acct-empty">No transactions ${engRangeLabel(30)}.</div>`; el.innerHTML=html; return; }
   const keys=[];
-  html+=info.txns.map((t,i)=>{ const key=_txnKey(t); keys[i]=key; const pos=t.amount>0; const col=pos?'var(--red)':'var(--pos)'; const amt=(pos?'-':'+')+fmt2(Math.abs(t.amount)); const cat=getTxnCategory(t); const note=getTxnNote(t); const tag=getTxnTag(t); const name=t.merchant_name||t.name||''; const dt=new Date(t.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
-      const tagChip = tag&&TXN_TAG_BY_ID[tag]?`<span class="txf-tag">${TXN_TAG_BY_ID[tag].icon} ${esc(TXN_TAG_BY_ID[tag].label)}</span>`:'';
+  html+=info.txns.map((t,i)=>{ const key=_txnKey(t); keys[i]=key; const pos=t.amount>0; const col=pos?'var(--red)':'var(--pos)'; const amt=(pos?'-':'+')+fmt2(Math.abs(t.amount)); const cat=getTxnCategory(t); const note=getTxnNote(t); const name=t.merchant_name||t.name||''; const dt=new Date(t.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
       return `<div class="acct-txn-row">
         <div style="flex:1;min-width:0">
-          <div class="acct-txn-nm">${esc(name)} ${tagChip}</div>
+          <div class="acct-txn-nm">${esc(name)}</div>
           <div class="acct-txn-meta"><span class="acct-txn-cat">${esc(cat)}</span>${note?`<span class="acct-txn-note">📝 ${esc(note)}</span>`:''}</div>
         </div>
         <div style="text-align:right;flex-shrink:0"><div class="acct-txn-amt" style="color:${col}">${amt}</div><div class="acct-txn-dt">${dt}</div></div>
       </div>`;
   }).join('');
-  html+='<div class="acct-txn-hint">Edit categories, notes &amp; tags in the <b>All Transactions</b> widget.</div>';
+  html+='<div class="acct-txn-hint">Edit categories &amp; notes in the <b>All Transactions</b> widget.</div>';
   _acctTxnKeys[w.uid]=keys;
   el.innerHTML=html;
 }
@@ -7338,7 +7337,7 @@ function setAcctTxnNote(uid, idx, note){
 
 /* ═══ ALL TRANSACTIONS widget — searchable feed with per-txn category, note & tag ═══ */
 let _txnFeed={}, _txnFeedKeys={}, _txnFeedRows={};
-const TXF_FILTERS=[{id:'all',label:'All'},{id:'income',label:'Income'},{id:'spending',label:'Spending'},{id:'pending',label:'⏳ Pending'},{id:'paycheck',label:'💵 Paychecks'},{id:'tagged',label:'Tagged'},{id:'untagged',label:'Untagged'}];
+const TXF_FILTERS=[{id:'all',label:'All'},{id:'income',label:'Income'},{id:'spending',label:'Spending'},{id:'pending',label:'⏳ Pending'},{id:'paycheck',label:'💵 Paychecks'}];
 const TXN_TF=[{key:'1d',label:'1 day',days:1},{key:'1w',label:'1 wk',days:7},{key:'30d',label:'30 days',days:30},{key:'3m',label:'3 mo',days:90},{key:'1y',label:'1 yr',days:365},{key:'all',label:'All',days:100000}];
 function _txfDays(tf){ const t=TXN_TF.find(x=>x.key===tf); return t?t.days:30; }
 // Basis-aware filter label: calendar → Today/This week/This month/This quarter/This year.
@@ -7369,14 +7368,11 @@ function _txnFeedData(w){
   list=list.filter(t=>{
     if(new Date(t.date).getTime()<_r.start) return false;
     if(q){ const name=(t.merchant_name||t.name||'').toLowerCase(); const cat=getTxnCategory(t).toLowerCase(); if(!(name.includes(q)||cat.includes(q))) return false; }
-    const tag=getTxnTag(t);
     switch(st.filter){
       case 'income':    return _isIncomeTxn(t);   // true income only — CC payments/transfers are inflows, not income
       case 'spending':  return t.amount>0 && !_txnExcludedFromSpend(t);   // real spending — CC payments/transfers excluded
       case 'pending':   return !!t.pending;
-      case 'paycheck':  return tag==='paycheck';
-      case 'tagged':    return !!tag;
-      case 'untagged':  return !tag;
+      case 'paycheck':  return getTxnCategory(t)==='Paycheck' || getTxnTag(t)==='paycheck';   // folded into the Paycheck category (tag kept as fallback)
       default:          return true;
     }
   });
@@ -7411,14 +7407,12 @@ function txnFeedRender(w){
   el.innerHTML=capped.map((t,i)=>{
     const key=_txnKey(t); keys[i]=key;
     const pos=t.amount>0, col=pos?'var(--red)':'var(--pos)', amt=(pos?'-':'+')+fmt2(Math.abs(t.amount));
-    const cat=getTxnCategory(t), note=getTxnNote(t), tag=getTxnTag(t);
+    const cat=getTxnCategory(t), note=getTxnNote(t);
     const name=t.merchant_name||t.name||'', dt=new Date(t.date+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
     const mk=_merchKey(t), hasRule=!!(mk&&_catRules[mk]);
     const acctExcl=_exSet.has(t.account_id);
     const catList=cats.includes(cat)?cats:[cat].concat(cats);
     const opts=catList.map(c=>`<option value="${esc(c)}"${c===cat?' selected':''}>${esc(c)}</option>`).join('');
-    const tagOpts=`<option value="">🏷️ tag…</option>`+TXN_TAGS.map(tg=>`<option value="${tg.id}"${tag===tg.id?' selected':''}>${tg.icon} ${tg.label}</option>`).join('');
-    const tagChip = tag&&TXN_TAG_BY_ID[tag]?`<span class="txf-tag">${TXN_TAG_BY_ID[tag].icon} ${esc(TXN_TAG_BY_ID[tag].label)}</span>`:'';
     const ruleChip = hasRule?`<span class="txf-tag" style="color:var(--blue,#5b8def);background:rgba(91,141,239,.14)">＝ rule</span>`:'';
     const exclChip = acctExcl?`<span class="txf-tag" style="color:var(--muted);background:var(--surface3)">excluded acct</span>`:'';
     const pendChip = t.pending?`<span class="txf-tag" style="color:var(--amber);background:var(--amber-dim)">⏳ pending</span>`:'';
@@ -7428,10 +7422,9 @@ function txnFeedRender(w){
     const billSel = (pos&&_billList.length)?`<select class="txn-cat-sel txf-billsel" onclick="event.stopPropagation()" onchange="txnFeedLinkBill('${w.uid}',${i},this.value)" title="Link this payment to a bill"><option value="">🔗 link bill…</option>${_billList.map(x=>`<option value="${esc(x.bk)}"${linkedBK===x.bk?' selected':''}>${esc(x.nm)}</option>`).join('')}${linkedBK?'<option value="__unlink__">✕ unlink</option>':''}</select>`:'';
     return `<div class="txf-row"${acctExcl?' style="opacity:.55"':''}>
       <div class="txf-main">
-        <div class="txf-nm">${esc(name)} ${pendChip}${tagChip}${ruleChip}${billChip}${exclChip}</div>
+        <div class="txf-nm">${esc(name)} ${pendChip}${ruleChip}${billChip}${exclChip}</div>
         <div class="txf-edit">
           <select class="txn-cat-sel" onclick="event.stopPropagation()" onchange="txnFeedSetCat('${w.uid}',${i},this.value)" title="Category">${opts}</select>
-          <select class="txn-cat-sel txf-tagsel" onclick="event.stopPropagation()" onchange="txnFeedSetTag('${w.uid}',${i},this.value)" title="Tag">${tagOpts}</select>
           ${billSel}
           <button class="txf-rulebtn${hasRule?' on':''}" onclick="event.stopPropagation();txnFeedRule('${w.uid}',${i})" title="Always categorize this merchant this way">＝</button>
           <input class="txn-note-in" type="text" placeholder="📝 note…" value="${esc(note)}" onclick="event.stopPropagation()" onchange="txnFeedSetNote('${w.uid}',${i},this.value)" onkeydown="if(event.key==='Enter')this.blur()">
@@ -7447,7 +7440,6 @@ function txnFeedFilter(uid,f){ (_txnFeed[uid]=_txnFeed[uid]||{q:'',filter:'all'}
 function txnFeedTf(uid,key){ (_txnFeed[uid]=_txnFeed[uid]||{q:'',filter:'all'}).tf=key; const w=_findWidget(uid); if(w) txnFeedMount(w); }
 function txnFeedSetCat(uid,idx,cat){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; if(cat)_catOverrides[k]=cat; else delete _catOverrides[k]; try{LS.setItem('mdf_cat_overrides',JSON.stringify(_catOverrides));}catch(e){} try{ gamiMarkEngaged('categorize'); }catch(e){} const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function txnFeedSetNote(uid,idx,note){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; if(note&&note.trim())_txnNotes[k]=note.trim(); else delete _txnNotes[k]; try{LS.setItem('mdf_txn_notes',JSON.stringify(_txnNotes));}catch(e){} }
-function txnFeedSetTag(uid,idx,tag){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; setTxnTag(k,tag); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function txnFeedRule(uid,idx){ const t=(_txnFeedRows[uid]||[])[idx]; if(!t)return; const mk=_merchKey(t); if(!mk)return; if(_catRules[mk]){ setCatRule(mk,''); } else { setCatRule(mk, getTxnCategory(t)); } const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 // Link this transaction to a bill (value = billKey), or '__unlink__' to remove. Marks that bill's
 // occurrence (for the transaction's month) paid, and _billOccMatched then treats it as settled.
