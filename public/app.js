@@ -5432,8 +5432,13 @@ const FD_SCENARIOS={
   custom:{name:'Custom',icon:'⚙️',sub:'Build your own',banner:'Build your own scenario. Adjust income and add costs to model any emergency.',incomeScale:{},extraCosts:[],severity:'info'},
 };
 let _fd={scenario:'job', incomeOverrides:{}, extraCosts:[]};
+/* Live income for the stress test: detected paychecks + manual streams (example seed dropped),
+   same source the rest of the app uses. Deterministic order, so the index-keyed
+   _fd.incomeOverrides stay aligned across fdSetScenario / fdRefresh / fdScenarioIncome.
+   Falls back to the example seed only in sample mode (no data), which is fine for preview. */
+function _fdIncomeSources(){ return _effectiveIncomeSources(); }
 function fdScenarioIncome(){
-  return incomeSources.reduce((s,src,i)=>{
+  return _fdIncomeSources().reduce((s,src,i)=>{
     if(_fd.incomeOverrides[i]!==undefined) return s+_fd.incomeOverrides[i];
     return s+src.amt*(FREQ_TO_MONTHLY[src.freq]||1);
   },0);
@@ -5452,8 +5457,9 @@ function fdRunway(){
 function fdSetScenario(id){
   _fd.scenario=id; const sc=FD_SCENARIOS[id];
   _fd.incomeOverrides={};
+  const _isrc=_fdIncomeSources();
   Object.entries(sc.incomeScale||{}).forEach(([idx,scale])=>{
-    const i=+idx; if(incomeSources[i]){ _fd.incomeOverrides[i]=Math.round(incomeSources[i].amt*(FREQ_TO_MONTHLY[incomeSources[i].freq]||1)*scale); }
+    const i=+idx; if(_isrc[i]){ _fd.incomeOverrides[i]=Math.round(_isrc[i].amt*(FREQ_TO_MONTHLY[_isrc[i].freq]||1)*scale); }
   });
   _fd.extraCosts=sc.extraCosts.map(e=>({...e}));
   document.querySelectorAll('.fd-scen').forEach(el=>{ el.classList.toggle('active', el.getAttribute('onclick')&&el.getAttribute('onclick').includes("'"+id+"'")); });
@@ -7626,7 +7632,7 @@ function fdRefresh(){
   const banner=gg('fdBanner'); if(banner){ banner.className='fd-banner '+(sc.severity||'info'); banner.textContent=sc.banner; }
   // income sliders
   const inc=gg('fdIncome');
-  if(inc){ inc.innerHTML=incomeSources.map((src,i)=>{
+  if(inc){ inc.innerHTML=_fdIncomeSources().map((src,i)=>{
     const origMo=Math.round(src.amt*(FREQ_TO_MONTHLY[src.freq]||1));
     const scenMo=_fd.incomeOverrides[i]!==undefined?_fd.incomeOverrides[i]:origMo;
     const pct=origMo>0?Math.round(scenMo/origMo*100):0;
