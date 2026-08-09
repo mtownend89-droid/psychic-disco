@@ -1426,31 +1426,20 @@ function _projDate(off){ const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.ge
 // One-time, per-occurrence pay bumps (e.g. a surplus lump sum applied to the next unpaid occurrence).
 // Keyed by okey (billKey|date) so exactly ONE occurrence carries the extra and every later month reverts
 // to normal pay — which keeps the cash-flow projection from inflating future months.
-function _billBump(){ APP.billBump=APP.billBump||{}; return APP.billBump; }
-function _billOccPay(b, okey){ return (b.pay||0) + (+(_billBump()[okey])||0); }
-// First UPCOMING unpaid occurrence for a bill — walks the same occurrences _billEvents emits (starting at
-// the next due date, not a passed one) so a bump always lands on an occurrence the projection will show.
-function _nextUnpaidBillOkey(b){
-  const today=new Date(); today.setHours(0,0,0,0);
-  let cur=_dueDateInMonth(today.getFullYear(), today.getMonth(), b.due);
-  if(cur<today) cur=_dueDateInMonth(today.getFullYear(), today.getMonth()+1, b.due);
-  for(let m=0;m<12;m++){ const ok=billKey(b)+'|'+_dk(cur); if(!_billOccPaid(ok)) return ok; cur=_dueDateInMonth(cur.getFullYear(), cur.getMonth()+1, b.due); }
-  return null;
-}
 function _billEvents(days){
   const out=[]; const today=new Date(); today.setHours(0,0,0,0);
   const horizon=new Date(today); horizon.setDate(horizon.getDate()+days);
   engUpcomingBills().filter(b=>b.pay>0).forEach(b=>{   // paid is handled per-occurrence via e.off in the projection, not by dropping the whole bill
     if(b.once){   // one-time scheduled payment (e.g. a savings top-up) — a single event on its date, no recurrence
       const d=_dkParse(b.once); if(d){ d.setHours(0,0,0,0); const off=Math.round((d-today)/86400000);
-        if(off>=0 && off<=days){ const okey=billKey(b)+'|'+_dk(d); out.push({day:off, amt:-(_billOccPay(b, okey)), name:b.name, type:'bill', key:billKey(b), okey, due:b.due}); } }
+        if(off>=0 && off<=days){ const okey=billKey(b)+'|'+_dk(d); out.push({day:off, amt:-(b.pay||0), name:b.name, type:'bill', key:billKey(b), okey, due:b.due}); } }
       return;
     }
     let cur=_dueDateInMonth(today.getFullYear(), today.getMonth(), b.due);
     if(cur<today) cur=_dueDateInMonth(today.getFullYear(), today.getMonth()+1, b.due);
     while(cur<=horizon){
       const off=Math.round((cur-today)/86400000);
-      if(off>=0 && off<=days){ const okey=billKey(b)+'|'+_dk(cur); out.push({day:off, amt:-(_billOccPay(b, okey)), name:b.name, type:'bill', key:billKey(b), okey, due:b.due}); }
+      if(off>=0 && off<=days){ const okey=billKey(b)+'|'+_dk(cur); out.push({day:off, amt:-(b.pay||0), name:b.name, type:'bill', key:billKey(b), okey, due:b.due}); }
       cur=_dueDateInMonth(cur.getFullYear(), cur.getMonth()+1, b.due);
     }
   });
@@ -1534,8 +1523,6 @@ function billsToggleOcc(okey, uid){
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
   if(nowPaid){ try{ gamiMarkEngaged('billpaid'); }catch(e){} try{ emojiBurst('coin',{particle:'coin',count:8,life:1600}); }catch(e){} const nm=(okey.split('|')[0]||'that').trim(); try{ richieCelebrate(`Boom — ${nm} marked paid! ✅ One less thing this month.`); }catch(e){} }
 }
-// Remove a one-time per-occurrence pay bump (the surplus lump extra) for a specific occurrence.
-function billClearBump(okey, uid){ const m=_billBump(); if(okey && (okey in m)){ delete m[okey]; saveState(); try{ _memoInvalidate&&_memoInvalidate(); }catch(e){} const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); } }
 // One-time migration: fold the old global per-bill paid flag into THIS month's occurrence so
 // existing "paid" marks aren't lost when the widget moves to per-month tracking.
 function _migrateBillPaid(){
@@ -1878,9 +1865,20 @@ function engCashRunway(){
   const low=Math.round(s.low90), buf=Math.round(s.buffer), lowDay=s.lowDay||0, headroom=low-buf;
   if(low < buf) return {kind:'deficit', low, buf, lowDay, shortfall:Math.max(0,buf-low), goalPortion:Math.round(s.goalPortion||0)};
   if(buf>0 && headroom>=buf){                       // threshold linked to the Safe-to-Spend buffer number
+    // Timing-aware ceiling: the lump is deployed AFTER your next income (as one-time bills on the best day),
+    // so a near-future deposit raises what's safely deployable. Use the DURABLE floor from the next income
+    // day onward — not the pre-income low — as the ceiling.
+    let ceiling=headroom, deployDay=lowDay;
+    try{ const proj=engCashFlowProjection(90), ser=(proj&&proj.series)||[];
+      if(ser.length){ const n=ser.length, suf=new Array(n); let m=Infinity;
+        for(let i=n-1;i>=0;i--){ m=Math.min(m,ser[i].bal); suf[i]=m; }
+        const nid=(s.nextIncomeDay!=null && s.nextIncomeDay>0 && s.nextIncomeDay<n)?s.nextIncomeDay:0;
+        ceiling=Math.max(headroom, Math.round(suf[nid]-buf)); deployDay=(ser[nid]&&ser[nid].day)||lowDay;
+      }
+    }catch(e){}
     const target=(typeof _topHiCard==='function')?_topHiCard():null;
-    const deploy=Math.floor(headroom/50)*50;        // round down to $50 so the low point still clears the buffer
-    if(deploy>0) return {kind:'opportunity', low, buf, lowDay, headroom, deploy, target};
+    const deploy=Math.floor(ceiling/50)*50;         // round down to $50 so the post-payment low still clears the buffer
+    if(deploy>0) return {kind:'opportunity', low, buf, lowDay, headroom:ceiling, deploy, deployDay, target};
   }
   return {kind:'ok', low, buf, lowDay};
 }
@@ -5728,7 +5726,7 @@ function billsWidgetBody(w){
   const withOcc=allF.map(b=>{ const okey=_billOkeyForMonth(b, mo); return { b, okey, paid:_billOccPaid(okey), dueStr:_dk(_dueDateInMonthFor(b, mo)) }; });
   const sorted=withOcc.sort((x,y)=>{ if(!!x.paid!==!!y.paid) return x.paid?1:-1; return (x.b.due||99)-(y.b.due||99); });   // unpaid first, paid sink to bottom
   const totMin=withOcc.filter(x=>!x.paid).reduce((s,x)=>s+(x.b.min||0),0);
-  const totPay=withOcc.filter(x=>!x.paid).reduce((s,x)=>s+_billOccPay(x.b, x.okey),0);   // includes any one-time per-occurrence bump for the viewed month
+  const totPay=withOcc.filter(x=>!x.paid).reduce((s,x)=>s+(x.b.pay||0),0);
   const paidCount=withOcc.filter(x=>x.paid).length;
   // Accounts a bill can be paid from: live OR manual cash/savings, plus credit cards.
   const payAccts=(dataLoaded?engAccounts():[]).filter(a=>!a.excluded && (a.type==='depository'||a.type==='credit'));
@@ -5760,7 +5758,6 @@ function billsWidgetBody(w){
       <div class="bill-paywrap">
         <label class="bill-paylabel">You pay</label>
         <div class="bill-pay"><span>$</span><input type="number" value="${Math.round(b.pay)}" min="0" step="10" onclick="event.stopPropagation()" oninput="setBillPay('${key}',this.value)" onblur="setBillPayCommit()"></div>
-        ${(!paid && (+(_billBump()[okey])||0)>0)?`<div class="bill-bump" title="One-time extra from your surplus — reverts to normal pay next cycle">+${fmtK(+_billBump()[okey])} one-time <span class="bill-bump-x" onclick="event.stopPropagation();billClearBump('${okeyEsc}','${w.uid}')" title="Remove this one-time extra">✕</span></div>`:''}
       </div>
     </div>`; }).join('');
   return `<div class="bills-mgr">
@@ -7037,9 +7034,9 @@ function _cfpRunwayFlag(rw, uid){
   }
   if(rw.kind==='opportunity'){
     const summary=_lumpSummary(engLumpSumPlan(rw.deploy));
-    const line=summary?`A <b>${fmtK(rw.deploy)}</b> lump sum could <b>${summary}</b> — real interest saved without risking a crunch.`
-                      :`You could put <b>${fmtK(rw.deploy)}</b> toward a savings bucket or your emergency fund.`;
-    return {cls:'opp', html:`💵 <b>You've got room</b> — even at your 90-day low on <b>${when(rw.lowDay)}</b>, you'd stay <b>${fmtK(rw.headroom)}</b> above your buffer. ${line} <button class="cfp-flag-act" onclick="event.stopPropagation();openLumpSumModal()">Put it to work →</button>`};
+    const body=summary?`a <b>${fmtK(rw.deploy)}</b> lump sum could <b>${summary}</b> without dipping below your <b>${fmtK(rw.buf)}</b> buffer.`
+                      :`you could put <b>${fmtK(rw.deploy)}</b> toward savings or your emergency fund and still hold your <b>${fmtK(rw.buf)}</b> buffer.`;
+    return {cls:'opp', html:`💵 <b>You've got room</b> — after your next income, ${body} <button class="cfp-flag-act" onclick="event.stopPropagation();openLumpSumModal()">Put it to work →</button>`};
   }
   return {cls:'ok', html:`✅ <b>On track</b> — your balance stays above your <b>${fmtK(rw.buf)}</b> buffer through the next 90 days (low <b>${fmtK(rw.low)}</b> on <b>${when(rw.lowDay)}</b>).`};
 }
@@ -7148,32 +7145,26 @@ function openLumpSumModal(){
       </div>
     </div>`;
 }
-// "Set up payments": bump each targeted bill's "You pay" by its share of the lump (capped at the
-// balance), then jump to Bills so the next unpaid occurrence reflects the extra payment.
+// "Set it up": schedule the whole waterfall (debt cascade + savings) as one-time bills, all dated on the
+// best day for your daily balance (right after your next income), so they never dip you below the buffer.
+// Scheduled transfers you mark paid once the money moves. Re-triggering replaces the prior auto bills.
 function lumpSetupPayments(){
-  let hadDebt=false, hadSav=false;
-  try{ const rw=engCashRunway(); if(rw && rw.kind==='opportunity'){ const plan=engLumpSumPlan(rw.deploy); const bump=_billBump();
-    plan.alloc.forEach(a=>{ try{ const b=engBills().find(x=>x.name===a.name); if(!b) return;
-      const okey=_nextUnpaidBillOkey(b);   // first upcoming UNPAID occurrence (this cycle if unpaid, else next…)
-      if(okey){ bump[okey]=Math.round(a.pay); hadDebt=true; }   // one-time, per-occurrence — SET once per trigger (never accumulated); later months revert to normal pay
-    }catch(e){} });
-    // Savings: a single "Savings top-up" one-time bill, dated on the best day for your daily balance
-    // (a scheduled transfer you reconcile yourself). Re-triggering replaces the prior auto bill.
+  let n=0, date='';
+  try{ const rw=engCashRunway(); if(rw && rw.kind==='opportunity'){ const plan=engLumpSumPlan(rw.deploy);
+    const day=_bestPaymentDay(rw.deploy, 90), dt=_projDate(day); date=_dk(dt);
+    APP.manualBills=(APP.manualBills||[]).filter(b=>!b._lumpOnce && !b._savingsOnce);   // clear prior auto lump bills (once per trigger)
+    plan.alloc.forEach(a=>{ try{ if(a.pay>0){ APP.manualBills.push({ name:'Extra → '+a.name, pay:Math.round(a.pay), min:Math.round(a.pay), bal:0, apr:0, due:dt.getDate(), cat:'CC', once:date, _lumpOnce:true, promo:'', promoEnd:'', limit:0, note:'one-time lump-sum payment', paid:false }); n++; } }catch(e){} });
     const savTotal=(plan.savingsAlloc||[]).reduce((s,x)=>s+x.add,0);
-    if(savTotal>0){ try{
-      const day=_bestPaymentDay(savTotal, 60), dt=_projDate(day), date=_dk(dt);
-      const names=(plan.savingsAlloc||[]).map(s=>s.name).join(', ');
-      APP.manualBills=(APP.manualBills||[]).filter(b=>!b._savingsOnce);
-      APP.manualBills.push({ name:'Savings top-up', pay:Math.round(savTotal), min:Math.round(savTotal), bal:0, apr:0, due:dt.getDate(), cat:'OTHER', once:date, _savingsOnce:true, promo:'', promoEnd:'', limit:0, note:'one-time · '+names, paid:false });
-      hadSav=true;
+    if(savTotal>0){ try{ const names=(plan.savingsAlloc||[]).map(s=>s.name).join(', ');
+      APP.manualBills.push({ name:'Savings top-up', pay:Math.round(savTotal), min:Math.round(savTotal), bal:0, apr:0, due:dt.getDate(), cat:'OTHER', once:date, _lumpOnce:true, promo:'', promoEnd:'', limit:0, note:'one-time · '+names, paid:false }); n++;
     }catch(e){} }
     try{ saveState(); }catch(e){}
   } }catch(e){}
   try{ closeManual(); }catch(e){}
-  const dest = (hadDebt||hadSav) ? 'bills_list' : 'cashflow_planner';
-  const msg = hadDebt&&hadSav ? 'Done — a one-time extra payment on the next unpaid card occurrence, plus a scheduled one-time "Savings top-up" bill on the best day for your balance. Mark each paid once the money moves.'
-            : hadSav ? 'Done — added a scheduled one-time "Savings top-up" bill on the best day for your balance. Mark it paid once you move the money.'
-            : 'Done — added a one-time extra payment to the next unpaid occurrence of those cards. It reverts to normal pay the month after.';
+  const dest = n>0 ? 'bills_list' : 'cashflow_planner';
+  let when=''; try{ const d=_dkParse(date); if(d) when=d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); }catch(e){}
+  const msg = n>0 ? `Done — scheduled ${n} one-time payment${n!==1?'s':''}${when?' for '+when:''}, the best day for your balance (right after your income). Mark each paid once the money moves.`
+                  : 'Nothing to schedule right now.';
   try{ _ensureWidgetOnPage(dest); }catch(e){}
   try{ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg) renderCanvas(pg); }catch(e){}
   try{ richieSpotlightAt(Object.assign({widgetType:dest, message:msg}, (typeof RICHIE_SPOTS!=='undefined'&&RICHIE_SPOTS[dest])||{})); }catch(e){}
@@ -10606,8 +10597,8 @@ function _briefActionItems(){
   const ss=_scoreStale(); if(ss.stale){ items.push({ id:'score', icon:'📊', title:'Log your credit score', say: ss.days==null?`I don't have a credit score from you yet — it takes ten seconds and I'll track the trend.`:`Your last credit score was ${ss.days} days ago. Drop in this month's so I can watch the trend.`, sub:'Free in your card app or Credit Karma — no score impact.', action:{label:'Log score', open:'openScoreEditor'} }); }
   try{ const hi=engHighInterestDebt(); if(hi>0){ items.push({ id:'hidebt', icon:'🔥', title:'High-interest debt to attack', say:`You're carrying ${fmtK(hi)} in high-interest debt. Sending your extra funds here first is a guaranteed return — want to plan it?`, sub:'The Extra Funds Triage delegates your surplus by priority.', action:{label:'Open triage', go:'fund_triage'} }); } }catch(e){}
   try{ const ef=engEmergencyFund(); if(ef<1000){ items.push({ id:'emergency', icon:'🛟', title:'Build your safety net', say:`Your starter emergency fund is at ${fmtK(ef)} of $1,000. That buffer keeps a surprise off your cards — let's grow it.`, sub:'Fund it in Savings Buckets.', action:{label:'Open buckets', go:'savings_buckets'} }); } }catch(e){}
-  try{ const rw=engCashRunway(); if(rw.kind==='opportunity'){ const when=rw.lowDay===0?'today':_projDate(rw.lowDay).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); const summary=_lumpSummary(engLumpSumPlan(rw.deploy));
-    items.push({ id:'surplus', icon:'💵', title:'Room for a lump-sum payment', say:`Nice cushion — even at your 90-day low on ${when} you'd stay ${fmtK(rw.headroom)} above your buffer. ${summary?`A ${fmtK(rw.deploy)} lump sum could ${summary}.`:`You could send ${fmtK(rw.deploy)} to savings or your emergency fund.`}`, sub:'See the payoff breakdown, then set up the payments or bank it as buffer.', action:{label:'Put it to work', open:'openLumpSumModal'} }); } }catch(e){}
+  try{ const rw=engCashRunway(); if(rw.kind==='opportunity'){ const summary=_lumpSummary(engLumpSumPlan(rw.deploy));
+    items.push({ id:'surplus', icon:'💵', title:'Room for a lump-sum payment', say:`Nice cushion — after your next income, ${summary?`a ${fmtK(rw.deploy)} lump sum could ${summary}`:`you could send ${fmtK(rw.deploy)} to savings or your emergency fund`} without dipping below your buffer.`, sub:'See the payoff breakdown, then schedule it on the best day for your balance.', action:{label:'Put it to work', open:'openLumpSumModal'} }); } }catch(e){}
   try{ const rec=engRecurring(); const hikes=rec.filter(r=>r.priceUp); const cancel=_cancelSubs(); const flagged=rec.filter(r=>cancel[r.merchKey]);
     if(hikes.length){ items.push({ id:'subhike', icon:'🔁', title:'A subscription price went up', say:`${hikes.length===1?esc(hikes[0].merchant)+' raised its price':hikes.length+' subscriptions raised their prices'} — worth a look before the next charge?`, sub:hikes.slice(0,3).map(r=>esc(r.merchant)+' · '+fmtK(r.prior)+'→'+fmtK(r.recent)).join('<br>'), action:{label:'Review subscriptions', go:'recurring'} }); }
     else if(flagged.length){ items.push({ id:'subcancel', icon:'⊘', title:'Subscriptions to cancel', say:`You flagged ${flagged.length} subscription${flagged.length>1?'s':''} to cancel — done it yet? That's ${fmtK(flagged.reduce((s,r)=>s+r.monthly,0))}/mo back in your pocket.`, sub:flagged.slice(0,4).map(r=>esc(r.merchant)).join(', '), action:{label:'Review subscriptions', go:'recurring'} }); }
