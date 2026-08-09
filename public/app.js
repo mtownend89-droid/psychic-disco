@@ -242,6 +242,7 @@ function ruleAdd(){
 function getTxnCategory(t){
   const id=_txnKey(t);
   if(id&&_catOverrides[id]) return _catOverrides[id];               // 1) per-transaction override wins
+  if(id && typeof _ccPaymentTxns==='function' && _ccPaymentTxns().has(id)) return 'Credit Card Payment';   // 2) matched card-payment transfer → its own spend-excluded category, separate from Loan Payments
   const mk=(typeof _merchKey==='function')?_merchKey(t):'';
   if(mk&&_catRules[mk]) return _catRules[mk];                        // 2) merchant rule ("always X")
   const raw=(t.personal_finance_category&&t.personal_finance_category.primary)||(t.category&&t.category[0])||'';
@@ -2840,6 +2841,18 @@ function engSpendTrends(){
 }
 // Tap a category mover → open global search filtered to that category's transactions.
 function trendSearchCat(cat){ if(typeof openTxnSearch!=='function') return; try{ _txnSearch.q=cat; if(_txnSearch.chips) Object.keys(_txnSearch.chips).forEach(k=>_txnSearch.chips[k]=false); }catch(e){} openTxnSearch(); }
+// Debt payments so far this month, split Loans (installment — counted in spending) vs Cards (card payments,
+// kept OUT of the spending total so they don't double-count the purchases). Surfaces the card amount the
+// spending breakdown hides.
+function engDebtPaymentsMonth(){
+  if(!dataLoaded || !allTxns.length) return {loans:0, cards:0};
+  const now=new Date(), curStart=new Date(now.getFullYear(), now.getMonth(), 1);
+  const ex=(typeof _excludedAcctIds==='function')?_excludedAcctIds():new Set();
+  let loans=0, cards=0;
+  allTxns.forEach(t=>{ if(t.amount<=0 || ex.has(t.account_id)) return; const d=new Date(t.date); if(d<curStart||d>now) return;
+    const c=getTxnCategory(t); if(c==='Credit Card Payment') cards+=t.amount; else if(c==='Loan Payments') loans+=t.amount; });
+  return {loans:Math.round(loans), cards:Math.round(cards)};
+}
 function spendTrendsBody(w){
   const s=engSpendTrends();
   const up=s.vsLastPeriod>0;   // spending more than the same point last month
@@ -2859,6 +2872,7 @@ function spendTrendsBody(w){
     <div class="st-hero"><div class="st-hero-num">${fmtK(s.curTotal)}</div><div class="st-hero-sub">spent so far this month · day ${s.dom} of ${s.daysInMonth}</div>
     <div class="st-vs" style="color:${vsCol}">${vsTxt}</div></div>
     <div class="st-proj">${proj}</div>${pace}
+    ${(function(){ try{ const dp=engDebtPaymentsMonth(); if(dp.loans>0||dp.cards>0){ return `<div class="st-debtpay" title="Money you paid toward debt this month. Card payments are kept out of your spending total so they don't double-count the purchases already on the card.">Debt paid this month · <span class="st-dp-v">${dp.loans>0?`🏦 Loans ${fmtK(dp.loans)}`:''}${dp.loans>0&&dp.cards>0?' · ':''}${dp.cards>0?`💳 Cards ${fmtK(dp.cards)}`:''}</span></div>`; } }catch(e){} return ''; })()}
     <div class="st-movers-h">Biggest movers vs last month</div>
     <div class="st-movers">${rows}</div>
   </div>`;
