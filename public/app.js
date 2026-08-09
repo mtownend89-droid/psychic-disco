@@ -1918,9 +1918,10 @@ function engLumpSumPlan(amount){
       rem-=add; }
   }catch(e){}
   const savingsApplied=savingsAlloc.reduce((s,x)=>s+x.add,0);
-  return {amount, alloc, savingsAlloc, clearedCount:alloc.filter(a=>a.cleared).length,
-    debtApplied, savingsApplied, applied:debtApplied+savingsApplied,
-    leftover:Math.round(Math.max(0,rem)), totalDebt:Math.round(debts.reduce((s,d)=>s+d.bal,0)), debtCount:debts.length};
+  const invest=Math.round(Math.max(0,rem));   // whatever's left after debt + savings → invest the rest (the last stop)
+  return {amount, alloc, savingsAlloc, invest, clearedCount:alloc.filter(a=>a.cleared).length,
+    debtApplied, savingsApplied, applied:debtApplied+savingsApplied+invest,
+    leftover:0, totalDebt:Math.round(debts.reduce((s,d)=>s+d.bal,0)), debtCount:debts.length};
 }
 // Detect recurring charges / subscriptions — groups outflows by merchant, keeps those
 // that repeat at a regular cadence with consistent amounts.
@@ -3851,7 +3852,7 @@ const BUNDLE_PAGES={
 };
 let _uidSeq=0;
 // Old widget types that were folded into the tabbed hubs — remap so they never render as "? Widget".
-const WIDGET_MIGRATE={debt_summary:'debt_hub',debt_payoff:'debt_hub',credit_util:'debt_hub',promo_tracker:'debt_hub',fire_progress:'fire_hub',retirement_proj:'fire_hub',fire_calc:'fire_hub',safe_to_spend:'cash_summary',budget_actual:'zero_budget',fire_drill:'fire_hub',debt_planner:'debt_hub',cashflow_chart:'cashflow_planner',top_categories:'spending_hub',spending_trends:'spending_hub',category_heatmap:'spending_hub'};
+const WIDGET_MIGRATE={debt_summary:'debt_hub',debt_payoff:'debt_hub',credit_util:'debt_hub',promo_tracker:'debt_hub',fire_progress:'fire_hub',retirement_proj:'fire_hub',fire_calc:'fire_hub',safe_to_spend:'cash_summary',budget_actual:'zero_budget',fire_drill:'fire_hub',debt_planner:'debt_hub',cashflow_chart:'cashflow_planner',top_categories:'spending_hub',spending_trends:'spending_hub',category_heatmap:'spending_hub',fund_triage:'cashflow_planner'};
 function makeWidget(type){ type=WIDGET_MIGRATE[type]||type; return {uid:'w'+Date.now()+'_'+(_uidSeq++),type:type,span:(WIDGET_BY_ID[type]&&WIDGET_BY_ID[type].span)||1}; }
 // Build widgets from a type list, silently dropping any type not registered in the current
 // catalog — so a starter set can name widgets that live behind an as-yet-unmerged feature
@@ -4690,7 +4691,8 @@ const WIDGET_CATALOG=[
   // editing. Kept out of the catalog; existing widgets migrate via WIDGET_MIGRATE above.
   {id:'pl_panel',name:'Profit & Loss',icon:'💹',cat:'Cash Flow',span:2,minLevel:3,desc:'Income, spending, net & savings rate by day/week/month.'},
   {id:'cashflow_planner',name:'Cash Flow',icon:'📅',cat:'Cash Flow',span:2,minLevel:3,desc:'Your projected running balance — see your low point before it hits, and edit bills to fix it.'},
-  {id:'fund_triage',name:'Where Extra Money Goes',icon:'💸',cat:'Cash Flow',span:2,minLevel:3,hidden:true,desc:'Delegate your monthly surplus by priority — high-interest debt, then savings, then investing.'},   // soft-hidden: superseded by the Cash Flow runway lump-sum flow; existing placements still render
+  // fund_triage ("Where Extra Money Goes") retired — superseded by the Cash Flow runway lump-sum flow
+  // (debt → savings → investing). Existing placements migrate to cashflow_planner via WIDGET_MIGRATE.
   {id:'goals',name:'Financial Goals',icon:'🎯',cat:'Overview',span:2,minLevel:1,desc:'Set goals, track progress automatically, and let Richie coach you to the finish.'},
   {id:'health_score',name:'Financial Health Score',icon:'🩺',cat:'Overview',span:2,minLevel:1,desc:'A single 0–100 score across savings rate, emergency fund, debt-to-income, credit use & high-interest debt — with Richie\'s top fix.'},
   {id:'accounts_list',name:'All Accounts',icon:'🏦',cat:'Overview',span:2,minLevel:1,desc:'Every account with balances — tap to see transactions.'},
@@ -7018,14 +7020,14 @@ function cfpScrollEvents(uid){ try{ const e=gg('cfpev_'+uid); if(e) e.scrollInto
 // and nudge don't misleadingly name a single card when the lump actually cascades across several.
 function _lumpSummary(plan){
   if(!plan) return '';
-  const sav=(plan.savingsAlloc||[]).length;
-  const savTail=sav?` & top up ${sav} savings bucket${sav!==1?'s':''}`:'';
-  if(!plan.alloc.length) return sav?`top up ${sav} savings bucket${sav!==1?'s':''}`:'';
+  const sav=(plan.savingsAlloc||[]).length, inv=(plan.invest||0)>0;
+  const tail=(sav?` & top up ${sav} savings bucket${sav!==1?'s':''}`:'')+(inv?` & invest ${fmtK(plan.invest)}`:'');
+  if(!plan.alloc.length) return (sav?`top up ${sav} savings bucket${sav!==1?'s':''}`:(inv?`invest ${fmtK(plan.invest)}`:''))+(sav&&inv?` & invest ${fmtK(plan.invest)}`:'');
   const cleared=plan.alloc.filter(a=>a.cleared), partial=plan.alloc.find(a=>!a.cleared);
-  if(cleared.length===0) return (partial?`put ${fmtK(partial.pay)} toward ${esc(partial.name)}`:'')+savTail;
-  if(cleared.length===1) return `clear ${esc(cleared[0].name)}`+(partial?` & put ${fmtK(partial.pay)} toward ${esc(partial.name)}`:'')+savTail;
-  if(cleared.length===2) return `clear ${esc(cleared[0].name)} & ${esc(cleared[1].name)}`+(partial?`, +${fmtK(partial.pay)} more`:'')+savTail;
-  return `clear ${cleared.length} cards`+(partial?` + ${fmtK(partial.pay)} more`:'')+savTail;
+  if(cleared.length===0) return (partial?`put ${fmtK(partial.pay)} toward ${esc(partial.name)}`:'')+tail;
+  if(cleared.length===1) return `clear ${esc(cleared[0].name)}`+(partial?` & put ${fmtK(partial.pay)} toward ${esc(partial.name)}`:'')+tail;
+  if(cleared.length===2) return `clear ${esc(cleared[0].name)} & ${esc(cleared[1].name)}`+(partial?`, +${fmtK(partial.pay)} more`:'')+tail;
+  return `clear ${cleared.length} cards`+(partial?` + ${fmtK(partial.pay)} more`:'')+tail;
 }
 function _cfpRunwayFlag(rw, uid){
   const when=d=>d===0?'today':_projDate(d).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
@@ -7127,13 +7129,18 @@ function openLumpSumModal(){
       <div class="lump-bar"><div class="lump-bar-fill sav" style="width:${s.target>0?Math.min(100,Math.round((s.balance+s.add)/s.target*100)):100}%"></div></div>
       <div class="lump-row-sub">${s.target>0?`${fmtK(s.balance)} → ${fmtK(s.balance+s.add)}${s.filled?' · funded 🎉':` of ${fmtK(s.target)}`}`:'added to savings'}</div>
     </div>`).join('');
+  const invRow = plan.invest>0 ? `<div class="lump-row">
+      <div class="lump-row-top"><span class="lump-nm">📈 Invest surplus</span><b class="lump-add" style="color:var(--green)">+${fmtK(plan.invest)}</b></div>
+      <div class="lump-row-sub">long-term growth — the last stop</div>
+    </div>` : '';
   const sections = (plan.alloc.length?`<div class="lump-sec">🔥 Pay down debt</div>${debtRows}`:'')
-                 + (savRows?`<div class="lump-sec">🪣 Fill savings buckets</div>${savRows}`:'');
-  const list = sections || `<div class="ws-hint">No high-APR debt or underfunded buckets to target — keeping it as a buffer (or investing) is your best move.</div>`;
+                 + (savRows?`<div class="lump-sec">🪣 Fill savings buckets</div>${savRows}`:'')
+                 + (invRow?`<div class="lump-sec">📈 Invest the rest</div>${invRow}`:'');
+  const list = sections || `<div class="ws-hint">No high-APR debt or underfunded buckets to target — keeping it as a buffer is your best move.</div>`;
   const bits=[];
   if(plan.clearedCount>0) bits.push(`<b>${plan.clearedCount}</b> card${plan.clearedCount!==1?'s':''} cleared`);
   if((plan.savingsAlloc||[]).length) bits.push(`<b>${plan.savingsAlloc.length}</b> bucket${plan.savingsAlloc.length!==1?'s':''} topped up`);
-  if(plan.leftover>0) bits.push(`${fmtK(plan.leftover)} left over`);
+  if(plan.invest>0) bits.push(`${fmtK(plan.invest)} invested`);
   const summary = bits.length?`<div class="lump-summary">${bits.join(' · ')}</div>`:'';
   gg('manualBody').innerHTML=`
     <div class="lump-list">${list}${summary}</div>
@@ -7157,6 +7164,9 @@ function lumpSetupPayments(){
     const savTotal=(plan.savingsAlloc||[]).reduce((s,x)=>s+x.add,0);
     if(savTotal>0){ try{ const names=(plan.savingsAlloc||[]).map(s=>s.name).join(', ');
       APP.manualBills.push({ name:'Savings top-up', pay:Math.round(savTotal), min:Math.round(savTotal), bal:0, apr:0, due:dt.getDate(), cat:'OTHER', once:date, _lumpOnce:true, promo:'', promoEnd:'', limit:0, note:'one-time · '+names, paid:false }); n++;
+    }catch(e){} }
+    if(plan.invest>0){ try{
+      APP.manualBills.push({ name:'Invest surplus', pay:Math.round(plan.invest), min:Math.round(plan.invest), bal:0, apr:0, due:dt.getDate(), cat:'OTHER', once:date, _lumpOnce:true, promo:'', promoEnd:'', limit:0, note:'one-time · long-term investing', paid:false }); n++;
     }catch(e){} }
     try{ saveState(); }catch(e){}
   } }catch(e){}
@@ -10509,7 +10519,7 @@ function _briefHidebtStepBody(){
   return `<div class="brief-mini">
     <div class="brief-actdesc">Top target: <b>${esc(b.name)}</b>${b.apr?` · ${b.apr.toFixed(1)}% APR`:''} · paying ${fmtK(cur)}/mo</div>
     <div class="brief-mini-row"><span>Add extra this month</span><div class="brief-pay"><span>$</span><input id="brHiExtra" type="number" min="0" step="10" value="50" onclick="event.stopPropagation()"></div><button class="brief-confirm" onclick="event.stopPropagation();briefPayExtra()">Apply ✓</button></div>
-    <button class="brief-goto brief-goto-sm" onclick="event.stopPropagation();briefGoto('fund_triage')">Plan it all in Extra Funds Triage →</button>
+    <button class="brief-goto brief-goto-sm" onclick="event.stopPropagation();briefGoto('cashflow_planner')">Plan it all in the Cash Flow planner →</button>
   </div>`;
 }
 function briefPayExtra(){
@@ -10595,7 +10605,7 @@ function _briefActionItems(){
   if(promos.length){ const soon=promos.slice().sort((a,b)=>a.days-b.days)[0];
     items.push({ id:'promo', icon:'⏰', title:'A 0% promo is ending', say:`Your 0% deal on ${esc(soon.name)} jumps to ${soon.apr?soon.apr.toFixed(1)+'%':'its rate'} in ${soon.days} day${soon.days!==1?'s':''}. Let's beat the clock.`, sub:`${promos.length} promo${promos.length>1?'s':''} within 45 days.`, action:{label:'See promos', go:'debt_hub', tab:'promo'} }); }
   const ss=_scoreStale(); if(ss.stale){ items.push({ id:'score', icon:'📊', title:'Log your credit score', say: ss.days==null?`I don't have a credit score from you yet — it takes ten seconds and I'll track the trend.`:`Your last credit score was ${ss.days} days ago. Drop in this month's so I can watch the trend.`, sub:'Free in your card app or Credit Karma — no score impact.', action:{label:'Log score', open:'openScoreEditor'} }); }
-  try{ const hi=engHighInterestDebt(); if(hi>0){ items.push({ id:'hidebt', icon:'🔥', title:'High-interest debt to attack', say:`You're carrying ${fmtK(hi)} in high-interest debt. Sending your extra funds here first is a guaranteed return — want to plan it?`, sub:'The Extra Funds Triage delegates your surplus by priority.', action:{label:'Open triage', go:'fund_triage'} }); } }catch(e){}
+  try{ const hi=engHighInterestDebt(); if(hi>0){ items.push({ id:'hidebt', icon:'🔥', title:'High-interest debt to attack', say:`You're carrying ${fmtK(hi)} in high-interest debt. Paying it down is a guaranteed return — want to plan it?`, sub:'Open the Debt hub to see balances and a payoff plan.', action:{label:'Open Debt', go:'debt_hub'} }); } }catch(e){}
   try{ const ef=engEmergencyFund(); if(ef<1000){ items.push({ id:'emergency', icon:'🛟', title:'Build your safety net', say:`Your starter emergency fund is at ${fmtK(ef)} of $1,000. That buffer keeps a surprise off your cards — let's grow it.`, sub:'Fund it in Savings Buckets.', action:{label:'Open buckets', go:'savings_buckets'} }); } }catch(e){}
   try{ const rw=engCashRunway(); if(rw.kind==='opportunity'){ const summary=_lumpSummary(engLumpSumPlan(rw.deploy));
     items.push({ id:'surplus', icon:'💵', title:'Room for a lump-sum payment', say:`Nice cushion — after your next income, ${summary?`a ${fmtK(rw.deploy)} lump sum could ${summary}`:`you could send ${fmtK(rw.deploy)} to savings or your emergency fund`} without dipping below your buffer.`, sub:'See the payoff breakdown, then schedule it on the best day for your balance.', action:{label:'Put it to work', open:'openLumpSumModal'} }); } }catch(e){}
