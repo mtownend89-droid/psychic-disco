@@ -1885,21 +1885,31 @@ function engCashRunway(){
   }
   return {kind:'ok', low, buf, lowDay};
 }
+// Effective APR for payoff ordering: a balance sitting under an active 0% promo isn't costing interest,
+// so it sorts LAST (eff 0) — unless the promo ends within ~45 days, in which case we treat it at the full
+// post-promo rate so the lump clears it before the rate jumps.
+function _cardEffApr(b){
+  const apr=+b.apr||0; const end=(typeof _parsePromoEnd==='function')?_parsePromoEnd(b.promoEnd):null;
+  if(!end) return apr;
+  const days=Math.round((end-new Date())/86400000);
+  return days>45 ? 0 : apr;
+}
 // Avalanche allocation of a one-time lump sum across debts worth attacking (credit cards + anything
-// APR>=8): highest-APR first, pay min(remaining, balance) on each, marking cleared vs partial. Lets a
-// lump larger than one card cascade across several instead of overpaying a single balance.
+// APR>=8), ordered by EFFECTIVE APR (0% promos deprioritized): pay min(remaining, balance) on each,
+// marking cleared vs partial. Lets a lump larger than one card cascade across several.
 function engLumpSumPlan(amount){
   amount=Math.max(0, Math.round(amount||0));
   let debts=[];
   try{ const g=engDebtGroups(); debts=[...g.revolving, ...g.installment]; }catch(e){}
-  debts=debts.map(b=>({name:b.name, apr:+b.apr||0, bal:Math.abs(b.bal||0), cat:b.cat}))   // paid-this-cycle cards stay in — the bump targets their next UNPAID occurrence (see lumpSetupPayments)
+  debts=debts.map(b=>{ const eff=_cardEffApr(b), end=(typeof _parsePromoEnd==='function')?_parsePromoEnd(b.promoEnd):null, pdays=end?Math.max(0,Math.round((end-new Date())/86400000)):0;
+      return {name:b.name, apr:+b.apr||0, eff, bal:Math.abs(b.bal||0), cat:b.cat, promoActive:(eff===0&&pdays>0), promoEnd:b.promoEnd||'', promoDays:pdays}; })   // paid-this-cycle cards stay in (bump targets next unpaid occ); 0% promos sort last via effective APR
     .filter(d=>d.bal>0 && (d.cat==='CC' || d.apr>=8))
-    .sort((a,b)=> (b.apr-a.apr) || (b.bal-a.bal));
+    .sort((a,b)=> (b.eff-a.eff) || (b.bal-a.bal));
   let rem=amount; const alloc=[];
   for(const d of debts){
     if(rem<=0.5) break;
     const pay=Math.min(rem, d.bal);
-    alloc.push({name:d.name, apr:d.apr, bal:Math.round(d.bal), pay:Math.round(pay), cleared:pay>=d.bal-0.5, after:Math.max(0,Math.round(d.bal-pay))});
+    alloc.push({name:d.name, apr:d.apr, eff:d.eff, promoActive:d.promoActive, promoEnd:d.promoEnd, promoDays:d.promoDays, bal:Math.round(d.bal), pay:Math.round(pay), cleared:pay>=d.bal-0.5, after:Math.max(0,Math.round(d.bal-pay))});
     rem-=pay;
   }
   const debtApplied=Math.round(amount-Math.max(0,rem));
@@ -7096,9 +7106,9 @@ function openLumpSumModal(){
   gg('manualSub').textContent = 'Highest-APR debt first, then your underfunded savings buckets.';
   const debtRows = plan.alloc.map(a=>`
     <div class="lump-row${a.cleared?' cleared':''}">
-      <div class="lump-row-top"><span class="lump-nm">${a.cleared?'✅ ':''}${esc(a.name)}${a.apr>0?` <span class="lump-apr">${a.apr.toFixed(1)}%</span>`:''}</span><b>${fmtK(a.pay)}</b></div>
+      <div class="lump-row-top"><span class="lump-nm">${a.cleared?'✅ ':''}${esc(a.name)}${a.promoActive?` <span class="lump-apr" style="color:var(--blue)">0% till ${esc(a.promoEnd)}</span>`:(a.apr>0?` <span class="lump-apr">${a.apr.toFixed(1)}%</span>`:'')}</span><b>${fmtK(a.pay)}</b></div>
       <div class="lump-bar"><div class="lump-bar-fill" style="width:${a.bal>0?Math.min(100,Math.round(a.pay/a.bal*100)):100}%"></div></div>
-      <div class="lump-row-sub">${a.cleared?'cleared ✓':`${fmtK(a.bal)} → ${fmtK(a.after)}`}</div>
+      <div class="lump-row-sub">${a.cleared?'cleared ✓':`${fmtK(a.bal)} → ${fmtK(a.after)}`}${a.promoActive?' · no rush while 0%':''}</div>
     </div>`).join('');
   const savRows = (plan.savingsAlloc||[]).map(s=>`
     <div class="lump-row${s.filled?' cleared':''}">
