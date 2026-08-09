@@ -7681,7 +7681,7 @@ function buildSankey(cid, days){
   // ── Income column (tier 1) ──
   const incSrc=_effectiveIncomeSources?_effectiveIncomeSources():incomeSources;
   const incNodes=incSrc.map(s=>({label:s.name.split(' ').slice(0,2).join(' '),value:Math.round(s.amt*(FM[s.freq]||1)),color:'#3dda91'})).filter(n=>n.value>0);
-  const incTotal=incNodes.reduce((s,n)=>s+n.value,0)||1;
+  let incTotal=incNodes.reduce((s,n)=>s+n.value,0)||1;
 
   // ── Child categories (tier 3) from the live category breakdown or a sample ──
   let childRaw;
@@ -7703,7 +7703,20 @@ function buildSankey(cid, days){
   const groupOrder={}; groupNodes.forEach((g,i)=>groupOrder[g.id]=i);
   // order children by their group, then by value, to minimize crossing
   const childNodes=childRaw.slice().sort((a,b)=> (groupOrder[a.parentId]-groupOrder[b.parentId]) || (b.value-a.value));
-  const spTotal=childNodes.reduce((s,n)=>s+n.value,0)||1;
+  let spTotal=childNodes.reduce((s,n)=>s+n.value,0)||1;
+
+  // Balance the flow: income − spending is either savings/leftover (a right-side sink fed from income)
+  // or a drawdown (a left-side source funding the gap), so both sides total the same and the ribbons
+  // conserve exactly instead of implying 100% of income is spent.
+  const _surplus=Math.round(incNodes.reduce((s,n)=>s+n.value,0) - childNodes.reduce((s,n)=>s+n.value,0));
+  if(_surplus>0.5){
+    groupNodes.push({id:'_leftover', label:'Savings / Leftover', color:'#5b8def', value:_surplus});
+    childNodes.push({label:'Savings / Leftover', value:_surplus, color:'#5b8def', parentId:'_leftover', parentLabel:'Savings / Leftover'});
+    spTotal=childNodes.reduce((s,n)=>s+n.value,0)||1;
+  } else if(_surplus<-0.5){
+    incNodes.push({label:'From savings', value:-_surplus, color:'#f0a540'});
+    incTotal=incNodes.reduce((s,n)=>s+n.value,0)||1;
+  }
 
   if(!incNodes.length && !childNodes.length){ const ctx0=canvas.getContext('2d'); ctx0.fillStyle='#888';ctx0.font='12px sans-serif';ctx0.textAlign='center';ctx0.fillText('Add income & spending to see flow',parent.clientWidth/2,100); return; }
 
