@@ -1281,6 +1281,8 @@ body.reduce-motion .canvas-widget-card::before,body.reduce-motion .canvas-widget
 .hm-cell{width:46px;height:30px;flex-shrink:0;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text);}
 .hm-head .hm-cell{height:auto;background:none!important;}
 .hm-mlabel,.hm-avg-h{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.02em;}
+.hm-mnow{color:var(--text);}
+.hm-sofar{display:block;font-size:7px;font-weight:700;color:var(--amber);text-transform:none;letter-spacing:0;line-height:1;}
 .hm-v{font-weight:600;text-shadow:0 1px 2px rgba(0,0,0,.4);}
 .hm-avg{background:var(--surface2)!important;font-weight:700;color:var(--muted);}
 .hm-avg-h{font-weight:700;}

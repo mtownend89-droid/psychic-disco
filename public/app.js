@@ -6681,7 +6681,8 @@ function categoryHeatmapBody(w){
     if(t<0.5){ const k=t/0.5; return `rgba(46,204,138,${0.15+k*0.55})`; }
     const k=(t-0.5)/0.5; return `rgba(${Math.round(240)}, ${Math.round(165-k*73)}, ${Math.round(64)}, ${0.55+k*0.4})`;
   };
-  const head=`<div class="hm-row hm-head"><div class="hm-cat"></div>${g.months.map(mo=>`<div class="hm-cell hm-mlabel">${mo}</div>`).join('')}<div class="hm-cell hm-avg-h">avg</div></div>`;
+  const _lastM=g.months.length-1;
+  const head=`<div class="hm-row hm-head"><div class="hm-cat"></div>${g.months.map((mo,i)=>`<div class="hm-cell hm-mlabel${i===_lastM?' hm-mnow':''}"${i===_lastM?' title="Current month — spending so far, not a full month yet"':''}>${mo}${i===_lastM?'<span class="hm-sofar">so far</span>':''}</div>`).join('')}<div class="hm-cell hm-avg-h">avg</div></div>`;
   const rows=cats.map(c=>{
     const cells=c.vals.map(v=>`<div class="hm-cell" style="background:${heat(v)}" title="${esc(c.label)}: ${fmtK(v)}">${v>0?`<span class="hm-v">${v>=1000?(v/1000).toFixed(1)+'k':Math.round(v)}</span>`:''}</div>`).join('');
     return `<div class="hm-row"><div class="hm-cat" title="${esc(c.label)}"><span class="hm-dot" style="background:${c.color}"></span>${esc(c.label)}</div>${cells}<div class="hm-cell hm-avg">${fmtK(c.avg)}</div></div>`;
