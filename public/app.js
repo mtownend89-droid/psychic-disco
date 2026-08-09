@@ -1832,6 +1832,7 @@ function _applyCardData(list){
     if(d.apr!=null && d.apr>0 && !(merged.apr>0)) merged.apr=d.apr;
     if(d.minPay!=null && d.minPay>0){ const payWasEst=merged.estMin&&merged.pay===merged.min; merged.min=d.minPay; if(!(merged.pay>0)||payWasEst) merged.pay=d.minPay; merged.estMin=false; }
     if(d.dueDay!=null && d.dueDay>0){ merged.due=d.dueDay; merged.dueEst=false; }
+    if(d.pi!=null && d.pi>0) merged.pi=d.pi;   // mortgage principal+interest (escrow excluded) — used by the Debt Lab payoff sim
     if(d.note) merged.note=d.note;
     return merged;
   });
@@ -5155,7 +5156,7 @@ function mountWidgetCharts(pg){
     try{
       if(w.type==='journey'){ journeyHubMount(w); }
       if(w.type==='fire_drill'){ fdSetScenario(_fd.scenario||'job'); }
-      if(w.type==='debt_planner'){ dpRecalc(); dpRenderOrder(); }
+      if(w.type==='debt_planner'){ dpRenderMortPI(); dpRecalc(); dpRenderOrder(); }
       if(w.type==='pl_panel'){ plMount(w); }
       if(w.type==='cashflow_planner'){ cfpMount(w); }
       if(w.type==='cashflow_chart'){ cfcMount(w); }
@@ -6310,7 +6311,7 @@ function debtHubMount(w){
   // sync tab button states
   const btns=wrap.parentElement.querySelectorAll('.hub-tab');
   DEBT_TABS.forEach((x,i)=>{ if(btns[i]) btns[i].classList.toggle('on', x.id===cur); });
-  if(t.mount==='debt_planner'){ try{ dpRecalc(); dpRenderOrder(); }catch(e){} }
+  if(t.mount==='debt_planner'){ try{ dpRenderMortPI(); dpRecalc(); dpRenderOrder(); }catch(e){} }
 }
 
 /* ═══ CREDIT SCORE MONITOR (Debt hub tab) ═══
@@ -7674,8 +7675,10 @@ function fdRecalc(){
 }
 
 /* ── Debt Payoff Planner (ported from Playground F2) ── */
-let _dp={method:'avalanche', extra:0};
+let _dp={method:'avalanche', extra:0, inclMortgage:false};
 function dpWidgetBody(w){
+  const hasMort=engBills().some(b=>b.bal<0 && b.cat==='HM');
+  const mortToggle=hasMort?`<label class="dp-incl"><input type="checkbox" ${_dp.inclMortgage?'checked':''} onchange="_dp.inclMortgage=this.checked; dpRenderMortPI(); dpRecalc(); dpRenderOrder()"> Include mortgage / HELOC <i>(long-term — off by default)</i></label>`:'';
   return `<div class="fd-wrap">
     <div class="dp-toggle">
       <button class="dp-mtab${_dp.method==='avalanche'?' active':''}" onclick="dpSet('avalanche')">🏔️ Avalanche<span>highest APR first</span></button>
@@ -7683,39 +7686,80 @@ function dpWidgetBody(w){
     </div>
     <div class="ww-section-label">Extra payment / month: <b id="dpExtraVal" style="color:var(--green)">${fmtK(_dp.extra)}</b></div>
     <input type="range" min="0" max="2000" step="50" value="${_dp.extra}" style="width:100%;accent-color:var(--green)" oninput="_dp.extra=+this.value; gg('dpExtraVal').textContent=fmtK(+this.value); dpRecalc()">
+    ${mortToggle}
+    <div id="dpMortPI"></div>
     <div class="dp-result" id="dpResult"></div>
+    <div id="dpWarn"></div>
     <div class="ww-section-label">Payoff order</div>
     <div id="dpOrder"></div>
   </div>`;
 }
+// Per-mortgage P&I inputs (shown only when the mortgage/HELOC is included). Lets the user enter the
+// principal+interest portion so escrow (taxes/insurance) doesn't get counted as debt paydown.
+function dpRenderMortPI(){
+  const el=gg('dpMortPI'); if(!el) return;
+  if(!_dp.inclMortgage){ el.innerHTML=''; return; }
+  const mort=engBills().filter(b=>b.bal<0 && b.cat==='HM');
+  el.innerHTML=mort.map(b=>{
+    const full=Math.round(b.min||b.pay||0);
+    const nm=String(b.name).replace(/'/g,"\\'");
+    return `<div class="dp-pi-row"><span class="dp-pi-lbl">${esc(b.name)} · P&amp;I <i>(excl. escrow)</i></span>
+      <input type="number" class="dp-pi-in" value="${+b.pi>0?b.pi:''}" placeholder="full pmt ${full}" min="0" step="10" onclick="event.stopPropagation()" oninput="dpSetPI('${nm}', this.value)"></div>`;
+  }).join('')||'<div class="ww-card-desc" style="padding:2px 0">No mortgage / HELOC to itemize.</div>';
+}
+function dpSetPI(name, val){
+  const v=parseFloat(val)||0;
+  setCardData(name, {pi: v>0?Math.round(v):0});   // persists + syncs via cardData
+  dpRecalc(); dpRenderOrder();
+}
 function dpSet(m){ _dp.method=m; document.querySelectorAll('.dp-mtab').forEach(b=>b.classList.remove('active')); event&&event.currentTarget&&event.currentTarget.classList.add('active'); dpRecalc(); dpRenderOrder(); }
 function dpDebts(){
-  // each debt: name, bal(+), apr, min
-  return engBills().filter(b=>b.bal<0).map(b=>({name:b.name, bal:Math.abs(b.bal), apr:b.apr||0, min:b.min||b.pay||0}));
+  // each debt: name, cat, bal(+), apr (promo-aware effective), min, aprKnown
+  return engBills().filter(b=>b.bal<0)
+    .filter(b=> _dp.inclMortgage || b.cat!=='HM')   // mortgage/HELOC sit out by default — they dwarf the timeline & aren't what avalanche/snowball targets
+    .map(b=>{
+      const isHM=b.cat==='HM';
+      // Mortgages: use the entered principal+interest (escrow excluded) when set, else the full payment.
+      const pay=(isHM && +b.pi>0) ? +b.pi : (b.min||b.pay||0);
+      const eff=(typeof _cardEffApr==='function')?_cardEffApr(b):(+b.apr||0);   // 0% promo counts as 0% while active
+      const promoEnd=(typeof _parsePromoEnd==='function')?_parsePromoEnd(b.promoEnd):null;
+      const aprKnown=(+b.apr>0) || (eff===0 && !!promoEnd);   // a real 0% promo is "known", a blank APR is not
+      return {name:b.name, cat:b.cat, bal:Math.abs(b.bal), apr:eff, min:pay, aprKnown};
+    });
 }
 function dpSimulate(){
   let debts=dpDebts().map(d=>({...d}));
-  if(!debts.length) return {months:0,interest:0,order:[]};
+  if(!debts.length) return {months:0,interest:0,order:[],unknownApr:[]};
   debts.sort((a,b)=> _dp.method==='avalanche' ? b.apr-a.apr : a.bal-b.bal);
   const order=debts.map(d=>d.name);
+  const unknownApr=debts.filter(d=>!d.aprKnown && d.bal>0).map(d=>d.name);
   let months=0, totalInterest=0; const extra=_dp.extra;
   while(debts.some(d=>d.bal>0.5) && months<600){
     months++;
     debts.forEach(d=>{ if(d.bal>0){ const interest=d.bal*(d.apr/100/12); totalInterest+=interest; d.bal+=interest; } });
-    // pay minimums
-    let pool=extra;
-    debts.forEach(d=>{ if(d.bal>0){ const pay=Math.min(d.min,d.bal); d.bal-=pay; } });
-    // throw extra at first unpaid in order
-    for(const d of debts){ if(d.bal>0.5 && pool>0){ const pay=Math.min(pool,d.bal); d.bal-=pay; pool-=pay; break; } }
+    // Payment budget = extra + minimums freed by already-cleared debts (the snowball/avalanche roll).
+    let pool = extra + debts.reduce((s,d)=> s + (d.bal>0 ? 0 : d.min), 0);
+    // Pay each active debt its minimum; hand any over-payment (min > tiny remaining balance) back to the pool.
+    debts.forEach(d=>{ if(d.bal>0){ const pay=Math.min(d.min,d.bal); d.bal-=pay; pool+=(d.min-pay); } });
+    // Cascade the pool across remaining debts in method order (no break — leftover rolls to the next).
+    for(const d of debts){ if(pool<=0) break; if(d.bal>0.5){ const pay=Math.min(pool,d.bal); d.bal-=pay; pool-=pay; } }
   }
-  return {months,interest:Math.round(totalInterest),order};
+  return {months,interest:Math.round(totalInterest),order,unknownApr};
 }
 function dpRecalc(){
-  const r=dpSimulate(); const el=gg('dpResult'); if(!el) return;
-  if(!r.order.length){ el.innerHTML='<div class="ww-card-desc">No debts found. Connect your bank or add bills.</div>'; return; }
+  const r=dpSimulate(); const el=gg('dpResult'); const wEl=gg('dpWarn'); if(!el) return;
+  if(wEl) wEl.innerHTML='';
+  if(!r.order.length){
+    const onlyMort=!_dp.inclMortgage && engBills().some(b=>b.bal<0 && b.cat==='HM');
+    el.innerHTML=`<div class="ww-card-desc">${onlyMort?'Your tracked debt is mortgage / HELOC only — tick “Include mortgage / HELOC” above to model its payoff.':'No debts found. Connect your bank or add bills.'}</div>`;
+    return;
+  }
   const yrs=Math.floor(r.months/12), mo=r.months%12;
   el.innerHTML=`<div class="dp-stat"><div class="dp-stat-num">${r.months>=600?'—':yrs+'y '+mo+'m'}</div><div class="dp-stat-lbl">debt-free</div></div>
     <div class="dp-stat"><div class="dp-stat-num" style="color:var(--red)">${fmtK(r.interest)}</div><div class="dp-stat-lbl">total interest</div></div>`;
+  if(wEl && r.unknownApr.length){
+    wEl.innerHTML=`<div class="dp-warn">⚠️ No APR set on ${r.unknownApr.length} debt${r.unknownApr.length>1?'s':''} (${esc(r.unknownApr.slice(0,3).join(', '))}${r.unknownApr.length>3?'…':''}) — treated as 0%, so this timeline &amp; interest are optimistic. Set each one's APR in its account editor.</div>`;
+  }
 }
 function dpRenderOrder(){
   const el=gg('dpOrder'); if(!el) return; const r=dpSimulate();
