@@ -3421,8 +3421,14 @@ function portfolioBody(w){
   const NA=engInvestNWAssets();
   if(!H.length && !IA.length && !NA.length) return `<div class="wph"><div class="wph-sub">No positions yet.</div><div class="ws-hint" style="margin-top:6px">Upload a brokerage / IRA / 401k statement and Richie pulls your positions in automatically — or add one by hand. Investment accounts and assets from Net Worth show up here too.</div><button class="nw-add" style="margin-top:11px" onclick="event.stopPropagation();openHoldingEditor()">＋ Add a position</button></div>`;
   const tot=engPortfolioValue();
-  const iaTot=IA.reduce((s,a)=>s+(+a.bal||0),0);
-  const naTot=NA.reduce((s,x)=>s+(+x.value||0),0);
+  // Dedupe: when an account already has imported positions, its NW-asset / investment-account
+  // "container" row is the same money as the positions (statement upload adds both by default) —
+  // count/show it once so "total investments" isn't ~2x. Positions win as the detailed view.
+  const holdAccts=new Set(H.map(h=>(h.account||'').trim().toLowerCase()).filter(Boolean));
+  const IA2=IA.filter(a=>!holdAccts.has((a.name||'').trim().toLowerCase()));
+  const NA2=NA.filter(x=>!holdAccts.has((x.name||'').trim().toLowerCase()));
+  const iaTot=IA2.reduce((s,a)=>s+(+a.bal||0),0);
+  const naTot=NA2.reduce((s,x)=>s+(+x.value||0),0);
   const grand=tot+iaTot+naTot;   // "% of total investments" baseline across all three sections
   const totGain=engHoldings().reduce((s,h)=>s+(+h.gain||0),0);
   const hasGain=engHoldings().some(h=>h.gain!=null);
@@ -3442,7 +3448,7 @@ function portfolioBody(w){
   const posSection=H.length?`<div class="pf-list">${rows}</div>`:'';
 
   // Investment-type accounts (Plaid-linked or manually added) — same row format as positions.
-  const acctRows=IA.slice().sort((a,b)=>(+b.bal||0)-(+a.bal||0)).map(a=>{
+  const acctRows=IA2.slice().sort((a,b)=>(+b.bal||0)-(+a.bal||0)).map(a=>{
     const kEsc=esc(_acctIdKey(a)).replace(/'/g,"\\'");
     const idx=(APP.manualAccounts||[]).findIndex(x=>x.id===a.id);
     const open=a.manual?`openManualAccount(${idx})`:`openAccountEditor('${kEsc}')`;
@@ -3452,17 +3458,17 @@ function portfolioBody(w){
       <div class="pf-side"><div class="pf-val">${fmtK(a.bal)}</div><div class="pf-pct">${pct}%</div><div class="pf-research">edit ›</div></div>
     </div>`;
   }).join('');
-  const acctSection=IA.length?`<div class="doc-section-h">Linked from Net Worth</div><div class="pf-list">${acctRows}</div>`:'';
+  const acctSection=IA2.length?`<div class="doc-section-h">Linked from Net Worth</div><div class="pf-list">${acctRows}</div>`:'';
 
   // Manually-entered Net Worth assets categorized as Investment — same row format as positions.
-  const naRows=NA.slice().sort((a,b)=>(+b.value||0)-(+a.value||0)).map(x=>{
+  const naRows=NA2.slice().sort((a,b)=>(+b.value||0)-(+a.value||0)).map(x=>{
     const pct=pctOf(x.value);
     return `<div class="pf-row" onclick="portfolioEditNWAsset('${x.id}')">
       <div class="pf-main"><div class="pf-nm">${esc(x.name||x.cat)}</div><div class="pf-sub">Net worth asset</div><div class="pf-bar"><i style="width:${Math.max(2,pct)}%"></i></div></div>
       <div class="pf-side"><div class="pf-val">${fmtK(+x.value||0)}</div><div class="pf-pct">${pct}%</div><div class="pf-research">edit ›</div></div>
     </div>`;
   }).join('');
-  const naSection=NA.length?`<div class="doc-section-h">Net worth investment assets</div><div class="pf-list">${naRows}</div>`:'';
+  const naSection=NA2.length?`<div class="doc-section-h">Net worth investment assets</div><div class="pf-list">${naRows}</div>`:'';
 
   return `<div class="pf-wrap">${posHeader}${posSection}${acctSection}${naSection}<button class="nw-add" onclick="event.stopPropagation();openHoldingEditor()">＋ Add a position</button></div>`;
 }
