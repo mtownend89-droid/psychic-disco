@@ -1481,11 +1481,15 @@ function _shiftBusinessDay(date, dir){ const d=new Date(date); let g=0; while(_i
    placed on that month's first payday ("pay yourself first"), falling back to the 1st in any
    month with no modeled income. Shown as their own line so the projection reflects money you've
    committed to save, not just bills. `incomeEvents` are the already-shifted paydays. */
+// One-time savings top-ups (e.g. a surplus lump routed to buckets), keyed by 'YYYY-M' → extra amount
+// added to that month's contribution only, so the boost shows once and later months revert to normal.
+function _savingsBump(){ APP.savingsBump=APP.savingsBump||{}; return APP.savingsBump; }
 function _savingsEvents(days, incomeEvents){
   const out=[]; const today=new Date(); today.setHours(0,0,0,0);
   const horizon=new Date(today); horizon.setDate(horizon.getDate()+days);
   let monthly=0; try{ monthly=engSavingsBuckets().filter(b=>!b.done).reduce((s,b)=>s+(+b.monthly||0),0); }catch(e){}
-  if(monthly<=0) return out;
+  const oneTime=_savingsBump();
+  if(monthly<=0 && !Object.keys(oneTime).length) return out;
   // earliest payday offset within each calendar month
   const firstPayday={};
   (incomeEvents||[]).forEach(e=>{ if(e.type!=='income') return; const d=_projDate(e.day); const k=d.getFullYear()+'-'+d.getMonth(); if(firstPayday[k]===undefined || e.day<firstPayday[k]) firstPayday[k]=e.day; });
@@ -1493,9 +1497,12 @@ function _savingsEvents(days, incomeEvents){
   while(cur<=horizon){
     const k=cur.getFullYear()+'-'+cur.getMonth();
     if(!seen[k]){ seen[k]=1;
-      let off=firstPayday[k];
-      if(off===undefined){ const first=new Date(cur.getFullYear(), cur.getMonth(), 1); off=Math.round((first-today)/86400000); }
-      if(off>=0 && off<=days) out.push({day:off, amt:-Math.round(monthly), name:'Planned savings', type:'savings', noShift:true});
+      const amt=Math.round(monthly + (+oneTime[k]||0));   // recurring + any one-time bump for this month (past months aren't generated, so it reverts)
+      if(amt>0){
+        let off=firstPayday[k];
+        if(off===undefined){ const first=new Date(cur.getFullYear(), cur.getMonth(), 1); off=Math.round((first-today)/86400000); }
+        if(off>=0 && off<=days) out.push({day:off, amt:-amt, name:(+oneTime[k]?'Planned savings + one-time':'Planned savings'), type:'savings', noShift:true});
+      }
     }
     cur=new Date(cur.getFullYear(), cur.getMonth()+1, 1);
   }
@@ -1895,7 +1902,18 @@ function engLumpSumPlan(amount){
     alloc.push({name:d.name, apr:d.apr, bal:Math.round(d.bal), pay:Math.round(pay), cleared:pay>=d.bal-0.5, after:Math.max(0,Math.round(d.bal-pay))});
     rem-=pay;
   }
-  return {amount, alloc, clearedCount:alloc.filter(a=>a.cleared).length, applied:Math.round(amount-Math.max(0,rem)), leftover:Math.round(Math.max(0,rem)), totalDebt:Math.round(debts.reduce((s,d)=>s+d.bal,0)), debtCount:debts.length};
+  const debtApplied=Math.round(amount-Math.max(0,rem));
+  // Savings leg: whatever's left after debt fills underfunded buckets toward their goals (most-behind first).
+  const savingsAlloc=[];
+  try{ const buckets=engSavingsBuckets().filter(b=>!b.done && b.remaining>0).sort((a,b)=>b.remaining-a.remaining);
+    for(const bk of buckets){ if(rem<=0.5) break; const add=Math.min(rem, bk.remaining); if(add<=0) continue;
+      savingsAlloc.push({name:bk.name, icon:bk.icon||'🪣', add:Math.round(add), balance:Math.round(bk.balance), target:Math.round(bk.target||0), filled:add>=bk.remaining-0.5});
+      rem-=add; }
+  }catch(e){}
+  const savingsApplied=savingsAlloc.reduce((s,x)=>s+x.add,0);
+  return {amount, alloc, savingsAlloc, clearedCount:alloc.filter(a=>a.cleared).length,
+    debtApplied, savingsApplied, applied:debtApplied+savingsApplied,
+    leftover:Math.round(Math.max(0,rem)), totalDebt:Math.round(debts.reduce((s,d)=>s+d.bal,0)), debtCount:debts.length};
 }
 // Detect recurring charges / subscriptions — groups outflows by merchant, keeps those
 // that repeat at a regular cadence with consistent amounts.
@@ -4665,7 +4683,7 @@ const WIDGET_CATALOG=[
   // editing. Kept out of the catalog; existing widgets migrate via WIDGET_MIGRATE above.
   {id:'pl_panel',name:'Profit & Loss',icon:'💹',cat:'Cash Flow',span:2,minLevel:3,desc:'Income, spending, net & savings rate by day/week/month.'},
   {id:'cashflow_planner',name:'Cash Flow',icon:'📅',cat:'Cash Flow',span:2,minLevel:3,desc:'Your projected running balance — see your low point before it hits, and edit bills to fix it.'},
-  {id:'fund_triage',name:'Where Extra Money Goes',icon:'💸',cat:'Cash Flow',span:2,minLevel:3,desc:'Delegate your monthly surplus by priority — high-interest debt, then savings, then investing.'},
+  {id:'fund_triage',name:'Where Extra Money Goes',icon:'💸',cat:'Cash Flow',span:2,minLevel:3,hidden:true,desc:'Delegate your monthly surplus by priority — high-interest debt, then savings, then investing.'},   // soft-hidden: superseded by the Cash Flow runway lump-sum flow; existing placements still render
   {id:'goals',name:'Financial Goals',icon:'🎯',cat:'Overview',span:2,minLevel:1,desc:'Set goals, track progress automatically, and let Richie coach you to the finish.'},
   {id:'health_score',name:'Financial Health Score',icon:'🩺',cat:'Overview',span:2,minLevel:1,desc:'A single 0–100 score across savings rate, emergency fund, debt-to-income, credit use & high-interest debt — with Richie\'s top fix.'},
   {id:'accounts_list',name:'All Accounts',icon:'🏦',cat:'Overview',span:2,minLevel:1,desc:'Every account with balances — tap to see transactions.'},
@@ -6392,6 +6410,7 @@ function savingsBucketsBody(w){
   }).join('');
   return `<div class="sb-wrap">
     <div class="sb-header" title="Combined balance across your ${buckets.length} savings bucket${buckets.length!==1?'s':''} — linked accounts pull live balances; manual buckets use the amount you entered."><span>${buckets.length} fund${buckets.length!==1?'s':''}</span><b style="color:var(--green)">${fmtK(total)} saved</b></div>
+    ${(function(){ let s=0; try{ const m=_savingsBump(), now=new Date(), cy=now.getFullYear(), cm=now.getMonth(); Object.keys(m).forEach(k=>{ const p=k.split('-'); if(+p[0]>cy||(+p[0]===cy&&+p[1]>=cm)) s+=(+m[k]||0); }); }catch(e){} return s>0?`<div class="sb-pendbump" title="A one-time surplus top-up scheduled into next month's contribution (from the Cash Flow runway). It reverts to your normal contribution after.">💵 ${fmtK(Math.round(s))} one-time top-up coming next month</div>`:''; })()}
     ${_atL(2)?rows:''}
     <div class="sb-foot-actions">${linkBtn}<button class="manual-add-btn" style="width:auto;flex:1" onclick="event.stopPropagation();editBucket(-1)">➕ Add a bucket</button></div>
   </div>`;
@@ -6991,12 +7010,15 @@ function cfpScrollEvents(uid){ try{ const e=gg('cfpev_'+uid); if(e) e.scrollInto
 // Short, plain-English summary of a lump-sum avalanche plan — matches the breakdown modal so the flag
 // and nudge don't misleadingly name a single card when the lump actually cascades across several.
 function _lumpSummary(plan){
-  if(!plan || !plan.alloc.length) return '';
+  if(!plan) return '';
+  const sav=(plan.savingsAlloc||[]).length;
+  const savTail=sav?` & top up ${sav} savings bucket${sav!==1?'s':''}`:'';
+  if(!plan.alloc.length) return sav?`top up ${sav} savings bucket${sav!==1?'s':''}`:'';
   const cleared=plan.alloc.filter(a=>a.cleared), partial=plan.alloc.find(a=>!a.cleared);
-  if(cleared.length===0) return partial?`put ${fmtK(partial.pay)} toward ${esc(partial.name)}`:'';
-  if(cleared.length===1) return `clear ${esc(cleared[0].name)}`+(partial?` & put ${fmtK(partial.pay)} toward ${esc(partial.name)}`:'');
-  if(cleared.length===2) return `clear ${esc(cleared[0].name)} & ${esc(cleared[1].name)}`+(partial?`, +${fmtK(partial.pay)} more`:'');
-  return `clear ${cleared.length} cards`+(partial?` + ${fmtK(partial.pay)} more`:'');
+  if(cleared.length===0) return (partial?`put ${fmtK(partial.pay)} toward ${esc(partial.name)}`:'')+savTail;
+  if(cleared.length===1) return `clear ${esc(cleared[0].name)}`+(partial?` & put ${fmtK(partial.pay)} toward ${esc(partial.name)}`:'')+savTail;
+  if(cleared.length===2) return `clear ${esc(cleared[0].name)} & ${esc(cleared[1].name)}`+(partial?`, +${fmtK(partial.pay)} more`:'')+savTail;
+  return `clear ${cleared.length} cards`+(partial?` + ${fmtK(partial.pay)} more`:'')+savTail;
 }
 function _cfpRunwayFlag(rw, uid){
   const when=d=>d===0?'today':_projDate(d).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
@@ -7071,20 +7093,33 @@ function openLumpSumModal(){
   if(!gg('manualModal')) return;
   gg('manualModal').style.display='flex';
   gg('manualTitle').textContent=`Put ${fmtK(plan.amount)} to work`;
-  gg('manualSub').textContent = plan.alloc.length ? 'Highest-APR first — here’s what this lump sum clears.' : 'No high-interest debt to target.';
-  const rows = plan.alloc.length ? plan.alloc.map(a=>`
+  gg('manualSub').textContent = 'Highest-APR debt first, then your underfunded savings buckets.';
+  const debtRows = plan.alloc.map(a=>`
     <div class="lump-row${a.cleared?' cleared':''}">
       <div class="lump-row-top"><span class="lump-nm">${a.cleared?'✅ ':''}${esc(a.name)}${a.apr>0?` <span class="lump-apr">${a.apr.toFixed(1)}%</span>`:''}</span><b>${fmtK(a.pay)}</b></div>
       <div class="lump-bar"><div class="lump-bar-fill" style="width:${a.bal>0?Math.min(100,Math.round(a.pay/a.bal*100)):100}%"></div></div>
       <div class="lump-row-sub">${a.cleared?'cleared ✓':`${fmtK(a.bal)} → ${fmtK(a.after)}`}</div>
-    </div>`).join('') : `<div class="ws-hint">You have no credit-card or high-APR debt — nice. Keeping it as a buffer (or investing) is your best move.</div>`;
-  const summary = plan.alloc.length ? `<div class="lump-summary"><b>${plan.clearedCount}</b> card${plan.clearedCount!==1?'s':''} cleared${plan.leftover>0?` · ${fmtK(plan.leftover)} left over`:''}</div>` : '';
+    </div>`).join('');
+  const savRows = (plan.savingsAlloc||[]).map(s=>`
+    <div class="lump-row${s.filled?' cleared':''}">
+      <div class="lump-row-top"><span class="lump-nm">${s.icon} ${esc(s.name)}</span><b class="lump-add">+${fmtK(s.add)}</b></div>
+      <div class="lump-bar"><div class="lump-bar-fill sav" style="width:${s.target>0?Math.min(100,Math.round((s.balance+s.add)/s.target*100)):100}%"></div></div>
+      <div class="lump-row-sub">${s.target>0?`${fmtK(s.balance)} → ${fmtK(s.balance+s.add)}${s.filled?' · funded 🎉':` of ${fmtK(s.target)}`}`:'added to savings'}</div>
+    </div>`).join('');
+  const sections = (plan.alloc.length?`<div class="lump-sec">🔥 Pay down debt</div>${debtRows}`:'')
+                 + (savRows?`<div class="lump-sec">🪣 Fill savings buckets</div>${savRows}`:'');
+  const list = sections || `<div class="ws-hint">No high-APR debt or underfunded buckets to target — keeping it as a buffer (or investing) is your best move.</div>`;
+  const bits=[];
+  if(plan.clearedCount>0) bits.push(`<b>${plan.clearedCount}</b> card${plan.clearedCount!==1?'s':''} cleared`);
+  if((plan.savingsAlloc||[]).length) bits.push(`<b>${plan.savingsAlloc.length}</b> bucket${plan.savingsAlloc.length!==1?'s':''} topped up`);
+  if(plan.leftover>0) bits.push(`${fmtK(plan.leftover)} left over`);
+  const summary = bits.length?`<div class="lump-summary">${bits.join(' · ')}</div>`:'';
   gg('manualBody').innerHTML=`
-    <div class="lump-list">${rows}${summary}</div>
+    <div class="lump-list">${list}${summary}</div>
     <div class="lump-choose">
-      <div class="lump-richie"><span class="lump-richie-ic">💰</span><span>Want me to set up these extra payments in your Bills, or keep the ${fmtK(plan.amount)} as a bigger safety buffer?</span></div>
+      <div class="lump-richie"><span class="lump-richie-ic">💰</span><span>Want me to set this up — extra payments in Bills and top-ups to your Savings Buckets — or keep the ${fmtK(plan.amount)} as a bigger safety buffer?</span></div>
       <div class="lump-actions">
-        ${plan.applied>0?`<button class="btn primary" onclick="lumpSetupPayments()">Set up payments →</button>`:''}
+        ${plan.applied>0?`<button class="btn primary" onclick="lumpSetupPayments()">Set it up →</button>`:''}
         <button class="btn" onclick="lumpKeepAsBuffer()">Keep as buffer →</button>
       </div>
     </div>`;
@@ -7092,17 +7127,25 @@ function openLumpSumModal(){
 // "Set up payments": bump each targeted bill's "You pay" by its share of the lump (capped at the
 // balance), then jump to Bills so the next unpaid occurrence reflects the extra payment.
 function lumpSetupPayments(){
+  let hadDebt=false, hadSav=false;
   try{ const rw=engCashRunway(); if(rw && rw.kind==='opportunity'){ const plan=engLumpSumPlan(rw.deploy); const bump=_billBump();
     plan.alloc.forEach(a=>{ try{ const b=engBills().find(x=>x.name===a.name); if(!b) return;
       const okey=_nextUnpaidBillOkey(b);   // first upcoming UNPAID occurrence (this cycle if unpaid, else next…)
-      if(okey) bump[okey]=Math.round(a.pay);   // one-time, per-occurrence — SET once per trigger (never accumulated); later months revert to normal pay
+      if(okey){ bump[okey]=Math.round(a.pay); hadDebt=true; }   // one-time, per-occurrence — SET once per trigger (never accumulated); later months revert to normal pay
     }catch(e){} });
+    // Savings: one-time top-up added to NEXT month's bucket contribution (projection reflects it once, then reverts).
+    const savTotal=(plan.savingsAlloc||[]).reduce((s,x)=>s+x.add,0);
+    if(savTotal>0){ try{ const d=new Date(), t=new Date(d.getFullYear(), d.getMonth()+1, 1), k=t.getFullYear()+'-'+t.getMonth(); _savingsBump()[k]=Math.round(savTotal); hadSav=true; }catch(e){} }
     try{ saveState(); }catch(e){}
   } }catch(e){}
   try{ closeManual(); }catch(e){}
-  try{ _ensureWidgetOnPage('bills_list'); }catch(e){}
+  const dest = hadDebt ? 'bills_list' : (hadSav ? 'savings_buckets' : 'cashflow_planner');
+  const msg = hadDebt&&hadSav ? 'Done — a one-time extra payment on the next unpaid card occurrence, plus a one-time top-up to your buckets next month. Both revert to normal after.'
+            : hadSav ? 'Done — added a one-time top-up to your savings buckets next month. It reverts to your normal contribution after.'
+            : 'Done — added a one-time extra payment to the next unpaid occurrence of those cards. It reverts to normal pay the month after.';
+  try{ _ensureWidgetOnPage(dest); }catch(e){}
   try{ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg) renderCanvas(pg); }catch(e){}
-  try{ richieSpotlightAt(Object.assign({widgetType:'bills_list', message:'Done — added a one-time extra payment to the next unpaid occurrence of those cards. It reverts to normal pay the month after.'}, (typeof RICHIE_SPOTS!=='undefined'&&RICHIE_SPOTS.bills_list)||{})); }catch(e){}
+  try{ richieSpotlightAt(Object.assign({widgetType:dest, message:msg}, (typeof RICHIE_SPOTS!=='undefined'&&RICHIE_SPOTS[dest])||{})); }catch(e){}
 }
 // "Keep as buffer": add the lump to the Safe-to-Spend safety buffer so the surplus stays reserved
 // (not shown as spendable), then jump to Safe to Spend and spotlight the buffer field.
