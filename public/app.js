@@ -5346,7 +5346,10 @@ function fireSlider(id,label,min,max,step,val,fmt){
 /* ═══ WEALTH / FIRE: extracted bodies + consolidated hub ═══ */
 function fireProgressBody(w){
   const target=engMonthlyBills()*12*25;
-  const cur=dataLoaded?Math.max(engNWAssets(),engNetBalance(),engInvestTotal()):Math.max(engNWAssets(),engInvestTotal());
+  // Invested-only, matching the Calculator tab's "Saved now" — the 4%-rule / 25x target assumes
+  // assets you can safely withdraw from, not home equity or checking cash. engInvestTotal works
+  // in sample mode too, so no dataLoaded branch needed.
+  const cur=engInvestTotal();
   const pct=target>0?Math.min(100,Math.round(cur/target*100)):0;
   return `<div class="wph"><div class="wph-stat">${pct}%</div><div class="wph-sub">to FI (${fmtM(target)} target)</div><div class="xp-bar" style="margin-top:8px"><div class="xp-fill" style="width:${pct}%"></div></div></div>`;
 }
