@@ -5197,7 +5197,7 @@ function buildWidgetChart(w, cid){
     let labels, vals;
     const hist=(typeof nwHistMonthly==='function')?nwHistMonthly(12):[];
     if(hist && hist.length>=2){ labels=hist.map(h=>h.label); vals=hist.map(h=>Math.round(h.v)); }
-    else { const cur=live?engNetBalance()+engNWAssets()-engNWLiab():engNetWorth(); const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; labels=months; vals=months.map((_,i)=>Math.round(cur*(0.86+0.14*(i/(months.length-1))))); }
+    else { const cur=_nwNow(); const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; labels=months; vals=months.map((_,i)=>Math.round(cur*(0.86+0.14*(i/(months.length-1))))); }
     buildChartWidget(cid,'line',labels,vals,'#5b8def',{fill:true,tension:0.35,
       datasets:[{data:vals,borderColor:'#5b8def',backgroundColor:'rgba(91,141,239,0.12)',fill:true,tension:0.35,pointRadius:0,borderWidth:2}]});
   } else if(w.type==='retirement_proj'){
@@ -8075,7 +8075,7 @@ function journeyBadgesBody(w){
 }
 
 /* ── Net-worth history (real trend + month-over-month streaks) ── */
-function _nwNow(){ try{ return dataLoaded?engNetBalance()+engNWAssets()-engNWLiab():engNetWorth(); }catch(e){ return 0; } }
+function _nwNow(){ try{ const acctNet=engAccounts().reduce((s,x)=>(x.manual||x.excluded)?s:s+(x.bal||0),0); return acctNet+engNWAssets()-engNWLiab(); }catch(e){ return 0; } }   // account-inclusive so the sample/preview isn't $0 (identical to engNetBalance()+... when live)
 function nwHistLoad(){ try{ const a=JSON.parse(LS.getItem('mdf_nw_history')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
 function nwHistRecord(){
   try{
