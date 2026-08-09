@@ -142,13 +142,33 @@ function getCatParent(label){
 }
 const _catOverrides=JSON.parse(LS.getItem('mdf_cat_overrides')||'{}');
 const _txnNotes=JSON.parse(LS.getItem('mdf_txn_notes')||'{}');
+// Card payments by MATCHED TRANSFER: an outflow from a cash account whose same-amount counterpart lands on
+// one of YOUR credit cards (±$1, within 4 days) is a card payment, not spending — the card's purchases are
+// the spend. Matched 1:1 (each card inflow settles one outflow) so a coincidental duplicate amount doesn't
+// over-exclude. Only CREDIT cards count — installment-loan payments still count as spending. Frame-memoized.
+function _ccPaymentTxns(){
+  return _memoFrame('ccPayTxns', ()=>{
+    const set=new Set();
+    if(!dataLoaded || !allTxns.length) return set;
+    const creditIds=new Set(allAccts.filter(a=>a && a.type==='credit').map(a=>a.account_id));
+    if(!creditIds.size) return set;
+    const byAmt={};   // credit-account inflows (payments landing on a card) indexed by rounded amount
+    allTxns.forEach(t=>{ if(t.amount<0 && creditIds.has(t.account_id)){ const a=Math.round(Math.abs(t.amount)); (byAmt[a]=byAmt[a]||[]).push(new Date(t.date+'T12:00:00').getTime()); } });
+    allTxns.filter(t=>t.amount>0 && !creditIds.has(t.account_id)).sort((x,y)=>new Date(x.date)-new Date(y.date)).forEach(t=>{
+      const a=Math.round(t.amount), tt=new Date(t.date+'T12:00:00').getTime();
+      for(const key of [a,a-1,a+1]){ const arr=byAmt[key]; if(!arr||!arr.length) continue; const idx=arr.findIndex(ts=>Math.abs(ts-tt)<=4*86400000); if(idx>=0){ arr.splice(idx,1); set.add(_txnKey(t)); break; } }
+    });
+    return set;
+  });
+}
 /* A credit-card payment leaving a bank account is NOT spending — the card's purchases are the real
-   spending, so counting the payment too double-counts. Detected by Plaid's category
-   (CREDIT_CARD_PAYMENT), the legacy category array, or a conservative payee-name pattern
-   ("AMEX EPAYMENT", "CHASE CREDIT CRD AUTOPAY", ...). A manual "Credit Card Payment" category is
-   handled separately via _catSysFlags in _txnExcludedFromSpend. */
+   spending, so counting the payment too double-counts. Detected by a matched transfer to one of your
+   credit cards (above), Plaid's category (CREDIT_CARD_PAYMENT), the legacy category array, or a
+   conservative payee-name pattern ("AMEX EPAYMENT", "CHASE CREDIT CRD AUTOPAY", ...). A manual "Credit
+   Card Payment" category is handled separately via _catSysFlags in _txnExcludedFromSpend. */
 function _isCCPaymentTxn(t){
   if(!(t.amount>0)) return false;   // only outflows from a bank account can be card payments
+  if(_ccPaymentTxns().has(_txnKey(t))) return true;   // matched to a same-amount inflow on one of your credit cards
   const det=((t.personal_finance_category&&(t.personal_finance_category.detailed||t.personal_finance_category.primary))||'').toUpperCase();
   if(det.includes('CREDIT_CARD_PAYMENT')) return true;
   const legacy=(Array.isArray(t.category)?t.category.join(' '):String(t.category||'')).toLowerCase();
