@@ -7098,16 +7098,18 @@ function ftCommit(uid){ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg
 // Best day offset (from today) to schedule a one-time payment of `amount`: the day that MAXIMIZES the
 // resulting projected low point — i.e. pay it when the daily balance can absorb it (typically right after
 // a paycheck) so it never dips below the buffer. Paying on day D reduces every balance from D onward.
-function _bestPaymentDay(amount, days){
-  days=days||60; let proj; try{ proj=engCashFlowProjection(days); }catch(e){ return 0; }
+function _bestPaymentDay(amount, days, floor){
+  days=days||60; floor=(floor==null?0:floor);
+  let proj; try{ proj=engCashFlowProjection(days); }catch(e){ return 0; }
   const s=(proj&&proj.series)||[]; if(!s.length) return 0;
   const n=s.length, suffixMin=new Array(n); let m=Infinity;
   for(let i=n-1;i>=0;i--){ m=Math.min(m, s[i].bal); suffixMin[i]=m; }
-  let prefixMin=Infinity, bestDay=s[0].day||0, bestLow=-Infinity;
+  let prefixMin=Infinity, fallbackDay=s[0].day||0, bestLow=-Infinity;
   for(let i=0;i<n;i++){ const low=Math.min(prefixMin, suffixMin[i]-amount);
-    if(low>bestLow){ bestLow=low; bestDay=s[i].day; }
+    if(low>=floor) return s[i].day;                       // EARLIEST day deploying still clears the floor — pay it as soon as it's safe (right after your income), not at the horizon's high point
+    if(low>bestLow){ bestLow=low; fallbackDay=s[i].day; }
     prefixMin=Math.min(prefixMin, s[i].bal); }
-  return bestDay;
+  return fallbackDay;                                     // nothing fully safe → the least-bad day
 }
 function openLumpSumModal(){
   let rw; try{ rw=engCashRunway(); }catch(e){}
@@ -7158,7 +7160,7 @@ function openLumpSumModal(){
 function lumpSetupPayments(){
   let n=0, date='';
   try{ const rw=engCashRunway(); if(rw && rw.kind==='opportunity'){ const plan=engLumpSumPlan(rw.deploy);
-    const day=_bestPaymentDay(rw.deploy, 90), dt=_projDate(day); date=_dk(dt);
+    const day=_bestPaymentDay(rw.deploy, 90, rw.buf), dt=_projDate(day); date=_dk(dt);   // earliest day the whole lump clears the buffer (right after your income)
     APP.manualBills=(APP.manualBills||[]).filter(b=>!b._lumpOnce && !b._savingsOnce);   // clear prior auto lump bills (once per trigger)
     plan.alloc.forEach(a=>{ try{ if(a.pay>0){ APP.manualBills.push({ name:'Extra → '+a.name, pay:Math.round(a.pay), min:Math.round(a.pay), bal:0, apr:0, due:dt.getDate(), cat:'CC', once:date, _lumpOnce:true, promo:'', promoEnd:'', limit:0, note:'one-time lump-sum payment', paid:false }); n++; } }catch(e){} });
     const savTotal=(plan.savingsAlloc||[]).reduce((s,x)=>s+x.add,0);
