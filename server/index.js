@@ -895,7 +895,10 @@ app.post('/api/create_link_token', requireAuth, async (req, res) => {
     const item = store.accessTokens.find(t => t.itemId === itemId);
     if (!item) return res.status(404).json({ error: 'Unknown item — remove and reconnect the bank instead.' });
     try {
-      const r = await plaidClient.linkTokenCreate({ ...base, access_token: item.accessToken });
+      // account_selection_enabled lets the user re-choose which accounts to share on reconnect —
+      // this is how a NO_ACCOUNTS item (bank currently sharing zero accounts, e.g. Capital One) gets
+      // its accounts back. Harmless for a plain expired-login reconnect (just confirms the accounts).
+      const r = await plaidClient.linkTokenCreate({ ...base, access_token: item.accessToken, update: { account_selection_enabled: true } });
       return res.json({ link_token: r.data.link_token, update_mode: true });
     } catch (e) {
       const pd = (e.response && e.response.data) || {};
@@ -1092,7 +1095,11 @@ app.get('/api/accounts', requireAuth, async (req, res) => {
         const code2 = err2.response?.data?.error_code || err2.message;
         console.warn(`Accounts error for ${item.institutionName}:`, code2);
         const e = { institution: item.institutionName, itemId: item.itemId, error: code2 };
-        if (code2 === 'ITEM_LOGIN_REQUIRED') e.needsRelink = true;
+        // Both a login-expired Item and a NO_ACCOUNTS Item (bank shared zero accounts — common with
+        // Capital One's OAuth consent) are resolved by re-launching Link in update mode, so both get
+        // the Reconnect affordance. NO_ACCOUNTS specifically needs account-selection (enabled on the
+        // update-mode link token) so the user can re-share their accounts.
+        if (code2 === 'ITEM_LOGIN_REQUIRED' || code2 === 'NO_ACCOUNTS') e.needsRelink = true;
         errors.push(e);
         return [];
       }
