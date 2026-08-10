@@ -6397,7 +6397,7 @@ function creditUtilBody(w){
   const u=engCreditUtil();
   const dti=engDTI();
   if(u.limit<=0){
-    const noLimit=engBills().filter(b=>b.cat==='CC' && !(b.limit>0));
+    const noLimit=engBills().filter(b=>b.cat==='CC' && !(b.limit>0) && !b.once && !b._lumpOnce);
     if(noLimit.length){
       const btns=noLimit.map(b=>`<button class="cu-setlimit" onclick="event.stopPropagation();openPromoEditor('${esc(b.name).replace(/'/g,"\\\\'")}')">${esc(b.name)}${Math.abs(b.bal||0)>0?' · '+fmtK(Math.abs(b.bal||0)):''} · Set limit ›</button>`).join('');
       return `<div class="wph"><div class="wph-sub">Found ${noLimit.length} card${noLimit.length>1?'s':''}, but your bank didn't report the credit limit${noLimit.length>1?'s':''}.</div><div class="ws-hint" style="margin-top:6px">Many issuers (Amex especially) don't send limits to Plaid. Enter yours and I'll track utilization:</div><div class="cu-nolimit" style="margin-top:11px">${btns}</div></div>`;
@@ -6442,7 +6442,7 @@ function creditUtilBody(w){
     </div>
     <div class="cu-cards-label">Per-card utilization <span class="ws-hint" style="margin:0">(dotted line = 30%)</span></div>
     <div class="cu-cards">${cardBars}</div>
-    ${(()=>{ const nl=engBills().filter(b=>b.cat==='CC'&&!(b.limit>0)); return nl.length?`<div class="cu-nolimit-h">${nl.length} card${nl.length>1?'s':''} without a reported limit — not counted in utilization above (store cards often don't send one). Add the limit and they'll count:</div><div class="cu-nolimit" style="margin-top:6px">${nl.map(b=>`<button class="cu-setlimit" onclick="event.stopPropagation();openPromoEditor('${esc(b.name).replace(/'/g,"\\\\'")}')">${esc(b.name)}${Math.abs(b.bal||0)>0?' · '+fmtK(Math.abs(b.bal||0)):''} · Set limit ›</button>`).join('')}</div>`:''; })()}
+    ${(()=>{ const nl=engBills().filter(b=>b.cat==='CC'&&!(b.limit>0)&&!b.once&&!b._lumpOnce); return nl.length?`<div class="cu-nolimit-h">${nl.length} card${nl.length>1?'s':''} without a reported limit — not counted in utilization above (store cards often don't send one). Add the limit and they'll count:</div><div class="cu-nolimit" style="margin-top:6px">${nl.map(b=>`<button class="cu-setlimit" onclick="event.stopPropagation();openPromoEditor('${esc(b.name).replace(/'/g,"\\\\'")}')">${esc(b.name)}${Math.abs(b.bal||0)>0?' · '+fmtK(Math.abs(b.bal||0)):''} · Set limit ›</button>`).join('')}</div>`:''; })()}
     <div style="text-align:center;margin-top:11px"><button class="manual-add-btn" style="width:auto;display:inline-block" onclick="event.stopPropagation();openManualCard()">➕ Add a card</button></div>
   </div>`;
 }
