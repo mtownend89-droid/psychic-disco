@@ -1078,11 +1078,24 @@ app.get('/api/accounts', requireAuth, async (req, res) => {
       return r.data.accounts.map(a => ({ ...a, institution: item.institutionName, itemId: item.itemId }));
     } catch (err) {
       const code = err.response?.data?.error_code || err.message;
-      console.warn(`Accounts error for ${item.institutionName}:`, code);
-      const e = { institution: item.institutionName, itemId: item.itemId, error: code };
-      if (code === 'ITEM_LOGIN_REQUIRED') e.needsRelink = true;
-      errors.push(e);
-      return [];
+      // accountsBalanceGet forces a LIVE balance refresh from the institution, which some banks
+      // (Capital One especially) frequently reject / time out on — returning the bank "not syncing"
+      // on every reload even though the token is fine. Fall back to accountsGet (Plaid's cached
+      // balances) before declaring failure — the same resilience /api/liabilities and
+      // /api/transactions already use. Only a genuine failure (e.g. ITEM_LOGIN_REQUIRED, which
+      // fails accountsGet the same way) then surfaces as an error.
+      try {
+        const r2 = await plaidClient.accountsGet({ access_token: item.accessToken });
+        console.warn(`Live balance fetch for ${item.institutionName} failed (${code}) — served cached balances via accountsGet`);
+        return r2.data.accounts.map(a => ({ ...a, institution: item.institutionName, itemId: item.itemId }));
+      } catch (err2) {
+        const code2 = err2.response?.data?.error_code || err2.message;
+        console.warn(`Accounts error for ${item.institutionName}:`, code2);
+        const e = { institution: item.institutionName, itemId: item.itemId, error: code2 };
+        if (code2 === 'ITEM_LOGIN_REQUIRED') e.needsRelink = true;
+        errors.push(e);
+        return [];
+      }
     }
   }));
   const all = perItem.flat();
