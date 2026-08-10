@@ -2881,6 +2881,12 @@ function spendTrendsBody(w){
 
 /* ── Chart.js utilities (ported buildChartWidget / buildChartLegend) ── */
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+// Escape a value for a SINGLE-quoted JS string that sits inside a DOUBLE-quoted HTML attribute,
+// e.g. onclick="fn('${_attrArg(name)}')". esc() must NOT be used here: it turns ' into &#39;, which
+// the browser decodes back to ' and breaks the JS string for names with apostrophes ("Kohl's",
+// "BJ's"). The JS quote is backslash-escaped (a backslash survives HTML decoding), and &, <, >, "
+// are HTML-escaped so the attribute itself stays well-formed.
+const _attrArg=s=>String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 function buildChartLegend(containerId, items, opts){
   const el=gg(containerId); if(!el) return; opts=opts||{};
   const total=opts.total||items.reduce((s,i)=>s+(i.value||0),0);
@@ -6399,7 +6405,7 @@ function creditUtilBody(w){
   if(u.limit<=0){
     const noLimit=engBills().filter(b=>b.cat==='CC' && !(b.limit>0) && !b.once && !b._lumpOnce);
     if(noLimit.length){
-      const btns=noLimit.map(b=>`<button class="cu-setlimit" onclick="event.stopPropagation();openPromoEditor('${esc(b.name).replace(/'/g,"\\\\'")}')">${esc(b.name)}${Math.abs(b.bal||0)>0?' · '+fmtK(Math.abs(b.bal||0)):''} · Set limit ›</button>`).join('');
+      const btns=noLimit.map(b=>`<button class="cu-setlimit" onclick="event.stopPropagation();openPromoEditor('${_attrArg(b.name)}')">${esc(b.name)}${Math.abs(b.bal||0)>0?' · '+fmtK(Math.abs(b.bal||0)):''} · Set limit ›</button>`).join('');
       return `<div class="wph"><div class="wph-sub">Found ${noLimit.length} card${noLimit.length>1?'s':''}, but your bank didn't report the credit limit${noLimit.length>1?'s':''}.</div><div class="ws-hint" style="margin-top:6px">Many issuers (Amex especially) don't send limits to Plaid. Enter yours and I'll track utilization:</div><div class="cu-nolimit" style="margin-top:11px">${btns}</div></div>`;
     }
     return `<div class="wph"><div class="wph-sub">No credit cards with a limit yet.</div><div class="ws-hint" style="margin-top:6px">Add a card with its limit${plaidHasLiab()?' (or set limits on your live cards)':''} and I'll show utilization + DTI here.</div><div style="text-align:center;margin-top:11px"><button class="manual-add-btn" style="width:auto;display:inline-block" onclick="event.stopPropagation();openManualCard()">➕ Add a card</button></div></div>`;
@@ -6442,7 +6448,7 @@ function creditUtilBody(w){
     </div>
     <div class="cu-cards-label">Per-card utilization <span class="ws-hint" style="margin:0">(dotted line = 30%)</span></div>
     <div class="cu-cards">${cardBars}</div>
-    ${(()=>{ const nl=engBills().filter(b=>b.cat==='CC'&&!(b.limit>0)&&!b.once&&!b._lumpOnce); return nl.length?`<div class="cu-nolimit-h">${nl.length} card${nl.length>1?'s':''} without a reported limit — not counted in utilization above (store cards often don't send one). Add the limit and they'll count:</div><div class="cu-nolimit" style="margin-top:6px">${nl.map(b=>`<button class="cu-setlimit" onclick="event.stopPropagation();openPromoEditor('${esc(b.name).replace(/'/g,"\\\\'")}')">${esc(b.name)}${Math.abs(b.bal||0)>0?' · '+fmtK(Math.abs(b.bal||0)):''} · Set limit ›</button>`).join('')}</div>`:''; })()}
+    ${(()=>{ const nl=engBills().filter(b=>b.cat==='CC'&&!(b.limit>0)&&!b.once&&!b._lumpOnce); return nl.length?`<div class="cu-nolimit-h">${nl.length} card${nl.length>1?'s':''} without a reported limit — not counted in utilization above (store cards often don't send one). Add the limit and they'll count:</div><div class="cu-nolimit" style="margin-top:6px">${nl.map(b=>`<button class="cu-setlimit" onclick="event.stopPropagation();openPromoEditor('${_attrArg(b.name)}')">${esc(b.name)}${Math.abs(b.bal||0)>0?' · '+fmtK(Math.abs(b.bal||0)):''} · Set limit ›</button>`).join('')}</div>`:''; })()}
     <div style="text-align:center;margin-top:11px"><button class="manual-add-btn" style="width:auto;display:inline-block" onclick="event.stopPropagation();openManualCard()">➕ Add a card</button></div>
   </div>`;
 }
