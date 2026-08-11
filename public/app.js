@@ -1704,9 +1704,6 @@ function _cardEnvelopeTotals(){
   const out={}; try{ _zbBuckets().forEach(b=>{ if(b.card) out[b.card]=(out[b.card]||0)+(b.amt||0); }); }catch(e){}
   return out;
 }
-// Fixed monthly paydown a user pays on a spending card ON TOP of budgeted spending (e.g. chipping
-// away at a pre-budget balance). Stays in fixed bills as real debt reduction. Stored per-card in cardData.
-function _cardPaydown(name){ const d=(APP.cardData||{})[_cardKey(name)]||{}; return Math.max(0, +d.paydown||0); }
 /* Spending cards: a card with assigned budget envelopes has an expected monthly payment that
    TRACKS those envelopes (you charge the categories, then pay them off) — both up AND down. So the
    card's payment always equals what you've budgeted on it: it contributes $0 net to fixed bills
@@ -1718,13 +1715,13 @@ function _applyEnvelopePlan(list){
   const ov=_billOverrides();
   list.forEach(b=>{
     if(b.cat!=='CC') return;
-    const e=env[b.name]||0, pd=_cardPaydown(b.name);
-    if(e<=0 && pd<=0) return;
+    const e=env[b.name]||0; if(e<=0) return;
     const hasPayOv=ov[billKey(b)] && ov[billKey(b)].pay!==undefined;
-    // Payment = envelope total (tracks up AND down) + a fixed extra paydown. The envelope part is
-    // covered (excluded from fixed bills, so it drives the budget); the paydown part stays in fixed
-    // bills as real debt reduction. A manual "You pay" override still wins over both.
-    if(!hasPayOv){ b.pay=e+pd; b.expected=b.pay; b.plannedFromEnvelopes=true; }
+    // Default payment = the envelope total (tracks up AND down), so budgeting a category moves the
+    // budget. A "You pay" override (set in the budget's per-card row or the bill editor) wins: raise
+    // it above the envelope to pay down an old balance (the extra stays in fixed bills), or lower it
+    // to float on debt in a lean month (frees cash now).
+    if(!hasPayOv){ b.pay=e; b.expected=e; b.plannedFromEnvelopes=true; }
   });
   return list;
 }
@@ -5597,17 +5594,23 @@ function zbWidgetBody(w){
   const perCardRows=linkedCards.map(c=>{
     const planned=cardEnv[c]||0;                 // what you budgeted to charge on this card (its envelopes)
     const actual=_cardSpendMonth(c,_bm);          // actual purchases on it this month (null if manual/unlinked)
-    const pd=_cardPaydown(c);
+    const bill=engBills().find(b=>b.cat==='CC'&&b.name===c);
+    const pay=bill?(+bill.pay||0):planned;        // resolved payment: You-pay override, else the envelope
+    const cmin=bill?(+bill.min||0):0;
     const drift=(actual!=null && planned>0)?actual-planned:null;
     const actLbl=(actual==null)
       ? `<span class="zb-cs-na">no transaction data</span>`
       : `${fmtK(actual)} spent`+((drift!=null && Math.abs(drift)>=1)?` · <b style="color:${drift>0?'var(--red)':'var(--green)'}">${drift>0?fmtK(drift)+' over':fmtK(-drift)+' under'}</b>`:'');
+    const payDiff=Math.round(pay-planned);
+    const payHint = Math.abs(payDiff)<1 ? `<span class="zb-cs-payhint">= your budget</span>`
+      : payDiff>0 ? `<span class="zb-cs-payhint" style="color:var(--green)">+${fmtK(payDiff)} paying down balance</span>`
+      : `<span class="zb-cs-payhint" style="color:var(--amber)">${fmtK(payDiff)} — floating on debt${cmin>0&&pay<cmin?` · below min ${fmtK(cmin)}!`:''}</span>`;
     return `<div class="zb-cs-row">
-        <div class="zb-cs-main"><div class="zb-cs-nm">💳 ${esc(c)}</div><div class="zb-cs-sub">planned ${fmtK(planned)} · ${actLbl}</div></div>
-        <div class="zb-cs-pd" title="Fixed extra paydown on top of budgeted spending — stays in Bills (fixed) as debt reduction"><span>+ paydown</span><div class="zb-pd-edit"><span>$</span><input type="number" min="0" step="10" value="${pd||''}" placeholder="0" onclick="event.stopPropagation()" onchange="zbSetPaydown('${_attrArg(c)}',this.value)" aria-label="Extra monthly paydown for ${esc(c)}"></div></div>
+        <div class="zb-cs-main"><div class="zb-cs-nm">💳 ${esc(c)}</div><div class="zb-cs-sub">planned ${fmtK(planned)} · ${actLbl}</div><div class="zb-cs-sub">${payHint}</div></div>
+        <div class="zb-cs-pd" title="What you pay this card. Defaults to its envelope total; raise it to pay down an old balance (the extra counts in Bills), or lower it to float on debt in a lean month (frees cash now).${cmin>0?' Real minimum: '+fmtK(cmin)+'.':''}"><span>You pay</span><div class="zb-pd-edit"><span>$</span><input type="number" min="0" step="10" value="${Math.round(pay)||''}" placeholder="${Math.round(planned)}" onclick="event.stopPropagation()" onchange="zbSetCardPay('${_attrArg(c)}',this.value,${Math.round(planned)})" aria-label="Monthly payment for ${esc(c)}"></div></div>
       </div>`;
   }).join('');
-  const paydownSection = linkedCards.length ? `<div class="zb-section-label" title="For each card you've assigned envelopes to: what you planned to charge (its envelopes) vs what you've actually spent on it this month, plus any fixed extra paydown. 'Over' just means you charged more on that card than budgeted (e.g. an occasional cross-category purchase) — it doesn't change your budget totals, which are envelope-driven.">Per card · this month <span class="ws-hint" style="margin:0">planned charges vs actual · extra paydown</span></div>
+  const perCardSection = linkedCards.length ? `<div class="zb-section-label" title="For each card you've assigned envelopes to: what you planned to charge (its envelopes) vs what you've actually spent this month, and what you'll pay it. 'You pay' defaults to the envelope; raise it to pay down an old balance (extra counts in Bills), lower it to float on debt in a lean month. Spending over/under doesn't change your budget totals — those are envelope-driven.">Per card · this month <span class="ws-hint" style="margin:0">planned vs actual · what you pay</span></div>
     <div class="zb-cardstats">${perCardRows}</div>` : '';
   const monthNav=`<div class="zb-monthnav">
       <button class="zb-mbtn" onclick="event.stopPropagation();zbMonthNav('${w.uid}',-1)" title="Previous month">◀</button>
@@ -5636,6 +5639,7 @@ function zbWidgetBody(w){
     ${sc.coveredPay>0?`<div class="ws-hint" style="margin:0 0 8px">💳 ${fmtK(sc.coveredPay)} of card payments is covered by envelopes and excluded from fixed bills${sc.extraPaydown>0?` · ${fmtK(sc.extraPaydown)} extra paydown stays in fixed`:''}.</div>`:''}
     ${balanceRow}
     <div class="zb-tpl-cta"><button onclick="event.stopPropagation();openBudgetTemplates('${w.uid}')">✨ Start from a template</button></div>
+    ${perCardSection}
     <div class="zb-section-label">Category envelopes <span class="ws-hint" style="margin:0">budget vs actual · ${fmtK(spentTotal)} spent of ${fmtK(envTotal)}</span></div>
     <div class="zb-buckets">
       ${buckets.map((b,i)=>{
@@ -5659,11 +5663,20 @@ function zbWidgetBody(w){
         <div class="zb-actual"><div class="zb-actual-bar"><div class="zb-actual-fill" style="width:${pct}%;background:${barColor}"></div></div><div class="zb-actual-lbl">${actualLbl}</div></div>
       </div>`;}).join('') || '<div class="ws-hint">No categories budgeted yet — add some below.</div>'}
     </div>
-    ${paydownSection}
     ${addSection}
   </div>`;
 }
-function zbSetPaydown(name,val){ setCardData(name,{paydown:Math.max(0,parseInt(val)||0)}); const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+// Per-card "You pay" for the budget — the same override the bill editor uses (billOverrides.pay).
+// Blank or equal to the envelope clears the override so the payment tracks the envelope again.
+function zbSetCardPay(name,val,env){
+  const key=name+'|CC';
+  const ov=_billOverrides(); ov[key]=ov[key]||{};
+  const n=parseFloat(val);
+  if(val===''||isNaN(n)||Math.round(n)===Math.round(env||0)){ delete ov[key].pay; }
+  else { ov[key].pay=Math.max(0,Math.round(n)); }
+  saveState();
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+}
 function zbAddCat(catId,uid){
   const c=_zbBudgetableCats().find(x=>x.id===catId); if(!c) return;
   const b=_zbBuckets(); if(b.some(x=>x.catId===catId)) return;
