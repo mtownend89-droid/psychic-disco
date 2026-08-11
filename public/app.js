@@ -5565,13 +5565,20 @@ function zbWidgetBody(w){
       <button class="zb-mbtn" onclick="event.stopPropagation();zbMonthNav('${w.uid}',1)" title="Next month">▶</button>
       ${_bm!==0?`<button class="zb-mtoday" onclick="event.stopPropagation();zbMonthNav('${w.uid}',0)">Today</button>`:''}
     </div>`;
+  const rawBills=bills+sc.coveredPay;   // engMonthlyBills() before the envelope-covered portion is removed
+  const incomeTip=`All income streams normalized to one month (biweekly ×26/12, weekly ×52/12): detected paychecks + any manual streams.`;
+  const billsTip=sc.coveredPay>0
+    ? `Every recurring bill's payment — rent, utilities, loans, card payments — MINUS card payments already covered by your envelopes (so card spend isn't double-counted). ${fmtK(rawBills)} in bills − ${fmtK(sc.coveredPay)} covered by envelopes = ${fmtK(bills)}.${sc.extraPaydown>0?` (${fmtK(sc.extraPaydown)} of card paydown beyond your envelopes stays here as real debt reduction.)`:''}`
+    : `Every recurring bill's payment — rent, utilities, loans, card payments. Link an envelope to a card (the 💳 selector) and that card's payment drops out of here so you don't budget the same spend twice.`;
+  const envTip=`Sum of every category envelope you set below — the money you're assigning to spending buckets this month.`;
+  const budgetTip=`Income − fixed bills − envelopes: what's still free to assign (positive) or how far you've over-assigned (negative). ${fmtK(income)} income − ${fmtK(bills)} bills − ${fmtK(envTotal)} envelopes = ${left>=0?'':'-'}${fmtK(Math.abs(left))}. You have ${fmtK(afterBills)} to divide among envelopes after bills.`;
   return `<div class="zb-wrap">
     ${monthNav}
     <div class="zb-head">
-      <div class="zb-hstat"><span>Monthly income</span><b>${fmtK(income)}</b></div>
-      <div class="zb-hstat"><span>Bills (fixed)</span><b style="color:var(--red)">${fmtK(bills)}</b></div>
-      <div class="zb-hstat"><span>Assigned to envelopes</span><b>${fmtK(envTotal)}</b></div>
-      <div class="zb-hstat zb-tobudget"><span>To budget</span><b style="color:${leftColor}">${left>=0?'':'-'}${fmtK(Math.abs(left))} ${Math.abs(left)<1?'✓ balanced':left>0?'left':'over'}</b></div>
+      <div class="zb-hstat" title="${esc(incomeTip)}"><span>Monthly income</span><b>${fmtK(income)}</b></div>
+      <div class="zb-hstat" title="${esc(billsTip)}"><span>Bills (fixed)</span><b style="color:var(--red)">${fmtK(bills)}</b></div>
+      <div class="zb-hstat" title="${esc(envTip)}"><span>Assigned to envelopes</span><b>${fmtK(envTotal)}</b></div>
+      <div class="zb-hstat zb-tobudget" title="${esc(budgetTip)}"><span>To budget</span><b style="color:${leftColor}">${left>=0?'':'-'}${fmtK(Math.abs(left))} ${Math.abs(left)<1?'✓ balanced':left>0?'left':'over'}</b></div>
     </div>
     <div class="zb-bar"><div class="zb-bar-fill" style="width:${Math.min(100,Math.round(assigned/Math.max(income,1)*100))}%;background:${left<0?'var(--red)':'var(--pos)'}"></div></div>
     ${sc.coveredPay>0?`<div class="ws-hint" style="margin:0 0 8px">💳 ${fmtK(sc.coveredPay)} of card payments is covered by envelopes and excluded from fixed bills${sc.extraPaydown>0?` · ${fmtK(sc.extraPaydown)} extra paydown stays in fixed`:''}.</div>`:''}
