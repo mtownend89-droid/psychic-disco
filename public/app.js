@@ -699,14 +699,30 @@ function setBillPayAcct(key,val){
    which point the bank's own data reflects the debit and the manual deduction must stop so nothing
    double-counts. Match = an outflow on that account near the bill's amount, on/after the occurrence's
    due date (or when it was marked paid). Keyed by occurrence so July's payment doesn't shadow August's. */
-// A transaction the user manually linked to a bill counts as that bill's payment for the month the
-// transaction falls in — for payments the auto-matcher can't catch (odd amount, different account,
-// weird merchant name). Keyed billKey|YYYY-MM. Persisted in APP.txnBillLinks (txnKey -> billKey).
+// A transaction the user manually linked to a bill counts as that bill's payment — for payments the
+// auto-matcher can't catch (odd amount, different account, weird merchant name, or paid weeks early).
+// APP.txnBillLinks maps txnKey -> billKey; APP.txnBillOcc optionally pins the OCCURRENCE month
+// (YYYY-MM) it settles. Without a pin, it snaps to the occurrence whose due date is nearest the txn.
+function _txnBillOcc(){ APP.txnBillOcc=APP.txnBillOcc||{}; return APP.txnBillOcc; }
+// The occurrence MONTH (YYYY-MM) whose due date is nearest a transaction date — so an end-of-month
+// payment snaps to next month's bill instead of the calendar month it posted in.
+function _billNearestOccMonth(b, txnDateStr){
+  const t=new Date((txnDateStr||'')+'T12:00:00'); if(isNaN(t.getTime())) return (txnDateStr||'').slice(0,7);
+  const day=(b&&b.due)||1; let best=null, bestDiff=Infinity;
+  for(let k=-1;k<=1;k++){ const d=_dueDateInMonth(t.getFullYear(), t.getMonth()+k, day); const diff=Math.abs(d.getTime()-t.getTime()); if(diff<bestDiff){ bestDiff=diff; best=d; } }
+  return best ? (best.getFullYear()+'-'+String(best.getMonth()+1).padStart(2,'0')) : (txnDateStr||'').slice(0,7);
+}
+function _occLabel(m){ if(!m) return ''; const p=m.split('-').map(Number); return new Date(p[0],(p[1]||1)-1,1).toLocaleDateString('en-US',{month:'short',year:'2-digit'}); }
 function _linkedBillMonthSet(){
   return _memoFrame('linkBillMonths', ()=>{
     const set=new Set(); const links=APP.txnBillLinks||{}; if(!Object.keys(links).length) return set;
+    const occ=_txnBillOcc();
     const dateByKey={}; (allTxns||[]).forEach(t=>{ dateByKey[_txnKey(t)]=(t.date||''); });
-    Object.keys(links).forEach(k=>{ const d=dateByKey[k]; if(d) set.add(links[k]+'|'+d.slice(0,7)); });
+    const billByBk={}; try{ engBills().forEach(b=>{ billByBk[billKey(b)]=b; }); }catch(e){}
+    Object.keys(links).forEach(k=>{ const bk=links[k]; const d=dateByKey[k]; if(!bk||!d) return;
+      const m = occ[k] || _billNearestOccMonth(billByBk[bk], d);   // pinned occurrence wins, else snap to nearest due date
+      set.add(bk+'|'+m);
+    });
     return set;
   });
 }
@@ -717,8 +733,19 @@ function _billOccMatched(b, dueStr, paidAt){
   if(!b.payAcct) return false;
   const tol=Math.max(2, b.pay*0.04);
   const dueTs=dueStr?new Date(dueStr+'T12:00:00').getTime():NaN;
-  const since = paidAt ? paidAt-4*86400000 : (isFinite(dueTs)? dueTs-4*86400000 : Date.now()-25*86400000);
-  return (allTxns||[]).some(t=> t.account_id===b.payAcct && (+t.amount)>0 && Math.abs((+t.amount)-b.pay)<=tol && new Date((t.date||'')+'T12:00:00').getTime()>=since);
+  // Window centered on THIS occurrence's due date: catches a payment made up to ~11 days early (which
+  // can be in the PRIOR month) or up to ~16 days late, while staying narrower than the ~30-day gap to
+  // the neighboring occurrence so one payment can't settle two months.
+  let lo, hi;
+  if(isFinite(dueTs)){ lo=dueTs-11*86400000; hi=dueTs+16*86400000; }
+  else if(paidAt){ lo=paidAt-11*86400000; hi=paidAt+16*86400000; }
+  else { hi=Date.now(); lo=hi-30*86400000; }
+  const links=APP.txnBillLinks||{};
+  // Explicitly-linked txns are attributed via the link path (to their chosen occurrence), so skip
+  // them here — otherwise a payment assigned to next month could also auto-settle this month.
+  return (allTxns||[]).some(t=>{ if(links[_txnKey(t)]) return false;
+    if(t.account_id!==b.payAcct || !((+t.amount)>0) || Math.abs((+t.amount)-b.pay)>tol) return false;
+    const ts=new Date((t.date||'')+'T12:00:00').getTime(); return ts>=lo && ts<=hi; });
 }
 // Bill OCCURRENCES marked paid that haven't posted yet, grouped by their pay-from cash account.
 // Iterates billPaidOcc (per calendar-month occurrence) so paying next month's bill early counts now,
@@ -7641,6 +7668,8 @@ function txnFeedRender(w){
   const _billList=(()=>{ try{ return engBills().filter(b=>b.name).map(b=>({bk:billKey(b), nm:b.name})); }catch(e){ return []; } })();
   const _bkName={}; _billList.forEach(x=>{ _bkName[x.bk]=x.nm; });
   const _txnLinks=APP.txnBillLinks||{};
+  const _occM=APP.txnBillOcc||{};
+  const _billObjByBk={}; try{ engBills().forEach(b=>{ _billObjByBk[billKey(b)]=b; }); }catch(e){}
   el.innerHTML=capped.map((t,i)=>{
     const key=_txnKey(t); keys[i]=key;
     const pos=t.amount>0, col=pos?'var(--red)':'var(--pos)', amt=(pos?'-':'+')+fmt2(Math.abs(t.amount));
@@ -7657,12 +7686,14 @@ function txnFeedRender(w){
     const billChip = (linkedBK&&_bkName[linkedBK])?`<span class="txf-tag" style="color:var(--blue,#5b8def);background:rgba(91,141,239,.14)">🔗 ${esc(_bkName[linkedBK])}</span>`:'';
     // "Link to bill" selector — mark a payment the auto-matcher missed as a specific bill's payment.
     const billSel = (pos&&_billList.length)?`<select class="txn-cat-sel txf-billsel" onclick="event.stopPropagation()" onchange="txnFeedLinkBill('${w.uid}',${i},this.value)" title="Link this payment to a bill"><option value="">🔗 link bill…</option>${_billList.map(x=>`<option value="${esc(x.bk)}"${linkedBK===x.bk?' selected':''}>${esc(x.nm)}</option>`).join('')}${linkedBK?'<option value="__unlink__">✕ unlink</option>':''}</select>`:'';
+    const linkOccM = linkedBK ? (_occM[key] || _billNearestOccMonth(_billObjByBk[linkedBK], t.date)) : '';
+    const linkShift = linkedBK ? `<span class="txf-occshift" title="Which bill month this payment settles — shift it if you paid ahead"><button onclick="event.stopPropagation();txnFeedShiftLinkOcc('${w.uid}',${i},-1)" title="Earlier month" aria-label="Earlier month">◀</button><span class="txf-occlbl">${esc(_occLabel(linkOccM))}</span><button onclick="event.stopPropagation();txnFeedShiftLinkOcc('${w.uid}',${i},1)" title="Later month" aria-label="Later month">▶</button></span>` : '';
     return `<div class="txf-row"${acctExcl?' style="opacity:.55"':''}>
       <div class="txf-main">
         <div class="txf-nm">${esc(name)} ${pendChip}${ruleChip}${billChip}${exclChip}</div>
         <div class="txf-edit">
           <select class="txn-cat-sel" onclick="event.stopPropagation()" onchange="txnFeedSetCat('${w.uid}',${i},this.value)" title="Category">${opts}</select>
-          ${billSel}
+          ${billSel}${linkShift}
           <button class="txf-rulebtn${hasRule?' on':''}" onclick="event.stopPropagation();txnFeedRule('${w.uid}',${i})" title="Always categorize this merchant this way">＝</button>
           <input class="txn-note-in" type="text" placeholder="📝 note…" value="${esc(note)}" onclick="event.stopPropagation()" onchange="txnFeedSetNote('${w.uid}',${i},this.value)" onkeydown="if(event.key==='Enter')this.blur()">
         </div>
@@ -7682,13 +7713,31 @@ function txnFeedRule(uid,idx){ const t=(_txnFeedRows[uid]||[])[idx]; if(!t)retur
 // occurrence (for the transaction's month) paid, and _billOccMatched then treats it as settled.
 function txnFeedLinkBill(uid,idx,value){
   const k=(_txnFeedKeys[uid]||[])[idx], t=(_txnFeedRows[uid]||[])[idx]; if(!k||!t) return;
-  APP.txnBillLinks=APP.txnBillLinks||{};
+  APP.txnBillLinks=APP.txnBillLinks||{}; const occM=_txnBillOcc(); const pm=_billPaidOcc();
+  const _okeyFor=(b,m)=>{ const p=m.split('-').map(Number); return billKey(b)+'|'+_dk(_dueDateInMonth(p[0],(p[1]||1)-1,b.due||1)); };
   if(value==='') return;                                   // placeholder chosen
-  if(value==='__unlink__'){ delete APP.txnBillLinks[k]; }
-  else {
+  if(value==='__unlink__'){
+    const bk=APP.txnBillLinks[k], m=occM[k]; delete APP.txnBillLinks[k]; delete occM[k];
+    try{ const b=engBills().find(x=>billKey(x)===bk); if(b && m){ const okey=_okeyFor(b,m); if(pm[okey]) delete pm[okey]; } }catch(e){}
+  } else {
     APP.txnBillLinks[k]=value;
-    try{ const b=engBills().find(x=>billKey(x)===value); if(b){ const d=new Date((t.date||'')+'T12:00:00'); const okey=billKey(b)+'|'+_dk(_dueDateInMonth(d.getFullYear(), d.getMonth(), b.due||1)); const m=_billPaidOcc(); if(!m[okey]) m[okey]=Date.now(); } }catch(e){}
+    try{ const b=engBills().find(x=>billKey(x)===value); if(b){ const m=_billNearestOccMonth(b, t.date); occM[k]=m; const okey=_okeyFor(b,m); if(!pm[okey]) pm[okey]=Date.now(); } }catch(e){}
   }
+  saveState(); try{ _memoInvalidate&&_memoInvalidate(); }catch(e){}
+  const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
+}
+// Shift a linked payment to an earlier/later bill occurrence — for payments made weeks ahead of the
+// due date, where the "nearest" month isn't the one you intended. Moves the paid-occurrence mark too.
+function txnFeedShiftLinkOcc(uid,idx,delta){
+  const k=(_txnFeedKeys[uid]||[])[idx], t=(_txnFeedRows[uid]||[])[idx]; if(!k||!t) return;
+  const bk=(APP.txnBillLinks||{})[k]; if(!bk) return;
+  const occM=_txnBillOcc(); const pm=_billPaidOcc();
+  const b=engBills().find(x=>billKey(x)===bk); if(!b) return;
+  const _okeyFor=(m)=>{ const p=m.split('-').map(Number); return billKey(b)+'|'+_dk(_dueDateInMonth(p[0],(p[1]||1)-1,b.due||1)); };
+  const curM = occM[k] || _billNearestOccMonth(b, t.date); const cp=curM.split('-').map(Number);
+  const oldOkey=_okeyFor(curM); if(pm[oldOkey]) delete pm[oldOkey];
+  const nd=new Date(cp[0], (cp[1]||1)-1+delta, 1); const nm=nd.getFullYear()+'-'+String(nd.getMonth()+1).padStart(2,'0');
+  occM[k]=nm; pm[_okeyFor(nm)]=Date.now();
   saveState(); try{ _memoInvalidate&&_memoInvalidate(); }catch(e){}
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg);
 }
