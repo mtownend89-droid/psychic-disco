@@ -224,7 +224,7 @@ function renderRulesManager(){
   const rows=keys.map(mk=>{
     const cat=_catRules[mk]; const catList=cats.includes(cat)?cats:[cat].concat(cats);
     const opts=catList.map(c=>`<option value="${esc(c)}"${c===cat?' selected':''}>${esc(c)}</option>`).join('');
-    const n=counts[mk]||0; const k=esc(mk).replace(/'/g,"\\'");
+    const n=counts[mk]||0; const k=_attrArg(mk);
     return `<div class="rule-row"><span class="rule-nm">${esc(_titleCaseKey(mk))}${n?`<span class="rule-count">${n} txn${n!==1?'s':''}</span>`:''}</span><span class="rule-arrow" aria-hidden="true">→</span><select class="txn-cat-sel" onchange="ruleSetCat('${k}',this.value)" aria-label="Category for ${esc(mk)}">${opts}</select><button class="rule-del" onclick="ruleDelete('${k}')" title="Delete rule" aria-label="Delete rule for ${esc(mk)}">🗑</button></div>`;
   }).join('');
   host.innerHTML=`<div class="rule-list">${rows}</div>${addRow}`;
@@ -383,7 +383,7 @@ function renderReconnectBanner(){
   const one=rl.length===1;
   const lead=one?`${esc(rl[0].institution||'A bank')} needs`:`${rl.length} banks need`;
   const btn=one
-    ? `<button class="reconnect-btn" onclick="openLinkHandler('${esc(String(rl[0].itemId)).replace(/'/g,"\\'")}')">Reconnect ${esc(rl[0].institution||'bank')}</button>`
+    ? `<button class="reconnect-btn" onclick="openLinkHandler('${_attrArg(rl[0].itemId)}')">Reconnect ${esc(rl[0].institution||'bank')}</button>`
     : `<button class="reconnect-btn" onclick="openBriefing()">Reconnect ${rl.length} banks</button>`;
   bn.innerHTML=`<span class="reconnect-ic" aria-hidden="true">⚠️</span><span class="reconnect-msg"><b>${lead} reconnecting</b> — sign in again so your balances and transactions stay live.</span>${btn}<button class="reconnect-x" onclick="dismissReconnectBanner()" title="Dismiss" aria-label="Dismiss reconnect banner">✕</button>`;
 }
@@ -848,7 +848,7 @@ function incomeEditorRender(){
         <div class="inc-nm">🔗 ${esc(s.name)}${status}</div>
         <div class="inc-sub">${fmtK(s.amt)} · ${freqLabel[s.freq]||s.freq} · from ${s.count} tagged deposit${s.count!==1?'s':''}${active?` → ${fmtK(perMo)}/mo`:' → not counted'}</div>
       </div>
-      <div class="inc-actions"><button class="goal-mini" onclick="editDetectedIncome('${esc(s.key).replace(/'/g,"\\'")}')" title="Adjust or stop">✎</button></div>
+      <div class="inc-actions"><button class="goal-mini" onclick="editDetectedIncome('${_attrArg(s.key)}')" title="Adjust or stop">✎</button></div>
     </div>`;
   }).join('');
   const detSection=detected.length?`<div class="nw-sec-h"><span>🔗 From tagged paychecks</span></div>${detRows}<div class="ws-hint" style="margin:4px 0 10px">Detected from transactions tagged 💵 Paycheck — median amount, real payday cadence. Tap ✎ to adjust the amount/cadence, set an end date (e.g. a job loss), or pause a stream.</div>`:'';
@@ -894,9 +894,9 @@ function editDetectedIncome(key){
     <div class="ws-hint" style="margin-top:3px">Set this to the last real paycheck — e.g. when a job ends — and no future income is projected past it.</div>
     <label class="ae-toggle" style="margin-top:10px"><input type="checkbox" id="doPause" ${s.disabled?'checked':''}><span>⏸ Pause this stream — stop counting it entirely, now</span></label>
     <div class="mf-actions">
-      ${s.overridden?`<button class="btn danger-btn" onclick="resetDetectedOverride('${esc(key).replace(/'/g,"\\'")}')" title="Clear overrides, go back to auto-detected">↺ Reset to detected</button>`:'<span></span>'}
+      ${s.overridden?`<button class="btn danger-btn" onclick="resetDetectedOverride('${_attrArg(key)}')" title="Clear overrides, go back to auto-detected">↺ Reset to detected</button>`:'<span></span>'}
       <button class="btn" onclick="incomeEditorRender()">Cancel</button>
-      <button class="btn primary" onclick="saveDetectedOverride('${esc(key).replace(/'/g,"\\'")}')">Save</button>
+      <button class="btn primary" onclick="saveDetectedOverride('${_attrArg(key)}')">Save</button>
     </div>`;
 }
 function saveDetectedOverride(key){
@@ -1648,7 +1648,7 @@ function _billCalList(days, uid){
       const isBill=e.type==='bill', paid=!!e.off;
       // Bills with an occurrence key get a tap-to-toggle checkbox tied to the SAME per-month paid
       // state as the Bills widget (billPaidOcc), so paying here reflects everywhere and vice-versa.
-      const chk=(isBill&&e.okey)?`<button class="bcal-li-chk${paid?' on':''}" onclick="event.stopPropagation();billsToggleOcc('${String(e.okey).replace(/'/g,"\\'")}','${uid}')" title="${paid?'Mark unpaid':'Mark paid'}">${paid?'✓':''}</button>`:'<span class="bcal-li-chk sp"></span>';
+      const chk=(isBill&&e.okey)?`<button class="bcal-li-chk${paid?' on':''}" onclick="event.stopPropagation();billsToggleOcc('${_attrArg(e.okey)}','${uid}')" title="${paid?'Mark unpaid':'Mark paid'}">${paid?'✓':''}</button>`:'<span class="bcal-li-chk sp"></span>';
       // Same posted/expected/on-card refinement the Bills widget shows on a PAID bill, so the two agree.
       let ptag='';
       if(isBill && paid && e.bill){
@@ -2032,7 +2032,7 @@ function recurringBody(w){
       return dLeft<0?`📅 renews around ${d}` : dLeft===0?`📅 renews today` : `📅 renews ${d} · in ${dLeft}d`; })();
     const priceBadge = r.priceUp?`<span class="rec-priceup" title="Price increase detected">▲ ${fmtK(r.prior)}→${fmtK(r.recent)}</span>`:'';
     const cancelBadge = isCancel?`<span class="rec-cancel-badge">cancelling</span>`:'';
-    const mk=String(r.merchKey||'').replace(/'/g,"\\'");
+    const mk=_attrArg(r.merchKey||'');
     const cancelBtn=`<button class="rec-cancelbtn${isCancel?' on':''}" onclick="event.stopPropagation();subToggleCancel(${i})" title="${isCancel?'Keep':'Flag to cancel'}" aria-label="${isCancel?'Keep':'Flag to cancel'} ${esc(r.merchant)}">${isCancel?'↺ Keep':'⊘ Cancel'}</button>`;
     let actions;
     if(mode==='current'){ actions=cancelBtn; }
@@ -2866,7 +2866,7 @@ function spendTrendsBody(w){
   const maxD=Math.max(1,...movers.map(m=>Math.abs(m.delta)));
   const rows=movers.map(m=>{
     const mu=m.delta>0; const c=mu?'var(--amber)':'var(--green)'; const wpct=Math.round(Math.abs(m.delta)/maxD*100);
-    const q=String(m.label).replace(/'/g,"\\'");
+    const q=_attrArg(m.label);
     return `<div class="st-row st-row-go" onclick="event.stopPropagation();trendSearchCat('${q}')" title="See the transactions behind this"><span class="st-dot" style="background:${m.color}"></span><span class="st-lbl">${esc(m.label)} <span class="st-chev">›</span></span><span class="st-barwrap"><span class="st-bar" style="width:${wpct}%;background:${c}"></span></span><b class="st-delta" style="color:${c}">${mu?'▲':'▼'} ${fmtK(Math.abs(m.delta))}</b></div>`;
   }).join('') || '<div class="ws-hint">Not enough history yet to compare months.</div>';
   return `<div class="st-wrap">
@@ -3456,7 +3456,7 @@ function portfolioBody(w){
 
   // Investment-type accounts (Plaid-linked or manually added) — same row format as positions.
   const acctRows=IA2.slice().sort((a,b)=>(+b.bal||0)-(+a.bal||0)).map(a=>{
-    const kEsc=esc(_acctIdKey(a)).replace(/'/g,"\\'");
+    const kEsc=_attrArg(_acctIdKey(a));
     const idx=(APP.manualAccounts||[]).findIndex(x=>x.id===a.id);
     const open=a.manual?`openManualAccount(${idx})`:`openAccountEditor('${kEsc}')`;
     const pct=pctOf(a.bal);
@@ -4798,7 +4798,7 @@ function wwCategoryStep(){
   return Object.keys(cats).map(cat=>{
     const items=cats[cat]; const unlocked=items.filter(w=>widgetUnlocked(w)).length;
     const intent=intents[cat]?`${intents[cat]} · `:'';
-    return `<div class="ww-card" onclick="wwPickCat('${cat.replace(/'/g,"\\'")}')">
+    return `<div class="ww-card" onclick="wwPickCat('${_attrArg(cat)}')">
       <div class="ww-card-icon">${icons[cat]||'🧩'}</div>
       <div style="flex:1;min-width:0"><div class="ww-card-name">${cat}</div>
       <div class="ww-card-desc">${intent}${items.length} widget${items.length!==1?'s':''}${unlocked<items.length?` · ${unlocked} unlocked`:''}</div></div>
@@ -4887,14 +4887,14 @@ function wsDataStep(){
   if(isCat){
     const labels=allCategoryLabels(); const sel=(c.query.categories||[]);
     queryHtml=`<div class="ws-section-label">Include categories <span class="ws-hint">(none = all)</span></div>
-      <div class="ws-chipwrap">${labels.map(l=>`<button class="ws-chip${sel.includes(l)?' active':''}" onclick="wsToggleQuery('categories','${l.replace(/'/g,"\\'")}')">${l}</button>`).join('')}</div>
+      <div class="ws-chipwrap">${labels.map(l=>`<button class="ws-chip${sel.includes(l)?' active':''}" onclick="wsToggleQuery('categories','${_attrArg(l)}')">${l}</button>`).join('')}</div>
       <div class="ws-section-label">Amount filter</div>
       <div class="ws-inline"><label>Min $<input type="number" value="${c.query.minAmt||''}" oninput="wsQueryNum('minAmt',this.value)"></label>
       <label>Max $<input type="number" value="${c.query.maxAmt||''}" oninput="wsQueryNum('maxAmt',this.value)"></label></div>`;
   } else {
     const accts=allAccountNames(); const sel=(c.query.accounts||[]);
     queryHtml=`<div class="ws-section-label">Include accounts <span class="ws-hint">(none = all)</span></div>
-      <div class="ws-chipwrap">${accts.map(a=>`<button class="ws-chip${sel.includes(a)?' active':''}" onclick="wsToggleQuery('accounts','${a.replace(/'/g,"\\'")}')">${a}</button>`).join('')}</div>`;
+      <div class="ws-chipwrap">${accts.map(a=>`<button class="ws-chip${sel.includes(a)?' active':''}" onclick="wsToggleQuery('accounts','${_attrArg(a)}')">${a}</button>`).join('')}</div>`;
   }
   const topN=['top_categories','budget_doughnut','sankey'].includes(_ws.type)?`<div class="ws-section-label">Show top <b>${c.topN}</b> items</div><input type="range" min="2" max="12" value="${c.topN}" style="width:100%;accent-color:var(--green)" oninput="wsSet('topN',+this.value);gg('wsTopnLbl')&&(gg('wsTopnLbl').textContent=this.value)">`:'';
   return `<div class="ws-section-label">Date range</div><div class="ws-chipwrap">${tfChips}</div>
@@ -5791,7 +5791,7 @@ function billsWidgetBody(w){
   const _payCash=payAccts.filter(a=>a.type==='depository').sort((x,y)=>Math.abs(y.bal||0)-Math.abs(x.bal||0));
   const _payCard=payAccts.filter(a=>a.type==='credit').sort((x,y)=>Math.abs(y.bal||0)-Math.abs(x.bal||0));
   const _acctById={}; payAccts.forEach(a=>{ _acctById[a.id]=a; });
-  const rows=sorted.map(({b,okey,paid,dueStr})=>{ const key=billKey(b).replace(/'/g,"\\'"); const okeyEsc=okey.replace(/'/g,"\\'"); const diff=(b.pay||0)-(b.min||0);
+  const rows=sorted.map(({b,okey,paid,dueStr})=>{ const key=_attrArg(billKey(b)); const okeyEsc=_attrArg(okey); const diff=(b.pay||0)-(b.min||0);
     const pa=b.payAcct?_acctById[b.payAcct]:null;
     const _pv=occ[okey]; const paidAt=(typeof _pv==='number' && _pv>1e12)?_pv:null;
     const _tag=(paid&&pa)?(pa.type==='credit'
@@ -5800,11 +5800,11 @@ function billsWidgetBody(w){
     const acctSel=payAccts.length?`<div class="bill-acctrow"><label class="bill-acctlbl">${paid?'Paid from':'Pay from'}</label><select class="bill-acct-sel" onclick="event.stopPropagation()" onchange="setBillPayAcct('${key}',this.value)"><option value="">— account —</option>${_payCash.map(a=>`<option value="${esc(a.id)}"${b.payAcct===a.id?' selected':''}>${esc(a.name)}${a.manual?' (manual)':''}</option>`).join('')}${_payCard.length?`<optgroup label="Credit cards">${_payCard.map(a=>`<option value="${esc(a.id)}"${b.payAcct===a.id?' selected':''}>💳 ${esc(a.name)}</option>`).join('')}</optgroup>`:''}</select>${_tag}</div>`:'';
     const isLoan=['HM','CAR','LOAN'].includes(b.cat);
     const miss=[]; if(isLoan && !b.manual){ if(!(b.apr>0)) miss.push('APR'); if(b.estMin) miss.push('payment'); if(b.dueEst) miss.push('due date'); }
-    const fillPrompt=miss.length?`<button class="bill-fill" onclick="event.stopPropagation();openAccountEditor('${esc(b.name).replace(/'/g,"\\'")}')" title="Plaid doesn't send these for this loan — add them once and they stick everywhere">＋ Add ${miss.join(' · ')}</button>`:'';
+    const fillPrompt=miss.length?`<button class="bill-fill" onclick="event.stopPropagation();openAccountEditor('${_attrArg(b.name)}')" title="Plaid doesn't send these for this loan — add them once and they stick everywhere">＋ Add ${miss.join(' · ')}</button>`:'';
     return `<div class="bill-row${paid?' paid':''}">
       <button class="bill-check" onclick="event.stopPropagation();billsToggleOcc('${okeyEsc}','${w.uid}')" title="${paid?'Mark unpaid':'Mark paid'}">${paid?'✓':''}</button>
       <div class="bill-info">
-        <div class="bill-nm">${esc(b.name)}${b.manual?`<span class="bill-edit" role="button" onclick="event.stopPropagation();openManualBill(${(APP.manualBills||[]).findIndex(x=>x.name===b.name&&x.cat===b.cat)})" title="Edit">✎</span>`:`<span class="bill-edit" role="button" onclick="event.stopPropagation();openAccountEditor('${esc(b.name).replace(/'/g,"\\'")}')" title="Edit min payment / due day / promo">✎</span>`}</div>
+        <div class="bill-nm">${esc(b.name)}${b.manual?`<span class="bill-edit" role="button" onclick="event.stopPropagation();openManualBill(${(APP.manualBills||[]).findIndex(x=>x.name===b.name&&x.cat===b.cat)})" title="Edit">✎</span>`:`<span class="bill-edit" role="button" onclick="event.stopPropagation();openAccountEditor('${_attrArg(b.name)}')" title="Edit min payment / due day / promo">✎</span>`}</div>
         <div class="bill-sub">${b.once?`<span style="color:var(--blue);font-weight:700">one-time</span> · ${(function(){const d=_dkParse(b.once);return d?d.toLocaleDateString('en-US',{month:'short',day:'numeric'}):esc(b.once);})()}`:(b.dueEst?'<span style="color:var(--muted)">due date not set</span>':'due '+ord(b.due))}${b.apr?` · ${b.apr.toFixed(1)}%`:''}${b.promo?` · ${esc(b.promo)}`:''}${_billPayoffLabel(b)}</div>
         <div class="bill-amts">
           <span class="bill-min">Min <b>${fmtK(b.min)}</b>${b.estMin?' · <span style="color:var(--amber)" title="No minimum reported by the bank — estimated at ~2% of balance. Tap the pencil to set the real one.">est.</span>':(live&&!b.manual?' · Plaid':'')}</span>
@@ -5851,7 +5851,7 @@ function promoTrackerBody(w){
         <div class="promo-side">
           <div class="promo-days" style="color:${color}">${daysLabel}</div>
           ${p.bal>0?`<div class="promo-warn">${willClear?'<span style="color:var(--green)">on track ✓</span>':'+'+fmtK(p.monthlyAfter)+'/mo if not paid'}</div>`:''}
-          <button class="promo-edit" onclick="event.stopPropagation();openPromoEditor('${esc(p.name).replace(/'/g,"\\\\'")}')">edit</button>
+          <button class="promo-edit" onclick="event.stopPropagation();openPromoEditor('${_attrArg(p.name)}')">edit</button>
         </div>
       </div>`;
     }).join('');
@@ -5860,7 +5860,7 @@ function promoTrackerBody(w){
   const head = urgent.length?`<div class="promo-alert">⚠️ ${urgent.length} promo${urgent.length>1?'s':''} expiring within 45 days — pay these down first.</div>`:'';
   // Cards WITHOUT a promo date — let the user attach one (works for live Plaid cards too)
   const noPromo=engBills().filter(b=>b.cat==='CC' && Math.abs(b.bal||0)>0.5 && !b.promoEnd);
-  const chips=noPromo.map(b=>`<button class="promo-add-chip" onclick="event.stopPropagation();openPromoEditor('${esc(b.name).replace(/'/g,"\\\\'")}')">+ ${esc(b.name)}</button>`).join('');
+  const chips=noPromo.map(b=>`<button class="promo-add-chip" onclick="event.stopPropagation();openPromoEditor('${_attrArg(b.name)}')">+ ${esc(b.name)}</button>`).join('');
   const addBtn=`<button class="promo-add-chip" style="background:var(--surface3);border-color:var(--border);color:var(--muted)" onclick="event.stopPropagation();openManualCard()">➕ Add a card</button>`;
   const addHint = noPromo.length
     ? `Attach a 0% promo end date to a card${plaidHasLiab()?' (works for your live cards too)':''}:`
@@ -5966,7 +5966,7 @@ function openAccountEditor(ref){
   const isCredit = type==='credit' || bill.cat==='CC';
   const isLoan   = type==='loan'   || ['HM','CAR','LOAN'].includes(bill.cat);
   const isInvest = !isCredit && !isLoan;   // savings/HYSA/investment — all can carry a planned contribution
-  const nEsc=esc(name).replace(/'/g,"\\'");
+  const nEsc=_attrArg(name);
   gg('manualModal').style.display='flex';
   gg('manualTitle').textContent='Edit account';
   gg('manualSub').textContent=esc(cd.nickname||name)+(acct&&acct.mask?' ···'+acct.mask:'');
@@ -6030,7 +6030,7 @@ function clearAccountEdits(name){ if(APP.cardData){ delete APP.cardData[_cardKey
    contribution lives in cardData under 'pos:<name>' and feeds engPlannedContrib. ── */
 function openPosAcctEditor(name){
   const cd=(APP.cardData||{})['pos:'+String(name).toLowerCase()]||{};
-  const nEsc=esc(name).replace(/'/g,"\\'");
+  const nEsc=_attrArg(name);
   gg('manualModal').style.display='flex';
   gg('manualTitle').textContent='Edit investment account';
   gg('manualSub').textContent='Grouped from your portfolio positions.';
@@ -6067,8 +6067,8 @@ function _openPromoEditorLegacy(name){
     </div>
     <div class="ws-hint">These stay attached to this card even when balances refresh live from your bank.</div>
     <div class="mf-actions">
-      <button class="btn danger-btn" onclick="clearPromo('${esc(name).replace(/'/g,"\\\\'")}')">Clear promo</button>
-      <button class="btn primary" onclick="savePromo('${esc(name).replace(/'/g,"\\\\'")}')">Save</button>
+      <button class="btn danger-btn" onclick="clearPromo('${_attrArg(name)}')">Clear promo</button>
+      <button class="btn primary" onclick="savePromo('${_attrArg(name)}')">Save</button>
     </div>`;
 }
 function savePromo(name){
@@ -6141,7 +6141,7 @@ function openSpendCatPicker(uid){
   gg('manualSub').textContent='Uncheck any category to leave it out of Current Spending (e.g. Work).';
   gg('manualBody').innerHTML = (labels.length?labels.map(l=>{
     const v=(unfiltered.find(r=>r.label===l)||{}).value||0;
-    const le=esc(l).replace(/'/g,"\\'");
+    const le=_attrArg(l);
     return `<label class="scp-row"><input type="checkbox" ${hidden.has(l)?'':'checked'} onchange="spendCatToggle('${uid}','${le}',this.checked)"><span class="scp-nm">${esc(l)}</span><span class="scp-v">${fmtK(v)}</span></label>`;
   }).join(''):'<div class="ws-hint">No spending categories yet.</div>') + `<div class="mf-actions"><span></span><button class="btn primary" onclick="closeManual()">Done</button></div>`;
 }
@@ -6189,7 +6189,7 @@ function acctCatEditorRender(){
   const groups=ACCOUNT_CATEGORIES.filter(c=>byCat[c.id]&&byCat[c.id].length).map(c=>{
     const rows=byCat[c.id].map(a=>{
       const k=_acctKey(a), auto=!ov[k];
-      const kEsc=esc(k).replace(/'/g,"\\'"), nEsc=esc(a.name||'Account').replace(/'/g,"\\'");
+      const kEsc=_attrArg(k), nEsc=_attrArg(a.name||'Account');
       return `<button type="button" class="ace-row ace-tap" onclick="acctCatPick('${kEsc}','${nEsc}')">
         <span class="ace-meta"><span class="ace-nm">${esc(a.name||'Account')}</span><span class="ace-sub">${esc(a.institution||a.subtype||a.type||'')}${auto?' · auto-detected':' · custom'}</span></span>
         <span class="ace-bal">${fmtK(a.bal)}</span>
@@ -6230,7 +6230,7 @@ function debtSummaryBody(w){
   const goal=_goals().find(x=>x&&x.metric===metric&&!x.completed);
   const hi=g.focusItems.slice().sort((a,b)=>(b.apr||0)-(a.apr||0))[0];
   const focusLabel=focusIsCC?'Credit-card payoff':'Focus payoff';
-  const row=(b)=>{ const inF=_debtInFocus(b); const k=String(_debtKey(b)).replace(/'/g,"\\'");
+  const row=(b)=>{ const inF=_debtInFocus(b); const k=_attrArg(_debtKey(b));
     return `<div class="dbt-row"><button class="dbt-star${inF?' on':''}" title="${inF?'In your focus payoff — tap to drop':'Tap to add to your focus payoff'}" onclick="event.stopPropagation();toggleDebtFocus('${w.uid}','${k}')">${inF?'★':'☆'}</button>`
       +`<span class="dbt-ic">${_debtCatIcon(b)}</span>`
       +`<span class="dbt-nm">${esc(b.name)}${b.apr?`<i class="dbt-apr">${b.apr.toFixed(1)}% APR</i>`:''}</span>`
@@ -7044,14 +7044,14 @@ function cfpMount(w){
         const runColor=run<0?'var(--red)':run<200?'var(--amber)':'var(--text)';
         const runBadge=`<span class="cfp-ev-run" style="color:${runColor}">${run<0?'-':''}${fmtK(Math.abs(run))}</span>`;
         if(e.type==='income'){
-          const ik=String(e.key||'').replace(/'/g,"\\'");
+          const ik=_attrArg(e.key||'');
           return `<div class="cfp-ev income${isOff?' cfp-ev-off':''}"><input type="checkbox" class="cfp-ev-chk" ${isOff?'':'checked'} onclick="event.stopPropagation();cfpToggleIncome('${ik}','${w.uid}')" title="Uncheck if this deposit won't actually land — it drops out of every projection"><span class="cfp-ev-nm">${esc(e.name)}</span><span class="cfp-ev-amt" style="color:${isOff?'var(--muted)':'var(--green)'}">${isOff?'skipped':'+'+fmtK(e.amt)}</span>${runBadge}</div>`;
         }
         if(e.type==='savings'){
           return `<div class="cfp-ev savings"><span class="cfp-ev-ind"></span><span class="cfp-ev-nm">💰 ${esc(e.name)}</span><span class="cfp-ev-amt" style="color:var(--blue)">-${fmtK(Math.abs(e.amt))}</span>${runBadge}</div>`;
         }
-        const key=(e.key||'').replace(/'/g,"\\'");
-        const okey=String(e.okey||'').replace(/'/g,"\\'");
+        const key=_attrArg(e.key||'');
+        const okey=_attrArg(e.okey||'');
         const chk=`<input type="checkbox" class="cfp-ev-chk" ${isOff?'checked':''} onclick="event.stopPropagation();cfpToggleBillPaid('${okey}','${w.uid}')" title="${isOff?'Paid — drops from this cycle; next month stays':'Mark this one paid ahead'}">`;
         const right=isOff
           ? `<span class="cfp-ev-amt" style="color:var(--muted)">paid</span>`
@@ -7384,7 +7384,7 @@ function acctWidgetBody(w){
     const open=_acctOpen[w.uid]===a.id;
     const raw=a.rawName||a.name;
     const cd=_cdFor(a);
-    const kEsc=esc(_acctIdKey(a)).replace(/'/g,"\\'");
+    const kEsc=_attrArg(_acctIdKey(a));
     const editBtn = a.manual
       ? `<button class="bill-edit" onclick="event.stopPropagation();openManualAccount(${(APP.manualAccounts||[]).findIndex(x=>x.id===a.id)})" title="Edit">\u270E</button>`
       : `<button class="bill-edit" onclick="event.stopPropagation();openAccountEditor('${kEsc}')" title="Edit details">\u270E</button>`;
@@ -7417,7 +7417,7 @@ function acctWidgetBody(w){
   // asset) \u2014 same grouping engine as net worth / invest totals (engPosOnlyAccounts).
   const posEntries=engPosOnlyAccounts();
   const posRow=(p)=>{
-    const nEsc=esc(p.name).replace(/'/g,"\\'");
+    const nEsc=_attrArg(p.name);
     return `<div class="acct-chip" onclick="openPosAcctEditor('${nEsc}')">
         <span class="acct-ic">\ud83d\udcc8</span>
         <div class="acct-meta"><div class="acct-nm">${esc(p.name)}<button class="bill-edit" onclick="event.stopPropagation();openPosAcctEditor('${nEsc}')" title="Edit details">\u270e</button></div><div class="acct-sub">portfolio positions \u00b7 investment${p.contrib?` \u00b7 <span style="color:var(--green)">\ud83d\udcb5 ${fmtK(p.contrib)}/mo planned</span>`:''}</div></div>
@@ -7708,7 +7708,7 @@ function dpRenderMortPI(){
   const mort=engBills().filter(b=>b.bal<0 && b.cat==='HM');
   el.innerHTML=mort.map(b=>{
     const full=Math.round(b.min||b.pay||0);
-    const nm=String(b.name).replace(/'/g,"\\'");
+    const nm=_attrArg(b.name);
     return `<div class="dp-pi-row"><span class="dp-pi-lbl">${esc(b.name)} · P&amp;I <i>(excl. escrow)</i></span>
       <input type="number" class="dp-pi-in" value="${+b.pi>0?b.pi:''}" placeholder="full pmt ${full}" min="0" step="10" onclick="event.stopPropagation()" oninput="dpSetPI('${nm}', this.value)"></div>`;
   }).join('')||'<div class="ww-card-desc" style="padding:2px 0">No mortgage / HELOC to itemize.</div>';
@@ -8847,7 +8847,7 @@ async function renderConnectedData(){
     const ups=_collectImports();
     box.innerHTML = ups.length ? ups.map(im=>{
       const icon=im.kind==='investment'?'📈':im.kind==='bill'?'🧾':im.kind==='score'?'📊':im.kind==='card'?'💳':'📄';
-      return `<div class="cd-row"><div class="cd-meta"><div class="cd-nm">${icon} ${esc(im.label||'Upload')}</div><div class="cd-info">${esc(im.summary||'')}</div></div><button class="cd-rm" onclick="removeImport('${esc(im.id)}')">Remove</button></div>`;
+      return `<div class="cd-row"><div class="cd-meta"><div class="cd-nm">${icon} ${esc(im.label||'Upload')}</div><div class="cd-info">${esc(im.summary||'')}</div></div><button class="cd-rm" onclick="removeImport('${_attrArg(im.id)}')">Remove</button></div>`;
     }).join('') : '<div class="ws-hint">No uploaded documents yet. Use “📄 Upload statement” to add one.</div>';
     return;
   }
@@ -8855,7 +8855,7 @@ async function renderConnectedData(){
   try{
     const d=await _fetchJSON('/api/items?ts='+Date.now());   // cache-bust so removals reflect immediately
     if(!d||!Array.isArray(d.items)){ box.innerHTML='<div class="ws-hint">Connect a bank to see it here.</div>'; return; }
-    box.innerHTML = d.items.length ? d.items.map(it=>`<div class="cd-row" id="cdbank_${esc(it.itemId)}"><div class="cd-meta"><div class="cd-nm">🏦 ${esc(it.institutionName||'Bank')}</div><div class="cd-info">${it.addedAt?('linked '+new Date(it.addedAt).toLocaleDateString()):'linked'}</div></div><button class="cd-rm" onclick="removeBank('${esc(it.itemId)}','${esc((it.institutionName||'this bank').replace(/'/g,''))}')">Remove</button></div>`).join('') : '<div class="ws-hint">No banks connected yet.</div>';
+    box.innerHTML = d.items.length ? d.items.map(it=>`<div class="cd-row" id="cdbank_${esc(it.itemId)}"><div class="cd-meta"><div class="cd-nm">🏦 ${esc(it.institutionName||'Bank')}</div><div class="cd-info">${it.addedAt?('linked '+new Date(it.addedAt).toLocaleDateString()):'linked'}</div></div><button class="cd-rm" onclick="removeBank('${_attrArg(it.itemId)}','${_attrArg(it.institutionName||'this bank')}')">Remove</button></div>`).join('') : '<div class="ws-hint">No banks connected yet.</div>';
   }catch(e){ box.innerHTML='<div class="ws-hint">Could not load connected banks.</div>'; }
 }
 async function removeBank(itemId, name){
@@ -10668,8 +10668,8 @@ function _briefBillsStepBody(){
   const bds=_billsDueSoon(); _briefBills=bds;
   if(!bds.length) return `<div class="brief-allclear">✅ Nothing due in the next 7 days — you're ahead of it.</div>`;
   const rows=bds.map((b)=>{
-    const key=billKey(b).replace(/'/g,"\\'");
-    const okey=String(b.okey||'').replace(/'/g,"\\'");
+    const key=_attrArg(billKey(b));
+    const okey=_attrArg(b.okey||'');
     const due=b.inDays===0?'due today':'in '+b.inDays+'d';
     return `<div class="brief-txn"><div class="brief-txn-main"><div class="brief-txn-nm">${esc(b.name)}</div><div class="brief-txn-meta">${due}${b.apr?' · '+b.apr.toFixed(1)+'%':''}</div></div><div class="brief-pay"><span>$</span><input type="number" min="0" step="10" value="${Math.round(b.pay||0)}" onclick="event.stopPropagation()" oninput="setBillPay('${key}',this.value)"></div><button class="brief-confirm" onclick="event.stopPropagation();briefPayBill('${okey}')">Mark paid ✓</button></div>`;
   }).join('');
@@ -10767,7 +10767,7 @@ function _briefRelinkStepBody(){
   const rl=_relinkErrors();
   if(!rl.length) return `<div class="brief-allclear">✅ All your banks are connected.</div>`;
   return `<div class="brief-mini"><div class="brief-actdesc">Banks expire access every so often — it's normal. Sign back in to keep the data flowing:</div>`
-    + rl.map(e=>`<div class="brief-txn"><div class="brief-txn-main"><div class="brief-txn-nm">🏦 ${esc(e.institution||'Bank')}</div><div class="brief-txn-meta">login expired</div></div><button class="brief-confirm" onclick="event.stopPropagation();briefReconnect('${esc(String(e.itemId)).replace(/'/g,"\\'")}')">Reconnect</button></div>`).join('')
+    + rl.map(e=>`<div class="brief-txn"><div class="brief-txn-main"><div class="brief-txn-nm">🏦 ${esc(e.institution||'Bank')}</div><div class="brief-txn-meta">login expired</div></div><button class="brief-confirm" onclick="event.stopPropagation();briefReconnect('${_attrArg(e.itemId)}')">Reconnect</button></div>`).join('')
     + `</div>`;
 }
 function briefReconnect(itemId){ briefFinish(); setTimeout(()=>{ try{ openLinkHandler(itemId); }catch(e){} }, 220); }
