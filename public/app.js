@@ -5573,15 +5573,15 @@ function zbWidgetBody(w){
   const billsTip=sc.coveredPay>0
     ? `Every recurring bill's payment — rent, utilities, loans, card payments — MINUS card payments already covered by your envelopes (so card spend isn't double-counted). ${fmtK(rawBills)} in bills − ${fmtK(sc.coveredPay)} covered by envelopes = ${fmtK(bills)}.${sc.extraPaydown>0?` (${fmtK(sc.extraPaydown)} of card paydown beyond your envelopes stays here as real debt reduction.)`:''}`
     : `Every recurring bill's payment — rent, utilities, loans, card payments. Link an envelope to a card (the 💳 selector) and that card's payment drops out of here so you don't budget the same spend twice.`;
-  const availTip=`What's free to divide among envelopes after fixed bills: income − bills. Assign envelopes until 'To budget' reaches $0. ${fmtK(income)} − ${fmtK(bills)} = ${fmtK(afterBills)}.`;
-  const envTip=`Sum of every category envelope you set below — the money you're assigning to spending buckets this month.`;
-  const budgetTip=`Available to assign − envelopes: what's still free (positive) or how far you've over-assigned (negative). ${fmtK(afterBills)} available − ${fmtK(envTotal)} envelopes = ${left>=0?'':'-'}${fmtK(Math.abs(left))}.`;
+  const availTip=`Your total pool for category envelopes: income − fixed bills. This is fixed — it doesn't shrink as you assign. Keep 'Assigned to envelopes' at or under it; 'To budget' shows what's left. ${fmtK(income)} − ${fmtK(bills)} = ${fmtK(afterBills)}.`;
+  const envTip=`Sum of every category envelope you set below — the money you've assigned to spending buckets this month. Compare it to 'Available for envelopes'.`;
+  const budgetTip=`What's still free to assign (positive) or how far you've over-assigned (negative): the envelope pool minus what you've assigned. ${fmtK(afterBills)} available − ${fmtK(envTotal)} assigned = ${left>=0?'':'-'}${fmtK(Math.abs(left))}.`;
   return `<div class="zb-wrap">
     ${monthNav}
     <div class="zb-head">
       <div class="zb-hstat" title="${esc(incomeTip)}"><span>Monthly income</span><b>${fmtK(income)}</b></div>
       <div class="zb-hstat" title="${esc(billsTip)}"><span>Bills (fixed)</span><b style="color:var(--red)">${fmtK(bills)}</b></div>
-      <div class="zb-hstat zb-h-avail" title="${esc(availTip)}"><span>Available to assign</span><b style="color:var(--green)">${fmtK(afterBills)}</b></div>
+      <div class="zb-hstat zb-h-avail" title="${esc(availTip)}"><span>Available for envelopes</span><b style="color:var(--green)">${fmtK(afterBills)}</b></div>
       <div class="zb-hstat zb-h-env" title="${esc(envTip)}"><span>Assigned to envelopes</span><b>${fmtK(envTotal)}</b></div>
       <div class="zb-hstat zb-tobudget" title="${esc(budgetTip)}"><span>To budget</span><b style="color:${leftColor}">${left>=0?'':'-'}${fmtK(Math.abs(left))} ${Math.abs(left)<1?'✓ balanced':left>0?'left':'over'}</b></div>
     </div>
