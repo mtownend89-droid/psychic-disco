@@ -5514,7 +5514,10 @@ function engSpendingCards(){
   if(names.size) engBills().forEach(bill=>{
     if(!names.has(bill.name)) return;
     const env=byCard[bill.name]||0, pay=bill.pay||0;
-    coveredPay+=Math.min(pay,env); extraPaydown+=Math.max(0,pay-env);
+    // Cover the FULL envelope even if it exceeds the card's current payment — you budget to charge
+    // (and pay off) that amount, so the whole envelope leaves fixed bills. Only a payment ABOVE the
+    // envelope is extra paydown that stays fixed.
+    coveredPay+=env; extraPaydown+=Math.max(0,pay-env);
   });
   return {names, byCard, coveredPay, extraPaydown};
 }
@@ -5534,7 +5537,7 @@ function zbMonthNav(uid,delta){
 function zbWidgetBody(w){
   const income=engMonthlyIncome();
   const sc=engSpendingCards();
-  const bills=engMonthlyBills()-sc.coveredPay;   // spending-card payments live in the envelopes; extra paydown stays fixed
+  const bills=Math.max(0, engMonthlyBills()-sc.coveredPay);   // spending-card payments live in the envelopes; extra paydown stays fixed
   const buckets=_zbBuckets();
   const ccNames=Array.from(new Set(engBills().filter(b=>b.cat==='CC').map(b=>b.name)));
   const _bm=_budMonth[w.uid]||0;   // which calendar month is being viewed/edited
@@ -5570,14 +5573,16 @@ function zbWidgetBody(w){
   const billsTip=sc.coveredPay>0
     ? `Every recurring bill's payment — rent, utilities, loans, card payments — MINUS card payments already covered by your envelopes (so card spend isn't double-counted). ${fmtK(rawBills)} in bills − ${fmtK(sc.coveredPay)} covered by envelopes = ${fmtK(bills)}.${sc.extraPaydown>0?` (${fmtK(sc.extraPaydown)} of card paydown beyond your envelopes stays here as real debt reduction.)`:''}`
     : `Every recurring bill's payment — rent, utilities, loans, card payments. Link an envelope to a card (the 💳 selector) and that card's payment drops out of here so you don't budget the same spend twice.`;
+  const availTip=`What's free to divide among envelopes after fixed bills: income − bills. Assign envelopes until 'To budget' reaches $0. ${fmtK(income)} − ${fmtK(bills)} = ${fmtK(afterBills)}.`;
   const envTip=`Sum of every category envelope you set below — the money you're assigning to spending buckets this month.`;
-  const budgetTip=`Income − fixed bills − envelopes: what's still free to assign (positive) or how far you've over-assigned (negative). ${fmtK(income)} income − ${fmtK(bills)} bills − ${fmtK(envTotal)} envelopes = ${left>=0?'':'-'}${fmtK(Math.abs(left))}. You have ${fmtK(afterBills)} to divide among envelopes after bills.`;
+  const budgetTip=`Available to assign − envelopes: what's still free (positive) or how far you've over-assigned (negative). ${fmtK(afterBills)} available − ${fmtK(envTotal)} envelopes = ${left>=0?'':'-'}${fmtK(Math.abs(left))}.`;
   return `<div class="zb-wrap">
     ${monthNav}
     <div class="zb-head">
       <div class="zb-hstat" title="${esc(incomeTip)}"><span>Monthly income</span><b>${fmtK(income)}</b></div>
       <div class="zb-hstat" title="${esc(billsTip)}"><span>Bills (fixed)</span><b style="color:var(--red)">${fmtK(bills)}</b></div>
-      <div class="zb-hstat" title="${esc(envTip)}"><span>Assigned to envelopes</span><b>${fmtK(envTotal)}</b></div>
+      <div class="zb-hstat zb-h-avail" title="${esc(availTip)}"><span>Available to assign</span><b style="color:var(--green)">${fmtK(afterBills)}</b></div>
+      <div class="zb-hstat zb-h-env" title="${esc(envTip)}"><span>Assigned to envelopes</span><b>${fmtK(envTotal)}</b></div>
       <div class="zb-hstat zb-tobudget" title="${esc(budgetTip)}"><span>To budget</span><b style="color:${leftColor}">${left>=0?'':'-'}${fmtK(Math.abs(left))} ${Math.abs(left)<1?'✓ balanced':left>0?'left':'over'}</b></div>
     </div>
     <div class="zb-bar"><div class="zb-bar-fill" style="width:${Math.min(100,Math.round(assigned/Math.max(income,1)*100))}%;background:${left<0?'var(--red)':'var(--pos)'}"></div></div>
@@ -5623,9 +5628,9 @@ function zbSetVal(i,val,uid,from){
   const sliders=card.querySelectorAll('.zb-slider'), inputs=card.querySelectorAll('.zb-bk-input');
   if(from!=='slider' && sliders[i]){ if(parseInt(sliders[i].max)<b[i].amt) sliders[i].max=Math.ceil(b[i].amt/100)*100; sliders[i].value=b[i].amt; }
   if(from!=='input' && inputs[i] && document.activeElement!==inputs[i]) inputs[i].value=b[i].amt;
-  const income=engMonthlyIncome(), bills=engMonthlyBills()-engSpendingCards().coveredPay;
+  const income=engMonthlyIncome(), bills=Math.max(0, engMonthlyBills()-engSpendingCards().coveredPay);
   const assigned=b.reduce((s,z)=>s+z.amt,0)+bills; const left=income-assigned;
-  const envEl=card.querySelector('.zb-head .zb-hstat:nth-child(3) b'); if(envEl) envEl.textContent=fmtK(b.reduce((s,z)=>s+z.amt,0));
+  const envEl=card.querySelector('.zb-head .zb-h-env b'); if(envEl) envEl.textContent=fmtK(b.reduce((s,z)=>s+z.amt,0));
   const tb=card.querySelector('.zb-tobudget b');
   if(tb){ tb.textContent=(left>=0?'':'-')+fmtK(Math.abs(left))+' '+(Math.abs(left)<1?'✓ balanced':left>0?'left':'over'); tb.style.color=Math.abs(left)<1?'var(--green)':left>0?'var(--amber)':'var(--red)'; }
   const bar=card.querySelector('.zb-bar-fill');
