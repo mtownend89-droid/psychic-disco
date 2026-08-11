@@ -5537,6 +5537,26 @@ function _cardSpend30(accountId){
   const cut=new Date(engRange(30).start).toISOString().slice(0,10);   // this month (calendar) or last 30 days (rolling)
   return allTxns.filter(t=>t.account_id===accountId&&t.date>=cut&&t.amount>0&&!_txnExcludedFromSpend(t)).reduce((s,t)=>s+t.amount,0);
 }
+// Actual purchases on a card (by its bill name) for a calendar month offset (0=this month). Returns
+// null for a manual/unlinked card with no transactions. Mirrors engCategoryBreakdownMonth's range.
+function _cardSpendMonth(cardName, monthOffset){
+  if(!dataLoaded) return null;
+  const ids=new Set();
+  engBills().forEach(b=>{ if(b.cat==='CC' && b.name===cardName && b.account_id) ids.add(b.account_id); });
+  if(!ids.size) (allAccts||[]).forEach(a=>{ if((a.name||'')===cardName && a.account_id) ids.add(a.account_id); });
+  if(!ids.size) return null;   // manual/unlinked card — no transaction data to compare against
+  monthOffset=monthOffset||0;
+  const now=new Date();
+  const start=new Date(now.getFullYear(), now.getMonth()+monthOffset, 1);
+  const end=new Date(now.getFullYear(), now.getMonth()+monthOffset+1, 1);
+  let sum=0;
+  (allTxns||[]).forEach(t=>{
+    if(!ids.has(t.account_id) || !(t.amount>0) || _txnExcludedFromSpend(t)) return;
+    const d=new Date((t.date||'')+'T12:00:00'); if(d<start || d>=end) return;
+    sum+=t.amount;
+  });
+  return sum;
+}
 // Budget widget month picker: per-widget calendar-month offset (0=this month, -1=last, +1=next).
 let _budMonth={};
 function zbMonthNav(uid,delta){
@@ -5573,8 +5593,22 @@ function zbWidgetBody(w){
       <div class="ws-hint" style="margin:0 0 7px">Add a category to budget:</div>
       <div class="zb-chips">${avail.map(c=>`<button class="zb-chip" onclick="event.stopPropagation();zbAddCat('${c.id}','${w.uid}')"><span class="zb-dot" style="background:${c.color}"></span>${esc(c.label)}</button>`).join('')}</div>
     </div>` : '';
-  const paydownSection = linkedCards.length ? `<div class="zb-section-label" title="A fixed amount you pay on a card ON TOP of the spending you've budgeted in envelopes — e.g. chipping away at an old balance. It stays in Bills (fixed) as real debt paydown; your envelopes still drive the budget.">Extra card paydown <span class="ws-hint" style="margin:0">fixed · on top of budgeted spending</span></div>
-    <div class="zb-paydowns">${linkedCards.map(c=>{ const pd=_cardPaydown(c); return `<div class="zb-pd-row"><span class="zb-pd-nm">💳 ${esc(c)}</span><div class="zb-pd-edit"><span>$</span><input type="number" min="0" step="10" value="${pd||''}" placeholder="0" onclick="event.stopPropagation()" onchange="zbSetPaydown('${_attrArg(c)}',this.value)" aria-label="Extra monthly paydown for ${esc(c)}"></div></div>`; }).join('')}</div>` : '';
+  const cardEnv=_cardEnvelopeTotals();
+  const perCardRows=linkedCards.map(c=>{
+    const planned=cardEnv[c]||0;                 // what you budgeted to charge on this card (its envelopes)
+    const actual=_cardSpendMonth(c,_bm);          // actual purchases on it this month (null if manual/unlinked)
+    const pd=_cardPaydown(c);
+    const drift=(actual!=null && planned>0)?actual-planned:null;
+    const actLbl=(actual==null)
+      ? `<span class="zb-cs-na">no transaction data</span>`
+      : `${fmtK(actual)} spent`+((drift!=null && Math.abs(drift)>=1)?` · <b style="color:${drift>0?'var(--red)':'var(--green)'}">${drift>0?fmtK(drift)+' over':fmtK(-drift)+' under'}</b>`:'');
+    return `<div class="zb-cs-row">
+        <div class="zb-cs-main"><div class="zb-cs-nm">💳 ${esc(c)}</div><div class="zb-cs-sub">planned ${fmtK(planned)} · ${actLbl}</div></div>
+        <div class="zb-cs-pd" title="Fixed extra paydown on top of budgeted spending — stays in Bills (fixed) as debt reduction"><span>+ paydown</span><div class="zb-pd-edit"><span>$</span><input type="number" min="0" step="10" value="${pd||''}" placeholder="0" onclick="event.stopPropagation()" onchange="zbSetPaydown('${_attrArg(c)}',this.value)" aria-label="Extra monthly paydown for ${esc(c)}"></div></div>
+      </div>`;
+  }).join('');
+  const paydownSection = linkedCards.length ? `<div class="zb-section-label" title="For each card you've assigned envelopes to: what you planned to charge (its envelopes) vs what you've actually spent on it this month, plus any fixed extra paydown. 'Over' just means you charged more on that card than budgeted (e.g. an occasional cross-category purchase) — it doesn't change your budget totals, which are envelope-driven.">Per card · this month <span class="ws-hint" style="margin:0">planned charges vs actual · extra paydown</span></div>
+    <div class="zb-cardstats">${perCardRows}</div>` : '';
   const monthNav=`<div class="zb-monthnav">
       <button class="zb-mbtn" onclick="event.stopPropagation();zbMonthNav('${w.uid}',-1)" title="Previous month">◀</button>
       <span class="zb-monthlbl">${esc(_monthLabel(_bm))}${_bm===0?' · this month':(_bm<0?` · ${-_bm} mo ago`:` · in ${_bm} mo`)}</span>
