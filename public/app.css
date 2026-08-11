@@ -2465,6 +2465,10 @@ canvas.chart-interactive{cursor:crosshair;}
 .txf-tagsel{max-width:none;}
 .txf-rulebtn{background:var(--surface3);border:1px solid var(--border);color:var(--muted);border-radius:7px;width:30px;height:30px;font-size:14px;font-weight:800;cursor:pointer;flex-shrink:0;}
 .txf-rulebtn.on{background:rgba(91,141,239,.16);border-color:#5b8def;color:#5b8def;}
+.txf-occshift{display:inline-flex;align-items:center;gap:3px;flex-shrink:0;background:rgba(91,141,239,.10);border-radius:6px;padding:1px 3px;}
+.txf-occshift button{width:20px;height:24px;border:1px solid var(--border);background:var(--surface2);color:var(--text);border-radius:5px;cursor:pointer;font-size:9px;padding:0;line-height:1;flex-shrink:0;}
+.txf-occshift button:hover{border-color:#5b8def;color:#5b8def;}
+.txf-occlbl{font-size:10.5px;font-weight:700;color:#5b8def;min-width:38px;text-align:center;}
 .txf-side{text-align:right;flex-shrink:0;}
 .txf-amt{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;}
 .txf-dt{font-size:10.5px;color:var(--muted);margin-top:2px;}
