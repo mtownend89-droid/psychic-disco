@@ -2093,6 +2093,13 @@ select.mf-in{appearance:none;cursor:pointer;}
 .dp-stat-lbl{font-size:11px;color:var(--muted);margin-top:2px;}
 .dp-ord{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;}
 .dp-ord-n{width:22px;height:22px;border-radius:50%;background:var(--green-dim);color:var(--green);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.bt-wrap{padding:2px;}
+.bt-head{margin-bottom:8px;}
+.bt-head select{width:100%;}
+.bt-stat{font-size:15px;}
+.bt-stat b{font-size:20px;font-weight:800;}
+.doc-attach{margin:10px 0 4px;}
+.doc-attach select{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:9px;background:var(--surface2);color:var(--text);font-family:var(--font);font-size:13px;}
 .dp-incl{display:flex;align-items:center;gap:8px;margin:10px 0 2px;font-size:12.5px;color:var(--text);cursor:pointer;}
 .dp-incl input{width:16px;height:16px;accent-color:var(--green);flex-shrink:0;}
 .dp-incl i{color:var(--muted);font-style:normal;font-size:11px;}
