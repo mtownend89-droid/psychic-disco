@@ -687,6 +687,11 @@ function toggleBillPaid(key){
 function setBillPay(key,val){
   const ov=_billOverrides(); ov[key]=ov[key]||{}; const n=parseFloat(val); if(!isNaN(n)&&n>=0) ov[key].pay=n; saveState();
 }
+// Edit the amount for ONE month's occurrence (a statement-set month) without touching the recurring baseline.
+function setBillOccPay(key,monthOffset,val){
+  const n=parseFloat(val); if(isNaN(n)||n<0) return;
+  const d=_billOccData(); const ym=_ymOfOffset(monthOffset); const rec=d[key]||(d[key]={}); rec[ym]=rec[ym]||{}; rec[ym].pay=Math.round(n); saveState();
+}
 function setBillPayCommit(){ const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 // Which account a bill is paid from (a live cash account) — lets Cash on Hand / Safe to Spend treat
 // a bill you've marked paid as already spent against that account, before the debit posts.
@@ -1483,12 +1488,16 @@ function _billEvents(days){
         if(off>=0 && off<=days){ const okey=billKey(b)+'|'+_dk(d); out.push({day:off, amt:-(b.pay||0), name:b.name, type:'bill', key:billKey(b), okey, due:b.due}); } }
       return;
     }
-    let cur=_dueDateInMonth(today.getFullYear(), today.getMonth(), b.due);
-    if(cur<today) cur=_dueDateInMonth(today.getFullYear(), today.getMonth()+1, b.due);
-    while(cur<=horizon){
+    // Walk calendar months so each occurrence can carry its own per-month override (amount + due day)
+    // from an uploaded statement, while months without one behave exactly as before.
+    const nMonths=Math.ceil(days/28)+2, m0=new Date(today.getFullYear(), today.getMonth(), 1);
+    for(let k=0;k<nMonths;k++){
+      const mm=new Date(m0.getFullYear(), m0.getMonth()+k, 1); const o=_billOccOv(b, _ymOfDate(mm));
+      const dueDay=(o&&o.due)?o.due:b.due, pay=(o&&o.pay!=null&&isFinite(o.pay))?o.pay:(b.pay||0);
+      if(!(pay>0)) continue;
+      const cur=_dueDateInMonth(mm.getFullYear(), mm.getMonth(), dueDay); if(cur<today) continue;
       const off=Math.round((cur-today)/86400000);
-      if(off>=0 && off<=days){ const okey=billKey(b)+'|'+_dk(cur); out.push({day:off, amt:-(b.pay||0), name:b.name, type:'bill', key:billKey(b), okey, due:b.due}); }
-      cur=_dueDateInMonth(cur.getFullYear(), cur.getMonth()+1, b.due);
+      if(off>=0 && off<=days){ const okey=billKey(b)+'|'+_dk(cur); out.push({day:off, amt:-pay, name:b.name, type:'bill', key:billKey(b), okey, due:dueDay}); }
     }
   });
   return out;
@@ -1559,8 +1568,19 @@ function _billPaidOcc(){ APP.billPaidOcc=APP.billPaidOcc||{}; return APP.billPai
 function _billOccPaid(okey){ return !!(okey && _billPaidOcc()[okey]); }
 // The occurrence key for a bill's due date in a given calendar month (offset from this month).
 // Uses the SAME due-date math as the cash-flow projection so widget/projection/expected-spend agree.
+// Per-occurrence overrides: an uploaded statement sets a SPECIFIC month's amount + due day
+// (APP.billOccData[billKey][YYYY-MM] = {pay, due}) without touching the recurring baseline or any
+// other month — so it never re-keys / unmarks an already-paid occurrence. Uploaded statements only;
+// Plaid-linked bills are separate.
+function _billOccData(){ APP.billOccData=APP.billOccData||{}; return APP.billOccData; }
+function _ymOfDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function _ymOfOffset(monthOffset){ const t=new Date(); return _ymOfDate(new Date(t.getFullYear(), t.getMonth()+(monthOffset||0), 1)); }
+function _billOccOv(b, ym){ if(!b||b.once) return null; return ((_billOccData()[billKey(b)])||{})[ym]||null; }
+function _billPayForYm(b, ym){ const o=_billOccOv(b, ym); return (o && o.pay!=null && isFinite(o.pay)) ? o.pay : (b.pay||0); }
+function _billPayForOffset(b, monthOffset){ return _billPayForYm(b, _ymOfOffset(monthOffset)); }
 function _dueDateInMonthFor(b, monthOffset){ if(b&&b.once){ const d=_dkParse(b.once); if(d){ d.setHours(0,0,0,0); return d; } }   // one-time bill: its single date, regardless of month
-  const t=new Date(); t.setHours(0,0,0,0); return _dueDateInMonth(t.getFullYear(), t.getMonth()+(monthOffset||0), b.due||1); }
+  const t=new Date(); t.setHours(0,0,0,0); const base=new Date(t.getFullYear(), t.getMonth()+(monthOffset||0), 1);
+  const o=_billOccOv(b, _ymOfDate(base)); return _dueDateInMonth(base.getFullYear(), base.getMonth(), (o&&o.due)?o.due:(b.due||1)); }
 function _billOkeyForMonth(b, monthOffset){ return billKey(b)+'|'+_dk(_dueDateInMonthFor(b, monthOffset)); }
 // Toggle a specific month's occurrence paid from the Bills widget (stores a timestamp so a real
 // posted/pending txn can be matched within a window). Shares billPaidOcc with the cash-flow planner.
@@ -3214,7 +3234,13 @@ function docAddSelected(){
       const dd=gg('docDueDate').value, dueDay=dd?Math.max(1,Math.min(31,(new Date(dd+'T12:00:00').getDate()||1))):1;
       const catMap={insurance:'Insurance',utility:'Utilities',phone:'Utilities',cable:'Utilities',loan:'Loan Payments',credit_card:'CC'};
       APP.manualBills=APP.manualBills||[];
-      { const _ex=due>0&&APP.manualBills.find(b=>(b.name||'').toLowerCase()===nm.toLowerCase()); if(_ex){ const _apr=parseFloat((gg('docApr')&&gg('docApr').value))||0; _ex.pay=Math.round(due); _ex.min=Math.round(due); _ex.due=dueDay; if(_apr>0)_ex.apr=_apr; if(pe){_ex.promoEnd=pe; if(!_ex.promo)_ex.promo='0% APR';} APP.imports.push({ id:impId, kind:'bill', label:nm, ts:Date.now(), summary:'Bill updated: '+fmtK(due) }); return finish('Updated '+nm+' in your Bills: '+fmtK(due)+' due.'+promoMsg); } }
+      { const _ex=due>0&&APP.manualBills.find(b=>(b.name||'').toLowerCase()===nm.toLowerCase()); if(_ex){ const _apr=parseFloat((gg('docApr')&&gg('docApr').value))||0; if(_apr>0)_ex.apr=_apr; if(pe){_ex.promoEnd=pe; if(!_ex.promo)_ex.promo='0% APR';}
+        // Statement = ONE specific month's amount + due → per-occurrence override, not the recurring
+        // baseline, so it never re-keys / unmarks other months (e.g. this month's already-paid bill).
+        const _ym=(/^\d{4}-\d{2}/.test(dd)?dd.slice(0,7):_docStmtDate().slice(0,7));
+        const _od=_billOccData(), _bk=billKey(_ex), _r=_od[_bk]||(_od[_bk]={}); _r[_ym]={ pay:Math.round(due), due:dueDay };
+        APP.imports.push({ id:impId, kind:'bill', label:nm, ts:Date.now(), summary:'Bill updated: '+fmtK(due)+' ('+_ym+')' });
+        return finish('Updated '+nm+' for '+_ym+' — '+fmtK(due)+' due day '+dueDay+'. Only that month changed; your other months and paid checkmarks are untouched.'+promoMsg); } }
       if(due>0 && !APP.manualBills.some(b=>(b.name||'').toLowerCase()===nm.toLowerCase())){ APP.manualBills.push({ name:nm, pay:Math.round(due), min:Math.round(due), bal:0, apr:parseFloat((gg('docApr')&&gg('docApr').value))||0, due:dueDay, cat:(catMap[type]||'OTHER'), promoEnd:pe||'', limit:0, promo:pe?'0% APR':'', note:'imported', paid:false }); APP.imports.push({ id:impId, kind:'bill', label:nm, ts:Date.now(), billName:nm, summary:`Bill · ${fmtK(due)}` }); return finish(`Added ${nm} to your Bills \u2014 ${fmtK(due)}.`+promoMsg); }
     }
     return finish(pe?('Saved the promo details from '+nm+'.'+promoMsg):'');
@@ -3231,7 +3257,9 @@ function docAddSelected(){
   if(addBill){
     const due=parseFloat(gg('docDue').value)||0;
     APP.manualBills=APP.manualBills||[];
-    { const _ex=due>0&&APP.manualBills.find(b=>(b.name||'').toLowerCase()===nm.toLowerCase()); if(_ex){ const _dd=gg('docDueDate').value, _dueDay=_dd?Math.max(1,Math.min(31,(new Date(_dd+'T12:00:00').getDate()||1))):1; const _apr=parseFloat(gg('docApr').value)||0, _lim=parseFloat(gg('docLimit').value)||0; _ex.pay=Math.round(due); _ex.min=Math.round(due); _ex.due=_dueDay; if(_apr>0)_ex.apr=_apr; if(_lim>0)_ex.limit=_lim; if(pe){_ex.promoEnd=pe; if(!_ex.promo)_ex.promo='0% APR';} } }   // re-upload refreshes an existing bill in place (no dup); billName stays null so removal won't delete it
+    { const _ex=due>0&&APP.manualBills.find(b=>(b.name||'').toLowerCase()===nm.toLowerCase()); if(_ex){ const _dd=gg('docDueDate').value, _dueDay=_dd?Math.max(1,Math.min(31,(new Date(_dd+'T12:00:00').getDate()||1))):1; const _apr=parseFloat(gg('docApr').value)||0, _lim=parseFloat(gg('docLimit').value)||0; if(_apr>0)_ex.apr=_apr; if(_lim>0)_ex.limit=_lim; if(pe){_ex.promoEnd=pe; if(!_ex.promo)_ex.promo='0% APR';}
+      // Per-occurrence override for the statement's month — leave the recurring baseline & paid states alone.
+      const _ym=(/^\d{4}-\d{2}/.test(_dd)?_dd.slice(0,7):_docStmtDate().slice(0,7)); const _od=_billOccData(), _bk=billKey(_ex), _r=_od[_bk]||(_od[_bk]={}); _r[_ym]={ pay:Math.round(due), due:_dueDay }; } }   // re-upload sets only that month (no dup, no re-key)
     if(due>0 && !APP.manualBills.some(b=>(b.name||'').toLowerCase()===nm.toLowerCase())){
       const dd=gg('docDueDate').value, dueDay=dd?Math.max(1,Math.min(31,(new Date(dd+'T12:00:00').getDate()||1))):1;
       billName=nm; APP.manualBills.push({ name:nm, pay:Math.round(due), min:Math.round(due), bal:0, apr:parseFloat(gg('docApr').value)||0, due:dueDay, cat:(type==='credit_card'?'CC':'OTHER'), promoEnd:pe||'', limit:parseFloat(gg('docLimit').value)||0, promo:pe?'0% APR':'', note:'imported', paid:false });
@@ -5964,14 +5992,14 @@ function billsWidgetBody(w){
   const withOcc=allF.map(b=>{ const okey=_billOkeyForMonth(b, mo); return { b, okey, paid:_billOccPaid(okey), dueStr:_dk(_dueDateInMonthFor(b, mo)) }; });
   const sorted=withOcc.sort((x,y)=>{ if(!!x.paid!==!!y.paid) return x.paid?1:-1; return (x.b.due||99)-(y.b.due||99); });   // unpaid first, paid sink to bottom
   const totMin=withOcc.filter(x=>!x.paid).reduce((s,x)=>s+(x.b.min||0),0);
-  const totPay=withOcc.filter(x=>!x.paid).reduce((s,x)=>s+(x.b.pay||0),0);
+  const totPay=withOcc.filter(x=>!x.paid).reduce((s,x)=>s+(_billPayForOffset(x.b, mo)||0),0);
   const paidCount=withOcc.filter(x=>x.paid).length;
   // Accounts a bill can be paid from: live OR manual cash/savings, plus credit cards.
   const payAccts=(dataLoaded?engAccounts():[]).filter(a=>!a.excluded && (a.type==='depository'||a.type==='credit'));
   const _payCash=payAccts.filter(a=>a.type==='depository').sort((x,y)=>Math.abs(y.bal||0)-Math.abs(x.bal||0));
   const _payCard=payAccts.filter(a=>a.type==='credit').sort((x,y)=>Math.abs(y.bal||0)-Math.abs(x.bal||0));
   const _acctById={}; payAccts.forEach(a=>{ _acctById[a.id]=a; });
-  const rows=sorted.map(({b,okey,paid,dueStr})=>{ const key=_attrArg(billKey(b)); const okeyEsc=_attrArg(okey); const diff=(b.pay||0)-(b.min||0);
+  const rows=sorted.map(({b,okey,paid,dueStr})=>{ const key=_attrArg(billKey(b)); const okeyEsc=_attrArg(okey); const occHasOv=!!_billOccOv(b, _ymOfOffset(mo)); const occPay=_billPayForOffset(b, mo); const diff=(occPay||0)-(b.min||0);
     const pa=b.payAcct?_acctById[b.payAcct]:null;
     const _pv=occ[okey]; const paidAt=(typeof _pv==='number' && _pv>1e12)?_pv:null;
     const _tag=(paid&&pa)?(pa.type==='credit'
@@ -5985,7 +6013,7 @@ function billsWidgetBody(w){
       <button class="bill-check" onclick="event.stopPropagation();billsToggleOcc('${okeyEsc}','${w.uid}')" title="${paid?'Mark unpaid':'Mark paid'}">${paid?'✓':''}</button>
       <div class="bill-info">
         <div class="bill-nm">${esc(b.name)}${b.manual?`<span class="bill-edit" role="button" onclick="event.stopPropagation();openManualBill(${(APP.manualBills||[]).findIndex(x=>x.name===b.name&&x.cat===b.cat)})" title="Edit">✎</span>`:`<span class="bill-edit" role="button" onclick="event.stopPropagation();openAccountEditor('${_attrArg(b.name)}')" title="Edit min payment / due day / promo">✎</span>`}</div>
-        <div class="bill-sub">${b.once?`<span style="color:var(--blue);font-weight:700">one-time</span> · ${(function(){const d=_dkParse(b.once);return d?d.toLocaleDateString('en-US',{month:'short',day:'numeric'}):esc(b.once);})()}`:(b.dueEst?'<span style="color:var(--muted)">due date not set</span>':'due '+ord(b.due))}${b.apr?` · ${b.apr.toFixed(1)}%`:''}${b.promo?` · ${esc(b.promo)}`:''}${_billPayoffLabel(b)}</div>
+        <div class="bill-sub">${b.once?`<span style="color:var(--blue);font-weight:700">one-time</span> · ${(function(){const d=_dkParse(b.once);return d?d.toLocaleDateString('en-US',{month:'short',day:'numeric'}):esc(b.once);})()}`:(b.dueEst?'<span style="color:var(--muted)">due date not set</span>':'due '+ord(parseInt((dueStr||'').slice(8,10))||b.due)+(occHasOv?' <span style="color:var(--blue)" title="Set from an uploaded statement for this month">· from statement</span>':''))}${b.apr?` · ${b.apr.toFixed(1)}%`:''}${b.promo?` · ${esc(b.promo)}`:''}${_billPayoffLabel(b)}</div>
         <div class="bill-amts">
           <span class="bill-min">Min <b>${fmtK(b.min)}</b>${b.estMin?' · <span style="color:var(--amber)" title="No minimum reported by the bank — estimated at ~2% of balance. Tap the pencil to set the real one.">est.</span>':(live&&!b.manual?' · Plaid':'')}</span>
           ${Math.abs(diff)>=1?`<span class="bill-diff" style="color:${diff>0?'var(--green)':'var(--amber)'}">${diff>0?'+':''}${fmtK(diff)} vs min</span>`:''}
@@ -5995,7 +6023,7 @@ function billsWidgetBody(w){
       </div>
       <div class="bill-paywrap">
         <label class="bill-paylabel">You pay</label>
-        <div class="bill-pay"><span>$</span><input type="number" value="${Math.round(b.pay)}" min="0" step="10" onclick="event.stopPropagation()" oninput="setBillPay('${key}',this.value)" onblur="setBillPayCommit()"></div>
+        <div class="bill-pay"><span>$</span><input type="number" value="${Math.round(occPay)}" min="0" step="10" onclick="event.stopPropagation()" oninput="${occHasOv?`setBillOccPay('${key}',${mo},this.value)`:`setBillPay('${key}',this.value)`}" onblur="setBillPayCommit()"></div>
       </div>
     </div>`; }).join('');
   return `<div class="bills-mgr">
