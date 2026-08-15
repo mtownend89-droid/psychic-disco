@@ -3202,8 +3202,14 @@ function docAddSelected(){
     const apr=parseFloat((gg('docApr')&&gg('docApr').value))||0;
     const minPay=parseFloat((gg('docMin')&&gg('docMin').value))||0;
     const dd=(gg('docDueDate')&&gg('docDueDate').value)||''; const dueDay=dd?Math.max(1,Math.min(31,(new Date(dd+'T12:00:00').getDate()||1))):0;
-    const cd={}; if(limit>0)cd.limit=limit; if(apr>0)cd.apr=apr; if(minPay>0)cd.minPay=minPay; if(dueDay>0)cd.dueDay=dueDay;
+    const _exBill=(function(){ try{ return engBills().find(x=>x.cat==='CC' && (x.name||'').toLowerCase()===nm.toLowerCase()); }catch(e){ return null; } })();
+    const cd={}; if(limit>0)cd.limit=limit; if(apr>0)cd.apr=apr; if(minPay>0)cd.minPay=minPay;
+    if(dueDay>0 && !_exBill) cd.dueDay=dueDay;   // seed the recurring due only on the FIRST statement for a new card
     if(Object.keys(cd).length) setCardData(nm, cd);
+    // Re-upload of an existing card: put the statement's due date on THAT month's occurrence only (a
+    // per-occurrence override) so it never re-keys / unmarks other months (e.g. a card already paid).
+    // The balance still updates below (running), and min/You-pay/budget still drive the amount.
+    if(dueDay>0 && _exBill){ const _ym=(/^\d{4}-\d{2}/.test(dd)?dd.slice(0,7):_docStmtDate().slice(0,7)); const _od=_billOccData(), _bk=billKey(_exBill), _r=_od[_bk]||(_od[_bk]={}); _r[_ym]=Object.assign(_r[_ym]||{},{due:dueDay}); }
     if(owed>0) _stmtHistRecord(nm, {bal:owed, min:minPay||null, apr:apr||null, limit:limit||null, d:_docStmtDate()});   // running-account timeline
     let updated=false;
     if(!gg('docAddCard')||gg('docAddCard').checked){
