@@ -9335,6 +9335,7 @@ function _panelShow(msg, opts){
   const nb=pn.querySelector('.rp-new-tip-btn'); if(nb) nb.style.display=(_raActions&&_raActions.length)?'none':'';
   if(rpChar){ rpChar.emotion(opts.celebrate?'celebrate':(opts.emo||'happy')); rpChar.talk(true); }
   richieSpeakType(gg('rpTip'), msg, ()=>{ if(rpChar)rpChar.talk(false); });   // types (voice off)
+  clearTimeout(_raHomeTimer); _raHomeTimer=setTimeout(richieGoHome, 10000);   // auto-dismiss 10s after popping out
 }
 function _raAct(i){ const a=_raActions&&_raActions[i]; if(a&&typeof a.on==='function') a.on(); }
 // Stop everything Richie is currently saying/typing (used when leaving the SWOT)
@@ -9467,9 +9468,10 @@ function richieShakeFx(){ try{ const el=gg('raChar'); if(el){ el.classList.remov
 function richieShow(msg, opts){
   opts=opts||{};
   if(_richieBlocked()){ richieGoHome(); return; }   // overlay came up — clean up, don't speak over it
-  // Only accomplishments (celebrate) or things you tapped for (user) pop out full-screen. Everything
-  // else becomes a quiet count badge on Richie's house — tap the house to read them.
-  if(_richieMobile() && !opts.celebrate && !opts.user){ _raQueuePush(msg, opts); return; }
+  // Only accomplishments (celebrate) or things you tapped for (user) pop out. Everything else — tips,
+  // confirmations, off-track/recap nudges — becomes a quiet count badge on Richie's safe (both mobile
+  // pop-out AND the desktop panel). Tap the safe to read them.
+  if(!opts.celebrate && !opts.user){ _raQueuePush(msg, opts); return; }
   if(opts.danger){ try{ emojiBurst('alarm',{particles:false}); }catch(e){} try{ richieShakeFx(); }catch(e){} }   // a real red-flag moment
   if(!_richieMobile()){ _panelShow(msg, opts); return; }   // desktop browser → original block panel
   if(opts.celebrate) _raConfetti();
