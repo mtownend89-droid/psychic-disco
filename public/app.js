@@ -9330,6 +9330,7 @@ function _panelShow(msg, opts){
   try{ const k=(typeof APP!=='undefined'&&APP.persona)||'coach'; const p=RICHIE_PERSONAS[k];
     if(p){ const nm=gg('rpName'); if(nm)nm.textContent='Richie · '+p.name; const c=gg('rpChar'); if(c)c.textContent=p.icon||'💰'; } }catch(e){}
   pn.classList.add('open'); _raBusy=true;
+  const ff=gg('richieFab'); if(ff) ff.classList.add('open');   // swing the safe door open on desktop too
   _raActions = opts.actions || null; _renderActs('rpAction');
   const nb=pn.querySelector('.rp-new-tip-btn'); if(nb) nb.style.display=(_raActions&&_raActions.length)?'none':'';
   if(rpChar){ rpChar.emotion(opts.celebrate?'celebrate':(opts.emo||'happy')); rpChar.talk(true); }
