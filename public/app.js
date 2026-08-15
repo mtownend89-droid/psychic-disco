@@ -9262,6 +9262,17 @@ async function richieAITip(){
 }
 // ── Richie leaves his house (FAB), interacts, and returns ──
 let _raChar=null, _raBusy=false, _raHomeTimer=null, _raActions=null, _raSelfNav=false;
+// Quiet notifications: non-accomplishment messages queue here and show as a count badge on Richie's
+// house instead of popping him out. Tap the house to read them.
+let _raQueue=[];
+function _raBadge(){ const b=gg('rfBadge'); if(!b) return; const n=_raQueue.length; b.textContent=n>9?'9+':String(n); b.classList.toggle('show', n>0); }
+function _raQueuePush(msg, opts){ if(!msg) return; _raQueue.push({msg:String(msg), opts:opts||{}}); if(_raQueue.length>9) _raQueue.shift(); _raBadge(); }
+function richieOpenQueue(){
+  if(!_raQueue.length){ richieCoachNow(); return; }
+  const items=_raQueue.slice(); _raQueue=[]; _raBadge();
+  if(items.length===1){ richieShow(items[0].msg, Object.assign({user:true}, items[0].opts)); return; }
+  richieShow(items.map(it=>'• '+it.msg).join('\n\n'), {user:true, actions:[{label:'👍 Got it', cls:'ra-go', on:richieGoHome},{label:'💬 Ask Richie', on:openRichieChat}]});
+}
 function _fabRect(){ const f=document.querySelector('.richie-fab'); return f?f.getBoundingClientRect():{left:window.innerWidth-80,top:window.innerHeight-80,width:58,height:58}; }
 // Richie stays out of the way while any full-screen overlay (onboarding / welcome / login) is up
 function _richieBlocked(){
@@ -9319,6 +9330,7 @@ function _panelShow(msg, opts){
   try{ const k=(typeof APP!=='undefined'&&APP.persona)||'coach'; const p=RICHIE_PERSONAS[k];
     if(p){ const nm=gg('rpName'); if(nm)nm.textContent='Richie · '+p.name; const c=gg('rpChar'); if(c)c.textContent=p.icon||'💰'; } }catch(e){}
   pn.classList.add('open'); _raBusy=true;
+  const ff=gg('richieFab'); if(ff) ff.classList.add('open');   // swing the safe door open on desktop too
   _raActions = opts.actions || null; _renderActs('rpAction');
   const nb=pn.querySelector('.rp-new-tip-btn'); if(nb) nb.style.display=(_raActions&&_raActions.length)?'none':'';
   if(rpChar){ rpChar.emotion(opts.celebrate?'celebrate':(opts.emo||'happy')); rpChar.talk(true); }
@@ -9455,6 +9467,9 @@ function richieShakeFx(){ try{ const el=gg('raChar'); if(el){ el.classList.remov
 function richieShow(msg, opts){
   opts=opts||{};
   if(_richieBlocked()){ richieGoHome(); return; }   // overlay came up — clean up, don't speak over it
+  // Only accomplishments (celebrate) or things you tapped for (user) pop out full-screen. Everything
+  // else becomes a quiet count badge on Richie's house — tap the house to read them.
+  if(_richieMobile() && !opts.celebrate && !opts.user){ _raQueuePush(msg, opts); return; }
   if(opts.danger){ try{ emojiBurst('alarm',{particles:false}); }catch(e){} try{ richieShakeFx(); }catch(e){} }   // a real red-flag moment
   if(!_richieMobile()){ _panelShow(msg, opts); return; }   // desktop browser → original block panel
   if(opts.celebrate) _raConfetti();
@@ -9463,16 +9478,16 @@ function richieShow(msg, opts){
     try{ richieSetProp(opts.prop || (opts.celebrate?'celebrate':({curious:'nudge',no:'warn',proud:'trophy'}[opts.emo]||''))); }catch(e){}
     _raBubble(msg);
     _raActions = opts.actions || null; _renderRaActs();         // interactive choices, if any
+    clearTimeout(_raHomeTimer);
+    _raHomeTimer=setTimeout(richieGoHome, 10000);              // auto-dismiss 10s after popping out
     richieSpeakType(gg('raMsg'), msg, ()=>{                        // done = finished speaking
       if(_raChar)_raChar.do(opts.celebrate?'celebrate':'point');
-      clearTimeout(_raHomeTimer);
-      _raHomeTimer=setTimeout(richieGoHome, opts.linger||6000);    // linger AFTER he finishes
     });
   };
   clearTimeout(_raHomeTimer);                                       // never auto-home mid-sentence
   if(_raBusy){ present(); } else { _raBusy=true; _raEmerge(present); }
 }
-function richieHopOut(){ if(_raBusy){ richieGoHome(); return; } richieCoachNow(); }
+function richieHopOut(){ if(_raBusy){ richieGoHome(); return; } if(_raQueue.length){ richieOpenQueue(); return; } richieCoachNow(); }
 function _raEmerge(then){
   if(!_raChar){ try{ _raChar=spawnRichie(gg('raChar')); }catch(e){} }
   const op=gg('richiePanel'); if(op) op.classList.remove('open');   // make sure the old panel is never up
@@ -9544,6 +9559,7 @@ function richieMaybeProactive(pg){
   _raLastPop=now;
   const recap=richieWeeklyRecap();                          // weekly recap wins when it's due
   const off=(!recap && now-_raOffTrackAt>480000) ? richieOffTrackSignal(pg) : null;   // else off-track at most ~every 8 min
+  if(!recap && !off) return;   // no plain per-page greeting anymore — only meaningful signals (they land as a house badge)
   setTimeout(()=>{ if(_raBusy||document.hidden||APP.activePage!==pg.id) return;
     if(recap){ try{ LS.setItem('richie_recap_ts', String(Date.now())); }catch(e){}
       richieShow(recap.msg, {emo:'happy', actions:[
@@ -9553,10 +9569,6 @@ function richieMaybeProactive(pg){
     else if(off){ _raOffTrackAt=Date.now(); richieShow(off.msg, {emo:off.danger?'no':'curious', danger:!!off.danger, actions:[
         {label:off.cta||'Show me', cls:'ra-go', on:()=>richieSpotlightAt(Object.assign({widgetType:off.widget}, RICHIE_SPOTS[off.widget]||{}))},   // decide first, THEN Richie flies to the spot
         {label:'Not now', on:richieDismiss}
-      ]}); }
-    else { richieShow(richiePageLine(pg), {emo:'happy', actions:[      // short + instant; no network
-        {label:'💬 Tip', cls:'ra-go', on:richieCoachNow},
-        {label:'✕', on:richieGoHome}
       ]}); }
   }, 280);
 }
@@ -9607,7 +9619,7 @@ async function richieCoachNow(){
   }catch(e){}
   if(!tip){ const q=richieQuips(); tip=q[Math.floor(Math.random()*q.length)]; }
   _aiSeen.push(tip); if(_aiSeen.length>12)_aiSeen.shift();
-  richieShow(tip, {prop:'tip', actions:[{label:'👍 Got it', cls:'ra-go', on:richieGoHome},{label:'💬 Ask Richie', on:openRichieChat}]});
+  richieShow(tip, {user:true, prop:'tip', actions:[{label:'👍 Got it', cls:'ra-go', on:richieGoHome},{label:'💬 Ask Richie', on:openRichieChat}]});
 }
 window.addEventListener('resize',()=>{ if(_raBusy){ const a=gg('raActor'); const r=_fabRect(); /* keep bubble anchored */ if(gg('raBubble').classList.contains('show')) _raBubble(gg('raMsg').textContent); } });
 function newSbTip(){ const b=richieQuips(); gg('sbRichieTip').textContent=b[Math.floor(Math.random()*b.length)]; }

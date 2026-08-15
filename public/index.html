@@ -327,9 +327,25 @@
       <button class="rp-new-tip-btn" onclick="openRichieChat()" style="margin-top:6px">💬 Ask Richie anything</button>
     </div>
   </div>
-  <button class="richie-fab" id="richieFab" onclick="richieHopOut()" aria-label="Richie's house">
-    <span class="rf-roof"></span>
-    <span class="rf-house"><span id="fabChar">💰</span></span>
+  <button class="richie-fab" id="richieFab" onclick="richieHopOut()" aria-label="Richie's safe">
+    <span class="rf-safe">
+      <svg class="rf-back" viewBox="155 150 490 560" aria-hidden="true">
+        <rect x="170" y="170" width="460" height="520" rx="26" fill="#8E959C"/>
+        <rect x="185" y="185" width="430" height="490" rx="20" fill="none" stroke="#70777E" stroke-width="18"/>
+        <rect x="212" y="212" width="376" height="436" rx="18" fill="#23282d"/>
+        <g fill="#70777E"><rect x="188" y="285" width="32" height="72" rx="10"/><rect x="188" y="410" width="32" height="72" rx="10"/><rect x="188" y="535" width="32" height="72" rx="10"/></g>
+      </svg>
+      <span class="rf-char-slot"><span id="fabChar">💰</span></span>
+      <svg class="rf-doorsvg" viewBox="155 150 490 560" aria-hidden="true"><g class="rf-door">
+        <rect x="225" y="220" width="350" height="420" rx="22" fill="#A7ADB3"/>
+        <rect x="245" y="240" width="310" height="380" rx="18" fill="none" stroke="#D8DDE1" stroke-width="12"/>
+        <g fill="#DCE1E5"><circle cx="275" cy="285" r="11"/><circle cx="525" cy="285" r="11"/><circle cx="275" cy="575" r="11"/><circle cx="525" cy="575" r="11"/></g>
+        <circle cx="400" cy="365" r="70" fill="#B9C0C6"/><circle cx="400" cy="365" r="58" fill="#8A9198"/>
+        <circle cx="400" cy="365" r="22" fill="#E8ECEF"/><circle cx="400" cy="365" r="9" fill="#8A9198"/>
+        <circle cx="400" cy="475" r="24" fill="#DCE1E5"/><rect x="396" y="432" width="8" height="86" rx="4" fill="#768089"/><rect x="357" y="471" width="86" height="8" rx="4" fill="#768089"/>
+      </g></svg>
+    </span>
+    <span class="richie-fab-badge" id="rfBadge">0</span>
   </button>
 </div>
 <!-- Richie actor (emerges from his house / FAB) -->
