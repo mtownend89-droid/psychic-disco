@@ -3072,15 +3072,55 @@ function docReviewRender(){
     section=buildTxnSection();
   }
   const kindLbl=isScore?'a credit-score snapshot':isInvest?'an investment statement':isCard?'a credit-card statement':isBill?('a '+((type||'bill').replace('_',' '))):('a '+((type||'statement').replace('_',' ')));
+  // "Attach to" a running account so re-uploads accumulate into one record + build a balance trend.
+  let attachHtml='';
+  if(!isScore && !isInvest){ const tg=_docAttachTargets(); if(tg.length){
+    const dn=r.accountName||''; const match=tg.find(n=>dn&&n.toLowerCase()===dn.toLowerCase());
+    attachHtml=`<div class="doc-f doc-attach"><label>Attach to a running account <span class="ws-hint" style="display:inline">(re-uploads update it + build a balance trend)</span></label>
+      <select id="docAttach" onchange="docAttachPick(this.value)"><option value="">➕ New account${dn?' — '+esc(dn):''}</option>${tg.map(n=>`<option value="${esc(n)}"${match&&n===match?' selected':''}>${esc(n)}</option>`).join('')}</select></div>`;
+  } }
   gg('docBody').innerHTML=`
     <div class="doc-sub">Richie found ${esc(kindLbl)}${r.institution?' from '+esc(r.institution):''}. Edit anything, then add it.</div>
     <div class="doc-section-h">${detailLbl} details</div>${header}
+    ${attachHtml}
     ${addOpt}
     ${section}
     <div class="mf-actions"><button class="btn" onclick="closeDocModal()">Cancel</button><button class="btn primary" onclick="docAddSelected()">\uff0b Add</button></div>`;
 }
 function docUpdateCount(){ const r=_docResult||{}, txns=r.transactions||[]; const el=gg('docSelCount'); if(el) el.textContent=txns.filter((_,i)=>_docSel[i]).length+' selected'; }
 function docSelectAll(v){ const txns=(_docResult&&_docResult.transactions)||[]; txns.forEach((_,i)=>_docSel[i]=v); docReviewRender(); }
+/* ═══ STATEMENT HISTORY (running-account timeline from uploads) ═══
+   Every card/bill statement upload records one point per account, deduped to one per statement
+   month, so re-uploading next month's statement builds a balance trend (the Balance History widget). */
+function _stmtHist(){ APP.statementHistory=APP.statementHistory||{}; return APP.statementHistory; }
+function _stmtKey(name){ return (name||'').toLowerCase().trim(); }
+function _stmtHistRecord(name, pt){
+  const key=_stmtKey(name); if(!key || pt==null) return;
+  const h=_stmtHist(); const rec=h[key]||(h[key]={name:name, points:[]}); rec.name=name;   // freshest display name
+  const d=(pt.d||new Date().toISOString().slice(0,10)); const ym=d.slice(0,7);
+  const point={ d, bal:(pt.bal!=null&&isFinite(pt.bal))?Math.round(pt.bal):null, min:(pt.min!=null&&isFinite(pt.min))?Math.round(pt.min):null, apr:(pt.apr!=null&&isFinite(pt.apr))?+pt.apr:null, limit:(pt.limit!=null&&isFinite(pt.limit))?Math.round(pt.limit):null };
+  const i=rec.points.findIndex(p=>(p.d||'').slice(0,7)===ym);
+  if(i>=0) rec.points[i]=point; else rec.points.push(point);
+  rec.points.sort((a,b)=>(a.d<b.d?-1:1));
+}
+function _stmtAccounts(){ const h=_stmtHist(); return Object.keys(h).filter(k=>h[k]&&(h[k].points||[]).length).map(k=>({key:k, name:h[k].name||k, n:h[k].points.length})).sort((a,b)=>a.name.localeCompare(b.name)); }
+// Best available statement date for a timeline point: analyzer's statement/period date, else the
+// payment due date in the modal, else today.
+function _docStmtDate(){
+  const r=_docResult||{};
+  const cand=[r.statementDate, r.periodEnd, r.closingDate, r.statementEndDate].find(x=>x && /^\d{4}-\d{2}-\d{2}/.test(String(x)));
+  if(cand) return String(cand).slice(0,10);
+  const dd=(gg('docDueDate')&&gg('docDueDate').value)||''; if(/^\d{4}-\d{2}-\d{2}/.test(dd)) return dd.slice(0,10);
+  return new Date().toISOString().slice(0,10);
+}
+// Existing bills/cards/accounts a statement can be attached to (a "running account"), deduped by name.
+function _docAttachTargets(){ const seen={}, out=[]; try{
+    engBills().forEach(b=>{ const n=b.name; if(n&&!seen[n.toLowerCase()]){ seen[n.toLowerCase()]=1; out.push(n); } });
+    (APP.manualAccounts||[]).forEach(a=>{ const n=a.name; if(n&&!seen[n.toLowerCase()]){ seen[n.toLowerCase()]=1; out.push(n); } });
+  }catch(e){} return out.sort((a,b)=>a.localeCompare(b)); }
+// Picking an existing account routes this statement onto it (the upsert-by-name updates that record
+// and files history under it) even when the statement's detected name differs.
+function docAttachPick(name){ const a=gg('docAcct'); if(a && name) a.value=name; }
 function docAddSelected(){
   const r=_docResult||{}, type=r.docType||'', txns=Array.isArray(r.transactions)?r.transactions:[];
   const hasTxns=txns.length>0;
@@ -3144,6 +3184,7 @@ function docAddSelected(){
     const dd=(gg('docDueDate')&&gg('docDueDate').value)||''; const dueDay=dd?Math.max(1,Math.min(31,(new Date(dd+'T12:00:00').getDate()||1))):0;
     const cd={}; if(limit>0)cd.limit=limit; if(apr>0)cd.apr=apr; if(minPay>0)cd.minPay=minPay; if(dueDay>0)cd.dueDay=dueDay;
     if(Object.keys(cd).length) setCardData(nm, cd);
+    if(owed>0) _stmtHistRecord(nm, {bal:owed, min:minPay||null, apr:apr||null, limit:limit||null, d:_docStmtDate()});   // running-account timeline
     let updated=false;
     if(!gg('docAddCard')||gg('docAddCard').checked){
       APP.manualAccounts=APP.manualAccounts||[];
@@ -3169,6 +3210,7 @@ function docAddSelected(){
   if(!hasTxns){
     if(gg('docAddBill')&&gg('docAddBill').checked){
       const due=parseFloat(gg('docDue').value)||r.amountDue||r.premium||0;
+      if(due>0) _stmtHistRecord(nm, {bal:due, apr:(parseFloat((gg('docApr')&&gg('docApr').value))||null), d:_docStmtDate()});   // running-account timeline
       const dd=gg('docDueDate').value, dueDay=dd?Math.max(1,Math.min(31,(new Date(dd+'T12:00:00').getDate()||1))):1;
       const catMap={insurance:'Insurance',utility:'Utilities',phone:'Utilities',cable:'Utilities',loan:'Loan Payments',credit_card:'CC'};
       APP.manualBills=APP.manualBills||[];
@@ -4794,6 +4836,7 @@ const WIDGET_CATALOG=[
   {id:'investments',name:'Investments',icon:'💼',cat:'Wealth',span:2,minLevel:5,desc:'Your portfolio — positions pulled from statements, allocation, and one-tap research. (Mogul)'},
   {id:'fire_hub',name:'Wealth & FIRE',icon:'🔥',cat:'Wealth',span:2,minLevel:4,desc:'Financial-independence progress, long-term projection, and an interactive calculator — in tabs.'},
   {id:'debt_hub',name:'Debt',icon:'💳',cat:'Debt',span:2,minLevel:2,desc:'Everything you owe in one place — balances, payoff timeline, credit utilization, credit-score monitor, and 0% promos, in tabs.'},
+  {id:'balance_trend',name:'Balance History',icon:'📉',cat:'Debt',span:2,minLevel:2,desc:'A card, loan, or bill\'s balance over time from your uploaded statements — pick an account to see its running trend.'},
   // Fire Drill (stress test) and Debt Payoff Lab now live as tabs inside Wealth & FIRE and Debt
   // respectively — see FIRE_TABS / DEBT_TABS. Kept out of the catalog; existing widgets migrate below.
 ];
@@ -5237,9 +5280,34 @@ function scheduleCanvasRedraw(){
     redrawActiveCanvases();
   }, 180);   // debounce so a rotation / drag-resize only redraws once, after dimensions settle
 }
+/* ═══ BALANCE HISTORY widget — statement balances over time ═══ */
+let _balSel={};
+function balTrendBody(w){
+  const accts=_stmtAccounts();
+  if(!accts.length) return `<div class="wph"><div class="wph-sub">No statement history yet.</div><div class="ws-hint" style="margin-top:6px">Upload a card, loan, or bill statement (＋ → Upload a statement) and each one drops a point here. Re-upload next month's to grow the trend line.</div></div>`;
+  let sel=_balSel[w.uid]; if(!sel || !accts.some(a=>a.key===sel)) sel=accts[0].key; _balSel[w.uid]=sel;
+  const rec=_stmtHist()[sel]||{points:[]}; const pts=rec.points||[];
+  const opts=accts.map(a=>`<option value="${esc(a.key)}"${a.key===sel?' selected':''}>${esc(a.name)} · ${a.n} pt${a.n!==1?'s':''}</option>`).join('');
+  const last=pts[pts.length-1]||{}, first=pts[0]||{};
+  const delta=(last.bal!=null&&first.bal!=null)?last.bal-first.bal:null;
+  const deltaLbl=(delta!=null && pts.length>1)?` · <span style="color:${delta<=0?'var(--green)':'var(--red)'}">${delta<=0?'▼':'▲'} ${fmtK(Math.abs(delta))} since ${esc((first.d||'').slice(0,7))}</span>`:'';
+  return `<div class="bt-wrap">
+    <div class="bt-head"><select class="txn-cat-sel" onclick="event.stopPropagation()" onchange="balTrendPick('${w.uid}',this.value)">${opts}</select></div>
+    <div class="bt-stat"><b style="color:${(last.bal||0)>0?'var(--red)':'var(--text)'}">${last.bal!=null?fmtK(last.bal):'—'}</b> <span class="ws-hint" style="display:inline">latest${last.d?' · '+esc((last.d||'').slice(0,7)):''}${deltaLbl}</span></div>
+    <div style="height:150px;margin-top:6px"><canvas id="cv_${w.uid}"></canvas></div>
+    ${pts.length<2?'<div class="ws-hint" style="margin-top:8px">Upload next month\'s statement to draw the trend line.</div>':''}
+  </div>`;
+}
+function balTrendPick(uid,key){ _balSel[uid]=key; const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function buildWidgetChart(w, cid){
   const live=dataLoaded;
   if(w.type==='sankey'){ buildSankey(cid, wDays(w)); return; }
+  if(w.type==='balance_trend'){
+    const sel=_balSel[w.uid]; const pts=((_stmtHist()[sel]||{}).points)||[];
+    const labels=pts.map(p=>(p.d||'').slice(0,7)); const vals=pts.map(p=>p.bal!=null?p.bal:null);
+    buildChartWidget(cid,'line',labels,vals,'#5b8def',{datasets:[{data:vals,borderColor:'#5b8def',backgroundColor:'rgba(91,141,239,0.12)',fill:true,tension:0.25,pointRadius:3,borderWidth:2,spanGaps:true}]});
+    return;
+  }
   if(w.type==='fire_calc'){ fireRefresh(); return; }
   if(w.type==='net_worth_chart'){
     // Real history if we have it; otherwise a gentle ramp toward current net worth
@@ -8472,6 +8540,7 @@ function renderWidgetBody(w){
     case 'fire_calc': return fireWidgetBody(w);
     case 'debt_payoff': return debtPayoffBody(w);
     case 'debt_hub': return debtHubBody(w);
+    case 'balance_trend': return balTrendBody(w);
     case 'zero_budget': return zbWidgetBody(w);
     case 'fund_triage': return fundTriageBody(w);
     case 'budget_actual': return budgetActualBody(w);
