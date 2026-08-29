@@ -1947,7 +1947,9 @@ function engCashRunway(){
     // so a near-future deposit raises what's safely deployable. Use the DURABLE floor from the next income
     // day onward — not the pre-income low — as the ceiling.
     let ceiling=headroom, deployDay=lowDay;
-    try{ const proj=engCashFlowProjection(90), ser=(proj&&proj.series)||[];
+    // Committed-aware, same basis as engSafeToSpend's low90: subtract bills marked paid but not yet
+    // posted so the deployable-lump ceiling doesn't overstate your headroom.
+    try{ const proj=engCashFlowProjection(90, null, s.paidPending||0), ser=(proj&&proj.series)||[];
       if(ser.length){ const n=ser.length, suf=new Array(n); let m=Infinity;
         for(let i=n-1;i>=0;i--){ m=Math.min(m,ser[i].bal); suf[i]=m; }
         const nid=(s.nextIncomeDay!=null && s.nextIncomeDay>0 && s.nextIncomeDay<n)?s.nextIncomeDay:0;
