@@ -7221,13 +7221,18 @@ function setCfpRange(uid,k){ _cfpRange[uid]=k; const pg=APP.pages.find(p=>p.id==
 function cfpMount(w){
   const range=_cfpRange[w.uid]||30;
   const cats=(w.acctCats&&w.acctCats.length)?w.acctCats:['cash','savings'];
-  const p=engCashFlowProjection(range, cats);
+  // Bills you've marked paid that haven't posted yet are money already committed — subtract them from
+  // the starting cash so the running balance drops for them (they're 'off' in the timeline, so without
+  // this they'd vanish and the total would read too high).
+  const pend=Math.round(engManualPending(cats).total||0);
+  const p=engCashFlowProjection(range, cats, pend);
   const scope=gg('cfpscope_'+w.uid);
   if(scope){ scope.innerHTML=`💳 Paying bills from: <b>${cats.map(c=>acctCatDef(c).label).join(' + ')||'—'}</b> <button class="cfp-scope-edit" onclick="event.stopPropagation();openAcctCatPicker('${w.uid}')">change</button>`; }
   // summary stats
   const sum=gg('cfpsum_'+w.uid);
   if(sum){ sum.innerHTML=`
-    <div class="cfp-stat"><div class="cfp-stat-l">Starting cash</div><div class="cfp-stat-v">${fmtK(p.start)}</div></div>
+    <div class="cfp-stat"><div class="cfp-stat-l">Starting cash</div><div class="cfp-stat-v">${fmtK(p.start+pend)}</div></div>
+    ${pend>0?`<div class="cfp-stat"><div class="cfp-stat-l" title="Bills you've marked paid that haven't posted yet — already committed, so held out of the running balance.">Committed (pending)</div><div class="cfp-stat-v" style="color:var(--amber)">-${fmtK(pend)}</div></div>`:''}
     <div class="cfp-stat"><div class="cfp-stat-l">Income in</div><div class="cfp-stat-v" style="color:var(--green)">+${fmtK(p.totalIn)}</div></div>
     <div class="cfp-stat"><div class="cfp-stat-l">Bills out</div><div class="cfp-stat-v" style="color:var(--red)">-${fmtK(p.totalOut)}</div></div>
     ${p.totalSaved>0?`<div class="cfp-stat"><div class="cfp-stat-l">Set aside</div><div class="cfp-stat-v" style="color:var(--blue)">-${fmtK(p.totalSaved)}</div></div>`:''}
