@@ -1941,7 +1941,16 @@ function engCashRunway(){
   let s; try{ s=engSafeToSpend(); }catch(e){ return {kind:'ok'}; }
   if(!s || !isFinite(s.low90) || !isFinite(s.buffer)) return {kind:'ok'};
   const low=Math.round(s.low90), buf=Math.round(s.buffer), lowDay=s.lowDay||0, headroom=low-buf;
-  if(low < buf) return {kind:'deficit', low, buf, lowDay, shortfall:Math.max(0,buf-low), goalPortion:Math.round(s.goalPortion||0)};
+  if(low < buf){
+    // Two distinct facts for the flag: the EARLIEST day the running balance crosses under the buffer
+    // (when the trouble starts), and the deepest point (biggest amount under, at lowDay). They can be
+    // different days — the balance can dip under, recover a little, then bottom out later.
+    let breachDay=lowDay;
+    try{ const proj=engCashFlowProjection(90, null, s.paidPending||0), ser=(proj&&proj.series)||[];
+      for(let i=0;i<ser.length;i++){ if(ser[i].bal < buf){ breachDay=ser[i].day; break; } }
+    }catch(e){}
+    return {kind:'deficit', low, buf, lowDay, breachDay, shortfall:Math.max(0,buf-low), goalPortion:Math.round(s.goalPortion||0)};
+  }
   if(buf>0 && headroom>=buf){                       // threshold linked to the Safe-to-Spend buffer number
     // Timing-aware ceiling: the lump is deployed AFTER your next income (as one-time bills on the best day),
     // so a near-future deposit raises what's safely deployable. Use the DURABLE floor from the next income
@@ -7310,7 +7319,11 @@ function _lumpSummary(plan){
 function _cfpRunwayFlag(rw, uid){
   const when=d=>d===0?'today':_projDate(d).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
   if(rw.kind==='deficit'){
-    return {cls:'danger', html:`🚩 <b>Heads up</b> — your balance is projected to dip to <b>${fmtK(rw.low)}</b> on <b>${when(rw.lowDay)}</b>, about <b>${fmtK(rw.shortfall)}</b> below your <b>${fmtK(rw.buf)}</b> safety buffer. Trim ~${fmtK(rw.shortfall)}${rw.goalPortion>0?`, pause this cycle's ${fmtK(rw.goalPortion)} set-aside,`:''} or push a bill before then. <button class="cfp-flag-act" onclick="event.stopPropagation();cfpScrollEvents('${uid}')">Adjust a bill ↓</button>`};
+    const bd=(rw.breachDay!=null?rw.breachDay:rw.lowDay);
+    const lowClause=(bd===rw.lowDay)
+      ? `, bottoming about <b>${fmtK(rw.shortfall)}</b> under`
+      : `, bottoming about <b>${fmtK(rw.shortfall)}</b> under by <b>${when(rw.lowDay)}</b>`;
+    return {cls:'danger', html:`🚩 <b>Heads up</b> — your balance first drops below your <b>${fmtK(rw.buf)}</b> safety buffer on <b>${when(bd)}</b>${lowClause}. Trim ~${fmtK(rw.shortfall)}${rw.goalPortion>0?`, pause this cycle's ${fmtK(rw.goalPortion)} set-aside,`:''} or push a bill before then. <button class="cfp-flag-act" onclick="event.stopPropagation();cfpScrollEvents('${uid}')">Adjust a bill ↓</button>`};
   }
   if(rw.kind==='opportunity'){
     const summary=_lumpSummary(engLumpSumPlan(rw.deploy));
@@ -10972,8 +10985,8 @@ function _briefActionItems(){
   if(bds.length){ const tot=bds.reduce((s,b)=>s+(b.pay||0),0);
     items.push({ id:'bills', icon:'📋', title:'Bills due this week', say:`Heads up — ${bds.length} bill${bds.length>1?'s':''} (${fmtK(tot)}) ${bds.length>1?'are':'is'} due within 7 days. Want to look them over?`,
       sub:`${bds.slice(0,4).map(b=>esc(b.name)+' · '+(b.inDays===0?'today':'in '+b.inDays+'d')).join('<br>')}`, action:{label:'Review bills', go:'bills_list'} }); }
-  try{ const rw=engCashRunway(); if(rw.kind==='deficit'){ const when=rw.lowDay===0?'today':_projDate(rw.lowDay).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
-    items.push({ id:'shortfall', icon:'🚩', title:'A shortfall is coming', say:`Careful — I'm projecting your balance dips to ${fmtK(rw.low)} on ${when}, about ${fmtK(rw.shortfall)} below your ${fmtK(rw.buf)} safety buffer. Let's head it off.`, sub:`Trim a bill or pause a set-aside in the planner.`, action:{label:'Open planner', go:'cashflow_planner'} }); } }catch(e){}
+  try{ const rw=engCashRunway(); if(rw.kind==='deficit'){ const _wd=d=>d===0?'today':_projDate(d).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}); const bd=(rw.breachDay!=null?rw.breachDay:rw.lowDay); const tail=(bd===rw.lowDay)?`about ${fmtK(rw.shortfall)} under`:`bottoming about ${fmtK(rw.shortfall)} under by ${_wd(rw.lowDay)}`;
+    items.push({ id:'shortfall', icon:'🚩', title:'A shortfall is coming', say:`Careful — your balance first drops below your ${fmtK(rw.buf)} safety buffer on ${_wd(bd)}, ${tail}. Let's head it off.`, sub:`Trim a bill or pause a set-aside in the planner.`, action:{label:'Open planner', go:'cashflow_planner'} }); } }catch(e){}
   let promos=[]; try{ promos=(engPromos()||[]).filter(p=>p.bal>0.5 && p.days>=0 && p.days<=45); }catch(e){}
   if(promos.length){ const soon=promos.slice().sort((a,b)=>a.days-b.days)[0];
     items.push({ id:'promo', icon:'⏰', title:'A 0% promo is ending', say:`Your 0% deal on ${esc(soon.name)} jumps to ${soon.apr?soon.apr.toFixed(1)+'%':'its rate'} in ${soon.days} day${soon.days!==1?'s':''}. Let's beat the clock.`, sub:`${promos.length} promo${promos.length>1?'s':''} within 45 days.`, action:{label:'See promos', go:'debt_hub', tab:'promo'} }); }
