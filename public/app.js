@@ -3105,7 +3105,12 @@ function docReviewRender(){
   const kindLbl=isScore?'a credit-score snapshot':isInvest?'an investment statement':isCard?'a credit-card statement':isBill?('a '+((type||'bill').replace('_',' '))):('a '+((type||'statement').replace('_',' ')));
   // "Attach to" a running account so re-uploads accumulate into one record + build a balance trend.
   let attachHtml='';
-  if(!isScore && !isInvest){ const tg=_docAttachTargets(); if(tg.length){
+  if(isInvest){ const tg=_docInvestTargets(); if(tg.length){
+    const dn=r.accountName||''; const match=tg.find(n=>dn&&n.toLowerCase()===dn.toLowerCase());
+    attachHtml=`<div class="doc-f doc-attach"><label>Connect to an existing investment account <span class="ws-hint" style="display:inline">(re-uploads refresh its value &amp; positions)</span></label>
+      <select id="docAttach" onchange="docAttachPick(this.value)"><option value="">➕ New account${dn?' — '+esc(dn):''}</option>${tg.map(n=>`<option value="${esc(n)}"${match&&n===match?' selected':''}>${esc(n)}</option>`).join('')}</select></div>`;
+  } }
+  else if(!isScore){ const tg=_docAttachTargets(); if(tg.length){
     const dn=r.accountName||''; const match=tg.find(n=>dn&&n.toLowerCase()===dn.toLowerCase());
     attachHtml=`<div class="doc-f doc-attach"><label>Attach to a running account <span class="ws-hint" style="display:inline">(re-uploads update it + build a balance trend)</span></label>
       <select id="docAttach" onchange="docAttachPick(this.value)"><option value="">➕ New account${dn?' — '+esc(dn):''}</option>${tg.map(n=>`<option value="${esc(n)}"${match&&n===match?' selected':''}>${esc(n)}</option>`).join('')}</select></div>`;
@@ -3148,6 +3153,13 @@ function _docStmtDate(){
 function _docAttachTargets(){ const seen={}, out=[]; try{
     engBills().forEach(b=>{ const n=b.name; if(n&&!seen[n.toLowerCase()]){ seen[n.toLowerCase()]=1; out.push(n); } });
     (APP.manualAccounts||[]).forEach(a=>{ const n=a.name; if(n&&!seen[n.toLowerCase()]){ seen[n.toLowerCase()]=1; out.push(n); } });
+  }catch(e){} return out.sort((a,b)=>a.localeCompare(b)); }
+// Existing investment accounts a statement can be connected to — names from Net Worth Investment
+// assets and any Portfolio holdings' account, deduped by name. Selecting one makes the upsert
+// (which keys off the account-name field) refresh that account's value & positions in place.
+function _docInvestTargets(){ const seen={}, out=[]; const add=n=>{ n=(n||'').trim(); if(n&&!seen[n.toLowerCase()]){ seen[n.toLowerCase()]=1; out.push(n); } };
+  try{ (APP.nwManualAssets||[]).forEach(a=>{ if(a && a.cat==='Investment') add(a.name); });
+    (APP.holdings||[]).forEach(h=>{ if(h && h.account) add(h.account); });
   }catch(e){} return out.sort((a,b)=>a.localeCompare(b)); }
 // Picking an existing account routes this statement onto it (the upsert-by-name updates that record
 // and files history under it) even when the statement's detected name differs.
