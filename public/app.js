@@ -204,7 +204,7 @@ function _migrateTagsToCats(){
 _migrateTagsToCats();
 function _txnKey(t){ return t.transaction_id || t.id || ((t.date||'')+'|'+(t.merchant_name||t.name||'')+'|'+t.amount); }
 let _catRules=JSON.parse(LS.getItem('mdf_cat_rules')||'{}');   // merchant key → category (auto-apply)
-function setCatRule(mk, cat){ if(!mk) return; if(cat) _catRules[mk]=cat; else delete _catRules[mk]; try{ LS.setItem('mdf_cat_rules', JSON.stringify(_catRules)); }catch(e){} }
+function setCatRule(mk, cat){ if(!mk) return; if(cat) _catRules[mk]=cat; else delete _catRules[mk]; try{ LS.setItem('mdf_cat_rules', JSON.stringify(_catRules)); }catch(e){} try{ saveState(); }catch(e){} }   // saveState → syncPush so the rule reaches the cloud (and other devices) immediately
 /* ═══ CATEGORY RULES MANAGER (Settings) ═══
    Every "always categorize this merchant as X" rule in one place — view, re-point, delete,
    or add by hand. Rules live in _catRules (merchant key → category), synced via mdf_cat_rules. */
@@ -7724,6 +7724,7 @@ function setAcctTxnCat(uid, idx, cat){
   const k=(_acctTxnKeys[uid]||[])[idx]; if(!k) return;
   if(cat) _catOverrides[k]=cat; else delete _catOverrides[k];
   try{ LS.setItem('mdf_cat_overrides', JSON.stringify(_catOverrides)); }catch(e){}
+  try{ saveState(); }catch(e){}   // push the category override to the cloud so it survives a device switch
   const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg) renderCanvas(pg);   // re-render so spending/category widgets update too
 }
 // Save a free-text note on a transaction (no re-render, so typing stays smooth)
@@ -7840,7 +7841,7 @@ function txnFeedRender(w){
 function txnFeedSearch(uid,val){ (_txnFeed[uid]=_txnFeed[uid]||{q:'',filter:'all'}).q=val; const w=_findWidget(uid); if(w) txnFeedRender(w); }
 function txnFeedFilter(uid,f){ (_txnFeed[uid]=_txnFeed[uid]||{q:'',filter:'all'}).filter=f; const w=_findWidget(uid); if(w) txnFeedMount(w); }
 function txnFeedTf(uid,key){ (_txnFeed[uid]=_txnFeed[uid]||{q:'',filter:'all'}).tf=key; const w=_findWidget(uid); if(w) txnFeedMount(w); }
-function txnFeedSetCat(uid,idx,cat){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; if(cat)_catOverrides[k]=cat; else delete _catOverrides[k]; try{LS.setItem('mdf_cat_overrides',JSON.stringify(_catOverrides));}catch(e){} try{ gamiMarkEngaged('categorize'); }catch(e){} const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
+function txnFeedSetCat(uid,idx,cat){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; if(cat)_catOverrides[k]=cat; else delete _catOverrides[k]; try{LS.setItem('mdf_cat_overrides',JSON.stringify(_catOverrides));}catch(e){} try{ saveState(); }catch(e){} try{ gamiMarkEngaged('categorize'); }catch(e){} const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 function txnFeedSetNote(uid,idx,note){ const k=(_txnFeedKeys[uid]||[])[idx]; if(!k)return; if(note&&note.trim())_txnNotes[k]=note.trim(); else delete _txnNotes[k]; try{LS.setItem('mdf_txn_notes',JSON.stringify(_txnNotes));}catch(e){} }
 function txnFeedRule(uid,idx){ const t=(_txnFeedRows[uid]||[])[idx]; if(!t)return; const mk=_merchKey(t); if(!mk)return; if(_catRules[mk]){ setCatRule(mk,''); } else { setCatRule(mk, getTxnCategory(t)); } const pg=APP.pages.find(p=>p.id===APP.activePage); if(pg)renderCanvas(pg); }
 // Link this transaction to a bill (value = billKey), or '__unlink__' to remove. Marks that bill's
@@ -10904,7 +10905,7 @@ function _briefTxnStepBody(){
   }).join('');
   return `<div class="brief-txns-hd"><span>${list.length} to review — fix any wrong category, then Confirm</span><button class="brief-confirm-all" onclick="event.stopPropagation();briefConfirmAll()">Confirm all ✓</button></div><div class="brief-txns">${rows}</div>`;
 }
-function briefTxnCat(i,cat){ const t=_briefTxns[i]; if(!t||!cat) return; const k=_txnKey(t); _catOverrides[k]=cat; try{ LS.setItem('mdf_cat_overrides',JSON.stringify(_catOverrides)); }catch(e){} }   // change now; stays until Confirmed
+function briefTxnCat(i,cat){ const t=_briefTxns[i]; if(!t||!cat) return; const k=_txnKey(t); _catOverrides[k]=cat; try{ LS.setItem('mdf_cat_overrides',JSON.stringify(_catOverrides)); }catch(e){} try{ saveState(); }catch(e){} }   // change now; persists to the cloud (stays until Confirmed)
 function briefConfirm(i){ const t=_briefTxns[i]; if(!t) return; _confSet().add(_txnKey(t)); _confSave(); try{ gamiMarkEngaged('confirm'); }catch(e){} if(_briefChar)_briefChar.do('nod'); _briefRefreshBody(); }
 function briefConfirmAll(){ (_briefTxns||[]).forEach(t=>_confSet().add(_txnKey(t))); _confSave(); try{ gamiMarkEngaged('confirm'); }catch(e){} if(_briefChar)_briefChar.do('tada'); _briefRefreshBody(); }
 
