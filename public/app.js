@@ -7005,7 +7005,8 @@ async function exportWidget(kind){
     g.cats.forEach(c=>rows.push([c.label,...c.vals.map(money),money(c.avg)]));
     XLSX.utils.book_append_sheet(wb,_xlsxSheet(rows),'Heatmap');
   } else if(kind==='cashflow_planner'){
-    const p=engCashFlowProjection(90); name='Cash_Flow'; const rows=[['Day','Date','Event','Amount','Running Balance']];
+    let rng=90; try{ const pg=APP.pages.find(p=>p.id===APP.activePage); const w=pg&&(pg.widgets||[]).find(x=>x.type==='cashflow_planner'); if(w && _cfpRange[w.uid]) rng=_cfpRange[w.uid]; }catch(e){}   // export the window the widget is showing (incl. 6 mo)
+    const p=engCashFlowProjection(rng); name='Cash_Flow'; const rows=[['Day','Date','Event','Amount','Running Balance']];
     let bal=p.start; const byDay=p.byDay||{};
     for(let d=1; d<=p.days; d++){ if(byDay[d]){ byDay[d].forEach(e=>{ bal+=e.amt; const dt=new Date(today.getTime()+d*86400000); rows.push([d,dt.toLocaleDateString(),e.name,money(e.amt),money(bal)]); }); } }
     XLSX.utils.book_append_sheet(wb,_xlsxSheet(rows),'Cash Flow');
@@ -7164,7 +7165,7 @@ function goalWizFinish(){
 
 /* ═══ CASH FLOW PLANNER WIDGET ═══ */
 let _cfpRange={};  // per-widget projection window in days
-const CFP_RANGES=[{k:7,l:'1 wk'},{k:30,l:'30 days'},{k:60,l:'60 days'},{k:90,l:'90 days'}];
+const CFP_RANGES=[{k:7,l:'1 wk'},{k:30,l:'30 days'},{k:60,l:'60 days'},{k:90,l:'90 days'},{k:180,l:'6 mo'}];
 /* Shared running-balance line chart (used by both the Planner and the Cash Flow widget) */
 function cfpLineSVG(p, idSuffix, W, H){
   W=W||300; H=H||80; const pad=4;
